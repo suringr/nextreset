@@ -1,0 +1,13 @@
+{
+  "game": "gta",
+  "type": "weekly-reset",
+  "title": "GTA Online Weekly Reset",
+  "nextEventUtc": "2026-02-05T10:00:00.000Z",
+  "lastUpdatedUtc": "2026-02-01T23:23:52.798Z",
+  "source": {
+    "name": "Rockstar Games - GTA Online Weekly Events",
+    "url": "https://www.rockstargames.com/gta-online"
+  },
+  "confidence": "high",
+  "notes": "Weekly reset occurs every Thursday at 10:00 UTC"
+}

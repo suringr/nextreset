@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Track Fortnite events and updates">
+  <meta property="og:title" content="Fortnite - NextReset">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://nextreset.co/og.png">
+  <title>Fortnite - NextReset</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="game-page">
+      <a href="/" class="back-link">← Back to Home</a>
+      
+      <!-- Ad Top -->
+      <div class="ad-slot ad-slot--top"></div>
+      
+      <!-- Game Header -->
+      <div class="game-header">
+        <h1 class="game-title" id="event-title">Loading...</h1>
+        <div class="game-meta">
+          <span class="kicker">Battle Royale</span>
+        </div>
+      </div>
+      
+      <!-- Countdown -->
+      <div class="countdown-box" id="countdown">
+        <div class="countdown-label">Loading data...</div>
+        <div class="countdown-value">--</div>
+      </div>
+      
+      <!-- Info Panel -->
+      <div class="info-panel">
+        <div class="info-row">
+          <span class="info-label">Source</span>
+          <span class="info-value" id="source">Loading...</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Confidence</span>
+          <span id="confidence" class="confidence">Loading...</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Last Updated</span>
+          <span class="info-value" id="last-updated">...</span>
+        </div>
+      </div>
+      
+      <!-- Notes -->
+      <div id="notes" class="notes" style="display: none;"></div>
+      
+      <!-- Ad Bottom -->
+      <div class="ad-slot ad-slot--bottom"></div>
+    </div>
+    
+    <footer>
+      <p>Data automatically updated every 6 hours from official sources.</p>
+    </footer>
+  </div>
+  
+  <!-- Data attributes for JS -->
+  <div id="countdown-container" data-game="fortnite" data-type="next-season" style="display: none;"></div>
+  
+  <script src="/assets/app.js"></script>
+</body>
+</html>
