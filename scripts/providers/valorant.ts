@@ -20,7 +20,7 @@ export async function run(): Promise<ProviderResult> {
     const url = "https://playvalorant.com/en-us/news/game-updates/";
 
     try {
-        const response = await fetchHtml(url);
+        const response = await fetchHtml(url, { providerId: META.provider_id });
 
         if (!response.ok) {
             const lastGood = readLastGood(META.game, META.type);

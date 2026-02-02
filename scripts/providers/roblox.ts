@@ -19,7 +19,7 @@ export async function run(): Promise<ProviderResult> {
     const url = "http://hostedstatus.com/1.0/status/59db90dbcdeb2f04dadcf16d";
 
     try {
-        const response = await fetchHtml(url);
+        const response = await fetchHtml(url, { providerId: META.provider_id });
 
         if (!response.ok) {
             const lastGood = readLastGood(META.game, META.type);

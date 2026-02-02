@@ -25,7 +25,7 @@ export async function run(): Promise<ProviderResult> {
     const url = "https://support-leagueoflegends.riotgames.com/hc/en-us/articles/360018987893-League-of-Legends-Patch-Schedule";
 
     try {
-        const response = await fetchHtml(url, { useBrowserOnBlocked: true });
+        const response = await fetchHtml(url, { providerId: META.provider_id, useBrowserOnBlocked: true });
 
         if (!response.ok) {
             const lastGood = readLastGood(META.game, META.type);
