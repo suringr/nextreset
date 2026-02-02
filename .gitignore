@@ -47,3 +47,6 @@ build-log.txt
 
 # Optional eslint cache
 .eslintcache
+
+# Game data (dynamically generated)
+public/data/*.json
