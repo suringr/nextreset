@@ -5,13 +5,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description"
-    content="Real-time countdowns for game events, patches, and resets. Track Fortnite, League of Legends, CS2, VALORANT, and more - automatically updated every 6 hours.">
-  <meta property="og:title" content="NextReset - Game Countdowns & Status Tracker">
-  <meta property="og:description" content="Real-time countdowns for game events, patches, and resets">
+    content="Live tracking of official game resets and updates — no predictions. Track Fortnite, League of Legends, CS2, VALORANT, and more.">
+  <meta property="og:title" content="NextReset - Live Game Reset Tracker">
+  <meta property="og:description" content="Live tracking of official game resets and updates — no predictions">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://nextreset.co">
   <meta property="og:image" content="https://nextreset.co/og.png">
-  <title>NextReset - Game Countdowns & Status</title>
+  <title>NextReset - Live Game Reset Tracker</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/favicon.png">
   <link rel="stylesheet" href="/assets/styles.css">
@@ -25,126 +25,137 @@
         <span class="dot"></span>
         NextReset
       </div>
+      <div class="trust-badges">
+        <span class="trust-badge">Official sources only</span>
+        <span class="trust-badge">Honest data</span>
+      </div>
     </div>
 
     <!-- Hero -->
     <div class="hero">
-      <h1 class="h1">Next resets & updates</h1>
-      <p class="sub">Countdowns for the biggest games. Always updated.</p>
+      <h1 class="h1">NextReset</h1>
+      <p class="sub">Live tracking of official game resets and updates — no predictions.</p>
     </div>
 
-    <!-- Ad Top -->
-    <div class="ad-slot ad-slot--top"></div>
-
     <!-- Game Grid -->
-    <div class="grid">
-      <a href="/fortnite/next-season/" class="card">
-        <div class="kicker">Battle Royale</div>
-        <h2 class="title">Fortnite</h2>
-        <div class="meta">
-          <span class="pill">
-            <span class="mini"></span>
-            Next Season
-          </span>
+    <div class="grid" id="game-grid">
+      <a href="/fortnite/next-season/" class="card" id="card-fortnite" data-game="fortnite" data-type="next-season"
+        data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">Fortnite</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
         </div>
       </a>
 
-      <a href="/lol/next-patch/" class="card">
-        <div class="kicker">MOBA</div>
-        <h2 class="title">League of Legends</h2>
-        <div class="meta">
-          <span class="pill">
-            <span class="mini"></span>
-            Next Patch
-          </span>
+      <a href="/lol/next-patch/" class="card" id="card-lol" data-game="lol" data-type="next-patch" data-state="loading"
+        data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">League of Legends</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
         </div>
       </a>
 
-      <a href="/valorant/last-patch/" class="card">
-        <div class="kicker">Tactical Shooter</div>
-        <h2 class="title">VALORANT</h2>
-        <div class="meta">
-          <span class="pill">
-            <span class="mini"></span>
-            Last Patch
-          </span>
+      <a href="/valorant/last-patch/" class="card" id="card-valorant" data-game="valorant" data-type="last-patch"
+        data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">VALORANT</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
         </div>
       </a>
 
-      <a href="/cs2/last-update/" class="card">
-        <div class="kicker">FPS</div>
-        <h2 class="title">Counter-Strike 2</h2>
-        <div class="meta">
-          <span class="pill">
-            <span class="mini"></span>
-            Last Update
-          </span>
+      <a href="/cs2/last-update/" class="card" id="card-cs2" data-game="cs2" data-type="last-update"
+        data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">Counter-Strike 2</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
         </div>
       </a>
 
-      <a href="/minecraft/last-release/" class="card">
-        <div class="kicker">Sandbox</div>
-        <h2 class="title">Minecraft</h2>
-        <div class="meta">
-          <span class="pill">
-            <span class="mini"></span>
-            Last Release
-          </span>
+      <a href="/minecraft/last-release/" class="card" id="card-minecraft" data-game="minecraft" data-type="last-release"
+        data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">Minecraft</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
         </div>
       </a>
 
-      <a href="/roblox/status/" class="card">
-        <div class="kicker">Platform</div>
-        <h2 class="title">Roblox</h2>
-        <div class="meta">
-          <span class="pill">
-            <span class="mini"></span>
-            Service Status
-          </span>
+      <a href="/roblox/status/" class="card" id="card-roblox" data-game="roblox" data-type="status" data-state="loading"
+        data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">Roblox</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
         </div>
       </a>
 
-      <a href="/gta/weekly-reset/" class="card">
-        <div class="kicker">Open World</div>
-        <h2 class="title">GTA Online</h2>
-        <div class="meta">
-          <span class="pill">
-            <span class="mini"></span>
-            Weekly Reset
-          </span>
+      <a href="/gta/weekly-reset/" class="card" id="card-gta" data-game="gta" data-type="weekly-reset"
+        data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">GTA Online</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
         </div>
       </a>
 
-      <a href="/warzone/last-patch/" class="card">
-        <div class="kicker">Battle Royale</div>
-        <h2 class="title">Warzone</h2>
-        <div class="meta">
-          <span class="pill">
-            <span class="mini"></span>
-            Last Patch
-          </span>
+      <a href="/warzone/last-patch/" class="card" id="card-warzone" data-game="warzone" data-type="last-patch"
+        data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">Warzone</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
         </div>
       </a>
 
-      <a href="/genshin/next-banner/" class="card">
-        <div class="kicker">RPG</div>
-        <h2 class="title">Genshin Impact</h2>
-        <div class="meta">
-          <span class="pill">
-            <span class="mini"></span>
-            Next Banner
-          </span>
+      <a href="/genshin/next-banner/" class="card" id="card-genshin" data-game="genshin" data-type="next-banner"
+        data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">Genshin Impact</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
         </div>
       </a>
 
-      <a href="/pubg/last-patch/" class="card">
-        <div class="kicker">Battle Royale</div>
-        <h2 class="title">PUBG</h2>
-        <div class="meta">
-          <span class="pill">
-            <span class="mini"></span>
-            Last Patch
-          </span>
+      <a href="/pubg/last-patch/" class="card" id="card-pubg" data-game="pubg" data-type="last-patch"
+        data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">PUBG</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
         </div>
       </a>
     </div>
@@ -155,6 +166,8 @@
       <p>Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
     </footer>
   </div>
+
+  <script src="/assets/app.js"></script>
 </body>
 
 </html>

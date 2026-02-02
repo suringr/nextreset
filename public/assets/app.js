@@ -207,9 +207,157 @@ async function initGamePage() {
     }
 }
 
+// === HOMEPAGE FUNCTIONS ===
+
+// Format duration for homepage cards (shorter format: 2d 14h or 03m)
+function formatCardDuration(ms) {
+    const absMs = Math.abs(ms);
+    const minutes = Math.floor(absMs / (1000 * 60)) % 60;
+    const hours = Math.floor(absMs / (1000 * 60 * 60)) % 24;
+    const days = Math.floor(absMs / (1000 * 60 * 60 * 24));
+
+    if (days > 0) {
+        return `${days}<span class="unit">d</span> ${String(hours).padStart(2, '0')}<span class="unit">h</span>`;
+    }
+    if (hours > 0) {
+        return `${String(hours).padStart(2, '0')}<span class="unit">h</span> ${String(minutes).padStart(2, '0')}<span class="unit">m</span>`;
+    }
+    return `${String(minutes).padStart(2, '0')}<span class="unit">m</span>`;
+}
+
+// Render a homepage card with data
+function renderCard(card, data) {
+    const badgeEl = card.querySelector('.badge');
+    const countdownEl = card.querySelector('.card-countdown');
+    const lastCheckedEl = card.querySelector('.last-checked');
+
+    // Determine state
+    let state = 'unavailable';
+    let badgeText = 'UNAVAILABLE';
+    let badgeClass = 'badge badge-unavailable';
+
+    if (data && !isDataUnavailable(data)) {
+        const diff = getTimeDifference(data.nextEventUtc);
+        if (diff > 0) {
+            state = data.status === 'stale' ? 'stale' : 'live';
+            badgeText = state === 'stale' ? 'STALE' : 'LIVE';
+            badgeClass = state === 'stale' ? 'badge badge-stale' : 'badge badge-live';
+        } else {
+            state = 'live';
+            badgeText = 'LIVE';
+            badgeClass = 'badge badge-live';
+        }
+    }
+
+    // Update card state
+    card.dataset.state = state;
+    card.dataset.nextUtc = data?.nextEventUtc || '';
+
+    // Update badge
+    if (badgeEl) {
+        badgeEl.className = badgeClass;
+        badgeEl.textContent = badgeText;
+    }
+
+    // Update countdown
+    if (countdownEl) {
+        if (data && !isDataUnavailable(data)) {
+            const diff = getTimeDifference(data.nextEventUtc);
+            if (diff <= 0) {
+                countdownEl.innerHTML = 'Updating...';
+            } else {
+                countdownEl.innerHTML = formatCardDuration(diff);
+            }
+        } else {
+            countdownEl.textContent = 'Data unavailable';
+        }
+    }
+
+    // Update last checked
+    if (lastCheckedEl && data?.lastUpdatedUtc) {
+        lastCheckedEl.textContent = `Checked ${formatTimeSince(data.lastUpdatedUtc)}`;
+    }
+}
+
+// Render card as unavailable (fetch failed)
+function renderCardUnavailable(card) {
+    card.dataset.state = 'unavailable';
+    card.dataset.nextUtc = '';
+
+    const badgeEl = card.querySelector('.badge');
+    const countdownEl = card.querySelector('.card-countdown');
+    const lastCheckedEl = card.querySelector('.last-checked');
+
+    if (badgeEl) {
+        badgeEl.className = 'badge badge-unavailable';
+        badgeEl.textContent = 'UNAVAILABLE';
+    }
+    if (countdownEl) {
+        countdownEl.textContent = 'Data unavailable';
+    }
+    if (lastCheckedEl) {
+        lastCheckedEl.textContent = '--';
+    }
+}
+
+// Update all homepage countdowns (recompute only, no network fetches)
+function updateHomepageCountdowns() {
+    const cards = document.querySelectorAll('.card[data-game]');
+    cards.forEach(card => {
+        const nextUtc = card.dataset.nextUtc;
+        if (!nextUtc) return;
+
+        const countdownEl = card.querySelector('.card-countdown');
+        if (!countdownEl) return;
+
+        const diff = getTimeDifference(nextUtc);
+        if (diff <= 0) {
+            countdownEl.innerHTML = 'Updating...';
+        } else {
+            countdownEl.innerHTML = formatCardDuration(diff);
+        }
+    });
+}
+
+// Initialize homepage
+async function initHomepage() {
+    const grid = document.getElementById('game-grid');
+    if (!grid) return false; // Not homepage
+
+    const cards = grid.querySelectorAll('.card[data-game]');
+
+    // Fetch all game data in parallel
+    const fetchPromises = Array.from(cards).map(async (card) => {
+        const game = card.dataset.game;
+        const type = card.dataset.type;
+        try {
+            const data = await fetchGameData(game, type);
+            renderCard(card, data);
+        } catch {
+            renderCardUnavailable(card);
+        }
+    });
+
+    await Promise.all(fetchPromises);
+
+    // Update countdowns every 60 seconds (recompute time deltas only, no network fetches)
+    setInterval(updateHomepageCountdowns, 60000);
+
+    return true;
+}
+
 // Auto-initialize on page load
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initGamePage);
-} else {
+async function init() {
+    // Try homepage first
+    const isHomepage = await initHomepage();
+    if (isHomepage) return;
+
+    // Otherwise try game page
     initGamePage();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
 }

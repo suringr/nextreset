@@ -1,50 +1,47 @@
 /**
  * NextReset - Console Hub Design
- * Xbox-inspired dark theme with green accent
+ * Dark theme with console-hub styling
  */
 
 :root {
-  /* Backgrounds */
-  --bg0: #0b0f14;
-  /* page background */
-  --bg1: #0f1620;
-  /* subtle gradient top */
-  --panel: #121b26;
-  /* cards/panels */
-  --panel2: #0f1722;
-  /* deeper panels */
-  --border: rgba(255, 255, 255, .08);
+  /* === NEW VARIABLES (Plan Spec) === */
+  --bg-main: #0b0f14;
+  --bg-card: #111827;
+  --bg-card-muted: #0f172a;
 
-  /* Text */
-  --text: #e8eef6;
-  --muted: #9aa7b5;
+  --text-primary: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
 
-  /* Accents */
-  --accent: #34d399;
-  /* xbox-ish green */
-  --accent2: #22c55e;
+  --accent-live: #22c55e;
+  --accent-stale: #eab308;
+  --accent-unavailable: #64748b;
+
+  --border-card: #1f2937;
+  --border-soft: #1e293b;
+
+  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.4);
+
+  --radius-card: 14px;
+  --radius-pill: 999px;
+
+  --font-main: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* === LEGACY MAPPINGS (Temporary) === */
+  --bg0: var(--bg-main);
+  --bg1: var(--bg-card-muted);
+  --panel: var(--bg-card);
+  --panel2: var(--bg-card-muted);
+  --border: var(--border-card);
+  --text: var(--text-primary);
+  --muted: var(--text-muted);
+  --accent: var(--accent-live);
+  --accent2: var(--accent-live);
   --danger: #fb7185;
 
   /* Effects */
   --shadow: 0 12px 30px rgba(0, 0, 0, .45);
   --radius: 18px;
-}
-
-/* Light mode (system preference) */
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg0: #f8fafc;
-    --bg1: #ffffff;
-    --panel: #ffffff;
-    --panel2: #f1f5f9;
-    --border: rgba(0, 0, 0, .08);
-    --text: #0f172a;
-    --muted: #475569;
-    --accent: #22c55e;
-    --accent2: #16a34a;
-    --danger: #e11d48;
-    --shadow: 0 12px 30px rgba(0, 0, 0, .08);
-  }
 }
 
 /* Base */
@@ -119,6 +116,29 @@ a {
 .nav a:hover {
   color: var(--text);
   transition: color .15s ease;
+}
+
+/* Trust Badges */
+.trust-badges {
+  display: flex;
+  gap: 10px;
+}
+
+.trust-badge {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-pill);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .trust-badges {
+    display: none;
+  }
 }
 
 /* Hero */
@@ -505,6 +525,114 @@ footer p {
   margin: 6px 0;
 }
 
+/* Status Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.badge-live {
+  background: rgba(34, 197, 94, .15);
+  color: var(--accent-live);
+  border: 1px solid rgba(34, 197, 94, .3);
+}
+
+.badge-live::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-live);
+  animation: pulse 2s infinite;
+}
+
+.badge-stale {
+  background: rgba(234, 179, 8, .15);
+  color: var(--accent-stale);
+  border: 1px solid rgba(234, 179, 8, .3);
+}
+
+.badge-unavailable {
+  background: rgba(100, 116, 139, .15);
+  color: var(--accent-unavailable);
+  border: 1px solid rgba(100, 116, 139, .3);
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Card States */
+.card[data-state="unavailable"] {
+  opacity: 0.7;
+}
+
+.card[data-state="unavailable"] .card-countdown {
+  color: var(--text-muted);
+}
+
+.card[data-state="stale"] .card-countdown {
+  color: var(--accent-stale);
+}
+
+.card[data-state="live"] .card-countdown {
+  color: var(--accent-live);
+}
+
+/* Homepage Card Structure */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.card-countdown {
+  font-size: 28px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em;
+  margin-bottom: 12px;
+}
+
+.card-countdown .unit {
+  font-size: 16px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-left: 1px;
+  margin-right: 6px;
+}
+
+.card-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .countdown-value {
@@ -521,5 +649,9 @@ footer p {
 
   .countdown-box {
     padding: 32px 20px;
+  }
+
+  .card-countdown {
+    font-size: 22px;
   }
 }
