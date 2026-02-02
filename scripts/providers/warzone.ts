@@ -1,51 +1,56 @@
-import fetch from "node-fetch";
-import * as cheerio from "cheerio";
-import { ProviderResult } from "../types";
-
 /**
  * Call of Duty Warzone Last Patch Provider
  * 
  * Fetches latest patch date from CoD patch notes
  */
+
+import * as cheerio from "cheerio";
+import { ProviderResult, ProviderMeta } from "../types";
+import { fetchWithRetry } from "../lib/http";
+import { readLastGood, buildFallback } from "../lib/data-output";
+
+const META: ProviderMeta = {
+    game: "warzone",
+    type: "last-patch",
+    title: "Call of Duty Warzone Last Patch"
+};
+
+interface PatchInfo {
+    date: Date;
+    title: string;
+}
+
 export async function run(): Promise<ProviderResult> {
     const url = "https://www.callofduty.com/patchnotes";
 
-    const response = await fetch(url, {
-        headers: {
-            "User-Agent": "NextReset/1.0 (+https://nextreset.co)",
-            "Accept-Language": "en-US"
-        },
-        timeout: 15000
-    });
+    try {
+        const response = await fetchWithRetry(url, { timeout: 15000 });
 
-    if (!response.ok) {
-        throw new Error(`Failed to fetch Warzone patch notes: ${response.status}`);
-    }
+        if (!response.ok) {
+            const reason = response.error || `HTTP ${response.status}`;
+            const lastGood = readLastGood(META.game, META.type);
+            return buildFallback(META, `Failed to fetch Warzone patch notes: ${reason}`, lastGood);
+        }
 
-    const html = await response.text();
-    const $ = cheerio.load(html);
+        const $ = cheerio.load(response.text);
 
-    const result: { date: Date; title: string } | null = (() => {
-        let latest: { date: Date; title: string } | null = null;
+        let latestPatch: PatchInfo | null = null;
 
-        // Find articles or cards mentioning Warzone
         $("article, .patch-note, .card, a").each((_, elem) => {
             const $elem = $(elem);
             const text = $elem.text();
 
-            // Check if this is a Warzone patch
             if (!text.toLowerCase().includes("warzone")) {
                 return;
             }
 
-            // Look for time element
             const timeEl = $elem.find("time").first();
             if (timeEl.length > 0) {
                 const datetime = timeEl.attr("datetime");
                 if (datetime) {
                     const date = new Date(datetime);
-                    if (!latest || date > latest.date) {
-                        latest = {
+                    if (!latestPatch || date > latestPatch.date) {
+                        latestPatch = {
                             date,
                             title: $elem.find("h2, h3, .title").first().text().trim()
                         };
@@ -53,14 +58,13 @@ export async function run(): Promise<ProviderResult> {
                 }
             }
 
-            // Alternative: extract date from text
-            if (!latest) {
+            if (!latestPatch) {
                 const dateMatch = text.match(/(\d{1,2}\/\d{1,2}\/\d{4})|([A-Z][a-z]+\s+\d{1,2},?\s+\d{4})/);
                 if (dateMatch) {
                     const dateStr = dateMatch[1] || dateMatch[2];
                     const date = new Date(dateStr);
                     if (!isNaN(date.getTime())) {
-                        latest = {
+                        latestPatch = {
                             date,
                             title: $elem.find("h2, h3").first().text().trim()
                         };
@@ -69,27 +73,31 @@ export async function run(): Promise<ProviderResult> {
             }
         });
 
-        return latest;
-    })();
+        if (!latestPatch) {
+            const lastGood = readLastGood(META.game, META.type);
+            return buildFallback(META, "Could not extract Warzone patch date from CoD patch notes", lastGood);
+        }
 
-    if (!result) {
-        throw new Error("Could not extract Warzone patch date from CoD patch notes");
+        // TypeScript needs explicit access after null check with callbacks
+        const result: PatchInfo = latestPatch;
+
+        return {
+            game: META.game,
+            type: META.type,
+            title: META.title,
+            nextEventUtc: result.date.toISOString(),
+            lastUpdatedUtc: new Date().toISOString(),
+            source: {
+                name: "Call of Duty - Patch Notes",
+                url: url
+            },
+            confidence: "medium",
+            status: "ok",
+            notes: result.title || undefined
+        };
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        const lastGood = readLastGood(META.game, META.type);
+        return buildFallback(META, reason, lastGood);
     }
-
-    // Type assertion to help TypeScript narrow the type after null check
-    const patchData = result as { date: Date; title: string };
-
-    return {
-        game: "warzone",
-        type: "last-patch",
-        title: "Call of Duty Warzone Last Patch",
-        nextEventUtc: patchData.date.toISOString(),
-        lastUpdatedUtc: new Date().toISOString(),
-        source: {
-            name: "Call of Duty - Patch Notes",
-            url: url
-        },
-        confidence: "medium",
-        notes: patchData.title || undefined
-    };
 }

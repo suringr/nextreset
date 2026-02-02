@@ -1,54 +1,63 @@
-import fetch from "node-fetch";
-import { ProviderResult } from "../types";
-
 /**
  * Roblox Service Status Provider
  * 
  * Fetches status from hostedstatus JSON API
  */
+
+import { ProviderResult, ProviderMeta } from "../types";
+import { fetchWithRetry } from "../lib/http";
+import { readLastGood, buildFallback } from "../lib/data-output";
+
+const META: ProviderMeta = {
+    game: "roblox",
+    type: "status",
+    title: "Roblox Service Status"
+};
+
 export async function run(): Promise<ProviderResult> {
-    const primaryUrl = "http://hostedstatus.com/1.0/status/59db90dbcdeb2f04dadcf16d";
+    const url = "http://hostedstatus.com/1.0/status/59db90dbcdeb2f04dadcf16d";
 
     try {
-        const response = await fetch(primaryUrl, {
-            headers: {
-                "User-Agent": "NextReset/1.0 (+https://nextreset.co)",
-                "Accept-Language": "en-US"
-            },
-            timeout: 15000
-        });
+        const response = await fetchWithRetry(url);
 
         if (!response.ok) {
-            throw new Error(`Failed to fetch Roblox status: ${response.status}`);
+            const reason = response.error || `HTTP ${response.status}`;
+            const lastGood = readLastGood(META.game, META.type);
+            return buildFallback(META, `Failed to fetch Roblox status: ${reason}`, lastGood);
         }
 
-        const data = await response.json() as any;
+        let data: any;
+        try {
+            data = JSON.parse(response.text);
+        } catch {
+            const lastGood = readLastGood(META.game, META.type);
+            return buildFallback(META, "Invalid JSON in Roblox status response", lastGood);
+        }
 
-        // Extract status and updated timestamp
         const status = data.result?.status_overall?.status || "unknown";
         const updated = data.result?.status_overall?.updated;
 
         if (!updated) {
-            throw new Error("No updated timestamp found in Roblox status JSON");
+            const lastGood = readLastGood(META.game, META.type);
+            return buildFallback(META, "No updated timestamp found in Roblox status JSON", lastGood);
         }
 
-        // Parse the timestamp (assuming ISO format or Unix timestamp)
         let updatedDate: Date;
-
         if (typeof updated === "number") {
-            updatedDate = new Date(updated * 1000); // Unix timestamp
+            updatedDate = new Date(updated * 1000);
         } else {
             updatedDate = new Date(updated);
         }
 
         if (isNaN(updatedDate.getTime())) {
-            throw new Error(`Invalid date format in Roblox status: ${updated}`);
+            const lastGood = readLastGood(META.game, META.type);
+            return buildFallback(META, `Invalid date format in Roblox status: ${updated}`, lastGood);
         }
 
         return {
-            game: "roblox",
-            type: "status",
-            title: "Roblox Service Status",
+            game: META.game,
+            type: META.type,
+            title: META.title,
             nextEventUtc: updatedDate.toISOString(),
             lastUpdatedUtc: new Date().toISOString(),
             source: {
@@ -56,10 +65,12 @@ export async function run(): Promise<ProviderResult> {
                 url: "https://status.roblox.com"
             },
             confidence: "high",
+            status: "ok",
             notes: `Current status: ${status}`
         };
     } catch (error) {
-        // Fallback: Could scrape status.roblox.com here if needed
-        throw new Error(`Roblox provider failed: ${error instanceof Error ? error.message : String(error)}`);
+        const reason = error instanceof Error ? error.message : String(error);
+        const lastGood = readLastGood(META.game, META.type);
+        return buildFallback(META, reason, lastGood);
     }
 }

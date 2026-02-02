@@ -62,6 +62,13 @@ function formatTimeSince(isoString) {
     return 'just now';
 }
 
+// Check if data is unavailable
+function isDataUnavailable(data) {
+    return !data.nextEventUtc ||
+        data.confidence === 'none' ||
+        data.status === 'unavailable';
+}
+
 // Update countdown display
 function updateCountdown(data) {
     const titleEl = document.getElementById('event-title');
@@ -71,17 +78,60 @@ function updateCountdown(data) {
     const updatedEl = document.getElementById('last-updated');
     const notesEl = document.getElementById('notes');
 
-    // Update static fields
+    // Update title
     if (titleEl) titleEl.textContent = data.title;
-    if (sourceEl) {
+
+    // Handle unavailable data
+    if (isDataUnavailable(data)) {
+        if (countdownEl) {
+            countdownEl.innerHTML = `
+                <div class="countdown-label">Status</div>
+                <div class="countdown-value unavailable">Data Unavailable</div>
+            `;
+        }
+
+        if (sourceEl) {
+            sourceEl.textContent = 'Unavailable';
+        }
+
+        if (confidenceEl) {
+            confidenceEl.textContent = 'none';
+            confidenceEl.className = 'confidence confidence-none';
+        }
+
+        if (notesEl && data.reason) {
+            notesEl.textContent = data.reason;
+            notesEl.style.display = 'block';
+        }
+
+        if (updatedEl) {
+            updatedEl.textContent = formatTimeSince(data.lastUpdatedUtc);
+        }
+
+        return; // Don't start countdown
+    }
+
+    // Update source
+    if (sourceEl && data.source) {
         sourceEl.innerHTML = `<a href="${data.source.url}" target="_blank" rel="noopener">${data.source.name}</a>`;
     }
+
+    // Update confidence
     if (confidenceEl) {
         confidenceEl.textContent = data.confidence;
         confidenceEl.className = `confidence confidence-${data.confidence}`;
     }
+
+    // Update notes
     if (notesEl && data.notes) {
         notesEl.textContent = data.notes;
+        notesEl.style.display = 'block';
+    }
+
+    // Show stale indicator if needed
+    if (data.status === 'stale' && notesEl) {
+        const staleNote = data.reason ? `⚠ Using cached data: ${data.reason}` : '⚠ Using cached data';
+        notesEl.textContent = staleNote;
         notesEl.style.display = 'block';
     }
 
@@ -93,12 +143,17 @@ function updateCountdown(data) {
         if (countdownEl) {
             const formattedTime = formatDuration(diff);
             const label = isFuture ? 'Time Until Event' : 'Time Since Event';
-            const valueClass = isFuture ? 'countdown-value' : 'countdown-value elapsed';
+            let valueClass = isFuture ? 'countdown-value' : 'countdown-value elapsed';
+
+            // Add stale class if using cached data
+            if (data.status === 'stale') {
+                valueClass += ' stale';
+            }
 
             countdownEl.innerHTML = `
-          <div class="countdown-label">${label}</div>
-          <div class="${valueClass}">${formattedTime}</div>
-        `;
+                <div class="countdown-label">${label}</div>
+                <div class="${valueClass}">${formattedTime}</div>
+            `;
         }
 
         if (updatedEl) {
@@ -118,12 +173,12 @@ function showError(message) {
     const container = document.getElementById('countdown-container');
     if (container) {
         container.innerHTML = `
-      <div class="error">
-        <h2>⚠️ Unable to Load Data</h2>
-        <p>${message}</p>
-        <p><a href="/">← Back to Home</a></p>
-      </div>
-    `;
+            <div class="error">
+                <h2>⚠️ Unable to Load Data</h2>
+                <p>${message}</p>
+                <p><a href="/">← Back to Home</a></p>
+            </div>
+        `;
     }
 }
 
