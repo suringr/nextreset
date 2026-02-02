@@ -3,12 +3,15 @@
  * Countdown timer and data fetching logic
  */
 
-// Fetch game data from JSON
+// Fetch game data from JSON with timeout (AbortController)
 async function fetchGameData(game, type) {
     const url = `/data/${game}.${type}.json`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             throw new Error(`Failed to load data: ${response.status}`);
@@ -16,7 +19,12 @@ async function fetchGameData(game, type) {
 
         return await response.json();
     } catch (error) {
-        console.error('Error fetching game data:', error);
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            console.warn(`[NextReset] Fetch timeout for ${game}.${type}`);
+        } else {
+            console.error('[NextReset] Error fetching game data:', error);
+        }
         throw error;
     }
 }
@@ -348,12 +356,17 @@ async function initHomepage() {
 
 // Auto-initialize on page load
 async function init() {
-    // Try homepage first
-    const isHomepage = await initHomepage();
-    if (isHomepage) return;
+    try {
+        // Try homepage first
+        const isHomepage = await initHomepage();
+        if (isHomepage) return;
 
-    // Otherwise try game page
-    initGamePage();
+        // Otherwise try game page
+        initGamePage();
+    } catch (error) {
+        console.error('[NextReset] Init failed:', error);
+        // Page still shows static content - fail-safe preserved
+    }
 }
 
 if (document.readyState === 'loading') {

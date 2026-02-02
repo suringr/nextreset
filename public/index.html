@@ -2,14 +2,6 @@
 <html lang="en">
 
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag() { dataLayer.push(arguments); }
-    gtag('js', new Date());
-    gtag('config', 'G-YY6V5SR1DN');
-  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description"
@@ -22,7 +14,134 @@
   <title>NextReset - Live Game Reset Tracker</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/favicon.png">
+
+  <!-- CRITICAL: Inline CSS for guaranteed first paint (hard paint guarantee) -->
+  <style>
+    body {
+      margin: 0;
+      background: #0b0f14;
+      color: #e5e7eb;
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 22px
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 20px
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #22c55e
+    }
+
+    .hero {
+      margin: 22px 0 32px
+    }
+
+    .h1 {
+      font-size: 38px;
+      font-weight: 900;
+      margin: 0 0 8px
+    }
+
+    .sub {
+      color: #6b7280;
+      margin: 0;
+      font-size: 16px
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(3, 1fr);
+      margin-top: 18px
+    }
+
+    .card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 18px;
+      padding: 16px;
+      min-height: 140px
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin: 0
+    }
+
+    .card-countdown {
+      font-size: 28px;
+      font-weight: 900;
+      color: #6b7280;
+      margin-bottom: 12px
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(100, 116, 139, .15);
+      color: #64748b;
+      border: 1px solid rgba(100, 116, 139, .3)
+    }
+
+    @media(max-width:900px) {
+      .grid {
+        grid-template-columns: repeat(2, 1fr)
+      }
+    }
+
+    @media(max-width:600px) {
+      .grid {
+        grid-template-columns: 1fr
+      }
+
+      .h1 {
+        font-size: 32px
+      }
+    }
+  </style>
+
+  <!-- External CSS (enhancement, not required for first paint) -->
   <link rel="stylesheet" href="/assets/styles.v1.css">
+
+  <!-- Google Analytics (moved after CSS to not block parsing) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-YY6V5SR1DN');
+  </script>
 </head>
 
 <body>
@@ -175,7 +294,41 @@
     </footer>
   </div>
 
-  <script src="/assets/app.js"></script>
+  <!-- Fallback for users with JavaScript disabled -->
+  <noscript>
+    <style>
+      .card-countdown {
+        color: #6b7280 !important;
+      }
+
+      .badge {
+        display: none;
+      }
+    </style>
+    <div
+      style="text-align: center; padding: 20px; color: #9ca3af; background: #111827; margin: 20px; border-radius: 12px;">
+      JavaScript is required for live countdowns. Visit individual game pages for static data.
+    </div>
+  </noscript>
+
+  <!-- Global error handlers - catch crashes before they blank the page -->
+  <script>
+    window.onerror = function (msg, url, line, col, error) {
+      console.error('[NextReset] Uncaught error:', msg, 'at', url, line);
+      if (typeof gtag === 'function') {
+        gtag('event', 'exception', { description: String(msg).slice(0, 100), fatal: false });
+      }
+      return false;
+    };
+    window.addEventListener('unhandledrejection', function (event) {
+      console.error('[NextReset] Unhandled promise rejection:', event.reason);
+      if (typeof gtag === 'function') {
+        gtag('event', 'exception', { description: 'Promise: ' + String(event.reason).slice(0, 100), fatal: false });
+      }
+    });
+  </script>
+
+  <script src="/assets/app.js" defer></script>
 </body>
 
 </html>

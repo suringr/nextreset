@@ -8,15 +8,16 @@ import * as path from 'path';
 const publicDir = path.join(__dirname, '../public');
 
 const gamePages = [
-    { path: 'fortnite/next-season/index.html', game: 'fortnite', type: 'next-season', title: 'Fortnite', kicker: 'Battle Royale' },
-    { path: 'lol/next-patch/index.html', game: 'lol', type: 'next-patch', title: 'League of Legends', kicker: 'MOBA' },
-    { path: 'valorant/last-patch/index.html', game: 'valorant', type: 'last-patch', title: 'VALORANT', kicker: 'Tactical Shooter' },
-    { path: 'minecraft/last-release/index.html', game: 'minecraft', type: 'last-release', title: 'Minecraft', kicker: 'Sandbox' },
-    { path: 'roblox/status/index.html', game: 'roblox', type: 'status', title: 'Roblox', kicker: 'Platform' },
-    { path: 'gta/weekly-reset/index.html', game: 'gta', type: 'weekly-reset', title: 'GTA Online', kicker: 'Open World' },
-    { path: 'warzone/last-patch/index.html', game: 'warzone', type: 'last-patch', title: 'Warzone', kicker: 'Battle Royale' },
-    { path: 'genshin/next-banner/index.html', game: 'genshin', type: 'next-banner', title: 'Genshin Impact', kicker: 'RPG' },
-    { path: 'pubg/last-patch/index.html', game: 'pubg', type: 'last-patch', title: 'PUBG', kicker: 'Battle Royale' }
+  { path: 'fortnite/next-season/index.html', game: 'fortnite', type: 'next-season', typeTitle: 'Next Season', title: 'Fortnite', kicker: 'Battle Royale' },
+  { path: 'lol/next-patch/index.html', game: 'lol', type: 'next-patch', typeTitle: 'Next Patch', title: 'League of Legends', kicker: 'MOBA' },
+  { path: 'valorant/last-patch/index.html', game: 'valorant', type: 'last-patch', typeTitle: 'Last Patch', title: 'VALORANT', kicker: 'Tactical Shooter' },
+  { path: 'cs2/last-update/index.html', game: 'cs2', type: 'last-update', typeTitle: 'Last Update', title: 'Counter-Strike 2', kicker: 'Tactical Shooter' },
+  { path: 'minecraft/last-release/index.html', game: 'minecraft', type: 'last-release', typeTitle: 'Last Release', title: 'Minecraft', kicker: 'Sandbox' },
+  { path: 'roblox/status/index.html', game: 'roblox', type: 'status', typeTitle: 'Status', title: 'Roblox', kicker: 'Platform' },
+  { path: 'gta/weekly-reset/index.html', game: 'gta', type: 'weekly-reset', typeTitle: 'Weekly Reset', title: 'GTA Online', kicker: 'Open World' },
+  { path: 'warzone/last-patch/index.html', game: 'warzone', type: 'last-patch', typeTitle: 'Last Patch', title: 'Warzone', kicker: 'Battle Royale' },
+  { path: 'genshin/next-banner/index.html', game: 'genshin', type: 'next-banner', typeTitle: 'Next Banner', title: 'Genshin Impact', kicker: 'RPG' },
+  { path: 'pubg/last-patch/index.html', game: 'pubg', type: 'last-patch', typeTitle: 'Last Patch', title: 'PUBG', kicker: 'Battle Royale' }
 ];
 
 const template = `<!DOCTYPE html>
@@ -31,7 +32,33 @@ const template = `<!DOCTYPE html>
   <title>__TITLE__ - NextReset</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/favicon.png">
-  <link rel="stylesheet" href="/assets/styles.css">
+  
+  <!-- CRITICAL: Inline CSS for guaranteed first paint -->
+  <style>
+    body{margin:0;background:#0b0f14;color:#e5e7eb;font-family:system-ui,-apple-system,sans-serif;min-height:100vh}
+    .container{max-width:980px;margin:0 auto;padding:22px}
+    .game-page{max-width:720px;margin:0 auto}
+    .game-title{font-size:42px;font-weight:900;margin:0 0 12px}
+    .countdown-box{background:#111827;border:1px solid #1f2937;border-radius:18px;padding:48px 32px;text-align:center;margin:32px 0}
+    .countdown-label{color:#6b7280;font-size:12px;text-transform:uppercase;letter-spacing:.14em;font-weight:700;margin-bottom:18px}
+    .countdown-value{font-size:56px;font-weight:900;color:#22c55e;line-height:1.1}
+    .info-panel{background:#0f172a;border:1px solid #1f2937;border-radius:18px;padding:20px 24px;margin:24px 0}
+    .info-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #1f2937}
+    .info-row:last-child{border-bottom:none}
+    .info-label{color:#6b7280;font-size:13px;text-transform:uppercase;font-weight:600}
+    .info-value{font-weight:700}
+    @media(max-width:600px){.game-title{font-size:32px}.countdown-value{font-size:40px}}
+  </style>
+
+  <link rel="stylesheet" href="/assets/styles.v1.css">
+  
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-YY6V5SR1DN');
+  </script>
 </head>
 <body>
   <div class="container">
@@ -43,7 +70,7 @@ const template = `<!DOCTYPE html>
       
       <!-- Game Header -->
       <div class="game-header">
-        <h1 class="game-title" id="event-title">Loading...</h1>
+        <h1 class="game-title" id="event-title">__TITLE__ __TYPE_TITLE__</h1>
         <div class="game-meta">
           <span class="kicker">__KICKER__</span>
         </div>
@@ -51,19 +78,19 @@ const template = `<!DOCTYPE html>
       
       <!-- Countdown -->
       <div class="countdown-box" id="countdown">
-        <div class="countdown-label">Loading data...</div>
-        <div class="countdown-value">--</div>
+        <div class="countdown-label">Checking official sources...</div>
+        <div class="countdown-value countdown-skeleton">--:--:--</div>
       </div>
       
       <!-- Info Panel -->
       <div class="info-panel">
         <div class="info-row">
           <span class="info-label">Source</span>
-          <span class="info-value" id="source">Loading...</span>
+          <span class="info-value" id="source">...</span>
         </div>
         <div class="info-row">
           <span class="info-label">Confidence</span>
-          <span id="confidence" class="confidence">Loading...</span>
+          <span id="confidence" class="confidence">...</span>
         </div>
         <div class="info-row">
           <span class="info-label">Last Updated</span>
@@ -78,6 +105,12 @@ const template = `<!DOCTYPE html>
       <div class="ad-slot ad-slot--bottom"></div>
     </div>
     
+    <noscript>
+      <div style="text-align: center; padding: 20px; color: #9ca3af; background: #111827; margin-top: 20px; border-radius: 12px;">
+        JavaScript is required for live countdowns. Data shown below is from the latest check.
+      </div>
+    </noscript>
+
     <footer>
       <p>Data automatically updated every 6 hours from official sources.</p>
     </footer>
@@ -86,23 +119,36 @@ const template = `<!DOCTYPE html>
   <!-- Data attributes for JS -->
   <div id="countdown-container" data-game="__GAME__" data-type="__TYPE__" style="display: none;"></div>
   
-  <script src="/assets/app.js"></script>
+  <!-- Global error handlers -->
+  <script>
+    window.onerror = function(msg, url, lineNo, columnNo, error) {
+      console.log('Error: ' + msg + '\\nScript: ' + url + '\\nLine: ' + lineNo);
+      if (window.gtag) gtag('event', 'exception', { 'description': msg, 'fatal': false });
+      return false;
+    };
+    window.addEventListener('unhandledrejection', function(event) {
+      console.log('Unhandled rejection:', event.reason);
+      if (window.gtag) gtag('event', 'exception', { 'description': event.reason, 'fatal': false });
+    });
+  </script>
+  <script src="/assets/app.js" defer></script>
 </body>
 </html>
 `;
 
 for (const page of gamePages) {
-    const filePath = path.join(publicDir, page.path);
+  const filePath = path.join(publicDir, page.path);
 
-    let content = template
-        .replace(/__TITLE__/g, page.title)
-        .replace('__DESCRIPTION__', `Track ${page.title} events and updates`)
-        .replace('__KICKER__', page.kicker)
-        .replace('__GAME__', page.game)
-        .replace('__TYPE__', page.type);
+  let content = template
+    .replace(/__TITLE__/g, page.title)
+    .replace('__TYPE_TITLE__', page.typeTitle)
+    .replace('__DESCRIPTION__', `Track ${page.title} events and updates`)
+    .replace('__KICKER__', page.kicker)
+    .replace('__GAME__', page.game)
+    .replace('__TYPE__', page.type);
 
-    fs.writeFileSync(filePath, content, 'utf-8');
-    console.log(`✓ Updated ${page.title}`);
+  fs.writeFileSync(filePath, content, 'utf-8');
+  console.log(`✓ Updated ${page.title}`);
 }
 
 console.log('\n✅ All game pages updated with console hub design!');

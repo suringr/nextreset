@@ -195,6 +195,7 @@ a {
   box-shadow: var(--shadow);
   transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
   cursor: pointer;
+  min-height: 140px;
 }
 
 .card:hover {
@@ -653,5 +654,29 @@ footer p {
 
   .card-countdown {
     font-size: 22px;
+  }
+}
+
+/* Skeleton Loading Animation */
+.countdown-skeleton,
+.card[data-state="loading"] .card-countdown {
+  background: linear-gradient(90deg,
+      var(--text-muted) 25%,
+      rgba(255, 255, 255, 0.15) 50%,
+      var(--text-muted) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@keyframes skeleton-pulse {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
   }
 }
