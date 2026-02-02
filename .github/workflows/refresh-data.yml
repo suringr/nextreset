@@ -1,4 +1,4 @@
-name: Refresh Game Data
+name: Build & Publish Dist
 
 on:
   schedule:
@@ -9,27 +9,27 @@ permissions:
   contents: write
 
 concurrency:
-  group: refresh-game-data
+  group: publish-dist
   cancel-in-progress: true
 
 jobs:
-  refresh:
+  publish:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install deps
+        run: npm ci
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
@@ -37,29 +37,30 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
 
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps chromium
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
 
-      - name: Build TypeScript
-        run: npm run build
+      # This generates dist/ (and refreshes data into public/data)
+      - name: Build site (build + refresh + export)
+        run: npm run build:site
 
-      - name: Refresh game data
-        run: npm run refresh:data
-        continue-on-error: true
-
-      - name: Commit and push if changes
+      - name: Publish dist to gh-pages
         run: |
           set -e
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
 
-          git add public/data/*.json
+          # Create orphan gh-pages with only dist contents
+          rm -rf /tmp/dist
+          cp -R dist /tmp/dist
 
-          # If nothing changed, exit cleanly
-          if git diff --cached --quiet; then
-            echo "No changes to commit."
-            exit 0
-          fi
+          git checkout --orphan gh-pages
+          git reset --hard
+          rm -rf *
 
-          git commit -m "chore(data): refresh game data"
-          git push
+          cp -R /tmp/dist/* .
+          touch .nojekyll
+
+          git add -A
+          git commit -m "chore(site): publish dist" || echo "Nothing to commit"
+          git push -f origin gh-pages
