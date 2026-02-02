@@ -7,6 +7,12 @@ import * as path from 'path';
 
 const publicDir = path.join(__dirname, '../public');
 
+// AdSense Configuration
+const ADSENSE_CLIENT = "ca-pub-8986430839492258";
+const ADSENSE_SLOT_TOP = "TOP_SLOT_ID";
+const ADSENSE_SLOT_BOTTOM = "BOTTOM_SLOT_ID";
+
+
 const gamePages = [
   { path: 'fortnite/next-season/index.html', game: 'fortnite', type: 'next-season', typeTitle: 'Season End', title: 'Fortnite', kicker: 'Pacific Break' },
   { path: 'lol/next-patch/index.html', game: 'lol', type: 'next-patch', typeTitle: 'Next Patch', title: 'League of Legends', kicker: 'MOBA' },
@@ -50,7 +56,7 @@ const template = `<!DOCTYPE html>
     @media(max-width:600px){.game-title{font-size:32px}.countdown-value{font-size:40px}}
   </style>
 
-  <link rel="stylesheet" href="/assets/styles.v1.css">
+  <link rel="stylesheet" href="/assets/styles.v2.css">
   
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
   <script>
@@ -59,6 +65,10 @@ const template = `<!DOCTYPE html>
     gtag('js', new Date());
     gtag('config', 'G-YY6V5SR1DN');
   </script>
+  
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8986430839492258"
+     crossorigin="anonymous"></script>
+
 </head>
 <body>
   <div class="container">
@@ -66,7 +76,17 @@ const template = `<!DOCTYPE html>
       <a href="/" class="back-link">← Back to Home</a>
       
       <!-- Ad Top -->
-      <div class="ad-slot ad-slot--top"></div>
+      <!-- Ad Top -->
+      <div class="ad-slot ad-slot--top">
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="${ADSENSE_CLIENT}"
+             data-ad-slot="${ADSENSE_SLOT_TOP}"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+      </div>
+
       
       <!-- Game Header -->
       <div class="game-header">
@@ -102,7 +122,17 @@ const template = `<!DOCTYPE html>
       <div id="notes" class="notes" style="display: none;"></div>
       
       <!-- Ad Bottom -->
-      <div class="ad-slot ad-slot--bottom"></div>
+      <!-- Ad Bottom -->
+      <div class="ad-slot ad-slot--bottom">
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="${ADSENSE_CLIENT}"
+             data-ad-slot="${ADSENSE_SLOT_BOTTOM}"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+      </div>
+
     </div>
     
     <noscript>

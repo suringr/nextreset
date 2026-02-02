@@ -451,14 +451,17 @@ a {
   border: 1px dashed rgba(255, 255, 255, .14);
   background: rgba(255, 255, 255, .02);
   margin: 28px 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   color: var(--muted);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: .12em;
   font-weight: 600;
+}
+
+.ad-slot:empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ad-slot--top {
@@ -469,7 +472,7 @@ a {
   min-height: 250px;
 }
 
-.ad-slot::before {
+.ad-slot:empty::before {
   content: 'Advertisement';
 }
 
