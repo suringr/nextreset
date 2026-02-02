@@ -5,6 +5,7 @@
   "main": "dist/refresh-all.js",
   "scripts": {
     "build": "tsc",
+    "postinstall": "npx playwright install chromium",
     "refresh:data": "node build/refresh-all.js",
     "export:site": "node build/export-site.js",
     "build:site": "npm run build && (npm run refresh:data || true) && npm run export:site",
