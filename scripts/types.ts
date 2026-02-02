@@ -2,60 +2,66 @@
  * Core data model for NextReset provider system
  */
 
-export interface ProviderResult {
-    /** Game identifier (lowercase, kebab-case, e.g., "fortnite", "gta") */
-    game: string;
-
-    /** Event type (e.g., "next-season", "next-patch", "weekly-reset", "last-update", "status") */
-    type: string;
-
-    /** Human-readable title */
-    title: string;
-
-    /** 
-     * ISO 8601 UTC timestamp (reference timestamp)
-     * - For future events: timestamp when event occurs
-     * - For last-update pages: timestamp when last updated
-     * - null when data is unavailable
-     */
-    nextEventUtc: string | null;
-
-    /** ISO 8601 UTC timestamp of when this data was fetched */
-    lastUpdatedUtc: string;
-
-    /** Source attribution (null when unavailable) */
-    source: {
-        name: string;
-        url: string;
-    } | null;
-
-    /** Confidence level in the data accuracy */
-    confidence: "high" | "medium" | "low" | "none";
-
-    /** Data status */
-    status?: "ok" | "stale" | "unavailable";
-
-    /** Reason for stale/unavailable status */
-    reason?: string;
-
-    /** Optional additional context or notes */
-    notes?: string;
-
-    /** Last known good data reference */
-    lastGood?: {
-        nextEventUtc: string | null;
-        lastUpdatedUtc: string;
-    };
+export enum FailureType {
+    Blocked = "blocked",
+    Unavailable = "unavailable",
+    ParseFailed = "parse_failed"
 }
+
+export enum Confidence {
+    High = "high",
+    Medium = "medium",
+    Low = "low",
+    None = "none"
+}
+
+export interface ProviderMetadata {
+    provider_id: string;
+    game: string;
+    type: string;
+    title: string;
+}
+
+export interface BaseResult extends ProviderMetadata {
+    fetched_at_utc: string;
+    http_status?: number;
+    fetch_mode?: "http" | "browser";
+}
+
+export interface FreshResult extends BaseResult {
+    status: "fresh";
+    nextEventUtc: string; // Must have a date
+    source_url: string;
+    confidence: Confidence;
+    notes?: string;
+}
+
+export interface StaleResult extends BaseResult {
+    status: "stale";
+    nextEventUtc: string;
+    last_good_at_utc: string;
+    source_url: string;
+    confidence: Confidence;
+    reason: string;
+    notes?: string;
+}
+
+export interface FallbackResult extends BaseResult {
+    status: "fallback";
+    nextEventUtc: null;
+    failure_type: FailureType;
+    explanation: string;
+}
+
+export type ProviderResult = FreshResult | StaleResult | FallbackResult;
 
 /**
  * Provider function signature
- * Each provider implements this interface to fetch and normalize game data
  */
 export type Provider = () => Promise<ProviderResult>;
 
 /**
- * Provider metadata for fallback generation
+ * Legacy metadata for backward compatibility during migration
  */
 export interface ProviderMeta {
     game: string;

@@ -5,11 +5,12 @@
  */
 
 import * as cheerio from "cheerio";
-import { ProviderResult, ProviderMeta } from "../types";
-import { fetchWithRetry } from "../lib/http";
+import { FailureType, Confidence, ProviderResult, ProviderMetadata } from "../types";
+import { fetchHtml } from "../lib/fetch-layer";
 import { readLastGood, buildFallback } from "../lib/data-output";
 
-const META: ProviderMeta = {
+const META: ProviderMetadata = {
+    provider_id: "lol",
     game: "lol",
     type: "next-patch",
     title: "League of Legends Next Patch"
@@ -24,67 +25,93 @@ export async function run(): Promise<ProviderResult> {
     const url = "https://support-leagueoflegends.riotgames.com/hc/en-us/articles/360018987893-League-of-Legends-Patch-Schedule";
 
     try {
-        const response = await fetchWithRetry(url);
+        const response = await fetchHtml(url, { useBrowserOnBlocked: true });
 
         if (!response.ok) {
-            const reason = response.error || `HTTP ${response.status}`;
             const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(META, `Failed to fetch LoL patch schedule: ${reason}`, lastGood);
+            return buildFallback(
+                META,
+                response.failureType || FailureType.Unavailable,
+                response.error || `HTTP ${response.status}`,
+                lastGood,
+                response.status,
+                response.mode
+            );
         }
 
         const $ = cheerio.load(response.text);
-        const now = new Date();
+        $("script, style, noscript").remove();
 
-        // Find best patch (closest future date)
+        const finalSourceUrl = response.url || url;
+        const now = new Date();
+        // Create a date for "today at midnight UTC" to avoid rejecting today's patches
+        const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
         let bestPatch: PatchInfo | null = null;
 
-        $("table tr, li, p").each((_, elem) => {
-            const text = $(elem).text();
-            const patchMatch = text.match(/Patch\s+(\d+\.\d+)/i);
-            const dateMatch = text.match(/([A-Z][a-z]+\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?)/);
+        // Strictly target the schedule table
+        const table = $("table").first();
+        if (table.length > 0) {
+            table.find("tr").each((_, tr) => {
+                const cells = $(tr).find("td");
+                if (cells.length >= 2) {
+                    const patchName = $(cells[0]).text().trim();
+                    const dateStr = $(cells[1]).text().trim();
 
-            if (patchMatch && dateMatch) {
-                const dateStr = dateMatch[1];
-                let parsedDate = new Date(dateStr);
+                    if (patchName && dateStr) {
+                        // Extract date from string like "Wednesday, Jan 10, 2024" or just "Jan 10, 2024"
+                        const dateMatch = dateStr.match(/([A-Z][a-z]+\s+\d{1,2},?\s+\d{4})/);
+                        if (dateMatch) {
+                            const parsedDate = new Date(dateMatch[1]);
 
-                if (isNaN(parsedDate.getTime())) {
-                    parsedDate = new Date(`${dateStr}, ${now.getFullYear()}`);
-                }
-                if (isNaN(parsedDate.getTime())) {
-                    parsedDate = new Date(`${dateStr}, ${now.getFullYear() + 1}`);
-                }
+                            if (!isNaN(parsedDate.getTime())) {
+                                // Date Validation Guardrail (already somewhat covered by schedule logic)
+                                const twoYearsAgo = new Date();
+                                twoYearsAgo.setFullYear(now.getFullYear() - 2);
+                                const twoYearsFuture = new Date();
+                                twoYearsFuture.setFullYear(now.getFullYear() + 2);
 
-                if (parsedDate > now && (!bestPatch || parsedDate < bestPatch.date)) {
-                    bestPatch = { date: parsedDate, patchName: patchMatch[1] };
+                                if (parsedDate >= twoYearsAgo && parsedDate <= twoYearsFuture) {
+                                    // select the first date that is >= today (UTC)
+                                    if (parsedDate >= todayUtc && (!bestPatch || parsedDate < bestPatch.date)) {
+                                        bestPatch = { date: parsedDate, patchName };
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-            }
-        });
+            });
+        }
 
         if (!bestPatch) {
             const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(META, "Could not find next patch date in LoL patch schedule", lastGood);
+            return buildFallback(
+                META,
+                FailureType.ParseFailed,
+                `Could not find upcoming patch date in schedule table. Source: ${finalSourceUrl}`,
+                lastGood,
+                response.status,
+                response.mode
+            );
         }
 
-        // TypeScript needs explicit access after null check with callbacks
-        const result: PatchInfo = bestPatch;
+        const finalPatch = bestPatch as PatchInfo;
 
         return {
-            game: META.game,
-            type: META.type,
-            title: META.title,
-            nextEventUtc: result.date.toISOString(),
-            lastUpdatedUtc: now.toISOString(),
-            source: {
-                name: "Riot Games - LoL Patch Schedule",
-                url: url
-            },
-            confidence: "high",
-            status: "ok",
-            notes: result.patchName ? `Patch ${result.patchName}` : undefined
+            ...META,
+            status: "fresh",
+            nextEventUtc: finalPatch.date.toISOString(),
+            fetched_at_utc: now.toISOString(),
+            source_url: finalSourceUrl,
+            confidence: Confidence.High,
+            http_status: response.status,
+            fetch_mode: response.mode,
+            notes: finalPatch.patchName ? `Patch ${finalPatch.patchName}` : undefined
         };
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         const lastGood = readLastGood(META.game, META.type);
-        return buildFallback(META, reason, lastGood);
+        return buildFallback(META, FailureType.Unavailable, reason, lastGood);
     }
 }

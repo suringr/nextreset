@@ -1,11 +1,13 @@
 {
+  "provider_id": "genshin",
   "game": "genshin",
   "type": "next-banner",
   "title": "Genshin Impact Next Banner End",
+  "status": "fallback",
   "nextEventUtc": null,
-  "lastUpdatedUtc": "2026-02-02T07:57:30.162Z",
-  "source": null,
-  "confidence": "none",
-  "status": "unavailable",
-  "reason": "Could not extract banner end date from Genshin Impact notices"
+  "failure_type": "parse_failed",
+  "explanation": "Could not extract explicit banner end date from Genshin news. Source: https://genshin.hoyoverse.com/en/news",
+  "fetched_at_utc": "2026-02-02T18:21:32.120Z",
+  "http_status": 200,
+  "fetch_mode": "http"
 }

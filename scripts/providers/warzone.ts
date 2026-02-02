@@ -5,11 +5,12 @@
  */
 
 import * as cheerio from "cheerio";
-import { ProviderResult, ProviderMeta } from "../types";
-import { fetchWithRetry } from "../lib/http";
+import { FailureType, Confidence, ProviderResult, ProviderMetadata } from "../types";
+import { fetchHtml } from "../lib/fetch-layer";
 import { readLastGood, buildFallback } from "../lib/data-output";
 
-const META: ProviderMeta = {
+const META: ProviderMetadata = {
+    provider_id: "warzone",
     game: "warzone",
     type: "last-patch",
     title: "Call of Duty Warzone Last Patch"
@@ -24,12 +25,18 @@ export async function run(): Promise<ProviderResult> {
     const url = "https://www.callofduty.com/patchnotes";
 
     try {
-        const response = await fetchWithRetry(url, { timeout: 15000 });
+        const response = await fetchHtml(url, { timeout: 15000 });
 
         if (!response.ok) {
-            const reason = response.error || `HTTP ${response.status}`;
             const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(META, `Failed to fetch Warzone patch notes: ${reason}`, lastGood);
+            return buildFallback(
+                META,
+                response.failureType || FailureType.Unavailable,
+                response.error || `HTTP ${response.status}`,
+                lastGood,
+                response.status,
+                response.mode
+            );
         }
 
         const $ = cheerio.load(response.text);
@@ -75,29 +82,32 @@ export async function run(): Promise<ProviderResult> {
 
         if (!latestPatch) {
             const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(META, "Could not extract Warzone patch date from CoD patch notes", lastGood);
+            return buildFallback(
+                META,
+                FailureType.ParseFailed,
+                "Could not extract Warzone patch date from CoD patch notes",
+                lastGood,
+                response.status,
+                response.mode
+            );
         }
 
-        // TypeScript needs explicit access after null check with callbacks
-        const result: PatchInfo = latestPatch;
+        const finalPatch = latestPatch as PatchInfo;
 
         return {
-            game: META.game,
-            type: META.type,
-            title: META.title,
-            nextEventUtc: result.date.toISOString(),
-            lastUpdatedUtc: new Date().toISOString(),
-            source: {
-                name: "Call of Duty - Patch Notes",
-                url: url
-            },
-            confidence: "medium",
-            status: "ok",
-            notes: result.title || undefined
+            ...META,
+            status: "fresh",
+            nextEventUtc: finalPatch.date.toISOString(),
+            fetched_at_utc: new Date().toISOString(),
+            source_url: url,
+            confidence: Confidence.Medium,
+            http_status: response.status,
+            fetch_mode: response.mode,
+            notes: finalPatch.title || undefined
         };
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         const lastGood = readLastGood(META.game, META.type);
-        return buildFallback(META, reason, lastGood);
+        return buildFallback(META, FailureType.Unavailable, reason, lastGood);
     }
 }

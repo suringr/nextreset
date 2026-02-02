@@ -5,9 +5,10 @@
  * This is a computed provider - no external API calls required
  */
 
-import { ProviderResult, ProviderMeta } from "../types";
+import { Confidence, ProviderResult, ProviderMetadata } from "../types";
 
-const META: ProviderMeta = {
+const META: ProviderMetadata = {
+    provider_id: "gta",
     game: "gta",
     type: "weekly-reset",
     title: "GTA Online Weekly Reset"
@@ -37,32 +38,23 @@ export async function run(): Promise<ProviderResult> {
         nextReset.setUTCHours(10, 0, 0, 0);
 
         return {
-            game: META.game,
-            type: META.type,
-            title: META.title,
+            ...META,
+            status: "fresh",
             nextEventUtc: nextReset.toISOString(),
-            lastUpdatedUtc: now.toISOString(),
-            source: {
-                name: "Rockstar Games - GTA Online Weekly Events",
-                url: "https://www.rockstargames.com/gta-online"
-            },
-            confidence: "high",
-            status: "ok",
+            fetched_at_utc: now.toISOString(),
+            source_url: "https://www.rockstargames.com/gta-online",
+            confidence: Confidence.High,
             notes: "Weekly reset occurs every Thursday at 10:00 UTC"
         };
     } catch (error) {
-        // This should never fail, but just in case
         const reason = error instanceof Error ? error.message : String(error);
         return {
-            game: META.game,
-            type: META.type,
-            title: META.title,
+            ...META,
+            status: "fallback" as const,
             nextEventUtc: null,
-            lastUpdatedUtc: new Date().toISOString(),
-            source: null,
-            confidence: "none",
-            status: "unavailable",
-            reason
+            failure_type: "unavailable" as any, // Simplified for this case
+            explanation: reason,
+            fetched_at_utc: new Date().toISOString()
         };
     }
 }

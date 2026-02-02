@@ -1,84 +1,137 @@
 /**
  * Genshin Impact Next Banner Provider
  * 
- * Fetches banner end date from HoYoverse event notices
+ * Fetches banner end date from official news
  */
 
 import * as cheerio from "cheerio";
-import { ProviderResult, ProviderMeta } from "../types";
-import { fetchWithRetry } from "../lib/http";
+import { FailureType, Confidence, ProviderResult, ProviderMetadata } from "../types";
+import { fetchHtml } from "../lib/fetch-layer";
 import { readLastGood, buildFallback } from "../lib/data-output";
 
-const META: ProviderMeta = {
+const META: ProviderMetadata = {
+    provider_id: "genshin",
     game: "genshin",
     type: "next-banner",
     title: "Genshin Impact Next Banner End"
 };
 
 export async function run(): Promise<ProviderResult> {
-    const url = "https://www.hoyolab.com/genshin/article/359862";
+    const url = "https://genshin.hoyoverse.com/en/news";
 
     try {
-        const response = await fetchWithRetry(url);
+        const response = await fetchHtml(url, { useBrowserOnBlocked: true });
 
         if (!response.ok) {
-            const reason = response.error || `HTTP ${response.status}`;
             const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(META, `Failed to fetch Genshin Impact event notices: ${reason}`, lastGood);
+            return buildFallback(
+                META,
+                response.failureType || FailureType.Unavailable,
+                response.error || `HTTP ${response.status}`,
+                lastGood,
+                response.status,
+                response.mode
+            );
         }
 
         const $ = cheerio.load(response.text);
-        const bodyText = $("article, .content, main").text();
+        $("script, style, noscript").remove();
 
+        const finalListingUrl = response.url || url;
         const now = new Date();
         let bannerEndDate: Date | null = null;
         let bannerName = "";
+        let articleUrl: string | null = null;
 
-        const patterns = [
-            /until\s+(\d{4}[\/\-]\d{2}[\/\-]\d{2}\s+\d{2}:\d{2})/i,
-            /ends?\s+(?:on\s+)?(\d{4}[\/\-]\d{2}[\/\-]\d{2})/i
-        ];
+        // Keywords for selecting the right news item
+        const keywords = [/Event Wish/i, /Banner/i, /Available/i, /Time:/i, /Patch/i, /Update/i, /Version/i];
 
-        for (const pattern of patterns) {
-            const match = bodyText.match(pattern);
-            if (match) {
-                const dateStr = match[1].replace(/\//g, '-');
-                const date = new Date(dateStr);
+        // Look for items that look like wishes/banners
+        $(".news__list .news__item, article, .news-item, .news-list li").each((_, elem) => {
+            if (articleUrl) return; // Only process the first match
 
-                if (!isNaN(date.getTime()) && date > now) {
-                    bannerEndDate = date;
+            const $item = $(elem);
+            const text = $item.text().trim();
 
-                    const wishMatch = bodyText.match(/([\w\s]+)\s+Wish/);
-                    if (wishMatch) {
-                        bannerName = wishMatch[1].trim();
-                    }
-                    break;
+            const hasKeyword = keywords.some(kw => kw.test(text));
+            if (hasKeyword) {
+                articleUrl = $item.find("a").attr("href") || $item.attr("href") || null;
+                if (articleUrl && !articleUrl.startsWith("http")) {
+                    articleUrl = new URL(articleUrl, url).href;
                 }
+                bannerName = $item.find("h3, .title").text().trim();
+            }
+        });
+
+        if (articleUrl) {
+            console.log(`[Genshin] Following link: ${articleUrl} (from ${finalListingUrl})`);
+            const articleResponse = await fetchHtml(articleUrl, { useBrowserOnBlocked: true });
+
+            if (articleResponse.ok) {
+                const $art = cheerio.load(articleResponse.text);
+                $art("script, style, noscript").remove();
+                const artText = $art("article, .article-body, main, #main-content").text() || $art("body").text();
+
+                // Look for explicit end time in the article body
+                // Often looks like "Event End Time: 2024/01/30 14:59:59"
+                const endPatterns = [
+                    /End\s+Time[:\s]+(\d{4}[\/\-]\d{2}[\/\-]\d{2}\s+\d{2}:\d{2}:\d{2})/i,
+                    /End\s+Time[:\s]+(\d{4}[\/\-]\d{2}[\/\-]\d{2}\s+\d{2}:\d{2})/i,
+                    /until\s+(\d{4}[\/\-]\d{2}[\/\-]\d{2}\s+\d{2}:\d{2}:\d{2})/i,
+                    /(\d{4}[\/\-]\d{2}[\/\-]\d{2}\s+\d{2}:\d{2}:\d{2})/
+                ];
+
+                for (const pattern of endPatterns) {
+                    const match = artText.match(pattern);
+                    if (match) {
+                        const dateStr = match[1].replace(/\//g, '-');
+                        const date = new Date(dateStr);
+
+                        if (!isNaN(date.getTime())) {
+                            // Date Validation Guardrail
+                            const twoYearsAgo = new Date();
+                            twoYearsAgo.setFullYear(now.getFullYear() - 2);
+                            const twoYearsFuture = new Date();
+                            twoYearsFuture.setFullYear(now.getFullYear() + 2);
+
+                            if (date > now && date <= twoYearsFuture) {
+                                bannerEndDate = date;
+                                break;
+                            }
+                        }
+                    }
+                }
+                // Update articleUrl to final URL
+                articleUrl = articleResponse.url || articleUrl;
             }
         }
 
         if (!bannerEndDate) {
             const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(META, "Could not extract banner end date from Genshin Impact notices", lastGood);
+            return buildFallback(
+                META,
+                FailureType.ParseFailed,
+                `Could not extract explicit banner end date from Genshin news. Source: ${articleUrl || finalListingUrl}`,
+                lastGood,
+                response.status,
+                response.mode
+            );
         }
 
         return {
-            game: META.game,
-            type: META.type,
-            title: META.title,
+            ...META,
+            status: "fresh",
             nextEventUtc: bannerEndDate.toISOString(),
-            lastUpdatedUtc: now.toISOString(),
-            source: {
-                name: "HoYoLAB - Genshin Impact Notices",
-                url: url
-            },
-            confidence: "medium",
-            status: "ok",
+            fetched_at_utc: now.toISOString(),
+            source_url: articleUrl || finalListingUrl,
+            confidence: Confidence.Medium,
+            http_status: response.status,
+            fetch_mode: response.mode,
             notes: bannerName || undefined
         };
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         const lastGood = readLastGood(META.game, META.type);
-        return buildFallback(META, reason, lastGood);
+        return buildFallback(META, FailureType.Unavailable, reason, lastGood);
     }
 }

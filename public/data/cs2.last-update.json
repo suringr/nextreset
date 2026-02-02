@@ -1,14 +1,14 @@
 {
+  "provider_id": "cs2",
   "game": "cs2",
   "type": "last-update",
   "title": "Counter-Strike 2 Last Update",
+  "status": "fresh",
   "nextEventUtc": "2026-01-30T00:17:36.000Z",
-  "lastUpdatedUtc": "2026-02-02T07:57:28.790Z",
-  "source": {
-    "name": "Steam Store - CS2 News",
-    "url": "https://store.steampowered.com/news/app/730"
-  },
+  "fetched_at_utc": "2026-02-02T18:21:21.413Z",
+  "source_url": "https://store.steampowered.com/news/app/730",
   "confidence": "high",
-  "status": "ok",
+  "http_status": 200,
+  "fetch_mode": "http",
   "notes": "Latest: Counter-Strike 2 Update"
 }

@@ -1,11 +1,13 @@
 {
+  "provider_id": "pubg",
   "game": "pubg",
   "type": "last-patch",
   "title": "PUBG Last Patch",
+  "status": "fallback",
   "nextEventUtc": null,
-  "lastUpdatedUtc": "2026-02-02T07:57:30.704Z",
-  "source": null,
-  "confidence": "none",
-  "status": "unavailable",
-  "reason": "Could not extract patch date from PUBG news page"
+  "failure_type": "parse_failed",
+  "explanation": "No article URL extracted from listing.",
+  "fetched_at_utc": "2026-02-02T18:21:32.686Z",
+  "http_status": 200,
+  "fetch_mode": "http"
 }

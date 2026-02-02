@@ -4,7 +4,15 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { ProviderResult } from "../types";
+import {
+    ProviderResult,
+    ProviderMetadata,
+    FailureType,
+    Confidence,
+    FreshResult,
+    StaleResult,
+    FallbackResult
+} from "../types";
 
 const DATA_DIR = path.join(__dirname, "../../public/data");
 
@@ -45,89 +53,71 @@ export function readLastGood(game: string, type: string): ProviderResult | null 
 /**
  * Write provider result to JSON file
  */
-export function writeJson(game: string, type: string, data: ProviderResult): void {
+export function writeJson(data: ProviderResult): void {
     ensureDataDir();
-    const filepath = getOutputPath(game, type);
+    const filepath = getOutputPath(data.game, data.type);
 
-    // Stable key order
-    const ordered: ProviderResult = {
-        game: data.game,
-        type: data.type,
-        title: data.title,
-        nextEventUtc: data.nextEventUtc,
-        lastUpdatedUtc: data.lastUpdatedUtc,
-        source: data.source,
-        confidence: data.confidence,
-        status: data.status,
-        reason: data.reason,
-        notes: data.notes,
-        lastGood: data.lastGood
-    };
-
-    // Remove undefined fields
-    const cleaned = JSON.parse(JSON.stringify(ordered));
+    // Filter out undefined and ensure order (mostly for readability/debugging)
+    const cleaned = JSON.parse(JSON.stringify(data));
 
     fs.writeFileSync(filepath, JSON.stringify(cleaned, null, 2), "utf-8");
-}
-
-/**
- * Provider info for fallback generation
- */
-export interface ProviderMeta {
-    game: string;
-    type: string;
-    title: string;
 }
 
 /**
  * Build fallback result when provider fails
  */
 export function buildFallback(
-    meta: ProviderMeta,
-    reason: string,
-    lastGood: ProviderResult | null
+    meta: ProviderMetadata,
+    failureType: FailureType,
+    explanation: string,
+    lastGood: ProviderResult | null,
+    httpStatus?: number,
+    fetchMode?: "http" | "browser"
 ): ProviderResult {
     const now = new Date().toISOString();
 
-    if (lastGood && lastGood.nextEventUtc) {
+    if (lastGood && (lastGood.status === "fresh" || lastGood.status === "stale") && lastGood.nextEventUtc) {
         // Reuse last known good data but mark as stale
-        return {
-            game: meta.game,
-            type: meta.type,
-            title: meta.title,
-            nextEventUtc: lastGood.nextEventUtc,
-            lastUpdatedUtc: now,
-            source: lastGood.source,
-            confidence: lastGood.confidence === "none" ? "low" : lastGood.confidence,
+        const stale: StaleResult = {
+            ...meta,
             status: "stale",
-            reason,
-            notes: lastGood.notes,
-            lastGood: {
-                nextEventUtc: lastGood.nextEventUtc,
-                lastUpdatedUtc: lastGood.lastUpdatedUtc
-            }
+            nextEventUtc: lastGood.nextEventUtc,
+            last_good_at_utc: lastGood.status === "fresh" ? lastGood.fetched_at_utc : lastGood.last_good_at_utc,
+            fetched_at_utc: now,
+            source_url: lastGood.source_url,
+            confidence: lastGood.confidence,
+            reason: explanation,
+            notes: (lastGood as any).notes,
+            http_status: httpStatus,
+            fetch_mode: fetchMode
         };
+        return stale;
     }
 
     // No last good data - write unavailable fallback
-    return {
-        game: meta.game,
-        type: meta.type,
-        title: meta.title,
+    const fallback: FallbackResult = {
+        ...meta,
+        status: "fallback",
         nextEventUtc: null,
-        lastUpdatedUtc: now,
-        source: null,
-        confidence: "none",
-        status: "unavailable",
-        reason
+        failure_type: failureType,
+        explanation: explanation,
+        fetched_at_utc: now,
+        http_status: httpStatus,
+        fetch_mode: fetchMode
     };
+    return fallback;
 }
 
 /**
  * Write provider result (success or fallback)
  */
 export function writeProviderResult(result: ProviderResult): void {
-    writeJson(result.game, result.type, result);
-    const status = result.status === "ok" ? "✓" : "⚠";
-    console.log(`${status} Wrote ${result.game}.${result.type}.json`);
+    writeJson(result);
+    const indicator = result.status === "fresh" ? "✓" : (result.status === "stale" ? "⚠" : "✗");
+    console.log(`${indicator} Wrote ${result.game}.${result.type}.json (${result.status})`);
+    if (result.status === "fallback") {
+        console.log(`  Reason: ${result.failure_type} - ${result.explanation}`);
+    } else if (result.status === "stale") {
+        console.log(`  Stale: ${result.reason}`);
+    }
 }

@@ -1,11 +1,13 @@
 {
+  "provider_id": "fortnite",
   "game": "fortnite",
   "type": "next-season",
   "title": "Fortnite Next Season",
+  "status": "fallback",
   "nextEventUtc": null,
-  "lastUpdatedUtc": "2026-02-02T07:57:26.457Z",
-  "source": null,
-  "confidence": "none",
-  "status": "unavailable",
-  "reason": "Failed to fetch Fortnite help article: HTTP 403"
+  "failure_type": "parse_failed",
+  "explanation": "Could not extract explicit season end date from Fortnite help article",
+  "fetched_at_utc": "2026-02-02T18:21:15.569Z",
+  "http_status": 200,
+  "fetch_mode": "browser"
 }
