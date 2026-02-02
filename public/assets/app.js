@@ -124,7 +124,7 @@ function updateCountdown(data) {
     // Update source
     if (sourceEl) {
         const sourceUrl = data.source_url || data.source?.url;
-        const sourceName = data.title || data.source?.name || 'Official Source';
+        const sourceName = data.sourceName || data.title || data.source?.name || 'Official Source';
         if (sourceUrl) {
             sourceEl.innerHTML = `<a href="${sourceUrl}" target="_blank" rel="noopener">${sourceName}</a>`;
         } else {
@@ -139,8 +139,19 @@ function updateCountdown(data) {
     }
 
     // Update notes
-    if (notesEl && data.notes) {
-        notesEl.textContent = data.notes;
+    let notes = data.notes || '';
+
+    // Add "Next season: Not officially announced" if applicable for Fortnite
+    if (data.game === 'fortnite' && data.type === 'next-season' && data.nextSeasonStart === null) {
+        let nextSeasonMsg = "Next season: Not officially announced";
+        if (data.nextSeasonEstimateFriendly) {
+            nextSeasonMsg = `Next season: Not officially announced (Likely ${data.nextSeasonEstimateFriendly})`;
+        }
+        notes = notes ? `${nextSeasonMsg}\n${notes}` : nextSeasonMsg;
+    }
+
+    if (notesEl && notes) {
+        notesEl.innerText = notes;
         notesEl.style.display = 'block';
     }
 
