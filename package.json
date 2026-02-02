@@ -7,7 +7,7 @@
     "build": "tsc",
     "refresh:data": "node build/refresh-all.js",
     "export:site": "node build/export-site.js",
-    "build:site": "npm run build && npm run refresh:data && npm run export:site",
+    "build:site": "npm run build && (npm run refresh:data || true) && npm run export:site",
     "dev": "npm run build && npm run refresh:data"
   },
   "keywords": [
