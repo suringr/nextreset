@@ -394,15 +394,33 @@ a {
 }
 
 .confidence-medium {
-  background: rgba(251, 191, 36, .15);
-  color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, .3);
-}
-
-.confidence-low {
   background: rgba(251, 113, 133, .15);
   color: var(--danger);
   border: 1px solid rgba(251, 113, 133, .3);
+}
+
+.confidence-none {
+  background: rgba(255, 255, 255, .08);
+  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, .15);
+}
+
+/* Unavailable State */
+.countdown-value.unavailable {
+  color: var(--muted);
+  font-size: 32px;
+  font-weight: 700;
+}
+
+/* Stale Data Indicator */
+.countdown-value.stale {
+  opacity: 0.8;
+}
+
+.countdown-value.stale::after {
+  content: ' ⚠';
+  font-size: 24px;
+  color: var(--warning, #fbbf24);
 }
 
 /* Ad Slots */

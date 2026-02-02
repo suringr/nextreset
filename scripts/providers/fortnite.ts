@@ -1,72 +1,76 @@
-import fetch from "node-fetch";
-import * as cheerio from "cheerio";
-import { ProviderResult } from "../types";
-
 /**
  * Fortnite Next Season Provider
  * 
  * Fetches season end date from Epic Games Help Center
  */
+
+import * as cheerio from "cheerio";
+import { ProviderResult, ProviderMeta } from "../types";
+import { fetchWithRetry } from "../lib/http";
+import { readLastGood, buildFallback } from "../lib/data-output";
+
+const META: ProviderMeta = {
+    game: "fortnite",
+    type: "next-season",
+    title: "Fortnite Next Season"
+};
+
 export async function run(): Promise<ProviderResult> {
     const url = "https://www.epicgames.com/help/en-US/fortnite-c5719335176219/battle-royale-c5719350646299/when-does-the-current-fortnite-season-end-a5720184470299";
 
-    const response = await fetch(url, {
-        headers: {
-            "User-Agent": "NextReset/1.0 (+https://nextreset.co)",
-            "Accept-Language": "en-US"
-        },
-        timeout: 15000
-    });
+    try {
+        const response = await fetchWithRetry(url);
 
-    if (!response.ok) {
-        throw new Error(`Failed to fetch Fortnite help article: ${response.status}`);
-    }
+        if (!response.ok) {
+            const reason = response.error || `HTTP ${response.status}`;
+            const lastGood = readLastGood(META.game, META.type);
+            return buildFallback(META, `Failed to fetch Fortnite help article: ${reason}`, lastGood);
+        }
 
-    const html = await response.text();
-    const $ = cheerio.load(html);
+        const $ = cheerio.load(response.text);
+        const bodyText = $("article, .article-body, main").text();
 
-    // Look for the season end date in the article body
-    // Epic typically includes text like "Season ends on Month Day, Year"
-    const bodyText = $("article, .article-body, main").text();
+        const datePatterns = [
+            /ends?\s+(?:on\s+)?([A-Z][a-z]+\s+\d{1,2},?\s+\d{4})/i,
+            /until\s+([A-Z][a-z]+\s+\d{1,2},?\s+\d{4})/i,
+            /([A-Z][a-z]+\s+\d{1,2},?\s+\d{4})/
+        ];
 
-    // Try to find date patterns
-    const datePatterns = [
-        // "ends on March 8, 2026" or "ends March 8, 2026"
-        /ends?\s+(?:on\s+)?([A-Z][a-z]+\s+\d{1,2},?\s+\d{4})/i,
-        // "until March 8, 2026"
-        /until\s+([A-Z][a-z]+\s+\d{1,2},?\s+\d{4})/i,
-        // "March 8, 2026"
-        /([A-Z][a-z]+\s+\d{1,2},?\s+\d{4})/
-    ];
+        let seasonEndDate: Date | null = null;
 
-    let seasonEndDate: Date | null = null;
-
-    for (const pattern of datePatterns) {
-        const match = bodyText.match(pattern);
-        if (match) {
-            const parsedDate = new Date(match[1]);
-            if (!isNaN(parsedDate.getTime()) && parsedDate > new Date()) {
-                seasonEndDate = parsedDate;
-                break;
+        for (const pattern of datePatterns) {
+            const match = bodyText.match(pattern);
+            if (match) {
+                const parsedDate = new Date(match[1]);
+                if (!isNaN(parsedDate.getTime()) && parsedDate > new Date()) {
+                    seasonEndDate = parsedDate;
+                    break;
+                }
             }
         }
-    }
 
-    if (!seasonEndDate) {
-        throw new Error("Could not extract season end date from Fortnite help article");
-    }
+        if (!seasonEndDate) {
+            const lastGood = readLastGood(META.game, META.type);
+            return buildFallback(META, "Could not extract season end date from Fortnite help article", lastGood);
+        }
 
-    return {
-        game: "fortnite",
-        type: "next-season",
-        title: "Fortnite Next Season",
-        nextEventUtc: seasonEndDate.toISOString(),
-        lastUpdatedUtc: new Date().toISOString(),
-        source: {
-            name: "Epic Games Help Center",
-            url: url
-        },
-        confidence: "medium",
-        notes: "Season end date may change"
-    };
+        return {
+            game: META.game,
+            type: META.type,
+            title: META.title,
+            nextEventUtc: seasonEndDate.toISOString(),
+            lastUpdatedUtc: new Date().toISOString(),
+            source: {
+                name: "Epic Games Help Center",
+                url: url
+            },
+            confidence: "medium",
+            status: "ok",
+            notes: "Season end date may change"
+        };
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        const lastGood = readLastGood(META.game, META.type);
+        return buildFallback(META, reason, lastGood);
+    }
 }

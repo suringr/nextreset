@@ -1,0 +1,11 @@
+{
+  "game": "minecraft",
+  "type": "last-release",
+  "title": "Minecraft Last Release",
+  "nextEventUtc": null,
+  "lastUpdatedUtc": "2026-02-02T07:57:28.952Z",
+  "source": null,
+  "confidence": "none",
+  "status": "unavailable",
+  "reason": "Failed to fetch Minecraft changelog: HTTP 403"
+}

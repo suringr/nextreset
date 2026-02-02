@@ -1,11 +1,13 @@
 import * as fs from "fs";
 import * as path from "path";
 import { ProviderResult } from "./types";
+import { writeProviderResult, ensureDataDir } from "./lib/data-output";
 
 /**
  * Orchestration script for NextReset
  * 
- * Runs all providers, writes JSON files, and handles failures gracefully
+ * Runs all providers, writes JSON files, and NEVER exits non-zero
+ * due to provider failures. Only exits 1 for programmer errors.
  */
 
 // Import all providers
@@ -38,87 +40,82 @@ const providers: ProviderEntry[] = [
     { name: "PUBG", run: pubg.run }
 ];
 
-const DATA_DIR = path.join(__dirname, "../public/data");
-
 /**
- * Ensure data directory exists
+ * Run a single provider - never throws
  */
-function ensureDataDir() {
-    if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-}
-
-/**
- * Write provider result to JSON file
- */
-function writeProviderData(result: ProviderResult): void {
-    const filename = `${result.game}.${result.type}.json`;
-    const filepath = path.join(DATA_DIR, filename);
-
-    fs.writeFileSync(filepath, JSON.stringify(result, null, 2), "utf-8");
-    console.log(`✓ Wrote ${filename}`);
-}
-
-/**
- * Check if JSON file exists for a provider result
- */
-function jsonExists(game: string, type: string): boolean {
-    const filename = `${game}.${type}.json`;
-    const filepath = path.join(DATA_DIR, filename);
-    return fs.existsSync(filepath);
-}
-
-/**
- * Run a single provider with error handling
- */
-async function runProvider(entry: ProviderEntry): Promise<{ success: boolean; result?: ProviderResult; error?: Error }> {
+async function runProvider(entry: ProviderEntry): Promise<{ name: string; result: ProviderResult }> {
     const startTime = Date.now();
     console.log(`\n[${new Date().toISOString()}] Running ${entry.name}...`);
 
     try {
         const result = await entry.run();
         const elapsed = Date.now() - startTime;
-        console.log(`✓ ${entry.name} succeeded in ${elapsed}ms`);
-        console.log(`  Confidence: ${result.confidence}`);
 
-        return { success: true, result };
+        if (result.status === "ok") {
+            console.log(`✓ ${entry.name} succeeded in ${elapsed}ms`);
+            console.log(`  Confidence: ${result.confidence}`);
+        } else {
+            console.log(`⚠ ${entry.name} using fallback (${elapsed}ms)`);
+            console.log(`  Reason: ${result.reason || "unknown"}`);
+        }
+
+        return { name: entry.name, result };
     } catch (error) {
+        // This should never happen since providers now never throw
+        // But just in case, create an emergency fallback
         const elapsed = Date.now() - startTime;
-        console.error(`✗ ${entry.name} failed after ${elapsed}ms`);
+        console.error(`✗ ${entry.name} unexpected error after ${elapsed}ms`);
         console.error(`  Error: ${error instanceof Error ? error.message : String(error)}`);
 
-        return { success: false, error: error instanceof Error ? error : new Error(String(error)) };
+        // Create minimal fallback
+        const result: ProviderResult = {
+            game: entry.name.toLowerCase().replace(/\s+/g, "-"),
+            type: "unknown",
+            title: entry.name,
+            nextEventUtc: null,
+            lastUpdatedUtc: new Date().toISOString(),
+            source: null,
+            confidence: "none",
+            status: "unavailable",
+            reason: error instanceof Error ? error.message : String(error)
+        };
+
+        return { name: entry.name, result };
     }
 }
 
 /**
- * Main orchestration function
+ * Main orchestration function - always exits 0 for provider issues
  */
 async function main() {
     console.log("=".repeat(60));
     console.log("NextReset Data Refresh");
     console.log("=".repeat(60));
 
-    ensureDataDir();
+    try {
+        ensureDataDir();
+    } catch (error) {
+        // This IS a programmer error - can't write files
+        console.error("❌ Fatal: Cannot create data directory");
+        console.error(error);
+        process.exit(1);
+    }
 
-    const results: { name: string; success: boolean; hasFallback: boolean }[] = [];
+    const results: { name: string; result: ProviderResult }[] = [];
 
     // Run providers sequentially to avoid rate limiting
     for (const provider of providers) {
         const outcome = await runProvider(provider);
+        results.push(outcome);
 
-        if (outcome.success && outcome.result) {
-            // Success: write the data
-            writeProviderData(outcome.result);
-            results.push({ name: provider.name, success: true, hasFallback: true });
-        } else {
-            // Failure: check if we have existing JSON
-            // We need to infer game/type from provider name (or we could track it differently)
-            // For now, we'll mark as failure and check existence later
-
-            const hasFallback = false; // We'll need to check this properly
-            results.push({ name: provider.name, success: false, hasFallback });
+        // Write result (success or fallback)
+        try {
+            writeProviderResult(outcome.result);
+        } catch (error) {
+            // This IS a programmer error - can't write files
+            console.error(`❌ Fatal: Cannot write ${outcome.result.game}.${outcome.result.type}.json`);
+            console.error(error);
+            process.exit(1);
         }
     }
 
@@ -127,34 +124,27 @@ async function main() {
     console.log("Summary");
     console.log("=".repeat(60));
 
-    const successCount = results.filter(r => r.success).length;
-    const failureCount = results.filter(r => !r.success).length;
-    const missingData = results.filter(r => !r.success && !r.hasFallback);
+    const freshCount = results.filter(r => r.result.status === "ok").length;
+    const staleCount = results.filter(r => r.result.status === "stale").length;
+    const unavailableCount = results.filter(r => r.result.status === "unavailable" || !r.result.status).length;
 
     console.log(`Total: ${providers.length} providers`);
-    console.log(`✓ Success: ${successCount}`);
-    console.log(`✗ Failed: ${failureCount}`);
+    console.log(`✓ Fresh: ${freshCount}`);
+    console.log(`⚠ Stale: ${staleCount}`);
+    console.log(`✗ Unavailable: ${unavailableCount}`);
 
-    if (missingData.length > 0) {
-        console.log(`\n⚠ Missing data (no fallback):`);
-        missingData.forEach(r => console.log(`  - ${r.name}`));
+    // Show fallback details
+    const fallbacks = results.filter(r => r.result.status !== "ok");
+    if (fallbacks.length > 0) {
+        console.log("\nFallback providers:");
+        fallbacks.forEach(f => {
+            const status = f.result.status === "stale" ? "stale" : "unavailable";
+            console.log(`  - ${f.name} (${status}): ${f.result.reason || "no reason"}`);
+        });
     }
 
-    // Exit policy:
-    // Exit 1 if any provider is missing JSON (no fallback data)
-    // Exit 0 if at least one provider succeeded
-
-    if (missingData.length > 0) {
-        console.error(`\n❌ Exiting with error: ${missingData.length} provider(s) have no data`);
-        process.exit(1);
-    }
-
-    if (successCount === 0) {
-        console.error(`\n❌ Exiting with error: No providers succeeded`);
-        process.exit(1);
-    }
-
-    console.log(`\n✓ Refresh completed successfully`);
+    // Always exit 0 - we wrote all JSON files
+    console.log(`\n✓ Refresh completed (${freshCount} fresh, ${staleCount + unavailableCount} fallback)`);
     process.exit(0);
 }
 

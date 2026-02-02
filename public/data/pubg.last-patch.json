@@ -1,0 +1,11 @@
+{
+  "game": "pubg",
+  "type": "last-patch",
+  "title": "PUBG Last Patch",
+  "nextEventUtc": null,
+  "lastUpdatedUtc": "2026-02-02T07:57:30.704Z",
+  "source": null,
+  "confidence": "none",
+  "status": "unavailable",
+  "reason": "Could not extract patch date from PUBG news page"
+}

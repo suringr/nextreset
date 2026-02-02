@@ -1,81 +1,88 @@
-import fetch from "node-fetch";
-import * as cheerio from "cheerio";
-import { ProviderResult } from "../types";
-
 /**
  * VALORANT Last Patch Provider
  * 
  * Fetches latest patch date from official patch notes
  */
+
+import * as cheerio from "cheerio";
+import { ProviderResult, ProviderMeta } from "../types";
+import { fetchWithRetry } from "../lib/http";
+import { readLastGood, buildFallback } from "../lib/data-output";
+
+const META: ProviderMeta = {
+    game: "valorant",
+    type: "last-patch",
+    title: "VALORANT Last Patch"
+};
+
 export async function run(): Promise<ProviderResult> {
     const url = "https://playvalorant.com/en-us/news/game-updates/";
 
-    const response = await fetch(url, {
-        headers: {
-            "User-Agent": "NextReset/1.0 (+https://nextreset.co)",
-            "Accept-Language": "en-US"
-        },
-        timeout: 15000
-    });
+    try {
+        const response = await fetchWithRetry(url);
 
-    if (!response.ok) {
-        throw new Error(`Failed to fetch VALORANT patch notes: ${response.status}`);
-    }
+        if (!response.ok) {
+            const reason = response.error || `HTTP ${response.status}`;
+            const lastGood = readLastGood(META.game, META.type);
+            return buildFallback(META, `Failed to fetch VALORANT patch notes: ${reason}`, lastGood);
+        }
 
-    const html = await response.text();
-    const $ = cheerio.load(html);
+        const $ = cheerio.load(response.text);
 
-    // Look for the most recent patch note article
-    let lastPatchDate: Date | null = null;
-    let patchTitle = "";
+        let lastPatchDate: Date | null = null;
+        let patchTitle = "";
 
-    // Find article cards or links
-    $("article, .article-card, a[href*='patch-notes']").slice(0, 10).each((_, elem) => {
-        const $elem = $(elem);
+        $("article, .article-card, a[href*='patch-notes']").slice(0, 10).each((_, elem) => {
+            const $elem = $(elem);
 
-        // Look for time element
-        const timeEl = $elem.find("time").first();
-        if (timeEl.length > 0) {
-            const datetime = timeEl.attr("datetime");
-            if (datetime) {
-                const date = new Date(datetime);
-                if (!lastPatchDate || date > lastPatchDate) {
+            const timeEl = $elem.find("time").first();
+            if (timeEl.length > 0) {
+                const datetime = timeEl.attr("datetime");
+                if (datetime) {
+                    const date = new Date(datetime);
+                    if (!lastPatchDate || date > lastPatchDate) {
+                        lastPatchDate = date;
+                        patchTitle = $elem.find("h2, h3, .title").first().text().trim();
+                    }
+                }
+            }
+
+            const text = $elem.text();
+            const dateMatch = text.match(/(\d{4}[-/]\d{2}[-/]\d{2})|([A-Z][a-z]+\s+\d{1,2},?\s+\d{4})/);
+            if (dateMatch && !lastPatchDate) {
+                const dateStr = dateMatch[1] || dateMatch[2];
+                const date = new Date(dateStr);
+                if (!isNaN(date.getTime())) {
                     lastPatchDate = date;
                     patchTitle = $elem.find("h2, h3, .title").first().text().trim();
                 }
             }
+        });
+
+        if (!lastPatchDate) {
+            const lastGood = readLastGood(META.game, META.type);
+            return buildFallback(META, "Could not extract patch date from VALORANT news page", lastGood);
         }
 
-        // Alternative: look for date in text
-        const text = $elem.text();
-        const dateMatch = text.match(/(\d{4}[-/]\d{2}[-/]\d{2})|([A-Z][a-z]+\s+\d{1,2},?\s+\d{4})/);
-        if (dateMatch && !lastPatchDate) {
-            const dateStr = dateMatch[1] || dateMatch[2];
-            const date = new Date(dateStr);
-            if (!isNaN(date.getTime())) {
-                lastPatchDate = date;
-                patchTitle = $elem.find("h2, h3, .title").first().text().trim();
-            }
-        }
-    });
+        const patchDate = lastPatchDate as Date;
 
-    if (!lastPatchDate) {
-        throw new Error("Could not extract patch date from VALOR ANT news page");
+        return {
+            game: META.game,
+            type: META.type,
+            title: META.title,
+            nextEventUtc: patchDate.toISOString(),
+            lastUpdatedUtc: new Date().toISOString(),
+            source: {
+                name: "VALORANT - Patch Notes",
+                url: url
+            },
+            confidence: "medium",
+            status: "ok",
+            notes: patchTitle || undefined
+        };
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        const lastGood = readLastGood(META.game, META.type);
+        return buildFallback(META, reason, lastGood);
     }
-
-    const patchDate = lastPatchDate as Date;
-
-    return {
-        game: "valorant",
-        type: "last-patch",
-        title: "VALORANT Last Patch",
-        nextEventUtc: patchDate.toISOString(),
-        lastUpdatedUtc: new Date().toISOString(),
-        source: {
-            name: "VALORANT - Patch Notes",
-            url: url
-        },
-        confidence: "medium",
-        notes: patchTitle || undefined
-    };
 }

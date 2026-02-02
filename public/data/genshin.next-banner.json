@@ -1,0 +1,11 @@
+{
+  "game": "genshin",
+  "type": "next-banner",
+  "title": "Genshin Impact Next Banner End",
+  "nextEventUtc": null,
+  "lastUpdatedUtc": "2026-02-02T07:57:30.162Z",
+  "source": null,
+  "confidence": "none",
+  "status": "unavailable",
+  "reason": "Could not extract banner end date from Genshin Impact notices"
+}

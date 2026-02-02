@@ -3,10 +3,11 @@
   "type": "last-patch",
   "title": "VALORANT Last Patch",
   "nextEventUtc": "2026-01-20T14:00:00.000Z",
-  "lastUpdatedUtc": "2026-02-02T07:34:04.926Z",
+  "lastUpdatedUtc": "2026-02-02T07:57:28.329Z",
   "source": {
     "name": "VALORANT - Patch Notes",
     "url": "https://playvalorant.com/en-us/news/game-updates/"
   },
-  "confidence": "medium"
+  "confidence": "medium",
+  "status": "ok"
 }

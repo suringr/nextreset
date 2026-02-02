@@ -1,0 +1,11 @@
+{
+  "game": "lol",
+  "type": "next-patch",
+  "title": "League of Legends Next Patch",
+  "nextEventUtc": null,
+  "lastUpdatedUtc": "2026-02-02T07:57:27.535Z",
+  "source": null,
+  "confidence": "none",
+  "status": "unavailable",
+  "reason": "Failed to fetch LoL patch schedule: HTTP 403"
+}
