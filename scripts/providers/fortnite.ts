@@ -29,6 +29,7 @@ export async function run(): Promise<ProviderResult> {
 
         // Use fetchHtml with browser fallback
         const response = await fetchHtml(SOURCE_URL, {
+            providerId: META.provider_id,
             useBrowserOnBlocked: true,
             timeout: 30000
         });

@@ -21,7 +21,7 @@ export async function run(): Promise<ProviderResult> {
 
     try {
         // Try HTTP first
-        const response = await fetchHtml(listingUrl, { useBrowserOnBlocked: false });
+        const response = await fetchHtml(listingUrl, { providerId: META.provider_id, useBrowserOnBlocked: false });
 
         if (!response.ok && (response.status === 403 || response.status === 429)) {
             console.log(`[Minecraft] Listing blocked (${response.status}). Using single browser session...`);
@@ -135,7 +135,7 @@ async function parseWithHtml(html: string, sourceUrl: string, status: number, mo
         const articleUrl = extractArticleUrl(html, sourceUrl);
         if (articleUrl && articleUrl !== sourceUrl) {
             console.log(`[Minecraft] Following link (HTTP): ${articleUrl}`);
-            const articleResponse = await fetchHtml(articleUrl, { useBrowserOnBlocked: true });
+            const articleResponse = await fetchHtml(articleUrl, { providerId: META.provider_id, useBrowserOnBlocked: true });
             if (articleResponse.ok) {
                 return await parseWithHtml(articleResponse.text, articleResponse.url || articleUrl, articleResponse.status, articleResponse.mode);
             }

@@ -21,7 +21,7 @@ export async function run(): Promise<ProviderResult> {
     const listingUrl = "https://pubg.com/en/news?category=patch_notes";
 
     try {
-        const response = await fetchHtml(listingUrl, { useBrowserOnBlocked: true });
+        const response = await fetchHtml(listingUrl, { providerId: META.provider_id, useBrowserOnBlocked: true });
 
         if (!response.ok) {
             const lastGood = readLastGood(META.game, META.type);
@@ -107,7 +107,7 @@ export async function run(): Promise<ProviderResult> {
 
         // Fetch the article page
         console.log(`[PUBG] Following link: ${artUrlStr} (listed on ${finalListingUrl})`);
-        const articleResponse = await fetchHtml(artUrlStr, { useBrowserOnBlocked: true });
+        const articleResponse = await fetchHtml(artUrlStr, { providerId: META.provider_id, useBrowserOnBlocked: true });
 
         if (!articleResponse.ok) {
             const lastGood = readLastGood(META.game, META.type);

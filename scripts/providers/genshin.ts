@@ -20,7 +20,7 @@ export async function run(): Promise<ProviderResult> {
     const url = "https://genshin.hoyoverse.com/en/news";
 
     try {
-        const response = await fetchHtml(url, { useBrowserOnBlocked: true });
+        const response = await fetchHtml(url, { providerId: META.provider_id, useBrowserOnBlocked: true });
 
         if (!response.ok) {
             const lastGood = readLastGood(META.game, META.type);
@@ -65,7 +65,7 @@ export async function run(): Promise<ProviderResult> {
 
         if (articleUrl) {
             console.log(`[Genshin] Following link: ${articleUrl} (from ${finalListingUrl})`);
-            const articleResponse = await fetchHtml(articleUrl, { useBrowserOnBlocked: true });
+            const articleResponse = await fetchHtml(articleUrl, { providerId: META.provider_id, useBrowserOnBlocked: true });
 
             if (articleResponse.ok) {
                 const $art = cheerio.load(articleResponse.text);

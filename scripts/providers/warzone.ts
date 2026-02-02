@@ -25,7 +25,7 @@ export async function run(): Promise<ProviderResult> {
     const url = "https://www.callofduty.com/patchnotes";
 
     try {
-        const response = await fetchHtml(url, { timeout: 15000 });
+        const response = await fetchHtml(url, { providerId: META.provider_id, timeout: 15000 });
 
         if (!response.ok) {
             const lastGood = readLastGood(META.game, META.type);

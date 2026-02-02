@@ -28,6 +28,7 @@ export interface FetchOptions {
     retries?: number;
     useBrowserOnBlocked?: boolean;
     headers?: Record<string, string>;
+    providerId?: string;
 }
 
 export interface FetchResult {
@@ -51,6 +52,9 @@ const DEFAULT_HEADERS = {
  */
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+import * as fs from 'fs/promises';
+import * as path from 'path';
+
 /**
  * Fetch HTML content using native fetch or Playwright
  */
@@ -59,7 +63,8 @@ export async function fetchHtml(url: string, options: FetchOptions = {}): Promis
         timeout = 10000,
         retries = 2,
         useBrowserOnBlocked = false,
-        headers = {}
+        headers = {},
+        providerId
     } = options;
 
     const mergedHeaders = { ...DEFAULT_HEADERS, ...headers };
@@ -94,7 +99,7 @@ export async function fetchHtml(url: string, options: FetchOptions = {}): Promis
                 if (budget.canUse()) {
                     console.log(`[Fetch] ${url} blocked (${response.status}). Retrying via browser...`);
                     budget.use();
-                    return await fetchWithBrowser(url, timeout);
+                    return await fetchWithBrowser(url, timeout, providerId);
                 } else {
                     console.warn(`[Fetch] ${url} blocked, but browser budget exhausted.`);
                     return {
@@ -178,7 +183,13 @@ export async function withBrowserPage<T>(callback: (page: Page) => Promise<T>): 
 /**
  * Fetch using Playwright
  */
-async function fetchWithBrowser(url: string, timeout: number): Promise<FetchResult> {
+async function fetchWithBrowser(url: string, timeout: number, providerId?: string): Promise<FetchResult> {
+    const logPrefix = `[BrowserFetch][${providerId || 'Unknown'}]`;
+    console.log(`${logPrefix} Starting fallback for ${url}`);
+    console.log(`${logPrefix} Time: ${new Date().toISOString()}`);
+    console.log(`${logPrefix} Headless: true`);
+    console.log(`${logPrefix} Node: ${process.version}, Platform: ${process.platform}, Arch: ${process.arch}`);
+
     let browser: Browser | null = null;
     try {
         browser = await chromium.launch({ headless: true });
@@ -187,36 +198,94 @@ async function fetchWithBrowser(url: string, timeout: number): Promise<FetchResu
         });
         const page = await context.newPage();
 
-        // Use 'load' and then wait a bit for dynamic content
-        const response = await page.goto(url, {
-            waitUntil: 'load',
-            timeout: Math.max(timeout, 30000)
-        });
+        let response = null;
+        try {
+            response = await page.goto(url, {
+                waitUntil: 'load',
+                timeout: Math.max(timeout, 30000)
+            });
+        } catch (e) {
+            console.error(`${logPrefix} Navigation failed: ${e}`);
+            throw e;
+        }
+
+        const finalUrl = page.url();
+        const status = response?.status() || 0;
+
+        // Safe headers
+        const headers = response?.headers() || {};
+        const safeHeaders = ['server', 'content-type', 'cf-ray', 'cf-cache-status', 'location'];
+        const loggedHeaders = safeHeaders.reduce((acc, h) => {
+            if (headers[h]) acc[h] = headers[h];
+            return acc;
+        }, {} as Record<string, string>);
+
+        console.log(`${logPrefix} Navigation Complete. Status: ${status}`);
+        console.log(`${logPrefix} Final URL: ${finalUrl}`);
+        console.log(`${logPrefix} Headers: ${JSON.stringify(loggedHeaders)}`);
+
+        // Failure handling
+        const isOk = status >= 200 && status < 300;
+        if (!isOk || status === 403) {
+            console.warn(`${logPrefix} Request failed with status ${status}. Capturing debug info...`);
+
+            try {
+                const title = await page.title();
+                console.log(`${logPrefix} Page Title: ${title}`);
+            } catch (e) { }
+
+            try {
+                const content = await page.content();
+                console.log(`${logPrefix} Content Snippet: ${content.slice(0, 500).replace(/\n/g, ' ')}`);
+
+                // Debug Artifacts
+                const debugDir = path.join(process.cwd(), 'public', 'data', '_debug');
+                try {
+                    await fs.mkdir(debugDir, { recursive: true });
+                } catch { }
+
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const baseFilename = `${providerId || 'unknown'}.${timestamp}`;
+
+                try {
+                    await page.screenshot({ path: path.join(debugDir, `${baseFilename}.png`), fullPage: true });
+                    console.log(`${logPrefix} Saved screenshot to ${baseFilename}.png`);
+                } catch (e) { console.error(`${logPrefix} Failed screenshot: ${e}`); }
+
+                try {
+                    await fs.writeFile(path.join(debugDir, `${baseFilename}.html`), content.slice(0, 50 * 1024));
+                    console.log(`${logPrefix} Saved HTML to ${baseFilename}.html`);
+                } catch (e) { console.error(`${logPrefix} Failed save HTML: ${e}`); }
+
+            } catch (e) {
+                console.error(`${logPrefix} Error capturing debug content: ${e}`);
+            }
+        }
 
         // Small wait for SPAs to render
         await sleep(2000);
 
-        const status = response?.status() || 0;
         const text = await page.content();
 
         await browser.close();
 
         return {
-            ok: status >= 200 && status < 300,
+            ok: isOk,
             status,
             text,
             mode: "browser",
-            url: page.url()
+            url: finalUrl
         };
     } catch (err: any) {
         if (browser) await browser.close();
+        console.error(`${logPrefix} Detailed Error: ${err.stack || err.message}`);
         return {
             ok: false,
             status: 0,
             text: "",
             mode: "browser",
             error: err.message,
-            failureType: FailureType.Blocked // Assume still blocked or unavailable if browser fails
+            failureType: FailureType.Blocked
         };
     }
 }
