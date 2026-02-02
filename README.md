@@ -1,5 +1,7 @@
 # NextReset
 
+🌐 **Live Site: [nextreset.co](https://nextreset.co)**
+
 **Automated game countdown and status tracking website**
 
 NextReset is a fully automated static website that displays countdowns or status pages for popular games. After initial setup, the system requires **zero manual maintenance**.
