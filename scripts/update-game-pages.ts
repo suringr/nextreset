@@ -9,8 +9,8 @@ const publicDir = path.join(__dirname, '../public');
 
 // AdSense Configuration
 const ADSENSE_CLIENT = "ca-pub-8986430839492258";
-const ADSENSE_SLOT_TOP = "TOP_SLOT_ID";
-const ADSENSE_SLOT_BOTTOM = "BOTTOM_SLOT_ID";
+const ADSENSE_SLOT_TOP = "6919083675";
+const ADSENSE_SLOT_BOTTOM = "3246306240";
 
 
 const gamePages = [
