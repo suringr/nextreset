@@ -8,7 +8,7 @@ import * as path from 'path';
 const publicDir = path.join(__dirname, '../public');
 
 const gamePages = [
-  { path: 'fortnite/next-season/index.html', game: 'fortnite', type: 'next-season', typeTitle: 'Next Season', title: 'Fortnite', kicker: 'Battle Royale' },
+  { path: 'fortnite/next-season/index.html', game: 'fortnite', type: 'next-season', typeTitle: 'Season End', title: 'Fortnite', kicker: 'Pacific Break' },
   { path: 'lol/next-patch/index.html', game: 'lol', type: 'next-patch', typeTitle: 'Next Patch', title: 'League of Legends', kicker: 'MOBA' },
   { path: 'valorant/last-patch/index.html', game: 'valorant', type: 'last-patch', typeTitle: 'Last Patch', title: 'VALORANT', kicker: 'Tactical Shooter' },
   { path: 'cs2/last-update/index.html', game: 'cs2', type: 'last-update', typeTitle: 'Last Update', title: 'Counter-Strike 2', kicker: 'Tactical Shooter' },
