@@ -1,11 +1,14 @@
 {
+  "provider_id": "lol",
   "game": "lol",
   "type": "next-patch",
   "title": "League of Legends Next Patch",
-  "nextEventUtc": null,
-  "lastUpdatedUtc": "2026-02-02T12:36:28.394Z",
-  "source": null,
-  "confidence": "none",
-  "status": "unavailable",
-  "reason": "Failed to fetch LoL patch schedule: HTTP 403"
+  "status": "fresh",
+  "nextEventUtc": "2026-02-03T22:00:00.000Z",
+  "fetched_at_utc": "2026-02-02T18:21:20.024Z",
+  "source_url": "https://support-leagueoflegends.riotgames.com/hc/en-us/articles/360018987893-Patch-Schedule-League-of-Legends",
+  "confidence": "high",
+  "http_status": 200,
+  "fetch_mode": "browser",
+  "notes": "Patch 26.03"
 }

@@ -1,6 +1,4 @@
-import * as fs from "fs";
-import * as path from "path";
-import { ProviderResult } from "./types";
+import { ProviderResult, FailureType } from "./types";
 import { writeProviderResult, ensureDataDir } from "./lib/data-output";
 
 /**
@@ -51,12 +49,18 @@ async function runProvider(entry: ProviderEntry): Promise<{ name: string; result
         const result = await entry.run();
         const elapsed = Date.now() - startTime;
 
-        if (result.status === "ok") {
-            console.log(`✓ ${entry.name} succeeded in ${elapsed}ms`);
+        const modeStr = result.fetch_mode ? ` [${result.fetch_mode.toUpperCase()}]` : "";
+        const statusStr = result.http_status ? ` (HTTP ${result.http_status})` : "";
+
+        if (result.status === "fresh") {
+            console.log(`✓ ${entry.name} succeeded in ${elapsed}ms${modeStr}${statusStr}`);
             console.log(`  Confidence: ${result.confidence}`);
+        } else if (result.status === "stale") {
+            console.log(`⚠ ${entry.name} using stale data (${elapsed}ms)${modeStr}${statusStr}`);
+            console.log(`  Reason: ${result.reason}`);
         } else {
-            console.log(`⚠ ${entry.name} using fallback (${elapsed}ms)`);
-            console.log(`  Reason: ${result.reason || "unknown"}`);
+            console.log(`✗ ${entry.name} failed (${elapsed}ms)${modeStr}${statusStr}`);
+            console.log(`  Failure: ${result.failure_type} - ${result.explanation}`);
         }
 
         return { name: entry.name, result };
@@ -69,15 +73,15 @@ async function runProvider(entry: ProviderEntry): Promise<{ name: string; result
 
         // Create minimal fallback
         const result: ProviderResult = {
+            provider_id: entry.name.toLowerCase().replace(/\s+/g, "-"),
             game: entry.name.toLowerCase().replace(/\s+/g, "-"),
             type: "unknown",
             title: entry.name,
+            status: "fallback",
             nextEventUtc: null,
-            lastUpdatedUtc: new Date().toISOString(),
-            source: null,
-            confidence: "none",
-            status: "unavailable",
-            reason: error instanceof Error ? error.message : String(error)
+            failure_type: FailureType.Unavailable,
+            explanation: error instanceof Error ? error.message : String(error),
+            fetched_at_utc: new Date().toISOString()
         };
 
         return { name: entry.name, result };
@@ -113,7 +117,7 @@ async function main() {
             writeProviderResult(outcome.result);
         } catch (error) {
             // This IS a programmer error - can't write files
-            console.error(`❌ Fatal: Cannot write ${outcome.result.game}.${outcome.result.type}.json`);
+            console.error(`❌ Fatal: Cannot write result for ${outcome.name}`);
             console.error(error);
             process.exit(1);
         }
@@ -124,27 +128,26 @@ async function main() {
     console.log("Summary");
     console.log("=".repeat(60));
 
-    const freshCount = results.filter(r => r.result.status === "ok").length;
+    const freshCount = results.filter(r => r.result.status === "fresh").length;
     const staleCount = results.filter(r => r.result.status === "stale").length;
-    const unavailableCount = results.filter(r => r.result.status === "unavailable" || !r.result.status).length;
+    const fallbackCount = results.filter(r => r.result.status === "fallback").length;
 
     console.log(`Total: ${providers.length} providers`);
     console.log(`✓ Fresh: ${freshCount}`);
     console.log(`⚠ Stale: ${staleCount}`);
-    console.log(`✗ Unavailable: ${unavailableCount}`);
+    console.log(`✗ Fallback: ${fallbackCount}`);
 
     // Show fallback details
-    const fallbacks = results.filter(r => r.result.status !== "ok");
+    const fallbacks = results.filter(r => r.result.status === "fallback") as { name: string; result: Extract<ProviderResult, { status: "fallback" }> }[];
     if (fallbacks.length > 0) {
         console.log("\nFallback providers:");
         fallbacks.forEach(f => {
-            const status = f.result.status === "stale" ? "stale" : "unavailable";
-            console.log(`  - ${f.name} (${status}): ${f.result.reason || "no reason"}`);
+            console.log(`  - ${f.name}: [${f.result.failure_type}] ${f.result.explanation}`);
         });
     }
 
     // Always exit 0 - we wrote all JSON files
-    console.log(`\n✓ Refresh completed (${freshCount} fresh, ${staleCount + unavailableCount} fallback)`);
+    console.log(`\n✓ Refresh completed (${freshCount} fresh, ${staleCount + fallbackCount} fallback/stale)`);
     process.exit(0);
 }
 

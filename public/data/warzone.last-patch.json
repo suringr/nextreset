@@ -1,13 +1,13 @@
 {
+  "provider_id": "warzone",
   "game": "warzone",
   "type": "last-patch",
   "title": "Call of Duty Warzone Last Patch",
-  "nextEventUtc": "2025-12-16T00:00:00.000Z",
-  "lastUpdatedUtc": "2026-02-02T12:36:29.329Z",
-  "source": {
-    "name": "Call of Duty - Patch Notes",
-    "url": "https://www.callofduty.com/patchnotes"
-  },
+  "status": "fresh",
+  "nextEventUtc": "2025-12-15T22:00:00.000Z",
+  "fetched_at_utc": "2026-02-02T18:21:31.040Z",
+  "source_url": "https://www.callofduty.com/patchnotes",
   "confidence": "medium",
-  "status": "ok"
+  "http_status": 200,
+  "fetch_mode": "http"
 }

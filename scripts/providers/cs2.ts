@@ -5,29 +5,33 @@
  */
 
 import { XMLParser } from "fast-xml-parser";
-import { ProviderResult, ProviderMeta } from "../types";
-import { fetchWithRetry } from "../lib/http";
+import { FailureType, Confidence, ProviderResult, ProviderMetadata } from "../types";
+import { fetchHtml } from "../lib/fetch-layer";
 import { readLastGood, buildFallback } from "../lib/data-output";
 
-const META: ProviderMeta = {
+const META: ProviderMetadata = {
+    provider_id: "cs2",
     game: "cs2",
     type: "last-update",
     title: "Counter-Strike 2 Last Update"
 };
 
-/**
- * Safe run function - never throws
- */
 export async function run(): Promise<ProviderResult> {
     const url = "https://store.steampowered.com/feeds/news/app/730/?l=english";
 
     try {
-        const response = await fetchWithRetry(url);
+        const response = await fetchHtml(url);
 
         if (!response.ok) {
-            const reason = response.error || `HTTP ${response.status}`;
             const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(META, `Failed to fetch CS2 RSS: ${reason}`, lastGood);
+            return buildFallback(
+                META,
+                response.failureType || FailureType.Unavailable,
+                response.error || `HTTP ${response.status}`,
+                lastGood,
+                response.status,
+                response.mode
+            );
         }
 
         // Parse RSS/XML
@@ -39,7 +43,14 @@ export async function run(): Promise<ProviderResult> {
 
         if (!items || !Array.isArray(items) || items.length === 0) {
             const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(META, "No items found in CS2 RSS feed", lastGood);
+            return buildFallback(
+                META,
+                FailureType.ParseFailed,
+                "No items found in CS2 RSS feed",
+                lastGood,
+                response.status,
+                response.mode
+            );
         }
 
         // Get the first (most recent) item's pubDate
@@ -48,7 +59,14 @@ export async function run(): Promise<ProviderResult> {
 
         if (!pubDate) {
             const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(META, "No pubDate found in latest CS2 news item", lastGood);
+            return buildFallback(
+                META,
+                FailureType.ParseFailed,
+                "No pubDate found in latest CS2 news item",
+                lastGood,
+                response.status,
+                response.mode
+            );
         }
 
         // Parse date and convert to ISO 8601 UTC
@@ -56,26 +74,30 @@ export async function run(): Promise<ProviderResult> {
 
         if (isNaN(lastUpdateDate.getTime())) {
             const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(META, `Invalid date format in CS2 RSS: ${pubDate}`, lastGood);
+            return buildFallback(
+                META,
+                FailureType.ParseFailed,
+                `Invalid date format in CS2 RSS: ${pubDate}`,
+                lastGood,
+                response.status,
+                response.mode
+            );
         }
 
         return {
-            game: META.game,
-            type: META.type,
-            title: META.title,
+            ...META,
+            status: "fresh",
             nextEventUtc: lastUpdateDate.toISOString(),
-            lastUpdatedUtc: new Date().toISOString(),
-            source: {
-                name: "Steam Store - CS2 News",
-                url: "https://store.steampowered.com/news/app/730"
-            },
-            confidence: "high",
-            status: "ok",
+            fetched_at_utc: new Date().toISOString(),
+            source_url: "https://store.steampowered.com/news/app/730",
+            confidence: Confidence.High,
+            http_status: response.status,
+            fetch_mode: response.mode,
             notes: latestItem.title ? `Latest: ${latestItem.title}` : undefined
         };
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         const lastGood = readLastGood(META.game, META.type);
-        return buildFallback(META, reason, lastGood);
+        return buildFallback(META, FailureType.Unavailable, reason, lastGood);
     }
 }

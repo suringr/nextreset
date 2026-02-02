@@ -1,14 +1,14 @@
 {
+  "provider_id": "roblox",
   "game": "roblox",
   "type": "status",
   "title": "Roblox Service Status",
+  "status": "fresh",
   "nextEventUtc": "2026-01-31T21:55:58.697Z",
-  "lastUpdatedUtc": "2026-02-02T12:36:29.104Z",
-  "source": {
-    "name": "Roblox Status Page",
-    "url": "https://status.roblox.com"
-  },
+  "fetched_at_utc": "2026-02-02T18:21:30.620Z",
+  "source_url": "https://status.roblox.com",
   "confidence": "high",
-  "status": "ok",
+  "http_status": 200,
+  "fetch_mode": "http",
   "notes": "Current status: Operational"
 }

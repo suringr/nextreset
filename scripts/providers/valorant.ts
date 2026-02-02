@@ -5,11 +5,12 @@
  */
 
 import * as cheerio from "cheerio";
-import { ProviderResult, ProviderMeta } from "../types";
-import { fetchWithRetry } from "../lib/http";
+import { FailureType, Confidence, ProviderResult, ProviderMetadata } from "../types";
+import { fetchHtml } from "../lib/fetch-layer";
 import { readLastGood, buildFallback } from "../lib/data-output";
 
-const META: ProviderMeta = {
+const META: ProviderMetadata = {
+    provider_id: "valorant",
     game: "valorant",
     type: "last-patch",
     title: "VALORANT Last Patch"
@@ -19,12 +20,18 @@ export async function run(): Promise<ProviderResult> {
     const url = "https://playvalorant.com/en-us/news/game-updates/";
 
     try {
-        const response = await fetchWithRetry(url);
+        const response = await fetchHtml(url);
 
         if (!response.ok) {
-            const reason = response.error || `HTTP ${response.status}`;
             const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(META, `Failed to fetch VALORANT patch notes: ${reason}`, lastGood);
+            return buildFallback(
+                META,
+                response.failureType || FailureType.Unavailable,
+                response.error || `HTTP ${response.status}`,
+                lastGood,
+                response.status,
+                response.mode
+            );
         }
 
         const $ = cheerio.load(response.text);
@@ -47,42 +54,48 @@ export async function run(): Promise<ProviderResult> {
                 }
             }
 
-            const text = $elem.text();
-            const dateMatch = text.match(/(\d{4}[-/]\d{2}[-/]\d{2})|([A-Z][a-z]+\s+\d{1,2},?\s+\d{4})/);
-            if (dateMatch && !lastPatchDate) {
-                const dateStr = dateMatch[1] || dateMatch[2];
-                const date = new Date(dateStr);
-                if (!isNaN(date.getTime())) {
-                    lastPatchDate = date;
-                    patchTitle = $elem.find("h2, h3, .title").first().text().trim();
+            if (!lastPatchDate) {
+                const text = $elem.text();
+                const dateMatch = text.match(/(\d{4}[-/]\d{2}[-/]\d{2})|([A-Z][a-z]+\s+\d{1,2},?\s+\d{4})/);
+                if (dateMatch) {
+                    const dateStr = dateMatch[1] || dateMatch[2];
+                    const date = new Date(dateStr);
+                    if (!isNaN(date.getTime())) {
+                        lastPatchDate = date;
+                        patchTitle = $elem.find("h2, h3, .title").first().text().trim();
+                    }
                 }
             }
         });
 
         if (!lastPatchDate) {
             const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(META, "Could not extract patch date from VALORANT news page", lastGood);
+            return buildFallback(
+                META,
+                FailureType.ParseFailed,
+                "Could not extract patch date from VALORANT news page",
+                lastGood,
+                response.status,
+                response.mode
+            );
         }
 
-        const patchDate = lastPatchDate as Date;
+        const finalDate = lastPatchDate as Date;
 
         return {
-            game: META.game,
-            type: META.type,
-            title: META.title,
-            nextEventUtc: patchDate.toISOString(),
-            lastUpdatedUtc: new Date().toISOString(),
-            source: {
-                name: "VALORANT - Patch Notes",
-                url: url
-            },
-            confidence: "medium",
-            status: "ok",
+            ...META,
+            status: "fresh",
+            nextEventUtc: finalDate.toISOString(),
+            fetched_at_utc: new Date().toISOString(),
+            source_url: url,
+            confidence: Confidence.Medium,
+            http_status: response.status,
+            fetch_mode: response.mode,
             notes: patchTitle || undefined
         };
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         const lastGood = readLastGood(META.game, META.type);
-        return buildFallback(META, reason, lastGood);
+        return buildFallback(META, FailureType.Unavailable, reason, lastGood);
     }
 }

@@ -74,7 +74,8 @@ function formatTimeSince(isoString) {
 function isDataUnavailable(data) {
     return !data.nextEventUtc ||
         data.confidence === 'none' ||
-        data.status === 'unavailable';
+        data.status === 'unavailable' ||
+        data.status === 'fallback';
 }
 
 // Update countdown display
@@ -113,15 +114,22 @@ function updateCountdown(data) {
         }
 
         if (updatedEl) {
-            updatedEl.textContent = formatTimeSince(data.lastUpdatedUtc);
+            const lastUpdated = data.fetched_at_utc || data.lastUpdatedUtc;
+            updatedEl.textContent = lastUpdated ? formatTimeSince(lastUpdated) : 'Never';
         }
 
         return; // Don't start countdown
     }
 
     // Update source
-    if (sourceEl && data.source) {
-        sourceEl.innerHTML = `<a href="${data.source.url}" target="_blank" rel="noopener">${data.source.name}</a>`;
+    if (sourceEl) {
+        const sourceUrl = data.source_url || data.source?.url;
+        const sourceName = data.title || data.source?.name || 'Official Source';
+        if (sourceUrl) {
+            sourceEl.innerHTML = `<a href="${sourceUrl}" target="_blank" rel="noopener">${sourceName}</a>`;
+        } else {
+            sourceEl.textContent = sourceName;
+        }
     }
 
     // Update confidence
@@ -149,6 +157,10 @@ function updateCountdown(data) {
         const isFuture = diff > 0;
 
         if (countdownEl) {
+            const diff = getTimeDifference(data.nextEventUtc);
+            const isFuture = diff > 0;
+            const isUpcoming = data.type?.startsWith('next-') || data.type?.includes('reset');
+
             const formattedTime = formatDuration(diff);
             const label = isFuture ? 'Time Until Event' : 'Time Since Event';
             let valueClass = isFuture ? 'countdown-value' : 'countdown-value elapsed';
@@ -158,14 +170,22 @@ function updateCountdown(data) {
                 valueClass += ' stale';
             }
 
-            countdownEl.innerHTML = `
-                <div class="countdown-label">${label}</div>
-                <div class="${valueClass}">${formattedTime}</div>
-            `;
+            if (!isFuture && isUpcoming) {
+                countdownEl.innerHTML = `
+                    <div class="countdown-label">Status</div>
+                    <div class="${valueClass}">Updating...</div>
+                `;
+            } else {
+                countdownEl.innerHTML = `
+                    <div class="countdown-label">${label}</div>
+                    <div class="${valueClass}">${formattedTime}</div>
+                `;
+            }
         }
 
         if (updatedEl) {
-            updatedEl.textContent = formatTimeSince(data.lastUpdatedUtc);
+            const lastUpdated = data.fetched_at_utc || data.lastUpdatedUtc;
+            updatedEl.textContent = lastUpdated ? formatTimeSince(lastUpdated) : 'Never';
         }
     }
 
@@ -260,6 +280,7 @@ function renderCard(card, data) {
     // Update card state
     card.dataset.state = state;
     card.dataset.nextUtc = data?.nextEventUtc || '';
+    card.dataset.type = data?.type || '';
 
     // Update badge
     if (badgeEl) {
@@ -271,7 +292,9 @@ function renderCard(card, data) {
     if (countdownEl) {
         if (data && !isDataUnavailable(data)) {
             const diff = getTimeDifference(data.nextEventUtc);
-            if (diff <= 0) {
+            const isUpcoming = data.type?.startsWith('next-') || data.type?.includes('reset');
+
+            if (diff <= 0 && isUpcoming) {
                 countdownEl.innerHTML = 'Updating...';
             } else {
                 countdownEl.innerHTML = formatCardDuration(diff);
@@ -282,8 +305,9 @@ function renderCard(card, data) {
     }
 
     // Update last checked
-    if (lastCheckedEl && data?.lastUpdatedUtc) {
-        lastCheckedEl.textContent = `Checked ${formatTimeSince(data.lastUpdatedUtc)}`;
+    const lastUpdated = data?.fetched_at_utc || data?.lastUpdatedUtc;
+    if (lastCheckedEl && lastUpdated) {
+        lastCheckedEl.textContent = `Checked ${formatTimeSince(lastUpdated)}`;
     }
 }
 
@@ -319,7 +343,9 @@ function updateHomepageCountdowns() {
         if (!countdownEl) return;
 
         const diff = getTimeDifference(nextUtc);
-        if (diff <= 0) {
+        const isUpcoming = card.dataset.type?.startsWith('next-') || card.dataset.type?.includes('reset');
+
+        if (diff <= 0 && isUpcoming) {
             countdownEl.innerHTML = 'Updating...';
         } else {
             countdownEl.innerHTML = formatCardDuration(diff);
