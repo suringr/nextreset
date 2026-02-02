@@ -1,16 +1,14 @@
-name: Refresh Game Data
+name: Build & Publish Dist
 
 on:
   pull_request:
-    branches: [ main ]
-  push:
     branches: [ main ]
   schedule:
     - cron: "0 */6 * * *"
   workflow_dispatch:
 
 concurrency:
-  group: refresh-game-data
+  group: publish-dist
   cancel-in-progress: true
 
 jobs:
@@ -31,25 +29,25 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-  refresh:
-    name: Refresh + commit (schedule/manual/push)
+  publish:
+    name: Build site + publish dist (schedule/manual)
     if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
-      - name: Install dependencies
+      - name: Install deps
         run: npm ci
 
       - name: Cache Playwright browsers
@@ -58,28 +56,32 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
 
-      - name: Install Playwright Browsers
+      - name: Install Playwright Chromium
         run: npx playwright install chromium
 
-      - name: Build TypeScript
-        run: npm run build
+      # This runs: build (tsc) + refresh:data + export:site => dist/
+      - name: Build site (includes refresh)
+        run: npm run build:site
 
-      - name: Refresh game data
-        run: npm run refresh:data
-        continue-on-error: true
-
-      - name: Commit and push if changes
+      - name: Publish dist/ to gh-pages
         run: |
           set -e
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
 
-          git add public/data/*.json
+          # copy dist aside
+          rm -rf /tmp/dist
+          cp -R dist /tmp/dist
 
-          if git diff --cached --quiet; then
-            echo "No changes to commit."
-            exit 0
-          fi
+          # create orphan gh-pages
+          git checkout --orphan gh-pages
+          git reset --hard
+          rm -rf *
 
-          git commit -m "chore(data): refresh game data"
-          git push
+          # move dist to repo root
+          cp -R /tmp/dist/* .
+          touch .nojekyll
+
+          git add -A
+          git commit -m "chore(site): publish dist" || echo "No changes to commit"
+          git push -f origin gh-pages
