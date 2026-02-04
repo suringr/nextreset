@@ -7,7 +7,6 @@
 import * as cheerio from "cheerio";
 import { FailureType, Confidence, ProviderResult, ProviderMetadata } from "../types";
 import { fetchHtml } from "../lib/fetch-layer";
-import { readLastGood, buildFallback } from "../lib/data-output";
 
 const META: ProviderMetadata = {
     provider_id: "genshin",
@@ -23,15 +22,7 @@ export async function run(): Promise<ProviderResult> {
         const response = await fetchHtml(url, { providerId: META.provider_id, useBrowserOnBlocked: true });
 
         if (!response.ok) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(
-                META,
-                response.failureType || FailureType.Unavailable,
-                response.error || `HTTP ${response.status}`,
-                lastGood,
-                response.status,
-                response.mode
-            );
+            throw new Error(response.error || `HTTP ${response.status}`);
         }
 
         const $ = cheerio.load(response.text);
@@ -107,15 +98,7 @@ export async function run(): Promise<ProviderResult> {
         }
 
         if (!bannerEndDate) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(
-                META,
-                FailureType.ParseFailed,
-                `Could not extract explicit banner end date from Genshin news. Source: ${articleUrl || finalListingUrl}`,
-                lastGood,
-                response.status,
-                response.mode
-            );
+            throw new Error(`Could not extract explicit banner end date from Genshin news. Source: ${articleUrl || finalListingUrl}`);
         }
 
         return {
@@ -123,6 +106,7 @@ export async function run(): Promise<ProviderResult> {
             status: "fresh",
             nextEventUtc: bannerEndDate.toISOString(),
             fetched_at_utc: now.toISOString(),
+            last_success_at_utc: now.toISOString(),
             source_url: articleUrl || finalListingUrl,
             confidence: Confidence.Medium,
             http_status: response.status,
@@ -130,8 +114,6 @@ export async function run(): Promise<ProviderResult> {
             notes: bannerName || undefined
         };
     } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        const lastGood = readLastGood(META.game, META.type);
-        return buildFallback(META, FailureType.Unavailable, reason, lastGood);
+        throw error;
     }
 }

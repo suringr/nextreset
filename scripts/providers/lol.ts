@@ -7,7 +7,6 @@
 import * as cheerio from "cheerio";
 import { FailureType, Confidence, ProviderResult, ProviderMetadata } from "../types";
 import { fetchHtml } from "../lib/fetch-layer";
-import { readLastGood, buildFallback } from "../lib/data-output";
 
 const META: ProviderMetadata = {
     provider_id: "lol",
@@ -28,15 +27,7 @@ export async function run(): Promise<ProviderResult> {
         const response = await fetchHtml(url, { providerId: META.provider_id, useBrowserOnBlocked: true });
 
         if (!response.ok) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(
-                META,
-                response.failureType || FailureType.Unavailable,
-                response.error || `HTTP ${response.status}`,
-                lastGood,
-                response.status,
-                response.mode
-            );
+            throw new Error(response.error || `HTTP ${response.status}`);
         }
 
         const $ = cheerio.load(response.text);
@@ -85,15 +76,7 @@ export async function run(): Promise<ProviderResult> {
         }
 
         if (!bestPatch) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(
-                META,
-                FailureType.ParseFailed,
-                `Could not find upcoming patch date in schedule table. Source: ${finalSourceUrl}`,
-                lastGood,
-                response.status,
-                response.mode
-            );
+            throw new Error(`Could not find upcoming patch date in schedule table. Source: ${finalSourceUrl}`);
         }
 
         const finalPatch = bestPatch as PatchInfo;
@@ -103,6 +86,7 @@ export async function run(): Promise<ProviderResult> {
             status: "fresh",
             nextEventUtc: finalPatch.date.toISOString(),
             fetched_at_utc: now.toISOString(),
+            last_success_at_utc: now.toISOString(),
             source_url: finalSourceUrl,
             confidence: Confidence.High,
             http_status: response.status,
@@ -110,8 +94,6 @@ export async function run(): Promise<ProviderResult> {
             notes: finalPatch.patchName ? `Patch ${finalPatch.patchName}` : undefined
         };
     } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        const lastGood = readLastGood(META.game, META.type);
-        return buildFallback(META, FailureType.Unavailable, reason, lastGood);
+        throw error;
     }
 }

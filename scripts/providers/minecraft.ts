@@ -7,7 +7,6 @@
 import * as cheerio from "cheerio";
 import { FailureType, Confidence, ProviderResult, ProviderMetadata } from "../types";
 import { fetchHtml, withBrowserPage, sleep } from "../lib/fetch-layer";
-import { readLastGood, buildFallback } from "../lib/data-output";
 
 const META: ProviderMetadata = {
     provider_id: "minecraft",
@@ -29,24 +28,14 @@ export async function run(): Promise<ProviderResult> {
         }
 
         if (!response.ok) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(
-                META,
-                response.failureType || FailureType.Unavailable,
-                response.error || `HTTP ${response.status}`,
-                lastGood,
-                response.status,
-                response.mode
-            );
+            throw new Error(response.error || `HTTP ${response.status}`);
         }
 
         // Proceed with standard HTTP flow
         return await parseWithHtml(response.text, response.url || listingUrl, response.status, response.mode);
 
     } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        const lastGood = readLastGood(META.game, META.type);
-        return buildFallback(META, FailureType.Unavailable, reason, lastGood);
+        throw error;
     }
 }
 
@@ -66,8 +55,7 @@ async function runWithBrowserSession(listingUrl: string): Promise<ProviderResult
             const articleUrl = extractArticleUrl(listingHtml, listingUrl);
 
             if (!articleUrl || articleUrl === listingUrl || articleUrl === finalListingUrl) {
-                const lastGood = readLastGood(META.game, META.type);
-                return buildFallback(META, FailureType.ParseFailed, "Could not extract valid article URL in browser session.", lastGood, 200, "browser");
+                throw new Error("Could not extract valid article URL in browser session.");
             }
 
             // 2. Visit article
@@ -106,6 +94,7 @@ async function runWithBrowserSession(listingUrl: string): Promise<ProviderResult
                         status: "fresh",
                         nextEventUtc: parsed.toISOString(),
                         fetched_at_utc: new Date().toISOString(),
+                        last_success_at_utc: new Date().toISOString(),
                         source_url: finalArticleUrl,
                         confidence: Confidence.High,
                         http_status: 200,
@@ -118,8 +107,7 @@ async function runWithBrowserSession(listingUrl: string): Promise<ProviderResult
             return await parseWithHtml(finalHtml, finalArticleUrl, 200, "browser");
         });
     } catch (err: any) {
-        const lastGood = readLastGood(META.game, META.type);
-        return buildFallback(META, FailureType.Unavailable, err.message, lastGood);
+        throw err;
     }
 }
 
@@ -196,8 +184,7 @@ async function parseWithHtml(html: string, sourceUrl: string, status: number, mo
     }
 
     if (!releaseDate) {
-        const lastGood = readLastGood(META.game, META.type);
-        return buildFallback(META, FailureType.ParseFailed, `Could not extract valid release date from Minecraft article. Source: ${sourceUrl}`, lastGood, status, mode);
+        throw new Error(`Could not extract valid release date from Minecraft article. Source: ${sourceUrl}`);
     }
 
     return {
@@ -205,6 +192,7 @@ async function parseWithHtml(html: string, sourceUrl: string, status: number, mo
         status: "fresh",
         nextEventUtc: releaseDate.toISOString(),
         fetched_at_utc: new Date().toISOString(),
+        last_success_at_utc: new Date().toISOString(),
         source_url: sourceUrl,
         confidence: Confidence.High,
         http_status: status,

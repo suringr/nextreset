@@ -6,7 +6,6 @@
 
 import { FailureType, Confidence, ProviderResult, ProviderMetadata } from "../types";
 import { fetchHtml } from "../lib/fetch-layer";
-import { readLastGood, buildFallback } from "../lib/data-output";
 
 const META: ProviderMetadata = {
     provider_id: "roblox",
@@ -22,45 +21,21 @@ export async function run(): Promise<ProviderResult> {
         const response = await fetchHtml(url, { providerId: META.provider_id });
 
         if (!response.ok) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(
-                META,
-                response.failureType || FailureType.Unavailable,
-                response.error || `HTTP ${response.status}`,
-                lastGood,
-                response.status,
-                response.mode
-            );
+            throw new Error(response.error || `HTTP ${response.status}`);
         }
 
         let data: any;
         try {
             data = JSON.parse(response.text);
         } catch {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(
-                META,
-                FailureType.ParseFailed,
-                "Invalid JSON in Roblox status response",
-                lastGood,
-                response.status,
-                response.mode
-            );
+            throw new Error("Invalid JSON in Roblox status response");
         }
 
         const status = data.result?.status_overall?.status || "unknown";
         const updated = data.result?.status_overall?.updated;
 
         if (!updated) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(
-                META,
-                FailureType.ParseFailed,
-                "No updated timestamp found in Roblox status JSON",
-                lastGood,
-                response.status,
-                response.mode
-            );
+            throw new Error("No updated timestamp found in Roblox status JSON");
         }
 
         let updatedDate: Date;
@@ -71,15 +46,7 @@ export async function run(): Promise<ProviderResult> {
         }
 
         if (isNaN(updatedDate.getTime())) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(
-                META,
-                FailureType.ParseFailed,
-                `Invalid date format in Roblox status: ${updated}`,
-                lastGood,
-                response.status,
-                response.mode
-            );
+            throw new Error(`Invalid date format in Roblox status: ${updated}`);
         }
 
         return {
@@ -87,6 +54,7 @@ export async function run(): Promise<ProviderResult> {
             status: "fresh",
             nextEventUtc: updatedDate.toISOString(),
             fetched_at_utc: new Date().toISOString(),
+            last_success_at_utc: new Date().toISOString(),
             source_url: "https://status.roblox.com",
             confidence: Confidence.High,
             http_status: response.status,
@@ -94,8 +62,6 @@ export async function run(): Promise<ProviderResult> {
             notes: `Current status: ${status}`
         };
     } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        const lastGood = readLastGood(META.game, META.type);
-        return buildFallback(META, FailureType.Unavailable, reason, lastGood);
+        throw error;
     }
 }

@@ -1,0 +1,14 @@
+{
+  "provider_id": "pubg",
+  "game": "pubg",
+  "type": "last-patch",
+  "title": "PUBG Last Patch",
+  "status": "fresh",
+  "nextEventUtc": "2026-02-03T00:00:00.000Z",
+  "fetched_at_utc": "2026-02-04T21:37:19.895Z",
+  "last_success_at_utc": "2026-02-04T21:37:19.895Z",
+  "source_url": "https://pubg.com/en/news/9690",
+  "confidence": "high",
+  "http_status": 200,
+  "fetch_mode": "http"
+}

@@ -23,37 +23,42 @@ export interface ProviderMetadata {
 }
 
 export interface BaseResult extends ProviderMetadata {
-    fetched_at_utc: string;
+    fetched_at_utc: string; // Always the current run time
     http_status?: number;
     fetch_mode?: "http" | "browser";
 }
 
 export interface FreshResult extends BaseResult {
     status: "fresh";
-    nextEventUtc: string; // Must have a date
+    nextEventUtc: string;
     source_url: string;
     confidence: Confidence;
     notes?: string;
+    // For fresh results, last_success_at_utc is implied to be fetched_at_utc,
+    // but we can include it explicitly or let the consumer infer it.
+    // For simplicity in the Stale logic, we don't strictly need it here, 
+    // but adding it makes the shape consistent.
+    last_success_at_utc: string;
 }
 
 export interface StaleResult extends BaseResult {
     status: "stale";
     nextEventUtc: string;
-    last_good_at_utc: string;
+    last_success_at_utc: string; // The fetched_at_utc of the original fresh data
     source_url: string;
     confidence: Confidence;
     reason: string;
     notes?: string;
 }
 
-export interface FallbackResult extends BaseResult {
-    status: "fallback";
+export interface UnavailableResult extends BaseResult {
+    status: "unavailable";
     nextEventUtc: null;
     failure_type: FailureType;
     explanation: string;
 }
 
-export type ProviderResult = FreshResult | StaleResult | FallbackResult;
+export type ProviderResult = FreshResult | StaleResult | UnavailableResult;
 
 /**
  * Provider function signature

@@ -1,0 +1,14 @@
+{
+  "provider_id": "valorant",
+  "game": "valorant",
+  "type": "last-patch",
+  "title": "VALORANT Last Patch",
+  "status": "fresh",
+  "nextEventUtc": "2026-02-03T14:00:00.000Z",
+  "fetched_at_utc": "2026-02-04T21:37:00.280Z",
+  "last_success_at_utc": "2026-02-04T21:37:00.280Z",
+  "source_url": "https://playvalorant.com/en-us/news/game-updates/",
+  "confidence": "medium",
+  "http_status": 200,
+  "fetch_mode": "http"
+}

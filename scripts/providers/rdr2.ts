@@ -9,7 +9,6 @@
 import * as cheerio from "cheerio";
 import { FailureType, Confidence, ProviderResult, ProviderMetadata } from "../types";
 import { fetchHtml, withBrowserPage, sleep, getBrowserBudgetRemaining } from "../lib/fetch-layer";
-import { readLastGood, buildFallback } from "../lib/data-output";
 
 const META: ProviderMetadata = {
     provider_id: "red-dead-redemption-2",
@@ -87,6 +86,7 @@ export async function run(): Promise<ProviderResult> {
                     status: "fresh",
                     nextEventUtc: (latestDate as unknown as Date).toISOString(),
                     fetched_at_utc: new Date().toISOString(),
+                    last_success_at_utc: new Date().toISOString(),
                     source_url: latestUrl,
                     confidence: Confidence.Medium,
                     http_status: response.status,
@@ -116,6 +116,7 @@ export async function run(): Promise<ProviderResult> {
                     status: "fresh",
                     nextEventUtc: (latestDate as unknown as Date).toISOString(),
                     fetched_at_utc: new Date().toISOString(),
+                    last_success_at_utc: new Date().toISOString(),
                     source_url: latestUrl,
                     confidence: Confidence.High,
                     fetch_mode: "browser",
@@ -127,13 +128,6 @@ export async function run(): Promise<ProviderResult> {
         throw new Error("HTTP failed to find content and Browser budget exhausted");
 
     } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        const lastGood = readLastGood(META.game, META.type);
-
-        if (reason.includes("budget exhausted")) {
-            return buildFallback(META, FailureType.Blocked, "Browser budget exhausted", lastGood);
-        }
-
-        return buildFallback(META, FailureType.Unavailable, reason, lastGood);
+        throw error;
     }
 }

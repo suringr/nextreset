@@ -1,0 +1,14 @@
+{
+  "provider_id": "cs2",
+  "game": "cs2",
+  "type": "last-update",
+  "title": "Counter-Strike 2 Last Update",
+  "status": "fresh",
+  "nextEventUtc": "2026-01-29T22:00:00.000Z",
+  "fetched_at_utc": "2026-02-04T21:37:04.712Z",
+  "source_url": "https://www.counter-strike.net/news/updates",
+  "confidence": "high",
+  "fetch_mode": "browser",
+  "notes": "Counter-Strike 2 Update",
+  "last_success_at_utc": "2026-02-04T21:37:04.712Z"
+}
