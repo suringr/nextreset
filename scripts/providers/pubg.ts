@@ -8,7 +8,6 @@
 import * as cheerio from "cheerio";
 import { FailureType, Confidence, ProviderResult, ProviderMetadata } from "../types";
 import { fetchHtml, withBrowserPage, sleep, getBrowserBudgetRemaining } from "../lib/fetch-layer";
-import { readLastGood, buildFallback } from "../lib/data-output";
 
 const META: ProviderMetadata = {
     provider_id: "pubg",
@@ -24,15 +23,7 @@ export async function run(): Promise<ProviderResult> {
         const response = await fetchHtml(listingUrl, { providerId: META.provider_id, useBrowserOnBlocked: true });
 
         if (!response.ok) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(
-                META,
-                response.failureType || FailureType.Unavailable,
-                response.error || `HTTP ${response.status}`,
-                lastGood,
-                response.status,
-                response.mode
-            );
+            throw new Error(response.error || `HTTP ${response.status}`);
         }
 
         const $ = cheerio.load(response.text);
@@ -89,20 +80,17 @@ export async function run(): Promise<ProviderResult> {
 
         // Hard Guards
         if (!articleUrl) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(META, FailureType.ParseFailed, "No article URL extracted from listing.", lastGood, response.status, response.mode);
+            throw new Error("No article URL extracted from listing.");
         }
 
         const artUrlStr = articleUrl as string;
 
         if (artUrlStr === listingUrl || artUrlStr === finalListingUrl) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(META, FailureType.ParseFailed, `Article URL matches listing URL (${artUrlStr}).`, lastGood, response.status, response.mode);
+            throw new Error(`Article URL matches listing URL (${artUrlStr}).`);
         }
 
         if (artUrlStr.includes("category=patch_notes")) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(META, FailureType.ParseFailed, `Article URL contains patch_notes category (${artUrlStr}).`, lastGood, response.status, response.mode);
+            throw new Error(`Article URL contains patch_notes category (${artUrlStr}).`);
         }
 
         // Fetch the article page
@@ -110,15 +98,7 @@ export async function run(): Promise<ProviderResult> {
         const articleResponse = await fetchHtml(artUrlStr, { providerId: META.provider_id, useBrowserOnBlocked: true });
 
         if (!articleResponse.ok) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(
-                META,
-                articleResponse.failureType || FailureType.Unavailable,
-                `Article fetch failed: ${articleUrl} (${articleResponse.status})`,
-                lastGood,
-                articleResponse.status,
-                articleResponse.mode
-            );
+            throw new Error(`Article fetch failed: ${articleUrl} (${articleResponse.status})`);
         }
 
         const $art = cheerio.load(articleResponse.text);
@@ -212,15 +192,7 @@ export async function run(): Promise<ProviderResult> {
         }
 
         if (!lastPatchDate || isNaN(lastPatchDate.getTime())) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(
-                META,
-                FailureType.ParseFailed,
-                `Could not extract valid patch date from PUBG article. Source: ${articleUrl}`,
-                lastGood,
-                articleResponse.status,
-                articleResponse.mode
-            );
+            throw new Error(`Could not extract valid patch date from PUBG article. Source: ${articleUrl}`);
         }
 
         return {
@@ -228,6 +200,7 @@ export async function run(): Promise<ProviderResult> {
             status: "fresh",
             nextEventUtc: lastPatchDate.toISOString(),
             fetched_at_utc: new Date().toISOString(),
+            last_success_at_utc: new Date().toISOString(),
             source_url: articleUrl,
             confidence: Confidence.High,
             http_status: articleResponse.status,
@@ -235,8 +208,6 @@ export async function run(): Promise<ProviderResult> {
             notes: patchTitle || undefined
         };
     } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        const lastGood = readLastGood(META.game, META.type);
-        return buildFallback(META, FailureType.Unavailable, reason, lastGood);
+        throw error;
     }
 }

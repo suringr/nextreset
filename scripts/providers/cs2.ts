@@ -8,7 +8,6 @@
 import * as cheerio from "cheerio";
 import { FailureType, Confidence, ProviderResult, ProviderMetadata } from "../types";
 import { fetchHtml, withBrowserPage, getBrowserBudgetRemaining, sleep } from "../lib/fetch-layer";
-import { readLastGood, buildFallback } from "../lib/data-output";
 import { XMLParser } from "fast-xml-parser";
 
 const META: ProviderMetadata = {
@@ -92,7 +91,8 @@ export async function run(): Promise<ProviderResult> {
                     source_url: latestUrl,
                     confidence: Confidence.High,
                     fetch_mode: "browser",
-                    notes: latestTitle
+                    notes: latestTitle,
+                    last_success_at_utc: new Date().toISOString()
                 };
             });
         } catch (error) {
@@ -143,6 +143,7 @@ export async function run(): Promise<ProviderResult> {
             status: "fresh",
             nextEventUtc: pubDate.toISOString(),
             fetched_at_utc: new Date().toISOString(),
+            last_success_at_utc: new Date().toISOString(), // Fresh = now
             source_url: latestEntry.link || rssUrl,
             confidence: Confidence.High,
             notes: latestEntry.title,
@@ -150,8 +151,6 @@ export async function run(): Promise<ProviderResult> {
         };
 
     } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        const lastGood = readLastGood(META.game, META.type);
-        return buildFallback(META, FailureType.Unavailable, reason, lastGood);
+        throw error;
     }
 }

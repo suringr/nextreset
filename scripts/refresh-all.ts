@@ -1,12 +1,5 @@
-import { ProviderResult, FailureType } from "./types";
-import { writeProviderResult, ensureDataDir } from "./lib/data-output";
-
-/**
- * Orchestration script for NextReset
- * 
- * Runs all providers, writes JSON files, and NEVER exits non-zero
- * due to provider failures. Only exits 1 for programmer errors.
- */
+import { FailureType, ProviderResult, StaleResult, UnavailableResult, Provider } from "./types";
+import { writeLiveJson, writeLkgJson, readLkgData, ensureDataDirs } from "./lib/data-output";
 
 // Import all providers
 import * as fortnite from "./providers/fortnite";
@@ -22,141 +15,181 @@ import * as pubg from "./providers/pubg";
 import * as rdr2 from "./providers/rdr2";
 import * as eafc from "./providers/eafc";
 
-interface ProviderEntry {
+/**
+ * Provider Registry
+ * explicit metadata allows LKG lookups even if provider crashes
+ */
+interface RegistryEntry {
+    id: string;
+    type: string;
     name: string;
-    run: () => Promise<ProviderResult>;
+    run: Provider;
 }
 
-const providers: ProviderEntry[] = [
-    { name: "Fortnite", run: fortnite.run },
-    { name: "League of Legends", run: lol.run },
-    { name: "VALORANT", run: valorant.run },
-    { name: "Counter-Strike 2", run: cs2.run },
-    { name: "Minecraft", run: minecraft.run },
-    { name: "Roblox", run: roblox.run },
-    { name: "GTA Online", run: gta.run },
-    { name: "Warzone", run: warzone.run },
-    { name: "Genshin Impact", run: genshin.run },
-    { name: "PUBG", run: pubg.run },
-    { name: "Red Dead Redemption 2", run: rdr2.run },
-    { name: "EA SPORTS FC", run: eafc.run }
+const REGISTRY: RegistryEntry[] = [
+    { id: "fortnite", type: "next-season", name: "Fortnite", run: fortnite.run },
+    { id: "lol", type: "next-patch", name: "League of Legends", run: lol.run },
+    { id: "valorant", type: "last-patch", name: "VALORANT", run: valorant.run },
+    { id: "cs2", type: "last-update", name: "Counter-Strike 2", run: cs2.run },
+    { id: "minecraft", type: "last-release", name: "Minecraft", run: minecraft.run },
+    { id: "roblox", type: "status", name: "Roblox", run: roblox.run },
+    { id: "gta", type: "weekly-reset", name: "GTA Online", run: gta.run },
+    { id: "warzone", type: "last-patch", name: "Warzone", run: warzone.run },
+    { id: "genshin", type: "next-banner", name: "Genshin Impact", run: genshin.run },
+    { id: "pubg", type: "last-patch", name: "PUBG", run: pubg.run },
+    { id: "red-dead-redemption-2", type: "last-update", name: "Red Dead Redemption 2", run: rdr2.run },
+    { id: "ea-sports-fc", type: "last-title-update", name: "EA SPORTS FC", run: eafc.run }
 ];
 
-/**
- * Run a single provider - never throws
- */
-async function runProvider(entry: ProviderEntry): Promise<{ name: string; result: ProviderResult }> {
-    const startTime = Date.now();
-    console.log(`\n[${new Date().toISOString()}] Running ${entry.name}...`);
-
-    try {
-        const result = await entry.run();
-        const elapsed = Date.now() - startTime;
-
-        const modeStr = result.fetch_mode ? ` [${result.fetch_mode.toUpperCase()}]` : "";
-        const statusStr = result.http_status ? ` (HTTP ${result.http_status})` : "";
-
-        if (result.status === "fresh") {
-            console.log(`✓ ${entry.name} succeeded in ${elapsed}ms${modeStr}${statusStr}`);
-            console.log(`  Confidence: ${result.confidence}`);
-        } else if (result.status === "stale") {
-            console.log(`⚠ ${entry.name} using stale data (${elapsed}ms)${modeStr}${statusStr}`);
-            console.log(`  Reason: ${result.reason}`);
-        } else {
-            console.log(`✗ ${entry.name} failed (${elapsed}ms)${modeStr}${statusStr}`);
-            console.log(`  Failure: ${result.failure_type} - ${result.explanation}`);
-        }
-
-        return { name: entry.name, result };
-    } catch (error) {
-        // This should never happen since providers now never throw
-        // But just in case, create an emergency fallback
-        const elapsed = Date.now() - startTime;
-        console.error(`✗ ${entry.name} unexpected error after ${elapsed}ms`);
-        console.error(`  Error: ${error instanceof Error ? error.message : String(error)}`);
-
-        // Create minimal fallback
-        const result: ProviderResult = {
-            provider_id: entry.name.toLowerCase().replace(/\s+/g, "-"),
-            game: entry.name.toLowerCase().replace(/\s+/g, "-"),
-            type: "unknown",
-            title: entry.name,
-            status: "fallback",
-            nextEventUtc: null,
-            failure_type: FailureType.Unavailable,
-            explanation: error instanceof Error ? error.message : String(error),
-            fetched_at_utc: new Date().toISOString()
-        };
-
-        return { name: entry.name, result };
-    }
-}
-
-/**
- * Main orchestration function - always exits 0 for provider issues
- */
 async function main() {
     console.log("=".repeat(60));
-    console.log("NextReset Data Refresh");
+    console.log("NextReset Data Refresh (LKG Enabled)");
     console.log("=".repeat(60));
 
     try {
-        ensureDataDir();
+        ensureDataDirs();
     } catch (error) {
-        // This IS a programmer error - can't write files
-        console.error("❌ Fatal: Cannot create data directory");
+        console.error("❌ Fatal: Cannot create data directories");
         console.error(error);
         process.exit(1);
     }
 
-    const results: { name: string; result: ProviderResult }[] = [];
+    const results: ProviderResult[] = [];
 
-    // Run providers sequentially to avoid rate limiting
-    for (const provider of providers) {
-        const outcome = await runProvider(provider);
-        results.push(outcome);
+    // Run providers sequentially
+    for (const entry of REGISTRY) {
+        const startTime = Date.now();
+        console.log(`\n[${new Date().toISOString()}] Running ${entry.name}...`);
 
-        // Write result (success or fallback)
+        let result: ProviderResult;
+
         try {
-            writeProviderResult(outcome.result);
+            // 1. Attempt Fresh Run
+            result = await entry.run();
+
+            // Validate result shape (providers might return Partial internally, but we expect ProviderResult)
+            if (!result || !result.status) {
+                throw new Error("Provider returned invalid/empty result");
+            }
+
         } catch (error) {
-            // This IS a programmer error - can't write files
-            console.error(`❌ Fatal: Cannot write result for ${outcome.name}`);
-            console.error(error);
-            process.exit(1);
+            // 2. Catch Crash -> Create Unavailable (temp) -> Fallback Logic will handle logic below
+            const reason = error instanceof Error ? error.message : String(error);
+            console.error(`✗ ${entry.name} crashed: ${reason}`);
+
+            result = {
+                provider_id: entry.id,
+                game: entry.id,
+                type: entry.type,
+                title: entry.name,
+                status: "unavailable",
+                nextEventUtc: null,
+                failure_type: FailureType.Unavailable,
+                explanation: `Crashed: ${reason}`,
+                fetched_at_utc: new Date().toISOString()
+            };
         }
+
+        const elapsed = Date.now() - startTime;
+
+        // 3. Global LKG Safety Net
+        if (result.status === "fresh") {
+            // Success!
+            console.log(`✓ ${entry.name} succeeded in ${elapsed}ms`);
+
+            // Explicit Dual-Write
+            writeLiveJson(result);
+            writeLkgJson(result);
+
+        } else {
+            // Failed (Unavailable from crash OR explicit 'unavailable' from provider)
+            // Attempt to recover using LKG
+            const lkg = readLkgData(entry.id, entry.type);
+
+            if (lkg && lkg.status === "fresh") {
+                // RECOVERY: Downgrade to Stale
+                const staleResult: StaleResult = {
+                    ...lkg,
+                    status: "stale",
+                    fetched_at_utc: new Date().toISOString(), // Current run
+                    last_success_at_utc: lkg.fetched_at_utc, // Original success
+                    reason: result.status === "unavailable" ? result.explanation : (result as StaleResult).reason || "Unknown failure",
+                    provider_id: entry.id,
+                    game: entry.id,
+                    type: entry.type,
+                    title: entry.name
+                };
+
+                console.warn(`⚠ ${entry.name} failed but recovered with LKG data (${elapsed}ms)`);
+                console.warn(`  Reason: ${staleResult.reason}`);
+
+                result = staleResult;
+                writeLiveJson(staleResult); // Only write live, NEVER overwrite LKG with stale
+
+            } else {
+                // CATASTROPHE: No LKG available
+                console.error(`✗ ${entry.name} failed and NO LKG data found (${elapsed}ms)`);
+
+                // Ensure result is marked unavailable
+                if (result.status !== "unavailable") {
+                    // Should not really happen if we follow types, but ensure shape
+                    result = {
+                        provider_id: entry.id,
+                        game: entry.id,
+                        type: entry.type,
+                        title: entry.name,
+                        status: "unavailable",
+                        nextEventUtc: null,
+                        failure_type: FailureType.Unavailable,
+                        explanation: (result as any).reason || "Unknown failure",
+                        fetched_at_utc: new Date().toISOString()
+                    };
+                }
+
+                writeLiveJson(result);
+            }
+        }
+
+        results.push(result);
     }
 
-    // Summary
+    // Summary & Exit Logic
     console.log("\n" + "=".repeat(60));
     console.log("Summary");
     console.log("=".repeat(60));
 
-    const freshCount = results.filter(r => r.result.status === "fresh").length;
-    const staleCount = results.filter(r => r.result.status === "stale").length;
-    const fallbackCount = results.filter(r => r.result.status === "fallback").length;
+    const freshCount = results.filter(r => r.status === "fresh").length;
+    const staleCount = results.filter(r => r.status === "stale").length;
+    const unavailableCount = results.filter(r => r.status === "unavailable").length;
+    const total = results.length;
 
-    console.log(`Total: ${providers.length} providers`);
+    console.log(`Total: ${total}`);
     console.log(`✓ Fresh: ${freshCount}`);
-    console.log(`⚠ Stale: ${staleCount}`);
-    console.log(`✗ Fallback: ${fallbackCount}`);
+    console.log(`⚠ Stale (LKG): ${staleCount}`);
+    console.log(`✗ Unavailable: ${unavailableCount}`);
 
-    // Show fallback details
-    const fallbacks = results.filter(r => r.result.status === "fallback") as { name: string; result: Extract<ProviderResult, { status: "fallback" }> }[];
-    if (fallbacks.length > 0) {
-        console.log("\nFallback providers:");
-        fallbacks.forEach(f => {
-            console.log(`  - ${f.name}: [${f.result.failure_type}] ${f.result.explanation}`);
+    if (unavailableCount > 0) {
+        console.log("\nUnavailable Providers:");
+        results.filter(r => r.status === "unavailable").forEach(r => {
+            console.log(`  - ${r.title}: ${(r as UnavailableResult).explanation}`);
         });
     }
 
-    // Always exit 0 - we wrote all JSON files
-    console.log(`\n✓ Refresh completed (${freshCount} fresh, ${staleCount + fallbackCount} fallback/stale)`);
-    process.exit(0);
+    // Exit Code Logic
+    // Fail only if > 50% are unavailable (catastrophic)
+    // 0 unavailable = Perfect/Safe (Exit 0)
+    const failureRatio = total > 0 ? unavailableCount / total : 0;
+
+    if (failureRatio > 0.5) {
+        console.error(`\n❌ Catastrophic failure: ${unavailableCount}/${total} providers unavailable.`);
+        process.exit(1);
+    } else {
+        console.log(`\n✓ Refresh completed successfully.`);
+        process.exit(0);
+    }
 }
 
-// Run main
 main().catch(error => {
-    console.error("Fatal error:", error);
+    console.error("Fatal orchestrator error:", error);
     process.exit(1);
 });

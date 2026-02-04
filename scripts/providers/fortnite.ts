@@ -6,7 +6,6 @@
 
 import { FailureType, Confidence, ProviderResult, ProviderMetadata } from "../types";
 import { fetchHtml, withBrowserPage } from "../lib/fetch-layer";
-import { readLastGood, buildFallback } from "../lib/data-output";
 
 const META: ProviderMetadata = {
     provider_id: "fortnite",
@@ -35,12 +34,8 @@ export async function run(): Promise<ProviderResult> {
         });
 
         if (!response.ok) {
-            console.error(`[Fortnite] Fetch failed: ${response.error} (Status: ${response.status})`);
-            const lastGood = readLastGood(META.game, META.type);
-            const failureType = response.status === 403 || response.status === 429 ? FailureType.Blocked : FailureType.Unavailable;
-            const reason = response.status === 403 || response.status === 429 ? "fetch_blocked" : `http_error_${response.status}`;
-
-            return buildFallback(META, failureType, reason, lastGood, response.status, response.mode);
+            // Throwing triggers orchestrator's LKG fallback
+            throw new Error(`Fetch failed: ${response.error} (Status: ${response.status})`);
         }
 
         let text = response.text;
@@ -54,24 +49,11 @@ export async function run(): Promise<ProviderResult> {
                 .trim();
         }
 
-        // Broaden text source: innerText equivalent is better for visibility
-        // If we are in withBrowserPage we'd use locator('body').innerText()
-        // Here we just have the raw HTML/Text from fetchHtml.
-
         const regex = /Ends(?:\s+on)?[:\s]+([A-Z][a-z]+\s+\d{1,2},\s+\d{4})(?:\s+(Eastern\s+Time|ET))?/i;
         const match = text.match(regex);
 
         if (!match) {
-            console.log(`[Fortnite] No explicit end date found on page.`);
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(
-                META,
-                FailureType.ParseFailed,
-                "no_explicit_end_date_on_page",
-                lastGood,
-                response.status,
-                response.mode
-            );
+            throw new Error("No explicit end date found on page");
         }
 
         const matchedText = match[0];
@@ -107,33 +89,35 @@ export async function run(): Promise<ProviderResult> {
             month: 'long', day: 'numeric', year: 'numeric'
         });
 
-        // Format according to specific user request while keeping system headers
-        const result: any = {
+        // Return FRESH result
+        // Orchestrator handles writing to _lkg
+        const result: ProviderResult = {
             ...META,
-            provider: "fortnite", // Requested field
-            currentSeasonEnds: dateStr,
-            timezone: isET ? "America/New_York" : null,
-            nextSeasonStart: null,
             status: "fresh",
-            confidence: Confidence.High,
-            reason: "",
-            sourceUrl: response.url || SOURCE_URL,
-            source_url: response.url || SOURCE_URL, // System compatibility
-            sourceName: "Fortnite Battle Pass (Official)",
             fetched_at_utc: new Date().toISOString(),
-            nextSeasonEstimate: nextSeasonEstimateStr,
-            nextSeasonEstimateFriendly: nextSeasonEstimateFriendly,
-            nextEventUtc: seasonEndDate.toISOString(), // System field
+            last_success_at_utc: new Date().toISOString(), // Fresh = now
+            nextEventUtc: seasonEndDate.toISOString(),
+            source_url: response.url || SOURCE_URL,
+            confidence: Confidence.High,
             http_status: response.status,
-            fetch_mode: response.mode
+            fetch_mode: response.mode,
+
+            // Custom fields (preserved in type assertion)
+            ...{
+                currentSeasonEnds: dateStr,
+                timezone: isET ? "America/New_York" : null,
+                nextSeasonStart: null,
+                nextSeasonEstimate: nextSeasonEstimateStr,
+                nextSeasonEstimateFriendly: nextSeasonEstimateFriendly,
+                sourceName: "Fortnite Battle Pass (Official)",
+                provider: "fortnite",
+            }
         };
 
-        return result as ProviderResult;
+        return result;
 
     } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        console.error(`[Fortnite] Unexpected error: ${reason}`);
-        const lastGood = readLastGood(META.game, META.type);
-        return buildFallback(META, FailureType.Unavailable, reason, lastGood);
+        // Re-throw to let orchestrator handle LKG
+        throw error;
     }
 }

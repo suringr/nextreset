@@ -11,32 +11,44 @@ import {
     Confidence,
     FreshResult,
     StaleResult,
-    FallbackResult
+    UnavailableResult
 } from "../types";
 
-const DATA_DIR = path.join(__dirname, "../../public/data");
+const LIVE_DATA_DIR = path.join(__dirname, "../../public/data");
+const LKG_DATA_DIR = path.join(LIVE_DATA_DIR, "_lkg");
 
 /**
- * Get output path for provider data
+ * Get output path for live provider data
  */
-export function getOutputPath(game: string, type: string): string {
-    return path.join(DATA_DIR, `${game}.${type}.json`);
+export function getLivePath(game: string, type: string): string {
+    return path.join(LIVE_DATA_DIR, `${game}.${type}.json`);
 }
 
 /**
- * Ensure data directory exists
+ * Get output path for LKG provider data
  */
-export function ensureDataDir(): void {
-    if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
+export function getLkgPath(game: string, type: string): string {
+    return path.join(LKG_DATA_DIR, `${game}.${type}.json`);
+}
+
+/**
+ * Ensure data directories exist
+ */
+export function ensureDataDirs(): void {
+    if (!fs.existsSync(LIVE_DATA_DIR)) {
+        fs.mkdirSync(LIVE_DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(LKG_DATA_DIR)) {
+        fs.mkdirSync(LKG_DATA_DIR, { recursive: true });
     }
 }
 
 /**
- * Read last known good data for a provider
+ * Read last known good data from the LKG vault
+ * Returns null if missing or corrupt
  */
-export function readLastGood(game: string, type: string): ProviderResult | null {
-    const filepath = getOutputPath(game, type);
+export function readLkgData(game: string, type: string): ProviderResult | null {
+    const filepath = getLkgPath(game, type);
 
     if (!fs.existsSync(filepath)) {
         return null;
@@ -45,79 +57,38 @@ export function readLastGood(game: string, type: string): ProviderResult | null 
     try {
         const content = fs.readFileSync(filepath, "utf-8");
         return JSON.parse(content) as ProviderResult;
-    } catch {
+    } catch (error) {
+        console.warn(`[LKG] Corrupt LKG file found for ${game}.${type}:`, error);
         return null;
     }
 }
 
 /**
- * Write provider result to JSON file
+ * Write to LIVE data folder (Always called)
  */
-export function writeJson(data: ProviderResult): void {
-    ensureDataDir();
-    const filepath = getOutputPath(data.game, data.type);
-
-    // Filter out undefined and ensure order (mostly for readability/debugging)
+export function writeLiveJson(data: ProviderResult): void {
+    ensureDataDirs();
+    const filepath = getLivePath(data.game, data.type);
     const cleaned = JSON.parse(JSON.stringify(data));
-
     fs.writeFileSync(filepath, JSON.stringify(cleaned, null, 2), "utf-8");
+
+    // Log write
+    const indicator = data.status === "fresh" ? "✓" : (data.status === "stale" ? "⚠" : "✗");
+    console.log(`${indicator} Wrote live/${data.game}.${data.type}.json (${data.status})`);
 }
 
 /**
- * Build fallback result when provider fails
+ * Write to LKG vault (Only called on FRESH success)
  */
-export function buildFallback(
-    meta: ProviderMetadata,
-    failureType: FailureType,
-    explanation: string,
-    lastGood: ProviderResult | null,
-    httpStatus?: number,
-    fetchMode?: "http" | "browser"
-): ProviderResult {
-    const now = new Date().toISOString();
-
-    if (lastGood && (lastGood.status === "fresh" || lastGood.status === "stale") && lastGood.nextEventUtc) {
-        // Reuse last known good data but mark as stale
-        const stale: StaleResult = {
-            ...meta,
-            status: "stale",
-            nextEventUtc: lastGood.nextEventUtc,
-            last_good_at_utc: lastGood.status === "fresh" ? lastGood.fetched_at_utc : lastGood.last_good_at_utc,
-            fetched_at_utc: now,
-            source_url: lastGood.source_url,
-            confidence: lastGood.confidence,
-            reason: explanation,
-            notes: (lastGood as any).notes,
-            http_status: httpStatus,
-            fetch_mode: fetchMode
-        };
-        return stale;
+export function writeLkgJson(data: ProviderResult): void {
+    if (data.status !== "fresh") {
+        console.warn(`[LKG] Attempted to write non-fresh data to LKG vault for ${data.game}.${data.type}`);
+        return;
     }
 
-    // No last good data - write unavailable fallback
-    const fallback: FallbackResult = {
-        ...meta,
-        status: "fallback",
-        nextEventUtc: null,
-        failure_type: failureType,
-        explanation: explanation,
-        fetched_at_utc: now,
-        http_status: httpStatus,
-        fetch_mode: fetchMode
-    };
-    return fallback;
-}
-
-/**
- * Write provider result (success or fallback)
- */
-export function writeProviderResult(result: ProviderResult): void {
-    writeJson(result);
-    const indicator = result.status === "fresh" ? "✓" : (result.status === "stale" ? "⚠" : "✗");
-    console.log(`${indicator} Wrote ${result.game}.${result.type}.json (${result.status})`);
-    if (result.status === "fallback") {
-        console.log(`  Reason: ${result.failure_type} - ${result.explanation}`);
-    } else if (result.status === "stale") {
-        console.log(`  Stale: ${result.reason}`);
-    }
+    ensureDataDirs();
+    const filepath = getLkgPath(data.game, data.type);
+    const cleaned = JSON.parse(JSON.stringify(data));
+    fs.writeFileSync(filepath, JSON.stringify(cleaned, null, 2), "utf-8");
+    console.log(`  + Backed up to _lkg/${data.game}.${data.type}.json`);
 }

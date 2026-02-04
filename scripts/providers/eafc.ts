@@ -9,7 +9,6 @@
 import * as cheerio from "cheerio";
 import { FailureType, Confidence, ProviderResult, ProviderMetadata } from "../types";
 import { fetchHtml } from "../lib/fetch-layer";
-import { readLastGood, buildFallback } from "../lib/data-output";
 
 const META: ProviderMetadata = {
     provider_id: "ea-sports-fc",
@@ -27,15 +26,7 @@ export async function run(): Promise<ProviderResult> {
         });
 
         if (!response.ok) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(
-                META,
-                response.failureType || FailureType.Unavailable,
-                response.error || `HTTP ${response.status}`,
-                lastGood,
-                response.status,
-                response.mode
-            );
+            throw new Error(response.error || `HTTP ${response.status}`);
         }
 
         const $ = cheerio.load(response.text);
@@ -110,15 +101,7 @@ export async function run(): Promise<ProviderResult> {
         });
 
         if (!latestDate) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(
-                META,
-                FailureType.ParseFailed,
-                "Could not find any 'Title Update' articles with dates on EA Forums",
-                lastGood,
-                response.status,
-                response.mode
-            );
+            throw new Error("Could not find any 'Title Update' articles with dates on EA Forums");
         }
 
         return {
@@ -127,6 +110,7 @@ export async function run(): Promise<ProviderResult> {
             // Cast to ensure TS is happy
             nextEventUtc: (latestDate as unknown as Date).toISOString(),
             fetched_at_utc: new Date().toISOString(),
+            last_success_at_utc: new Date().toISOString(),
             source_url: latestUrl,
             confidence: Confidence.Medium,
             http_status: response.status,
@@ -135,8 +119,6 @@ export async function run(): Promise<ProviderResult> {
         };
 
     } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        const lastGood = readLastGood(META.game, META.type);
-        return buildFallback(META, FailureType.Unavailable, reason, lastGood);
+        throw error;
     }
 }

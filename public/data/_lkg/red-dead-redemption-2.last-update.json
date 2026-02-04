@@ -1,0 +1,14 @@
+{
+  "provider_id": "red-dead-redemption-2",
+  "game": "red-dead-redemption-2",
+  "type": "last-update",
+  "title": "Red Dead Redemption 2 Last Update",
+  "status": "fresh",
+  "nextEventUtc": "2026-02-02T22:00:00.000Z",
+  "fetched_at_utc": "2026-02-04T21:37:24.812Z",
+  "last_success_at_utc": "2026-02-04T21:37:24.812Z",
+  "source_url": "https://www.rockstargames.com/newswire/article/75318ak27ok97k/crime-pays-in-red-dead-online-with-triple-rewards-on-blood-money-oppor",
+  "confidence": "high",
+  "fetch_mode": "browser",
+  "notes": "Red Dead OnlineFebruary 3, 2026Crime Pays in Red Dead Online with Triple Rewards on Blood Money Opportunities"
+}

@@ -7,7 +7,6 @@
 import * as cheerio from "cheerio";
 import { FailureType, Confidence, ProviderResult, ProviderMetadata } from "../types";
 import { fetchHtml } from "../lib/fetch-layer";
-import { readLastGood, buildFallback } from "../lib/data-output";
 
 const META: ProviderMetadata = {
     provider_id: "valorant",
@@ -23,15 +22,7 @@ export async function run(): Promise<ProviderResult> {
         const response = await fetchHtml(url, { providerId: META.provider_id });
 
         if (!response.ok) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(
-                META,
-                response.failureType || FailureType.Unavailable,
-                response.error || `HTTP ${response.status}`,
-                lastGood,
-                response.status,
-                response.mode
-            );
+            throw new Error(response.error || `HTTP ${response.status}`);
         }
 
         const $ = cheerio.load(response.text);
@@ -69,15 +60,7 @@ export async function run(): Promise<ProviderResult> {
         });
 
         if (!lastPatchDate) {
-            const lastGood = readLastGood(META.game, META.type);
-            return buildFallback(
-                META,
-                FailureType.ParseFailed,
-                "Could not extract patch date from VALORANT news page",
-                lastGood,
-                response.status,
-                response.mode
-            );
+            throw new Error("Could not extract patch date from VALORANT news page");
         }
 
         const finalDate = lastPatchDate as Date;
@@ -87,6 +70,7 @@ export async function run(): Promise<ProviderResult> {
             status: "fresh",
             nextEventUtc: finalDate.toISOString(),
             fetched_at_utc: new Date().toISOString(),
+            last_success_at_utc: new Date().toISOString(),
             source_url: url,
             confidence: Confidence.Medium,
             http_status: response.status,
@@ -94,8 +78,6 @@ export async function run(): Promise<ProviderResult> {
             notes: patchTitle || undefined
         };
     } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        const lastGood = readLastGood(META.game, META.type);
-        return buildFallback(META, FailureType.Unavailable, reason, lastGood);
+        throw error;
     }
 }

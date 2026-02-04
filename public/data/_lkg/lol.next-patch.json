@@ -1,0 +1,15 @@
+{
+  "provider_id": "lol",
+  "game": "lol",
+  "type": "next-patch",
+  "title": "League of Legends Next Patch",
+  "status": "fresh",
+  "nextEventUtc": "2026-02-18T22:00:00.000Z",
+  "fetched_at_utc": "2026-02-04T21:36:59.553Z",
+  "last_success_at_utc": "2026-02-04T21:36:59.553Z",
+  "source_url": "https://support-leagueoflegends.riotgames.com/hc/en-us/articles/360018987893-Patch-Schedule-League-of-Legends",
+  "confidence": "high",
+  "http_status": 200,
+  "fetch_mode": "browser",
+  "notes": "Patch 26.04"
+}

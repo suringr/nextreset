@@ -42,19 +42,12 @@ export async function run(): Promise<ProviderResult> {
             status: "fresh",
             nextEventUtc: nextReset.toISOString(),
             fetched_at_utc: now.toISOString(),
+            last_success_at_utc: now.toISOString(),
             source_url: "https://www.rockstargames.com/gta-online",
             confidence: Confidence.High,
             notes: "Weekly reset occurs every Thursday at 10:00 UTC"
         };
     } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        return {
-            ...META,
-            status: "fallback" as const,
-            nextEventUtc: null,
-            failure_type: "unavailable" as any, // Simplified for this case
-            explanation: reason,
-            fetched_at_utc: new Date().toISOString()
-        };
+        throw error;
     }
 }
