@@ -19,6 +19,8 @@ import * as gta from "./providers/gta";
 import * as warzone from "./providers/warzone";
 import * as genshin from "./providers/genshin";
 import * as pubg from "./providers/pubg";
+import * as rdr2 from "./providers/rdr2";
+import * as eafc from "./providers/eafc";
 
 interface ProviderEntry {
     name: string;
@@ -35,7 +37,9 @@ const providers: ProviderEntry[] = [
     { name: "GTA Online", run: gta.run },
     { name: "Warzone", run: warzone.run },
     { name: "Genshin Impact", run: genshin.run },
-    { name: "PUBG", run: pubg.run }
+    { name: "PUBG", run: pubg.run },
+    { name: "Red Dead Redemption 2", run: rdr2.run },
+    { name: "EA SPORTS FC", run: eafc.run }
 ];
 
 /**
