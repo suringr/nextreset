@@ -6,7 +6,7 @@ import { FailureType } from '../types';
  */
 class BrowserBudget {
     private count = 0;
-    private readonly MAX = 3;
+    private readonly MAX = 10;
 
     canUse(): boolean {
         return this.count < this.MAX;
