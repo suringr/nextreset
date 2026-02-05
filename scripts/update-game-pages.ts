@@ -38,6 +38,8 @@ const template = `<!DOCTYPE html>
   <title>__TITLE__ - NextReset</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#0b0f14">
   
   <!-- CRITICAL: Inline CSS for guaranteed first paint -->
   <style>

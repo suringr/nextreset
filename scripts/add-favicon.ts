@@ -9,7 +9,9 @@ const publicDir = path.join(__dirname, '../public');
 
 // Favicon HTML to add
 const faviconTags = `  <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="apple-touch-icon" href="/favicon.png">`;
+  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#0b0f14">`;
 
 // Update homepage
 const indexPath = path.join(publicDir, 'index.html');
