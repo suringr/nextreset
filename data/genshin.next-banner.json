@@ -1,0 +1,11 @@
+{
+  "provider_id": "genshin",
+  "game": "genshin",
+  "type": "next-banner",
+  "title": "Genshin Impact",
+  "status": "unavailable",
+  "nextEventUtc": null,
+  "failure_type": "unavailable",
+  "explanation": "Crashed: Could not extract explicit banner end date from Genshin news. Source: https://genshin.hoyoverse.com/en/news",
+  "fetched_at_utc": "2026-03-02T06:45:02.227Z"
+}

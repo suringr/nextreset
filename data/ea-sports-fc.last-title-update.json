@@ -1,0 +1,11 @@
+{
+  "provider_id": "ea-sports-fc",
+  "game": "ea-sports-fc",
+  "type": "last-title-update",
+  "title": "EA SPORTS FC",
+  "status": "unavailable",
+  "nextEventUtc": null,
+  "failure_type": "unavailable",
+  "explanation": "Crashed: Could not find any 'Title Update' articles with dates on EA Forums",
+  "fetched_at_utc": "2026-03-02T06:45:12.985Z"
+}

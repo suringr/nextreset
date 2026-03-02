@@ -1,0 +1,21 @@
+{
+  "provider_id": "fortnite",
+  "game": "fortnite",
+  "type": "next-season",
+  "title": "Fortnite Season End",
+  "status": "fresh",
+  "fetched_at_utc": "2026-03-02T06:44:48.307Z",
+  "last_success_at_utc": "2026-03-02T06:44:48.307Z",
+  "nextEventUtc": "2026-03-19T00:00:00.000Z",
+  "source_url": "https://www.fortnite.com/battle-pass",
+  "confidence": "high",
+  "http_status": 200,
+  "fetch_mode": "browser",
+  "currentSeasonEnds": "2026-03-19",
+  "timezone": "America/New_York",
+  "nextSeasonStart": null,
+  "nextSeasonEstimate": "2026-03-20",
+  "nextSeasonEstimateFriendly": "March 20, 2026",
+  "sourceName": "Fortnite Battle Pass (Official)",
+  "provider": "fortnite"
+}

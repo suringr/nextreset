@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Live tracking of official game resets and updates — no predictions. Track Fortnite, League of Legends, CS2, VALORANT, and more.">
+  <meta property="og:title" content="NextReset - Live Game Reset Tracker">
+  <meta property="og:description" content="Live tracking of official game resets and updates — no predictions">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://nextreset.co">
+  <meta property="og:image" content="https://nextreset.co/og.png">
+  <title>NextReset - Live Game Reset Tracker</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
+
+  <!-- CRITICAL: Inline CSS for guaranteed first paint (hard paint guarantee) -->
+  <style>
+    body {
+      margin: 0;
+      background: #0b0f14;
+      color: #e5e7eb;
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 22px
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 20px
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #22c55e
+    }
+
+    .hero {
+      margin: 22px 0 32px
+    }
+
+    .h1 {
+      font-size: 38px;
+      font-weight: 900;
+      margin: 0 0 8px
+    }
+
+    .sub {
+      color: #6b7280;
+      margin: 0;
+      font-size: 16px
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(3, 1fr);
+      margin-top: 18px
+    }
+
+    .card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 18px;
+      padding: 16px;
+      min-height: 140px
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin: 0
+    }
+
+    .card-countdown {
+      font-size: 28px;
+      font-weight: 900;
+      color: #6b7280;
+      margin-bottom: 12px
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(100, 116, 139, .15);
+      color: #64748b;
+      border: 1px solid rgba(100, 116, 139, .3)
+    }
+
+    @media(max-width:900px) {
+      .grid {
+        grid-template-columns: repeat(2, 1fr)
+      }
+    }
+
+    @media(max-width:600px) {
+      .grid {
+        grid-template-columns: 1fr
+      }
+
+      .h1 {
+        font-size: 32px
+      }
+    }
+  </style>
+
+  <!-- External CSS (enhancement, not required for first paint) -->
+  <link rel="stylesheet" href="/assets/styles.v2.css">
+
+  <!-- Google Analytics (moved after CSS to not block parsing) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-YY6V5SR1DN');
+  </script>
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8986430839492258"
+    crossorigin="anonymous"></script>
+</head>
+
+
+<body>
+  <div class="container">
+    <!-- Top Bar -->
+    <div class="topbar">
+      <div class="brand">
+        <span class="dot"></span>
+        NextReset
+      </div>
+      <div class="trust-badges">
+        <span class="trust-badge">Official sources only</span>
+        <span class="trust-badge">Honest data</span>
+      </div>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero">
+      <h1 class="h1">NextReset</h1>
+      <p class="sub">Live tracking of official game resets and updates — no predictions.</p>
+    </div>
+
+    <!-- Ad Top -->
+    <div class="ad-slot ad-slot--top">
+      <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8986430839492258" data-ad-slot="6919083675"
+        data-ad-format="auto" data-full-width-responsive="true"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+
+    <!-- Game Grid -->
+    <div class="grid" id="game-grid">
+      <a href="/fortnite/next-season/" class="card" id="card-fortnite" data-game="fortnite" data-type="next-season"
+        data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">Fortnite</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
+        </div>
+      </a>
+
+      <a href="/lol/next-patch/" class="card" id="card-lol" data-game="lol" data-type="next-patch" data-state="loading"
+        data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">League of Legends</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
+        </div>
+      </a>
+
+      <a href="/valorant/last-patch/" class="card" id="card-valorant" data-game="valorant" data-type="last-patch"
+        data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">VALORANT</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
+        </div>
+      </a>
+
+      <a href="/cs2/last-update/" class="card" id="card-cs2" data-game="cs2" data-type="last-update"
+        data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">Counter-Strike 2</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
+        </div>
+      </a>
+
+      <a href="/minecraft/last-release/" class="card" id="card-minecraft" data-game="minecraft" data-type="last-release"
+        data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">Minecraft</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
+        </div>
+      </a>
+
+      <a href="/roblox/status/" class="card" id="card-roblox" data-game="roblox" data-type="status" data-state="loading"
+        data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">Roblox</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
+        </div>
+      </a>
+
+      <a href="/gta/weekly-reset/" class="card" id="card-gta" data-game="gta" data-type="weekly-reset"
+        data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">GTA Online</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
+        </div>
+      </a>
+
+      <a href="/warzone/last-patch/" class="card" id="card-warzone" data-game="warzone" data-type="last-patch"
+        data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">Warzone</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
+        </div>
+      </a>
+
+      <a href="/genshin/next-banner/" class="card" id="card-genshin" data-game="genshin" data-type="next-banner"
+        data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">Genshin Impact</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
+        </div>
+      </a>
+
+      <a href="/pubg/last-patch/" class="card" id="card-pubg" data-game="pubg" data-type="last-patch"
+        data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">PUBG</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
+        </div>
+      </a>
+
+      <a href="/red-dead-redemption-2/last-update/" class="card" id="card-red-dead-redemption-2"
+        data-game="red-dead-redemption-2" data-type="last-update" data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">Red Dead Redemption 2</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
+        </div>
+      </a>
+
+      <a href="/ea-sports-fc/last-title-update/" class="card" id="card-ea-sports-fc" data-game="ea-sports-fc"
+        data-type="last-title-update" data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h2 class="card-title">EA SPORTS FC</h2>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- Ad Bottom -->
+    <div class="ad-slot ad-slot--bottom">
+      <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8986430839492258" data-ad-slot="3246306240"
+        data-ad-format="auto" data-full-width-responsive="true"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+
+    <!-- Footer -->
+    <footer>
+      <p>Data automatically updated every 6 hours from official sources.</p>
+      <p>Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
+    </footer>
+  </div>
+
+  <!-- Fallback for users with JavaScript disabled -->
+  <noscript>
+    <style>
+      .card-countdown {
+        color: #6b7280 !important;
+      }
+
+      .badge {
+        display: none;
+      }
+    </style>
+    <div
+      style="text-align: center; padding: 20px; color: #9ca3af; background: #111827; margin: 20px; border-radius: 12px;">
+      JavaScript is required for live countdowns. Visit individual game pages for static data.
+    </div>
+  </noscript>
+
+  <!-- Global error handlers - catch crashes before they blank the page -->
+  <script>
+    window.onerror = function (msg, url, line, col, error) {
+      console.error('[NextReset] Uncaught error:', msg, 'at', url, line);
+      if (typeof gtag === 'function') {
+        gtag('event', 'exception', { description: String(msg).slice(0, 100), fatal: false });
+      }
+      return false;
+    };
+    window.addEventListener('unhandledrejection', function (event) {
+      console.error('[NextReset] Unhandled promise rejection:', event.reason);
+      if (typeof gtag === 'function') {
+        gtag('event', 'exception', { description: 'Promise: ' + String(event.reason).slice(0, 100), fatal: false });
+      }
+    });
+  </script>
+
+  <script src="/assets/app.js" defer></script>
+</body>
+
+</html>
