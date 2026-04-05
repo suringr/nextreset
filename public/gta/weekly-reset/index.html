@@ -3,14 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Track GTA Online events and updates">
-  <meta property="og:title" content="GTA Online - NextReset">
+  <meta name="description" content="Track the next GTA Online weekly reset countdown. Every Thursday at 10:00 UTC, Rockstar refreshes bonuses, discounts, and challenges.">
+  <meta property="og:title" content="GTA Online Weekly Reset - NextReset">
+  <meta property="og:description" content="Track the next GTA Online weekly reset countdown. Every Thursday at 10:00 UTC, Rockstar refreshes bonuses, discounts, and challenges.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://nextreset.co/og.png">
-  <title>GTA Online - NextReset</title>
+  <link rel="canonical" href="https://nextreset.co/gta/weekly-reset/">
+  <title>GTA Online Weekly Reset - NextReset</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/favicon.png">
-  
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#0b0f14">
+
   <!-- CRITICAL: Inline CSS for guaranteed first paint -->
   <style>
     body{margin:0;background:#0b0f14;color:#e5e7eb;font-family:system-ui,-apple-system,sans-serif;min-height:100vh}
@@ -25,11 +29,26 @@
     .info-row:last-child{border-bottom:none}
     .info-label{color:#6b7280;font-size:13px;text-transform:uppercase;font-weight:600}
     .info-value{font-weight:700}
-    @media(max-width:600px){.game-title{font-size:32px}.countdown-value{font-size:40px}}
+    .content-section{margin:32px 0}
+    .content-section h2{font-size:22px;font-weight:800;margin:0 0 12px;color:#e5e7eb}
+    .content-section p{color:#9ca3af;line-height:1.7;margin:0 0 16px;font-size:15px}
+    .content-section ul{color:#9ca3af;line-height:1.8;padding-left:20px;margin:0 0 16px}
+    .content-section li{margin-bottom:4px;font-size:15px}
+    .faq-item{background:#111827;border:1px solid #1f2937;border-radius:12px;margin-bottom:8px;overflow:hidden}
+    .faq-item summary{padding:14px 18px;cursor:pointer;font-weight:700;font-size:15px;list-style:none;display:flex;align-items:center;gap:10px}
+    .faq-item summary::before{content:'▸';color:#22c55e;font-size:14px;transition:transform .2s}
+    .faq-item[open] summary::before{transform:rotate(90deg)}
+    .faq-item summary::-webkit-details-marker{display:none}
+    .faq-item p{padding:0 18px 14px;color:#9ca3af;line-height:1.7;margin:0;font-size:14px}
+    .trust-box{background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:16px 20px;margin:24px 0;display:flex;gap:24px;flex-wrap:wrap}
+    .trust-item{flex:1;min-width:140px}
+    .trust-item .label{color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:4px}
+    .trust-item .value{font-weight:700;font-size:14px;color:#e5e7eb}
+    @media(max-width:600px){.game-title{font-size:32px}.countdown-value{font-size:40px}.trust-box{flex-direction:column;gap:12px}}
   </style>
 
   <link rel="stylesheet" href="/assets/styles.v2.css">
-  
+
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -37,29 +56,45 @@
     gtag('js', new Date());
     gtag('config', 'G-YY6V5SR1DN');
   </script>
-  
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8986430839492258"
-     crossorigin="anonymous"></script>
 
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What time does GTA Online reset each week?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "GTA Online resets every Thursday at exactly 10:00 UTC (6:00 AM Eastern, 3:00 AM Pacific). The countdown above shows the exact time remaining until the next reset."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What changes during the GTA Online weekly reset?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Each week brings new discounted vehicles and properties, bonus payout activities (double/triple GTA$ and RP), a new podium vehicle, and refreshed weekly challenges."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I lose anything during the weekly reset?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No, your character progress, money, vehicles, and properties are never affected by the weekly reset. Only the featured content and discounts change."
+          }
+        }
+      ]
+    }
+    </script>
 </head>
 <body>
   <div class="container">
     <div class="game-page">
       <a href="/" class="back-link">← Back to Home</a>
-      
-      <!-- Ad Top -->
-      <!-- Ad Top -->
-      <div class="ad-slot ad-slot--top">
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="ca-pub-8986430839492258"
-             data-ad-slot="6919083675"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-      </div>
 
-      
       <!-- Game Header -->
       <div class="game-header">
         <h1 class="game-title" id="event-title">GTA Online Weekly Reset</h1>
@@ -67,13 +102,18 @@
           <span class="kicker">Open World</span>
         </div>
       </div>
-      
+
+      <!-- About -->
+      <div class="content-section">
+        <p>This page shows the exact countdown to the next GTA Online weekly content update. The reset time is computed from Rockstar Games' established Thursday 10:00 UTC schedule, making this one of our highest-confidence trackers.</p>
+      </div>
+
       <!-- Countdown -->
       <div class="countdown-box" id="countdown">
         <div class="countdown-label">Checking official sources...</div>
         <div class="countdown-value countdown-skeleton">--:--:--</div>
       </div>
-      
+
       <!-- Info Panel -->
       <div class="info-panel">
         <div class="info-row">
@@ -89,24 +129,64 @@
           <span class="info-value" id="last-updated">...</span>
         </div>
       </div>
-      
+
       <!-- Notes -->
       <div id="notes" class="notes" style="display: none;"></div>
-      
-      <!-- Ad Bottom -->
-      <!-- Ad Bottom -->
-      <div class="ad-slot ad-slot--bottom">
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="ca-pub-8986430839492258"
-             data-ad-slot="3246306240"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+
+      <!-- What Is It -->
+      <div class="content-section">
+        <h2>What Is the Weekly Reset?</h2>
+        <p>Every Thursday at 10:00 UTC (6:00 AM Eastern), Rockstar Games refreshes GTA Online with new weekly content. This rotation has been a core part of GTA Online for years and gives players a reason to check in every week. The weekly reset brings new discounts, bonus payouts, and featured content that changes the best way to earn money and experience in the game.</p>
+      </div>
+
+      <!-- What Changes -->
+      <div class="content-section">
+        <h2>What Changes</h2>
+        <ul>
+              <li>New podium vehicle at the Diamond Casino</li>
+              <li>Discounted properties, vehicles, and upgrades</li>
+              <li>Double and triple GTA$ and RP on featured activities</li>
+              <li>New time-limited weekly challenges</li>
+              <li>Prize Ride challenge rotation</li>
+              <li>Featured Adversary Mode and Survival maps</li>
+            </ul>
+      </div>
+
+      <!-- FAQ -->
+      <div class="content-section">
+        <h2>Frequently Asked Questions</h2>
+            <details class="faq-item">
+              <summary>What time does GTA Online reset each week?</summary>
+              <p>GTA Online resets every Thursday at exactly 10:00 UTC (6:00 AM Eastern, 3:00 AM Pacific). The countdown above shows the exact time remaining until the next reset.</p>
+            </details>
+            <details class="faq-item">
+              <summary>What changes during the GTA Online weekly reset?</summary>
+              <p>Each week brings new discounted vehicles and properties, bonus payout activities (double/triple GTA$ and RP), a new podium vehicle, and refreshed weekly challenges.</p>
+            </details>
+            <details class="faq-item">
+              <summary>Do I lose anything during the weekly reset?</summary>
+              <p>No, your character progress, money, vehicles, and properties are never affected by the weekly reset. Only the featured content and discounts change.</p>
+            </details>
+      </div>
+
+      <!-- Trust Box -->
+      <div class="trust-box">
+        <div class="trust-item">
+          <div class="label">Data Source</div>
+          <div class="value">Official Publisher</div>
+        </div>
+        <div class="trust-item">
+          <div class="label">Update Frequency</div>
+          <div class="value">Every 6 Hours</div>
+        </div>
+        <div class="trust-item">
+          <div class="label">Method</div>
+          <div class="value">Automated Monitoring</div>
+        </div>
       </div>
 
     </div>
-    
+
     <noscript>
       <div style="text-align: center; padding: 20px; color: #9ca3af; background: #111827; margin-top: 20px; border-radius: 12px;">
         JavaScript is required for live countdowns. Data shown below is from the latest check.
@@ -115,12 +195,14 @@
 
     <footer>
       <p>Data automatically updated every 6 hours from official sources.</p>
+      <p>Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
+      <p><a href="/about/">About</a> · <a href="/privacy/">Privacy Policy</a></p>
     </footer>
   </div>
-  
+
   <!-- Data attributes for JS -->
   <div id="countdown-container" data-game="gta" data-type="weekly-reset" style="display: none;"></div>
-  
+
   <!-- Global error handlers -->
   <script>
     window.onerror = function(msg, url, lineNo, columnNo, error) {
