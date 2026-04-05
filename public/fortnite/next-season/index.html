@@ -3,16 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Track Fortnite events and updates">
-  <meta property="og:title" content="Fortnite - NextReset">
+  <meta name="description" content="Track the exact countdown to when the current Fortnite season ends and the next one begins. Updated automatically from official Epic Games sources.">
+  <meta property="og:title" content="Fortnite Season End - NextReset">
+  <meta property="og:description" content="Track the exact countdown to when the current Fortnite season ends and the next one begins. Updated automatically from official Epic Games sources.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://nextreset.co/og.png">
-  <title>Fortnite - NextReset</title>
+  <link rel="canonical" href="https://nextreset.co/fortnite/next-season/">
+  <title>Fortnite Season End - NextReset</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/favicon.png">
   <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#0b0f14">
-  
+
   <!-- CRITICAL: Inline CSS for guaranteed first paint -->
   <style>
     body{margin:0;background:#0b0f14;color:#e5e7eb;font-family:system-ui,-apple-system,sans-serif;min-height:100vh}
@@ -27,11 +29,26 @@
     .info-row:last-child{border-bottom:none}
     .info-label{color:#6b7280;font-size:13px;text-transform:uppercase;font-weight:600}
     .info-value{font-weight:700}
-    @media(max-width:600px){.game-title{font-size:32px}.countdown-value{font-size:40px}}
+    .content-section{margin:32px 0}
+    .content-section h2{font-size:22px;font-weight:800;margin:0 0 12px;color:#e5e7eb}
+    .content-section p{color:#9ca3af;line-height:1.7;margin:0 0 16px;font-size:15px}
+    .content-section ul{color:#9ca3af;line-height:1.8;padding-left:20px;margin:0 0 16px}
+    .content-section li{margin-bottom:4px;font-size:15px}
+    .faq-item{background:#111827;border:1px solid #1f2937;border-radius:12px;margin-bottom:8px;overflow:hidden}
+    .faq-item summary{padding:14px 18px;cursor:pointer;font-weight:700;font-size:15px;list-style:none;display:flex;align-items:center;gap:10px}
+    .faq-item summary::before{content:'▸';color:#22c55e;font-size:14px;transition:transform .2s}
+    .faq-item[open] summary::before{transform:rotate(90deg)}
+    .faq-item summary::-webkit-details-marker{display:none}
+    .faq-item p{padding:0 18px 14px;color:#9ca3af;line-height:1.7;margin:0;font-size:14px}
+    .trust-box{background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:16px 20px;margin:24px 0;display:flex;gap:24px;flex-wrap:wrap}
+    .trust-item{flex:1;min-width:140px}
+    .trust-item .label{color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:4px}
+    .trust-item .value{font-weight:700;font-size:14px;color:#e5e7eb}
+    @media(max-width:600px){.game-title{font-size:32px}.countdown-value{font-size:40px}.trust-box{flex-direction:column;gap:12px}}
   </style>
 
   <link rel="stylesheet" href="/assets/styles.v2.css">
-  
+
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -39,43 +56,64 @@
     gtag('js', new Date());
     gtag('config', 'G-YY6V5SR1DN');
   </script>
-  
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8986430839492258"
-     crossorigin="anonymous"></script>
 
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "When does the current Fortnite season end?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The exact end date is shown in the countdown above. This date is pulled directly from the official Fortnite Battle Pass page and updates automatically."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What happens when a Fortnite season ends?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "When a season ends, your Battle Pass progress resets, the map typically changes, and a new set of weapons and items are introduced. Any unearned Battle Pass rewards from the previous season become unavailable."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can Fortnite seasons be extended?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, Epic Games occasionally extends seasons beyond their originally announced end date. Our tracker updates automatically when this happens, so the countdown always reflects the latest official date."
+          }
+        }
+      ]
+    }
+    </script>
 </head>
 <body>
   <div class="container">
     <div class="game-page">
       <a href="/" class="back-link">← Back to Home</a>
-      
-      <!-- Ad Top -->
-      <!-- Ad Top -->
-      <div class="ad-slot ad-slot--top">
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="ca-pub-8986430839492258"
-             data-ad-slot="6919083675"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-      </div>
 
-      
       <!-- Game Header -->
       <div class="game-header">
         <h1 class="game-title" id="event-title">Fortnite Season End</h1>
         <div class="game-meta">
-          <span class="kicker">Pacific Break</span>
+          <span class="kicker">Battle Royale</span>
         </div>
       </div>
-      
+
+      <!-- About -->
+      <div class="content-section">
+        <p>This page tracks the official end date for the current Fortnite Battle Pass season. The countdown is sourced directly from the official Fortnite Battle Pass page on fortnite.com, so you always see the real date — not a community guess.</p>
+      </div>
+
       <!-- Countdown -->
       <div class="countdown-box" id="countdown">
         <div class="countdown-label">Checking official sources...</div>
         <div class="countdown-value countdown-skeleton">--:--:--</div>
       </div>
-      
+
       <!-- Info Panel -->
       <div class="info-panel">
         <div class="info-row">
@@ -91,24 +129,64 @@
           <span class="info-value" id="last-updated">...</span>
         </div>
       </div>
-      
+
       <!-- Notes -->
       <div id="notes" class="notes" style="display: none;"></div>
-      
-      <!-- Ad Bottom -->
-      <!-- Ad Bottom -->
-      <div class="ad-slot ad-slot--bottom">
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="ca-pub-8986430839492258"
-             data-ad-slot="3246306240"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+
+      <!-- What Is It -->
+      <div class="content-section">
+        <h2>What Is the Season End?</h2>
+        <p>Every few months, Epic Games launches a new Fortnite season with a completely refreshed Battle Pass, new map changes, fresh weapons, and unique gameplay mechanics. Each season typically lasts 10-13 weeks and introduces a new theme that reshapes the entire game experience. Knowing when the current season ends helps you plan your remaining Battle Pass challenges and prepare for whatever comes next.</p>
+      </div>
+
+      <!-- What Changes -->
+      <div class="content-section">
+        <h2>What Changes</h2>
+        <ul>
+              <li>New Battle Pass with 100+ tiers of cosmetics</li>
+              <li>Map changes — new POIs, terrain updates, and biome shifts</li>
+              <li>Fresh weapon and item loot pool</li>
+              <li>New gameplay mechanics and vehicles</li>
+              <li>Seasonal quests and XP challenges reset</li>
+              <li>Competitive ranked season may reset</li>
+            </ul>
+      </div>
+
+      <!-- FAQ -->
+      <div class="content-section">
+        <h2>Frequently Asked Questions</h2>
+            <details class="faq-item">
+              <summary>When does the current Fortnite season end?</summary>
+              <p>The exact end date is shown in the countdown above. This date is pulled directly from the official Fortnite Battle Pass page and updates automatically.</p>
+            </details>
+            <details class="faq-item">
+              <summary>What happens when a Fortnite season ends?</summary>
+              <p>When a season ends, your Battle Pass progress resets, the map typically changes, and a new set of weapons and items are introduced. Any unearned Battle Pass rewards from the previous season become unavailable.</p>
+            </details>
+            <details class="faq-item">
+              <summary>Can Fortnite seasons be extended?</summary>
+              <p>Yes, Epic Games occasionally extends seasons beyond their originally announced end date. Our tracker updates automatically when this happens, so the countdown always reflects the latest official date.</p>
+            </details>
+      </div>
+
+      <!-- Trust Box -->
+      <div class="trust-box">
+        <div class="trust-item">
+          <div class="label">Data Source</div>
+          <div class="value">Official Publisher</div>
+        </div>
+        <div class="trust-item">
+          <div class="label">Update Frequency</div>
+          <div class="value">Every 6 Hours</div>
+        </div>
+        <div class="trust-item">
+          <div class="label">Method</div>
+          <div class="value">Automated Monitoring</div>
+        </div>
       </div>
 
     </div>
-    
+
     <noscript>
       <div style="text-align: center; padding: 20px; color: #9ca3af; background: #111827; margin-top: 20px; border-radius: 12px;">
         JavaScript is required for live countdowns. Data shown below is from the latest check.
@@ -117,12 +195,14 @@
 
     <footer>
       <p>Data automatically updated every 6 hours from official sources.</p>
+      <p>Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
+      <p><a href="/about/">About</a> · <a href="/privacy/">Privacy Policy</a></p>
     </footer>
   </div>
-  
+
   <!-- Data attributes for JS -->
   <div id="countdown-container" data-game="fortnite" data-type="next-season" style="display: none;"></div>
-  
+
   <!-- Global error handlers -->
   <script>
     window.onerror = function(msg, url, lineNo, columnNo, error) {
