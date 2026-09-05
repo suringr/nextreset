@@ -1,0 +1,11 @@
+{
+  "provider_id": "ea-sports-fc",
+  "game": "ea-sports-fc",
+  "type": "last-title-update",
+  "title": "EA SPORTS FC",
+  "status": "unavailable",
+  "nextEventUtc": null,
+  "failure_type": "unavailable",
+  "explanation": "Crashed: HTTP 403",
+  "fetched_at_utc": "2026-09-05T14:14:19.696Z"
+}

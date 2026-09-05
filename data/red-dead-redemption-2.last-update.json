@@ -1,0 +1,14 @@
+{
+  "provider_id": "red-dead-redemption-2",
+  "game": "red-dead-redemption-2",
+  "type": "last-update",
+  "title": "Red Dead Redemption 2 Last Update",
+  "status": "fresh",
+  "nextEventUtc": "2026-09-01T00:00:00.000Z",
+  "fetched_at_utc": "2026-09-05T14:14:19.501Z",
+  "last_success_at_utc": "2026-09-05T14:14:19.501Z",
+  "source_url": "https://www.rockstargames.com/newswire/article/39a24772831aa7/distill-your-best-swill-for-triple-rewards-in-red-dead-online",
+  "confidence": "high",
+  "fetch_mode": "browser",
+  "notes": "Red Dead OnlineSeptember 1, 2026Distill Your Best Swill for Triple Rewards in Red Dead Online"
+}
