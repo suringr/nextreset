@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Track the next League of Legends patch release date. Live countdown sourced from Riot Games official patch schedule.">
+  <meta property="og:title" content="League of Legends Next Patch - NextReset">
+  <meta property="og:description" content="Track the next League of Legends patch release date. Live countdown sourced from Riot Games official patch schedule.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://nextreset.co/og.png">
+  <link rel="canonical" href="https://nextreset.co/lol/next-patch/">
+  <title>League of Legends Next Patch - NextReset</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#0b0f14">
+
+  <!-- CRITICAL: Inline CSS for guaranteed first paint -->
+  <style>
+    body{margin:0;background:#0b0f14;color:#e5e7eb;font-family:system-ui,-apple-system,sans-serif;min-height:100vh}
+    .container{max-width:980px;margin:0 auto;padding:22px}
+    .game-page{max-width:720px;margin:0 auto}
+    .game-title{font-size:42px;font-weight:900;margin:0 0 12px}
+    .countdown-box{background:#111827;border:1px solid #1f2937;border-radius:18px;padding:48px 32px;text-align:center;margin:32px 0}
+    .countdown-label{color:#6b7280;font-size:12px;text-transform:uppercase;letter-spacing:.14em;font-weight:700;margin-bottom:18px}
+    .countdown-value{font-size:56px;font-weight:900;color:#22c55e;line-height:1.1}
+    .info-panel{background:#0f172a;border:1px solid #1f2937;border-radius:18px;padding:20px 24px;margin:24px 0}
+    .info-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #1f2937}
+    .info-row:last-child{border-bottom:none}
+    .info-label{color:#6b7280;font-size:13px;text-transform:uppercase;font-weight:600}
+    .info-value{font-weight:700}
+    .content-section{margin:32px 0}
+    .content-section h2{font-size:22px;font-weight:800;margin:0 0 12px;color:#e5e7eb}
+    .content-section p{color:#9ca3af;line-height:1.7;margin:0 0 16px;font-size:15px}
+    .content-section ul{color:#9ca3af;line-height:1.8;padding-left:20px;margin:0 0 16px}
+    .content-section li{margin-bottom:4px;font-size:15px}
+    .faq-item{background:#111827;border:1px solid #1f2937;border-radius:12px;margin-bottom:8px;overflow:hidden}
+    .faq-item summary{padding:14px 18px;cursor:pointer;font-weight:700;font-size:15px;list-style:none;display:flex;align-items:center;gap:10px}
+    .faq-item summary::before{content:'▸';color:#22c55e;font-size:14px;transition:transform .2s}
+    .faq-item[open] summary::before{transform:rotate(90deg)}
+    .faq-item summary::-webkit-details-marker{display:none}
+    .faq-item p{padding:0 18px 14px;color:#9ca3af;line-height:1.7;margin:0;font-size:14px}
+    .trust-box{background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:16px 20px;margin:24px 0;display:flex;gap:24px;flex-wrap:wrap}
+    .trust-item{flex:1;min-width:140px}
+    .trust-item .label{color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:4px}
+    .trust-item .value{font-weight:700;font-size:14px;color:#e5e7eb}
+    @media(max-width:600px){.game-title{font-size:32px}.countdown-value{font-size:40px}.trust-box{flex-direction:column;gap:12px}}
+  </style>
+
+  <link rel="stylesheet" href="/assets/styles.v2.css">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-YY6V5SR1DN');
+  </script>
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How often does League of Legends get patched?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "LoL follows a strict two-week patch cycle. Riot Games publishes the full year's patch schedule in advance, so you always know when the next update is coming."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What time do LoL patches go live?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Patches typically deploy during early morning hours in each region. NA patches usually go live around 3:00 AM PT, while EUW patches deploy around 5:00 AM GMT."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Where can I read the patch notes?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Official patch notes are published on the League of Legends website at leagueoflegends.com and are usually available the day before the patch deploys."
+          }
+        }
+      ]
+    }
+    </script>
+</head>
+<body>
+  <div class="container">
+    <div class="game-page">
+      <a href="/" class="back-link">← Back to Home</a>
+
+      <!-- Game Header -->
+      <div class="game-header">
+        <h1 class="game-title" id="event-title">League of Legends Next Patch</h1>
+        <div class="game-meta">
+          <span class="kicker">MOBA</span>
+        </div>
+      </div>
+
+      <!-- About -->
+      <div class="content-section">
+        <p>This page tracks the next scheduled League of Legends patch release date. The data comes directly from Riot Games' official patch schedule page, ensuring accuracy down to the exact day.</p>
+      </div>
+
+      <!-- Countdown -->
+      <div class="countdown-box" id="countdown">
+        <div class="countdown-label">Checking official sources...</div>
+        <div class="countdown-value countdown-skeleton">--:--:--</div>
+      </div>
+
+      <!-- Info Panel -->
+      <div class="info-panel">
+        <div class="info-row">
+          <span class="info-label">Source</span>
+          <span class="info-value" id="source">...</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Confidence</span>
+          <span id="confidence" class="confidence">...</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Last Updated</span>
+          <span class="info-value" id="last-updated">...</span>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div id="notes" class="notes" style="display: none;"></div>
+
+      <!-- What Is It -->
+      <div class="content-section">
+        <h2>What Is the Next Patch?</h2>
+        <p>League of Legends follows a consistent two-week patch cycle throughout the year. Each patch brings balance changes to champions, items, and runes, along with occasional new features, visual updates, and gameplay adjustments. Riot Games publishes their patch schedule at the start of each season, making LoL one of the most predictable games to track.</p>
+      </div>
+
+      <!-- What Changes -->
+      <div class="content-section">
+        <h2>What Changes</h2>
+        <ul>
+              <li>Champion balance adjustments (buffs, nerfs, reworks)</li>
+              <li>Item stat changes and new item additions</li>
+              <li>Rune and summoner spell modifications</li>
+              <li>Bug fixes and quality-of-life improvements</li>
+              <li>New skins and cosmetic content releases</li>
+              <li>Ranked split transitions and seasonal events</li>
+            </ul>
+      </div>
+
+      <!-- FAQ -->
+      <div class="content-section">
+        <h2>Frequently Asked Questions</h2>
+            <details class="faq-item">
+              <summary>How often does League of Legends get patched?</summary>
+              <p>LoL follows a strict two-week patch cycle. Riot Games publishes the full year's patch schedule in advance, so you always know when the next update is coming.</p>
+            </details>
+            <details class="faq-item">
+              <summary>What time do LoL patches go live?</summary>
+              <p>Patches typically deploy during early morning hours in each region. NA patches usually go live around 3:00 AM PT, while EUW patches deploy around 5:00 AM GMT.</p>
+            </details>
+            <details class="faq-item">
+              <summary>Where can I read the patch notes?</summary>
+              <p>Official patch notes are published on the League of Legends website at leagueoflegends.com and are usually available the day before the patch deploys.</p>
+            </details>
+      </div>
+
+      <!-- Trust Box -->
+      <div class="trust-box">
+        <div class="trust-item">
+          <div class="label">Data Source</div>
+          <div class="value">Official Publisher</div>
+        </div>
+        <div class="trust-item">
+          <div class="label">Update Frequency</div>
+          <div class="value">Every 6 Hours</div>
+        </div>
+        <div class="trust-item">
+          <div class="label">Method</div>
+          <div class="value">Automated Monitoring</div>
+        </div>
+      </div>
+
+    </div>
+
+    <noscript>
+      <div style="text-align: center; padding: 20px; color: #9ca3af; background: #111827; margin-top: 20px; border-radius: 12px;">
+        JavaScript is required for live countdowns. Data shown below is from the latest check.
+      </div>
+    </noscript>
+
+    <footer>
+      <p>Data automatically updated every 6 hours from official sources.</p>
+      <p>Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
+      <p><a href="/about/">About</a> · <a href="/privacy/">Privacy Policy</a></p>
+    </footer>
+  </div>
+
+  <!-- Data attributes for JS -->
+  <div id="countdown-container" data-game="lol" data-type="next-patch" style="display: none;"></div>
+
+  <!-- Global error handlers -->
+  <script>
+    window.onerror = function(msg, url, lineNo, columnNo, error) {
+      console.log('Error: ' + msg + '\nScript: ' + url + '\nLine: ' + lineNo);
+      if (window.gtag) gtag('event', 'exception', { 'description': msg, 'fatal': false });
+      return false;
+    };
+    window.addEventListener('unhandledrejection', function(event) {
+      console.log('Unhandled rejection:', event.reason);
+      if (window.gtag) gtag('event', 'exception', { 'description': event.reason, 'fatal': false });
+    });
+  </script>
+  <script src="/assets/app.js" defer></script>
+</body>
+</html>
