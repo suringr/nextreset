@@ -88,6 +88,25 @@ test("a JavaScript shell is rendered and the rendered page is used", async () =>
     assert.equal(transport.renders.length, 1);
     assert.equal(transport.renders[0].label, "lol-schedule");
     assert.equal(result.state.lastMode, "browser");
+
+    // Old HTTP validators never survive a browser-derived document.
+    const previous = { ...EMPTY_SOURCE_STATE, etag: "\"http-v1\"", lastModified: "Mon, 01 Sep 2026 00:00:00 GMT" };
+    const again = await smartFetch(RIOT_URL, { expect: { kind: "html" }, previous, transport: fakeTransport({ http: [{ body: fixture("riot-support-shell.html") }], render: [{ html: fixture("minecraft-article.html") }] }), now });
+    assert.equal(again.outcome, "usable");
+    assert.equal(again.state.etag, undefined);
+    assert.equal(again.state.lastModified, undefined);
+});
+
+test("validators are taken only from the response that produced the document", async () => {
+    const body = fixture("minecraft-article.html");
+    const previous = { ...EMPTY_SOURCE_STATE, etag: "\"old\"", lastModified: "Mon, 01 Sep 2026 00:00:00 GMT", textHash: "old-hash" };
+    const transport = fakeTransport({ http: [{ body, headers: {} }] });
+    const result = await smartFetch(ARTICLE_URL, { expect: { kind: "html" }, previous, transport, now });
+    assert.equal(result.outcome, "usable");
+    assert.equal(transport.gets[0].etag, "\"old\"", "the old validator is still offered on the request");
+    assert.equal(result.state.etag, undefined, "but not kept once a new representation arrives without one");
+    assert.equal(result.state.lastModified, undefined);
+    assert.notEqual(result.state.textHash, "old-hash");
 });
 
 test("a challenge that survives rendering is unusable and increments the failure streak", async () => {

@@ -126,8 +126,11 @@ export async function smartFetch(url: string, options: SmartFetchOptions): Promi
             document,
             attempts,
             state: {
-                etag: headers["etag"] ?? previous.etag,
-                lastModified: headers["last-modified"] ?? previous.lastModified,
+                // Validators belong to the representation that produced this document. A 200 that
+                // omits them, or a browser render (no HTTP validators), clears them so a later 304
+                // can never be matched against a different representation's hash.
+                etag: headers["etag"],
+                lastModified: headers["last-modified"],
                 textHash: document.textHash,
                 lastFetchedAt: nowIso,
                 lastUsableAt: nowIso,
@@ -205,6 +208,6 @@ export async function smartFetch(url: string, options: SmartFetchOptions): Promi
     }
 
     const document = documentFrom(url, rendered.finalUrl, rendered.status, "browser", rendered.html, "text/html", options.expect, now);
-    // A rendered document has no validators; keep the previous ETag/Last-Modified so the next HTTP probe stays conditional.
+    // A rendered document has no HTTP validators; the next run probes unconditionally.
     return succeeded(document, rendered.verdict, {});
 }
