@@ -25,6 +25,11 @@ test("text extraction is deterministic, strips scripts and prefers substantial m
     assert.ok(withMain.bodyWordCount > 150);
     assert.ok(!withMain.text.includes("Footer"));
 
+    // Compact markup without whitespace between block elements still yields separate words.
+    const compact = extractText("<html><body><table><tr><td>Patch</td><td>26.19</td></tr><tr><td>Patch</td><td>26.20</td></tr></table><ul><li>Wednesday</li><li>Thursday</li></ul><p>Line one</p><p>Line two</p><h2>Head</h2><span>inline</span><span>text</span></body></html>");
+    assert.equal(compact.text, "Patch 26.19 Patch 26.20 Wednesday Thursday Line one Line two Head inlinetext");
+    assert.equal(compact.wordCount, 12);
+
     // Whitespace and markup changes that do not change visible text keep the same hash.
     const h1 = hashText(extractText("<html><body><p>Patch  26.19 lands\n\non   Wednesday</p></body></html>").text);
     const h2 = hashText(extractText("<html><body><div><p>Patch 26.19 lands on Wednesday</p></div><script>x()</script></body></html>").text);

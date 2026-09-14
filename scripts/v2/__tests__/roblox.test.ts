@@ -147,6 +147,22 @@ test("fetch failure serves stored knowledge as stale and records the failure str
     assert.equal(knowledge.sources[0].textHash!.length, 64, "last good hash survives a failure");
 });
 
+test("stored validators are ignored when the configured source URL has changed", async () => {
+    const { store } = tempStore();
+    const knowledge = store.load("roblox");
+    knowledge.sources.push({ id: "roblox-hostedstatus", url: "http://old.example/feed", etag: "\"stale-etag\"", textHash: "f".repeat(64), consecutiveFailures: 0 });
+    store.save(knowledge);
+
+    const transport = feedTransport(fixture, { "etag": "\"new-etag\"" });
+    const run = await runTracker(game, topic, createRobloxStatusAdapter(transport), store, new Date("2026-09-14T12:00:00Z"));
+    assert.equal(transport.gets[0].etag, undefined, "an ETag from another URL must not be sent");
+    assert.equal(transport.gets[0].lastModified, undefined);
+    assert.equal(run.created, 1, "the feed is read in full, not reported as unchanged");
+    const state = store.load("roblox").sources.find(s => s.id === "roblox-hostedstatus")!;
+    assert.equal(state.url, FEED_URL);
+    assert.equal(state.etag, "\"new-etag\"");
+});
+
 test("valid JSON with the wrong shape is recorded as a source failure and served stale", async () => {
     const { store } = tempStore();
     await runTracker(game, topic, createRobloxStatusAdapter(feedTransport(fixture)), store, new Date("2026-09-14T12:00:00Z"));

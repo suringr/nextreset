@@ -27,6 +27,8 @@ export interface ExtractedText {
 const REMOVE_SELECTOR = "script, style, noscript, template, iframe, svg, canvas, link, meta";
 const MAIN_SELECTOR = "main, article, [role=main], #main-content, .article-body, .article-content";
 const MIN_MAIN_WORDS = 100;
+/** Elements whose boundaries separate words even when the markup has no whitespace between them. */
+const BLOCK_SELECTOR = "p, div, li, ul, ol, dl, dt, dd, td, th, tr, table, thead, tbody, h1, h2, h3, h4, h5, h6, br, hr, section, article, aside, header, footer, nav, main, blockquote, pre, figure, figcaption, details, summary, form, label, option, time";
 
 export function normalizeWhitespace(text: string): string {
     return text.replace(/ /g, " ").replace(/\s+/g, " ").trim();
@@ -62,6 +64,12 @@ export function extractText(html: string): ExtractedText {
     );
 
     $(REMOVE_SELECTOR).remove();
+
+    // Compact markup such as <td>Patch</td><td>26.19</td> must not read as "Patch26.19".
+    $(BLOCK_SELECTOR).each((_, el) => {
+        $(el).before(" ");
+        $(el).after(" ");
+    });
 
     const bodyText = normalizeWhitespace($("body").text() || $.root().text());
     const bodyWordCount = countWords(bodyText);

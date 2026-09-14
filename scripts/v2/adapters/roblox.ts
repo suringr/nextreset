@@ -63,10 +63,14 @@ export function createRobloxStatusAdapter(transport?: Transport): Adapter {
         const source = game.sources.find(s => s.id === topic.sourceId);
         if (!source) throw new Error(`Source ${topic.sourceId} is not configured for ${game.id}`);
 
+        // Validators and hashes belong to a URL: if the configured source moved, start from nothing.
+        const stored = getSourceState(source.id);
+        const previous = stored && stored.url === source.url ? stored : undefined;
+
         const fetched = await smartFetch(source.url, {
             expect: { kind: "json" },
             allowRender: false,
-            previous: getSourceState(source.id),
+            previous,
             transport,
             label: `${game.id}-${topic.type}`,
             now
@@ -91,7 +95,6 @@ export function createRobloxStatusAdapter(transport?: Transport): Adapter {
             snapshot = parseHostedStatus(fetched.document!.body);
         } catch (error) {
             const reason = error instanceof Error ? error.message : String(error);
-            const previous = getSourceState(source.id);
             sourceStates[0] = {
                 ...sourceStates[0],
                 // Drop validators: a 304 against bad content must not read as "unchanged, still good".
