@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "game": "roblox",
+  "updatedAt": "2026-09-14T20:19:35.926Z",
+  "events": [
+    {
+      "key": "roblox/status/2026-08-07t04-48-28z",
+      "game": "roblox",
+      "topic": "status",
+      "kind": "occurrence",
+      "label": "Operational",
+      "status": "observed",
+      "at": "2026-08-07T04:48:28.252Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-14T20:19:35.926Z",
+      "lastVerified": "2026-09-14T20:19:35.926Z",
+      "publishState": "published"
+    }
+  ],
+  "changes": [
+    {
+      "entityKey": "roblox/status/2026-08-07t04-48-28z",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Operational @ 2026-08-07T04:48:28.252Z",
+      "at": "2026-09-14T20:19:35.926Z",
+      "reason": "observed by roblox-hostedstatus",
+      "decision": "applied"
+    }
+  ],
+  "overrides": [],
+  "documents": [],
+  "claims": []
+}
