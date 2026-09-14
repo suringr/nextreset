@@ -84,6 +84,9 @@ async function runV2(entry: RegistryEntry, store: JsonKnowledgeStore, startTime:
         const run = await runV2Tracker(entry.id, entry.type, store, new Date());
         result = run.result;
         detail = `${run.created} new event(s), ${run.changes.length} change(s)`;
+        if (run.saveError && process.env.GITHUB_ACTIONS === "true") {
+            console.log(`::warning title=Knowledge not saved::${entry.name} (${entry.id}.${entry.type}): ${run.saveError.replace(/[\r\n]+/g, " ")}`);
+        }
     } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         result = {

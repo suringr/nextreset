@@ -26,10 +26,28 @@ export interface TrackerRunResult {
     changes: Change[];
     /** Events created by this run. */
     created: number;
+    /** Set when the knowledge file could not be written; the result is still served from memory. */
+    saveError?: string;
 }
 
 function errorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Persists knowledge without letting a write failure (read-only checkout, full
+ * disk) discard a result that is already correct in memory. Returns the error
+ * message so the orchestrator can surface it.
+ */
+function trySave(store: KnowledgeStore, knowledge: GameKnowledge): string | undefined {
+    try {
+        store.save(knowledge);
+        return undefined;
+    } catch (error) {
+        const message = errorMessage(error);
+        console.error(`✗ Knowledge for ${knowledge.game} could not be saved: ${message}`);
+        return message;
+    }
 }
 
 export async function runTracker(game: Game, topic: Topic, adapter: Adapter, store: KnowledgeStore, now: Date): Promise<TrackerRunResult> {
@@ -55,9 +73,9 @@ export async function runTracker(game: Game, topic: Topic, adapter: Adapter, sto
 
     if (outcome.failure) {
         knowledge.updatedAt = now.toISOString();
-        store.save(knowledge);
+        const saveError = trySave(store, knowledge);
         const result = deriveProviderResult(topic, knowledge, { now, outcome: { ok: false, reason: outcome.failure } });
-        return { result, knowledge, changes: [], created: 0 };
+        return { result, knowledge, changes: [], created: 0, saveError };
     }
 
     const changes: Change[] = [];
@@ -74,13 +92,13 @@ export async function runTracker(game: Game, topic: Topic, adapter: Adapter, sto
     changes.push(...endPastScheduled(knowledge, topic, now, "scheduled instant has passed"));
 
     knowledge.updatedAt = now.toISOString();
-    store.save(knowledge);
+    const saveError = trySave(store, knowledge);
 
     const result = deriveProviderResult(topic, knowledge, {
         now,
         outcome: { ok: true, httpStatus: outcome.fetch?.httpStatus, fetchMode: outcome.fetch?.mode }
     });
-    return { result, knowledge, changes, created };
+    return { result, knowledge, changes, created, saveError };
 }
 
 /** Entry point used by the orchestrator: resolves configuration by ids. */
