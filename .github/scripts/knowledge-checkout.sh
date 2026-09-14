@@ -22,10 +22,20 @@ fi
 
 git worktree prune
 
-if git fetch --no-tags "$REMOTE" "+refs/heads/$BRANCH:refs/remotes/$REMOTE/$BRANCH" >/dev/null 2>&1; then
+# Distinguish "the branch does not exist yet" (bootstrap) from "the remote could not
+# be reached" (do not bootstrap: an unrelated orphan history could never be pushed
+# over the existing branch). `git ls-remote --exit-code` exits 2 when the ref is
+# absent and with another non-zero code on transport or auth failures.
+set +e
+git ls-remote --exit-code --heads "$REMOTE" "refs/heads/$BRANCH" >/dev/null 2>&1
+probe=$?
+set -e
+
+if [ "$probe" -eq 0 ]; then
+  git fetch --no-tags "$REMOTE" "+refs/heads/$BRANCH:refs/remotes/$REMOTE/$BRANCH" >/dev/null 2>&1
   git worktree add --detach "$DIR" "refs/remotes/$REMOTE/$BRANCH" >/dev/null
   echo "knowledge: checked out $REMOTE/$BRANCH at $(git -C "$DIR" rev-parse --short HEAD)"
-else
+elif [ "$probe" -eq 2 ]; then
   # First run: bootstrap an orphan branch with no history and no files.
   git worktree add --detach "$DIR" HEAD >/dev/null
   git -C "$DIR" checkout -q --orphan "$BRANCH"
@@ -41,6 +51,9 @@ you are deliberately correcting stored knowledge.
   (schema: `scripts/v2/domain.ts` on `main`).
 EOF
   echo "knowledge: no $REMOTE/$BRANCH yet; bootstrapped an empty orphan branch"
+else
+  echo "::warning title=Knowledge checkout::cannot reach $REMOTE (git ls-remote exit $probe); knowledge will not be persisted this run"
+  exit 1
 fi
 
 ls -la "$DIR"
