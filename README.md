@@ -44,6 +44,9 @@ nextreset/
 # Install dependencies
 npm install
 
+# Install the headless browser used by some providers (one-time)
+npx playwright install chromium
+
 # Build TypeScript
 npm run build
 

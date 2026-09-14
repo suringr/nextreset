@@ -36,4 +36,8 @@ rmrf(out);
 console.log("📦 Copying public/ → dist/...");
 copyDir(src, out);
 
+// Playwright debug captures must never reach the published site, even if a stale
+// local copy still exists under public/data/_debug (they are written to build/debug now).
+rmrf(path.join(out, "data", "_debug"));
+
 console.log("✅ Exported site: public/ → dist/");

@@ -238,8 +238,9 @@ async function fetchWithBrowser(url: string, timeout: number, providerId?: strin
                 const content = await page.content();
                 console.log(`${logPrefix} Content Snippet: ${content.slice(0, 500).replace(/\n/g, ' ')}`);
 
-                // Debug Artifacts
-                const debugDir = path.join(process.cwd(), 'public', 'data', '_debug');
+                // Debug Artifacts: kept under build/ (never under public/, which is published verbatim).
+                // CI uploads this directory as a workflow artifact.
+                const debugDir = path.join(process.cwd(), 'build', 'debug');
                 try {
                     await fs.mkdir(debugDir, { recursive: true });
                 } catch { }

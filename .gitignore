@@ -50,3 +50,6 @@ build-log.txt
 
 # Game data (dynamically generated)
 public/data/*.json
+
+# Playwright debug captures (written to build/debug; CI uploads them as a workflow artifact)
+public/data/_debug/
