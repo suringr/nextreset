@@ -209,4 +209,12 @@ test("structured sources: JSON body becomes the document text, hashed", async ()
     assert.equal(result.document?.title, "");
     assert.ok(result.document!.text.includes("status_overall"));
     assert.equal(result.document!.textHash.length, 64);
+
+    // Whitespace inside JSON values is significant: "Partial  Outage" and "Partial Outage" differ.
+    const a = fakeTransport({ http: [{ body: '{"result":{"status_overall":{"status":"Partial  Outage","updated":"2026-09-14T12:00:00.000Z"}}}' }] });
+    const first = await smartFetch("https://x.example/status.json", { expect: { kind: "json" }, transport: a, now });
+    const b = fakeTransport({ http: [{ body: '{"result":{"status_overall":{"status":"Partial Outage","updated":"2026-09-14T12:00:00.000Z"}}}' }] });
+    const second = await smartFetch("https://x.example/status.json", { expect: { kind: "json" }, previous: first.state, transport: b, now });
+    assert.equal(second.outcome, "usable", "a value change must not be reported as unchanged");
+    assert.notEqual(second.state.textHash, first.state.textHash);
 });

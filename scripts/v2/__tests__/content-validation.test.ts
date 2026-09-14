@@ -81,6 +81,13 @@ test("structured responses are validated by parsing, not by status", () => {
 
     const notFeed = validateContent({ requestedUrl: "https://x.example/a.xml", finalUrl: "https://x.example/a.xml", status: 200, body: "<root><x/></root>", expect: { kind: "xml" } });
     assert.equal(notFeed.code, "parse-error");
+
+    // A truncated feed is malformed XML even though the parser would recover items from it.
+    const rss = fixture("steam-cs2-news.rss.xml");
+    const truncated = rss.slice(0, Math.floor(rss.length * 0.6));
+    const cut = validateContent({ requestedUrl: "https://x.example/feed", finalUrl: "https://x.example/feed", status: 200, body: truncated, expect: { kind: "xml" } });
+    assert.equal(cut.code, "parse-error");
+    assert.match(cut.reason, /malformed XML/);
 });
 
 test("unexpected redirects are rejected without rendering", () => {

@@ -90,8 +90,11 @@ function documentFrom(url: string, finalUrl: string, status: number, mode: "http
         const extracted = extractText(body);
         title = extracted.title;
         text = extracted.text;
-    } else {
+    } else if (expect.kind === "text") {
         text = normalizeWhitespace(body);
+    } else {
+        // JSON/XML: whitespace inside values is significant, so the raw body is the text (and the hash input).
+        text = body;
     }
     return { url, finalUrl, status, fetchedAt: now.toISOString(), mode, contentType, title, text, textHash: hashText(text), body };
 }

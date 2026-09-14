@@ -7,7 +7,7 @@
  * deterministic and explains itself in `reason`, and the verdict says whether a
  * rendered (browser) fetch might help.
  */
-import { XMLParser } from "fast-xml-parser";
+import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { ExtractedText, extractText } from "./text";
 
 export type ContentKind = "html" | "json" | "xml" | "text";
@@ -184,6 +184,11 @@ export function validateContent(input: ValidationInput): Verdict {
     }
 
     if (expect.kind === "xml") {
+        // XMLParser recovers from malformed input; check well-formedness first.
+        const wellFormed = XMLValidator.validate(body);
+        if (wellFormed !== true) {
+            return verdict("parse-error", `malformed XML: ${wellFormed.err.msg} (line ${wellFormed.err.line})`, false, base);
+        }
         try {
             const parsed = new XMLParser({ ignoreAttributes: false }).parse(body);
             const items = parsed?.rss?.channel?.item ?? parsed?.feed?.entry ?? parsed?.urlset?.url ?? parsed?.sitemapindex?.sitemap;
