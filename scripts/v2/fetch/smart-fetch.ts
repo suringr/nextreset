@@ -59,6 +59,16 @@ export interface SmartFetchOptions {
     label?: string;
     now?: Date;
     timeoutMs?: number;
+    /** Extra HTTP attempts after a transport error or a 5xx/0 status (default 2, like the V1 fetch layer). */
+    retries?: number;
+    /** Base backoff between HTTP attempts in ms, doubled per attempt (default 1000; tests pass 0). */
+    retryDelayMs?: number;
+}
+
+const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
+function isRetryableStatus(status: number): boolean {
+    return status === 0 || status >= 500;
 }
 
 export interface SmartFetchResult {
@@ -128,14 +138,26 @@ export async function smartFetch(url: string, options: SmartFetchOptions): Promi
         };
     };
 
-    // 1. Plain HTTP with conditional headers.
+    // 1. Plain HTTP with conditional headers; bounded retries on transport errors and 5xx.
+    const retries = options.retries ?? 2;
+    const retryDelayMs = options.retryDelayMs ?? 1000;
     let response;
-    try {
-        response = await transport.get({ url, timeoutMs: options.timeoutMs, etag: previous.etag, lastModified: previous.lastModified });
-    } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        attempts.push({ mode: "http", status: 0, code: "error", reason: message, elapsedMs: 0 });
-        return failed(undefined, message, "http");
+    let lastError: string | undefined;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+            response = await transport.get({ url, timeoutMs: options.timeoutMs, etag: previous.etag, lastModified: previous.lastModified });
+            lastError = undefined;
+            if (!isRetryableStatus(response.status) || attempt === retries) break;
+            attempts.push({ mode: "http", status: response.status, code: "http-error", reason: `HTTP ${response.status}, retrying`, elapsedMs: response.elapsedMs });
+        } catch (error) {
+            lastError = error instanceof Error ? error.message : String(error);
+            attempts.push({ mode: "http", status: 0, code: "error", reason: lastError, elapsedMs: 0 });
+            if (attempt === retries) break;
+        }
+        if (retryDelayMs > 0) await sleep(retryDelayMs * Math.pow(2, attempt));
+    }
+    if (!response || lastError !== undefined) {
+        return failed(undefined, lastError ?? "no response", "http");
     }
 
     if (response.notModified) {

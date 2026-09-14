@@ -84,7 +84,26 @@ export function createRobloxStatusAdapter(transport?: Transport): Adapter {
             return { events: [], unchanged: true, sourceStates, fetch };
         }
 
-        const snapshot = parseHostedStatus(fetched.document!.body);
+        // Syntactically valid JSON with the wrong shape is a source failure too: record it
+        // on the source state instead of throwing past the pipeline's bookkeeping.
+        let snapshot: HostedStatusSnapshot;
+        try {
+            snapshot = parseHostedStatus(fetched.document!.body);
+        } catch (error) {
+            const reason = error instanceof Error ? error.message : String(error);
+            const previous = getSourceState(source.id);
+            sourceStates[0] = {
+                ...sourceStates[0],
+                // Drop validators: a 304 against bad content must not read as "unchanged, still good".
+                etag: undefined,
+                lastModified: undefined,
+                textHash: previous?.textHash,
+                lastUsableAt: previous?.lastUsableAt,
+                lastVerdict: "parse-error",
+                consecutiveFailures: (previous?.consecutiveFailures ?? 0) + 1
+            };
+            return { events: [], failure: reason, sourceStates };
+        }
         return {
             events: [{
                 identity: instantIdentity(snapshot.updated),

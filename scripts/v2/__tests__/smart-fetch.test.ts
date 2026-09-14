@@ -148,6 +148,34 @@ test("transport errors are reported without touching stored validators", async (
     assert.equal(rendered.verdict?.code, "js-shell");
 });
 
+test("transient transport errors and 5xx responses are retried a bounded number of times", async () => {
+    const body = fixture("minecraft-article.html");
+    const flaky = fakeTransport({ http: [{ error: "ETIMEDOUT" }, { status: 503, body: "<html><body>down</body></html>" }, { body }] });
+    const result = await smartFetch(ARTICLE_URL, { expect: { kind: "html" }, transport: flaky, now, retryDelayMs: 0 });
+    assert.equal(result.outcome, "usable");
+    assert.equal(flaky.gets.length, 3);
+    assert.deepEqual(result.attempts.map(a => a.code), ["error", "http-error", "usable"]);
+    assert.equal(result.state.consecutiveFailures, 0);
+
+    const alwaysDown = fakeTransport({ http: [{ status: 502, body: "<html><body>bad gateway</body></html>" }] });
+    const down = await smartFetch(ARTICLE_URL, { expect: { kind: "html" }, transport: alwaysDown, now, retryDelayMs: 0 });
+    assert.equal(down.outcome, "unusable");
+    assert.equal(alwaysDown.gets.length, 3, "default is two retries after the first attempt");
+    assert.equal(down.verdict?.code, "http-error");
+    assert.equal(down.state.consecutiveFailures, 1, "one failed fetch, not one per attempt");
+
+    const noRetry = fakeTransport({ http: [{ error: "ECONNRESET" }, { body }] });
+    const single = await smartFetch(ARTICLE_URL, { expect: { kind: "html" }, transport: noRetry, now, retries: 0 });
+    assert.equal(single.outcome, "unusable");
+    assert.equal(noRetry.gets.length, 1);
+
+    // 4xx is not retried: the answer is definitive.
+    const forbidden = fakeTransport({ http: [{ status: 403, body: "<html><body>Forbidden</body></html>" }, { body }] });
+    const notRetried = await smartFetch(ARTICLE_URL, { expect: { kind: "html" }, allowRender: false, transport: forbidden, now, retryDelayMs: 0 });
+    assert.equal(notRetried.outcome, "unusable");
+    assert.equal(forbidden.gets.length, 1);
+});
+
 test("structured sources: JSON body becomes the document text, hashed", async () => {
     const body = fixture("roblox-hostedstatus.json");
     const transport = fakeTransport({ http: [{ body, headers: { "content-type": "application/json" } }] });

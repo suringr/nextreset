@@ -147,6 +147,31 @@ test("fetch failure serves stored knowledge as stale and records the failure str
     assert.equal(knowledge.sources[0].textHash!.length, 64, "last good hash survives a failure");
 });
 
+test("valid JSON with the wrong shape is recorded as a source failure and served stale", async () => {
+    const { store } = tempStore();
+    await runTracker(game, topic, createRobloxStatusAdapter(feedTransport(fixture)), store, new Date("2026-09-14T12:00:00Z"));
+    const before = store.load("roblox").sources[0];
+
+    const wrongShape = feedTransport({ result: { status: [] } }, { "etag": "\"bad-shape\"" });
+    const run = await runTracker(game, topic, createRobloxStatusAdapter(wrongShape), store, new Date("2026-09-14T18:00:00Z"));
+    assert.equal(run.result.status, "stale");
+    assert.match((run.result as any).reason, /status_overall/);
+    assert.equal(run.changes.length, 0);
+
+    const after = store.load("roblox").sources[0];
+    assert.equal(after.consecutiveFailures, 1);
+    assert.equal(after.lastVerdict, "parse-error");
+    assert.equal(after.lastFetchedAt, "2026-09-14T18:00:00.000Z");
+    assert.equal(after.textHash, before.textHash, "the last good hash is kept");
+    assert.equal(after.lastUsableAt, before.lastUsableAt);
+    assert.equal(after.etag, undefined, "validators of bad content are not kept, so the next run cannot 304 into a false 'unchanged'");
+
+    // A second bad response keeps counting.
+    const again = await runTracker(game, topic, createRobloxStatusAdapter(wrongShape), store, new Date("2026-09-15T00:00:00Z"));
+    assert.equal(again.result.status, "stale");
+    assert.equal(store.load("roblox").sources[0].consecutiveFailures, 2);
+});
+
 test("a 200 that is not JSON is a failure, not data", async () => {
     const { store } = tempStore();
     await runTracker(game, topic, createRobloxStatusAdapter(feedTransport(fixture)), store, new Date("2026-09-14T12:00:00Z"));
