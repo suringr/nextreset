@@ -1,0 +1,77 @@
+/**
+ * V2 tracker run: adapter -> knowledge -> compatibility view.
+ *
+ *   load knowledge (store)
+ *   run adapter          -> events for this topic (or a failure)
+ *   upsert events        -> Change records only when something actually changed
+ *   end past schedules   -> scheduled instants that have passed become "ended"
+ *   save knowledge       -> only on adapter success
+ *   derive view          -> fresh / stale (stored knowledge) / unavailable
+ *
+ * Failures never delete or rewrite stored knowledge.
+ */
+import { ProviderResult } from "../types";
+import { Adapter } from "./adapter";
+import { Change, Game, GameKnowledge, Topic } from "./domain";
+import { adapterFor, findGame, findTopic } from "./games";
+import { endPastScheduled, upsertEvent } from "./knowledge";
+import { KnowledgeStore } from "./store";
+import { deriveProviderResult, unavailableResult } from "./views";
+
+export interface TrackerRunResult {
+    result: ProviderResult;
+    /** Knowledge after the run, or null when the store could not be read. */
+    knowledge: GameKnowledge | null;
+    /** Change records appended by this run. */
+    changes: Change[];
+    /** Events created by this run. */
+    created: number;
+}
+
+function errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}
+
+export async function runTracker(game: Game, topic: Topic, adapter: Adapter, store: KnowledgeStore, now: Date): Promise<TrackerRunResult> {
+    let knowledge: GameKnowledge;
+    try {
+        knowledge = store.load(game.id);
+    } catch (error) {
+        // Corrupt or unreadable knowledge: report loudly, touch nothing.
+        return { result: unavailableResult(topic, now, `Knowledge store error: ${errorMessage(error)}`), knowledge: null, changes: [], created: 0 };
+    }
+
+    let outcome;
+    try {
+        outcome = await adapter({ now, game, topic });
+    } catch (error) {
+        const reason = errorMessage(error);
+        const result = deriveProviderResult(topic, knowledge, { now, outcome: { ok: false, reason } });
+        return { result, knowledge, changes: [], created: 0 };
+    }
+
+    const changes: Change[] = [];
+    let created = 0;
+    for (const input of outcome.events) {
+        const upsert = upsertEvent(knowledge, topic, input, now, `observed by ${topic.sourceId}`);
+        if (upsert.created) created++;
+        changes.push(...upsert.changes);
+    }
+    changes.push(...endPastScheduled(knowledge, topic, now, "scheduled instant has passed"));
+
+    knowledge.updatedAt = now.toISOString();
+    store.save(knowledge);
+
+    const result = deriveProviderResult(topic, knowledge, {
+        now,
+        outcome: { ok: true, httpStatus: outcome.fetch?.httpStatus, fetchMode: outcome.fetch?.mode }
+    });
+    return { result, knowledge, changes, created };
+}
+
+/** Entry point used by the orchestrator: resolves configuration by ids. */
+export async function runV2Tracker(gameId: string, type: string, store: KnowledgeStore, now: Date = new Date()): Promise<TrackerRunResult> {
+    const game = findGame(gameId);
+    const topic = findTopic(game, type);
+    return runTracker(game, topic, adapterFor(topic), store, now);
+}

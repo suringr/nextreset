@@ -53,3 +53,6 @@ public/data/*.json
 
 # Playwright debug captures (written to build/debug; CI uploads them as a workflow artifact)
 public/data/_debug/
+
+# V2 knowledge store: in CI a git worktree of the `knowledge` branch, locally a plain directory
+knowledge/
