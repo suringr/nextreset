@@ -5,13 +5,21 @@
  * `result.status_overall`: `updated` is when the overall status last changed
  * and `status` is its text ("Operational", ...).
  *
+ * Fetching goes through the smart fetch layer: conditional requests, content
+ * validation (a 200 that is not JSON is a failure, not data), text hashing so an
+ * unchanged feed does no downstream work, and per-source fetch state persisted
+ * in the knowledge file.
+ *
  * Semantics preserved from V1 for compatibility: the published instant is the
  * last overall-status change, which the site renders as "time since". That is a
  * weak tracker (it is not an outage or a release); redesigning it is out of
- * scope for this PR. Each distinct `updated` value becomes one observed event,
- * so the knowledge file accumulates a history of overall-status changes.
+ * scope. Each distinct `updated` value becomes one observed event, so the
+ * knowledge file accumulates a history of overall-status changes.
  */
 import { Adapter } from "../adapter";
+import { SourceState } from "../domain";
+import { smartFetch } from "../fetch/smart-fetch";
+import { Transport } from "../fetch/transport";
 import { instantIdentity } from "../identity";
 
 export interface HostedStatusSnapshot {
@@ -49,32 +57,34 @@ export function parseHostedStatus(text: string): HostedStatusSnapshot {
     return { status, updated: updated.toISOString(), statusCode };
 }
 
-export interface FetchedText {
-    ok: boolean;
-    status: number;
-    text: string;
-    mode: "http" | "browser";
-    error?: string;
-}
-
-export type TextFetcher = (url: string) => Promise<FetchedText>;
-
-/** Production fetcher; loaded lazily so tests never pull in Playwright. */
-const defaultFetcher: TextFetcher = async (url) => {
-    const { fetchHtml } = await import("../../lib/fetch-layer");
-    const response = await fetchHtml(url, { providerId: "roblox" });
-    return { ok: response.ok, status: response.status, text: response.text, mode: response.mode, error: response.error };
-};
-
-export function createRobloxStatusAdapter(fetcher: TextFetcher = defaultFetcher): Adapter {
-    return async ({ game, topic }) => {
+/** `transport` is injectable for tests; production uses the default HTTP transport (no rendering for JSON). */
+export function createRobloxStatusAdapter(transport?: Transport): Adapter {
+    return async ({ game, topic, now, getSourceState }) => {
         const source = game.sources.find(s => s.id === topic.sourceId);
         if (!source) throw new Error(`Source ${topic.sourceId} is not configured for ${game.id}`);
 
-        const response = await fetcher(source.url);
-        if (!response.ok) throw new Error(response.error || `HTTP ${response.status}`);
+        const fetched = await smartFetch(source.url, {
+            expect: { kind: "json" },
+            allowRender: false,
+            previous: getSourceState(source.id),
+            transport,
+            label: `${game.id}-${topic.type}`,
+            now
+        });
+        const sourceStates: SourceState[] = [{ id: source.id, url: source.url, ...fetched.state }];
 
-        const snapshot = parseHostedStatus(response.text);
+        if (fetched.outcome === "unusable") {
+            const reason = fetched.error ?? fetched.verdict?.reason ?? "fetch failed";
+            return { events: [], failure: reason, sourceStates };
+        }
+
+        const fetch = { httpStatus: fetched.document?.status ?? 304, mode: fetched.document?.mode ?? "http" as const };
+
+        if (fetched.outcome === "unchanged") {
+            return { events: [], unchanged: true, sourceStates, fetch };
+        }
+
+        const snapshot = parseHostedStatus(fetched.document!.body);
         return {
             events: [{
                 identity: instantIdentity(snapshot.updated),
@@ -84,7 +94,8 @@ export function createRobloxStatusAdapter(fetcher: TextFetcher = defaultFetcher)
                 precision: "exact",
                 timezone: "UTC"
             }],
-            fetch: { httpStatus: response.status, mode: response.mode }
+            sourceStates,
+            fetch
         };
     };
 }

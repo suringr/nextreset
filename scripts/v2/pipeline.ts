@@ -14,9 +14,9 @@ import { ProviderResult } from "../types";
 import { Adapter } from "./adapter";
 import { Change, Game, GameKnowledge, Topic } from "./domain";
 import { adapterFor, findGame, findTopic } from "./games";
-import { endPastScheduled, upsertEvent } from "./knowledge";
+import { endPastScheduled, eventsForTopic, getSourceState, putSourceState, touchEvents, upsertEvent } from "./knowledge";
 import { KnowledgeStore } from "./store";
-import { deriveProviderResult, unavailableResult } from "./views";
+import { deriveProviderResult, selectCurrentEvent, unavailableResult } from "./views";
 
 export interface TrackerRunResult {
     result: ProviderResult;
@@ -43,10 +43,20 @@ export async function runTracker(game: Game, topic: Topic, adapter: Adapter, sto
 
     let outcome;
     try {
-        outcome = await adapter({ now, game, topic });
+        outcome = await adapter({ now, game, topic, getSourceState: (id) => getSourceState(knowledge, id) });
     } catch (error) {
         const reason = errorMessage(error);
         const result = deriveProviderResult(topic, knowledge, { now, outcome: { ok: false, reason } });
+        return { result, knowledge, changes: [], created: 0 };
+    }
+
+    // Fetch bookkeeping is persisted even when the source failed, so streaks are visible.
+    for (const state of outcome.sourceStates ?? []) putSourceState(knowledge, state);
+
+    if (outcome.failure) {
+        knowledge.updatedAt = now.toISOString();
+        store.save(knowledge);
+        const result = deriveProviderResult(topic, knowledge, { now, outcome: { ok: false, reason: outcome.failure } });
         return { result, knowledge, changes: [], created: 0 };
     }
 
@@ -56,6 +66,10 @@ export async function runTracker(game: Game, topic: Topic, adapter: Adapter, sto
         const upsert = upsertEvent(knowledge, topic, input, now, `observed by ${topic.sourceId}`);
         if (upsert.created) created++;
         changes.push(...upsert.changes);
+    }
+    if (outcome.unchanged) {
+        const current = selectCurrentEvent(eventsForTopic(knowledge, topic.type), now);
+        if (current) touchEvents([current], now);
     }
     changes.push(...endPastScheduled(knowledge, topic, now, "scheduled instant has passed"));
 

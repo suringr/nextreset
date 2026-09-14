@@ -147,6 +147,22 @@ function validateDocument(value: unknown, path: string): void {
     requireOneOf(doc, "fetchMode", path, FETCH_MODES, true);
 }
 
+function validateSourceState(value: unknown, path: string): void {
+    const state = requireRecord(value, path);
+    requireString(state, "id", path);
+    requireString(state, "url", path);
+    requireString(state, "etag", path, true);
+    requireString(state, "lastModified", path, true);
+    requireString(state, "textHash", path, true);
+    requireIso(state, "lastFetchedAt", path, true);
+    requireIso(state, "lastUsableAt", path, true);
+    requireString(state, "lastVerdict", path, true);
+    requireOneOf(state, "lastMode", path, FETCH_MODES, true);
+    if (typeof state.consecutiveFailures !== "number" || state.consecutiveFailures < 0 || !Number.isInteger(state.consecutiveFailures)) {
+        fail(`${path}.consecutiveFailures`, "must be a non-negative integer");
+    }
+}
+
 function validateClaim(value: unknown, path: string): void {
     const claim = requireRecord(value, path);
     requireString(claim, "id", path);
@@ -186,6 +202,17 @@ export function validateGameKnowledge(value: unknown, where = "knowledge"): Game
     requireArray(root, "overrides", where).forEach((o, i) => validateOverride(o, `${where}.overrides[${i}]`));
     requireArray(root, "documents", where).forEach((d, i) => validateDocument(d, `${where}.documents[${i}]`));
     requireArray(root, "claims", where).forEach((c, i) => validateClaim(c, `${where}.claims[${i}]`));
+
+    // `sources` arrived after the first schema-1 files were written; treat absence as empty.
+    if (root.sources === undefined) root.sources = [];
+    const sourceIds = new Set<string>();
+    requireArray(root, "sources", where).forEach((s, i) => {
+        const path = `${where}.sources[${i}]`;
+        validateSourceState(s, path);
+        const id = (s as Rec).id as string;
+        if (sourceIds.has(id)) fail(`${path}.id`, `duplicate source id ${id}`);
+        sourceIds.add(id);
+    });
 
     return root as unknown as GameKnowledge;
 }

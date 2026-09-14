@@ -141,6 +141,24 @@ export interface Override {
     expiresAt?: string;
 }
 
+/**
+ * Fetch bookkeeping for one source: conditional-request validators, the hash of
+ * the last usable normalized text, and the failure streak. Written by the smart
+ * fetch layer (scripts/v2/fetch) and read back on the next run.
+ */
+export interface SourceState {
+    id: string;
+    url: string;
+    etag?: string;
+    lastModified?: string;
+    textHash?: string;
+    lastFetchedAt?: string;
+    lastUsableAt?: string;
+    lastVerdict?: string;
+    lastMode?: "http" | "browser";
+    consecutiveFailures: number;
+}
+
 export const KNOWLEDGE_SCHEMA_VERSION = 1;
 
 /** Everything stored for one game: `knowledge/games/<game>.json`. */
@@ -153,6 +171,8 @@ export interface GameKnowledge {
     overrides: Override[];
     documents: Document[];
     claims: Claim[];
+    /** Per-source fetch state. Files written before this field existed load as []. */
+    sources: SourceState[];
 }
 
 export function emptyKnowledge(gameId: string, now: Date = new Date()): GameKnowledge {
@@ -164,6 +184,7 @@ export function emptyKnowledge(gameId: string, now: Date = new Date()): GameKnow
         changes: [],
         overrides: [],
         documents: [],
-        claims: []
+        claims: [],
+        sources: []
     };
 }
