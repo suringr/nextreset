@@ -21,20 +21,22 @@ export interface ViewContext {
 
 /**
  * The event a topic currently publishes: the earliest scheduled event still in
- * the future, otherwise the most recent past event (by `at`). Held events are
- * ignored. Period events without `at` are not selectable yet.
+ * the future, otherwise the latest of everything else by `at`. Only *scheduled*
+ * events are ever treated as "future"; an observed event whose timestamp sits a
+ * little ahead of `now` (source clock skew, or a change that landed while the
+ * request was in flight) is still the latest observation and stays selectable.
+ * Held events are ignored. Period events without `at` are not selectable yet.
  */
 export function selectCurrentEvent(events: Event[], now: Date): Event | undefined {
     const candidates = events.filter(e => e.publishState === "published" && typeof e.at === "string");
     const byAt = (a: Event, b: Event) => Date.parse(a.at!) - Date.parse(b.at!);
+    const isUpcoming = (e: Event) => e.status === "scheduled" && Date.parse(e.at!) > now.getTime();
 
-    const future = candidates
-        .filter(e => e.status === "scheduled" && Date.parse(e.at!) > now.getTime())
-        .sort(byAt);
-    if (future.length > 0) return future[0];
+    const upcoming = candidates.filter(isUpcoming).sort(byAt);
+    if (upcoming.length > 0) return upcoming[0];
 
-    const past = candidates.filter(e => Date.parse(e.at!) <= now.getTime()).sort(byAt);
-    return past.length > 0 ? past[past.length - 1] : undefined;
+    const rest = candidates.filter(e => !isUpcoming(e)).sort(byAt);
+    return rest.length > 0 ? rest[rest.length - 1] : undefined;
 }
 
 function renderNotes(template: string | undefined, label: string): string | undefined {

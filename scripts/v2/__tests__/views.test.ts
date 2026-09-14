@@ -45,6 +45,15 @@ test("selectCurrentEvent falls back to the latest past event and ignores held ev
     assert.equal(selectCurrentEvent([], now), undefined);
 });
 
+test("an observed event timestamped slightly after now is still the current event", () => {
+    const skewed = event({ key: "roblox/status/2026-09-14t12-00-30z", game: "roblox", topic: "status", kind: "occurrence", label: "Degraded", status: "observed", at: "2026-09-14T12:00:30.000Z" });
+    const earlier = event({ key: "roblox/status/2026-08-07t04-48-28z", game: "roblox", topic: "status", kind: "occurrence", label: "Operational", status: "observed", at: "2026-08-07T04:48:28.252Z" });
+    assert.equal(selectCurrentEvent([earlier, skewed], now)?.key, "roblox/status/2026-09-14t12-00-30z");
+    // A scheduled event in the future still wins over any observation.
+    const scheduled = event({ key: "gta/weekly-reset/2026-09-17", at: "2026-09-17T10:00:00.000Z" });
+    assert.equal(selectCurrentEvent([earlier, skewed, scheduled], now)?.key, "gta/weekly-reset/2026-09-17");
+});
+
 test("fresh view key order matches V1 with and without fetch metadata", () => {
     const gta = emptyKnowledge("gta", now);
     gta.events.push(event({ key: "gta/weekly-reset/2026-09-17", at: "2026-09-17T10:00:00.000Z" }));
