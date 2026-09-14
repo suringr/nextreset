@@ -16,6 +16,7 @@ import { Change, Game, GameKnowledge, Topic } from "./domain";
 import { adapterFor, findGame, findTopic } from "./games";
 import { endPastScheduled, eventsForTopic, getSourceState, putSourceState, touchEvents, upsertEvent } from "./knowledge";
 import { KnowledgeStore } from "./store";
+import { KnowledgeValidationError } from "./validate";
 import { deriveProviderResult, selectCurrentEvent, unavailableResult } from "./views";
 
 export interface TrackerRunResult {
@@ -35,15 +36,18 @@ function errorMessage(error: unknown): string {
 }
 
 /**
- * Persists knowledge without letting a write failure (read-only checkout, full
+ * Persists knowledge without letting an I/O failure (read-only checkout, full
  * disk) discard a result that is already correct in memory. Returns the error
- * message so the orchestrator can surface it.
+ * message so the orchestrator can surface it. A schema violation is not an I/O
+ * failure: invalid knowledge must never be published, so it propagates and the
+ * orchestrator falls back exactly as for a crashed provider.
  */
 function trySave(store: KnowledgeStore, knowledge: GameKnowledge): string | undefined {
     try {
         store.save(knowledge);
         return undefined;
     } catch (error) {
+        if (error instanceof KnowledgeValidationError) throw error;
         const message = errorMessage(error);
         console.error(`✗ Knowledge for ${knowledge.game} could not be saved: ${message}`);
         return message;

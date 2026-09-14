@@ -5,6 +5,7 @@ import { GameKnowledge } from "../domain";
 import { findGame, findTopic } from "../games";
 import { runTracker } from "../pipeline";
 import { KnowledgeStore } from "../store";
+import { KnowledgeValidationError } from "../validate";
 import { fakeTransport } from "./fake-transport";
 import fixture from "./fixtures/roblox-hostedstatus.json";
 import { tempStore } from "./helpers";
@@ -41,6 +42,15 @@ test("a failing save does not turn stored knowledge into 'unavailable' on a fetc
     assert.match(run.saveError ?? "", /EROFS/);
     // The file on disk is untouched by the failed write.
     assert.equal(store.load("roblox").sources[0].consecutiveFailures, 0);
+});
+
+test("schema-invalid events are never published: the validation error propagates", async () => {
+    const { store } = tempStore();
+    const badAdapter = async () => ({
+        events: [{ identity: "2026-09-14t12-00-00z", label: "Operational", status: "observed" as const, at: "not a date", precision: "exact" as const }]
+    });
+    await assert.rejects(() => runTracker(game, topic, badAdapter, store, new Date("2026-09-14T12:00:00Z")), (e: unknown) => e instanceof KnowledgeValidationError && /events\[0\]\.at/.test((e as Error).message));
+    assert.equal(store.load("roblox").events.length, 0, "nothing invalid was written");
 });
 
 test("a failing save still returns the fresh result computed in memory", async () => {
