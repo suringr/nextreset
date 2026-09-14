@@ -99,7 +99,7 @@ function validateEvent(value: unknown, path: string, gameId: string): void {
     requireOneOf(event, "status", path, EVENT_STATUSES);
     const at = requireIso(event, "at", path, true);
     const startAt = requireIso(event, "startAt", path, true);
-    requireIso(event, "endAt", path, true);
+    const endAt = requireIso(event, "endAt", path, true);
     requireOneOf(event, "precision", path, PRECISIONS);
     requireString(event, "timezone", path, true);
     requireIso(event, "firstSeen", path);
@@ -107,7 +107,10 @@ function validateEvent(value: unknown, path: string, gameId: string): void {
     requireOneOf(event, "publishState", path, PUBLISH_STATES);
 
     if (kind === "period") {
+        // A period needs a start. Its end may be unknown (open-ended) until the
+        // publisher announces it, but a known end can never precede the start.
         if (!startAt) fail(`${path}.startAt`, "is required for period events");
+        if (endAt && Date.parse(endAt) < Date.parse(startAt)) fail(`${path}.endAt`, `must not be before startAt (${startAt})`);
     } else if (!at) {
         fail(`${path}.at`, `is required for ${kind} events`);
     }

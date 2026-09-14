@@ -76,8 +76,13 @@ export interface Event {
     status: EventStatus;
     /** Instant of the event (occurrence, recurring, version). ISO 8601 UTC. */
     at?: string;
-    /** Period bounds (period kind). ISO 8601 UTC. */
+    /** Period start (period kind). ISO 8601 UTC. */
     startAt?: string;
+    /**
+     * Period end (period kind). ISO 8601 UTC. Absent while the publisher has not
+     * announced it: seasons are routinely announced with a start date only, and the
+     * end is filled in by a later observation.
+     */
     endAt?: string;
     precision: DatePrecision;
     /** IANA zone the publisher stated the time in, when known. */

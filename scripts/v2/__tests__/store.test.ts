@@ -72,6 +72,24 @@ test("schema validation rejects invalid documents on save with a path", () => {
     assert.throws(() => store.save(duplicate), /duplicate event key/);
 });
 
+test("period events need a start; the end may be open but never precede the start", () => {
+    const { store } = tempStore();
+    const k = sampleKnowledge();
+    const period = { ...k.events[0], key: "gta/season/s1", topic: "season", kind: "period" as const, status: "scheduled" as const, at: undefined, startAt: "2026-09-01T00:00:00.000Z", endAt: undefined };
+    k.events = [period];
+    store.save(k); // open-ended period is valid
+    assert.equal(store.load("gta").events[0].endAt, undefined);
+
+    k.events = [{ ...period, endAt: "2026-10-01T00:00:00.000Z" }];
+    store.save(k); // bounded period is valid
+
+    k.events = [{ ...period, endAt: "2026-08-31T00:00:00.000Z" }];
+    assert.throws(() => store.save(k), /events\[0\]\.endAt: must not be before startAt/);
+
+    k.events = [{ ...period, startAt: undefined }];
+    assert.throws(() => store.save(k), /events\[0\]\.startAt: is required for period events/);
+});
+
 test("corrupt JSON on disk fails clearly and is not replaced", () => {
     const { store } = tempStore();
     const file = store.filePath("gta");
