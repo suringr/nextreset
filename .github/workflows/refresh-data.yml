@@ -28,9 +28,10 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      # No Chromium download here: package.json has no postinstall hook and this job only type-checks.
+      # No Chromium download here: package.json has no postinstall hook and this job only builds and tests.
       - run: npm ci
       - run: npm run build
+      - run: npm test
 
   publish:
     name: Build site + publish dist (push/schedule/manual)
@@ -71,9 +72,21 @@ jobs:
         continue-on-error: true
         run: bash .github/scripts/restore-lkg.sh
 
+      # V2 trackers read/write knowledge/games/<game>.json. Check the `knowledge` branch out
+      # as a git worktree at ./knowledge (gitignored on main); bootstraps the branch on first run.
+      - name: Check out knowledge branch
+        continue-on-error: true
+        run: bash .github/scripts/knowledge-checkout.sh
+
       # This runs: build (tsc) + refresh:data + export:site => dist/
       - name: Build site (includes refresh)
         run: npm run build:site
+
+      # Commit and push knowledge changes (fast-forward only, never force) and detach the
+      # worktree. Must run before the publish step, which wipes the working tree.
+      - name: Persist knowledge branch
+        continue-on-error: true
+        run: bash .github/scripts/knowledge-persist.sh
 
       # Failed browser fetches write screenshots/HTML to build/debug (never under public/).
       # Must run before the publish step, which wipes the working tree.

@@ -61,6 +61,23 @@ npm run refresh:data
 npm run dev
 ```
 
+### Tests
+
+```bash
+npm run build && npm test
+```
+
+## 🧠 Knowledge store (V2 pilot)
+
+GTA Online and Roblox run on the V2 pipeline in `scripts/v2/`: an adapter produces events, they are
+stored in a per-game JSON knowledge file (`knowledge/games/<game>.json`, schema in `scripts/v2/domain.ts`),
+and the V1-compatible `/data/<game>.<type>.json` is derived from that knowledge. Every other tracker
+still runs its V1 provider; `REGISTRY` in `scripts/refresh-all.ts` shows which engine each one uses.
+
+In CI, `knowledge/` is a git worktree of the `knowledge` branch: checked out before the refresh and
+pushed back afterwards (`.github/scripts/knowledge-*.sh`). Locally the directory is created on demand
+and is gitignored.
+
 ## 🎮 How It Works
 
 ### Provider Pattern

@@ -1,5 +1,7 @@
 import { FailureType, ProviderResult, StaleResult, UnavailableResult, Provider } from "./types";
 import { writeLiveJson, writeLkgJson, readLkgData, ensureDataDirs } from "./lib/data-output";
+import { JsonKnowledgeStore } from "./v2/store";
+import { runV2Tracker } from "./v2/pipeline";
 
 // Import all providers
 import * as fortnite from "./providers/fortnite";
@@ -18,28 +20,76 @@ import * as eafc from "./providers/eafc";
 /**
  * Provider Registry
  * explicit metadata allows LKG lookups even if provider crashes
+ *
+ * engine "v1": legacy provider (run) + LKG vault fallback.
+ * engine "v2": scripts/v2 pipeline (adapter -> KnowledgeStore -> compatible view);
+ *              `run` is kept only as the rollback path (flip the engine back to "v1").
  */
+type Engine = "v1" | "v2";
+
 interface RegistryEntry {
     id: string;
     type: string;
     name: string;
+    engine: Engine;
     run: Provider;
 }
 
 const REGISTRY: RegistryEntry[] = [
-    { id: "fortnite", type: "next-season", name: "Fortnite", run: fortnite.run },
-    { id: "lol", type: "next-patch", name: "League of Legends", run: lol.run },
-    { id: "valorant", type: "last-patch", name: "VALORANT", run: valorant.run },
-    { id: "cs2", type: "last-update", name: "Counter-Strike 2", run: cs2.run },
-    { id: "minecraft", type: "last-release", name: "Minecraft", run: minecraft.run },
-    { id: "roblox", type: "status", name: "Roblox", run: roblox.run },
-    { id: "gta", type: "weekly-reset", name: "GTA Online", run: gta.run },
-    { id: "warzone", type: "last-patch", name: "Warzone", run: warzone.run },
-    { id: "genshin", type: "next-banner", name: "Genshin Impact", run: genshin.run },
-    { id: "pubg", type: "last-patch", name: "PUBG", run: pubg.run },
-    { id: "red-dead-redemption-2", type: "last-update", name: "Red Dead Redemption 2", run: rdr2.run },
-    { id: "ea-sports-fc", type: "last-title-update", name: "EA SPORTS FC", run: eafc.run }
+    { id: "fortnite", type: "next-season", name: "Fortnite", engine: "v1", run: fortnite.run },
+    { id: "lol", type: "next-patch", name: "League of Legends", engine: "v1", run: lol.run },
+    { id: "valorant", type: "last-patch", name: "VALORANT", engine: "v1", run: valorant.run },
+    { id: "cs2", type: "last-update", name: "Counter-Strike 2", engine: "v1", run: cs2.run },
+    { id: "minecraft", type: "last-release", name: "Minecraft", engine: "v1", run: minecraft.run },
+    { id: "roblox", type: "status", name: "Roblox", engine: "v2", run: roblox.run },
+    { id: "gta", type: "weekly-reset", name: "GTA Online", engine: "v2", run: gta.run },
+    { id: "warzone", type: "last-patch", name: "Warzone", engine: "v1", run: warzone.run },
+    { id: "genshin", type: "next-banner", name: "Genshin Impact", engine: "v1", run: genshin.run },
+    { id: "pubg", type: "last-patch", name: "PUBG", engine: "v1", run: pubg.run },
+    { id: "red-dead-redemption-2", type: "last-update", name: "Red Dead Redemption 2", engine: "v1", run: rdr2.run },
+    { id: "ea-sports-fc", type: "last-title-update", name: "EA SPORTS FC", engine: "v1", run: eafc.run }
 ];
+
+/**
+ * V2 path: adapter -> KnowledgeStore -> V1-compatible view.
+ * Fallback to previously stored knowledge happens inside the pipeline, so the
+ * V1 LKG vault is neither read nor written for these trackers.
+ */
+async function runV2(entry: RegistryEntry, store: JsonKnowledgeStore, startTime: number): Promise<ProviderResult> {
+    let result: ProviderResult;
+    let detail = "";
+    try {
+        const run = await runV2Tracker(entry.id, entry.type, store, new Date());
+        result = run.result;
+        detail = `${run.created} new event(s), ${run.changes.length} change(s)`;
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        result = {
+            provider_id: entry.id,
+            game: entry.id,
+            type: entry.type,
+            title: entry.name,
+            status: "unavailable",
+            nextEventUtc: null,
+            failure_type: FailureType.Unavailable,
+            explanation: `Crashed (v2): ${reason}`,
+            fetched_at_utc: new Date().toISOString()
+        };
+    }
+
+    const elapsed = Date.now() - startTime;
+    if (result.status === "fresh") {
+        console.log(`✓ ${entry.name} succeeded in ${elapsed}ms [v2: ${detail}]`);
+    } else if (result.status === "stale") {
+        console.warn(`⚠ ${entry.name} failed but served stored knowledge (${elapsed}ms)`);
+        console.warn(`  Reason: ${result.reason}`);
+    } else {
+        console.error(`✗ ${entry.name} unavailable (${elapsed}ms): ${result.explanation}`);
+    }
+
+    writeLiveJson(result);
+    return result;
+}
 
 async function main() {
     console.log("=".repeat(60));
@@ -55,11 +105,18 @@ async function main() {
     }
 
     const results: ProviderResult[] = [];
+    const store = new JsonKnowledgeStore();
+    console.log(`Knowledge store: ${store.rootDir}`);
 
     // Run providers sequentially
     for (const entry of REGISTRY) {
         const startTime = Date.now();
-        console.log(`\n[${new Date().toISOString()}] Running ${entry.name}...`);
+        console.log(`\n[${new Date().toISOString()}] Running ${entry.name} [${entry.engine}]...`);
+
+        if (entry.engine === "v2") {
+            results.push(await runV2(entry, store, startTime));
+            continue;
+        }
 
         let result: ProviderResult;
 
