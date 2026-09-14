@@ -51,9 +51,31 @@ const REGISTRY: RegistryEntry[] = [
 ];
 
 /**
+ * V1 fail-safe: rebuild a stale result from the LKG vault, or null when the
+ * vault has nothing usable for this tracker.
+ */
+function staleFromLkg(entry: RegistryEntry, reason: string): StaleResult | null {
+    const lkg = readLkgData(entry.id, entry.type);
+    if (!lkg || lkg.status !== "fresh") return null;
+    return {
+        ...lkg,
+        status: "stale",
+        fetched_at_utc: new Date().toISOString(), // Current run
+        last_success_at_utc: lkg.fetched_at_utc, // Original success
+        reason,
+        provider_id: entry.id,
+        game: entry.id,
+        type: entry.type,
+        title: entry.name
+    };
+}
+
+/**
  * V2 path: adapter -> KnowledgeStore -> V1-compatible view.
- * Fallback to previously stored knowledge happens inside the pipeline, so the
- * V1 LKG vault is neither read nor written for these trackers.
+ * Fallback to previously stored knowledge happens inside the pipeline. During
+ * the migration the V1 LKG vault is still kept current on success and consulted
+ * as a last resort, so an empty or unavailable knowledge branch never makes a
+ * tracker less resilient than it was on V1.
  */
 async function runV2(entry: RegistryEntry, store: JsonKnowledgeStore, startTime: number): Promise<ProviderResult> {
     let result: ProviderResult;
@@ -77,9 +99,18 @@ async function runV2(entry: RegistryEntry, store: JsonKnowledgeStore, startTime:
         };
     }
 
+    if (result.status === "unavailable") {
+        const fallback = staleFromLkg(entry, result.explanation);
+        if (fallback) {
+            console.warn(`⚠ ${entry.name}: no usable stored knowledge; recovered with V1 LKG data`);
+            result = fallback;
+        }
+    }
+
     const elapsed = Date.now() - startTime;
     if (result.status === "fresh") {
         console.log(`✓ ${entry.name} succeeded in ${elapsed}ms [v2: ${detail}]`);
+        writeLkgJson(result); // keep the V1 vault current as the migration-time last resort
     } else if (result.status === "stale") {
         console.warn(`⚠ ${entry.name} failed but served stored knowledge (${elapsed}ms)`);
         console.warn(`  Reason: ${result.reason}`);
@@ -161,22 +192,10 @@ async function main() {
         } else {
             // Failed (Unavailable from crash OR explicit 'unavailable' from provider)
             // Attempt to recover using LKG
-            const lkg = readLkgData(entry.id, entry.type);
+            const staleResult = staleFromLkg(entry, result.status === "unavailable" ? result.explanation : (result as StaleResult).reason || "Unknown failure");
 
-            if (lkg && lkg.status === "fresh") {
+            if (staleResult) {
                 // RECOVERY: Downgrade to Stale
-                const staleResult: StaleResult = {
-                    ...lkg,
-                    status: "stale",
-                    fetched_at_utc: new Date().toISOString(), // Current run
-                    last_success_at_utc: lkg.fetched_at_utc, // Original success
-                    reason: result.status === "unavailable" ? result.explanation : (result as StaleResult).reason || "Unknown failure",
-                    provider_id: entry.id,
-                    game: entry.id,
-                    type: entry.type,
-                    title: entry.name
-                };
-
                 console.warn(`⚠ ${entry.name} failed but recovered with LKG data (${elapsed}ms)`);
                 console.warn(`  Reason: ${staleResult.reason}`);
 
