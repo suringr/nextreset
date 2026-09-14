@@ -14,9 +14,10 @@ import { ProviderResult } from "../types";
 import { Adapter } from "./adapter";
 import { Change, Game, GameKnowledge, Topic } from "./domain";
 import { adapterFor, findGame, findTopic } from "./games";
-import { endPastScheduled, upsertEvent } from "./knowledge";
+import { endPastScheduled, eventsForTopic, getSourceState, putSourceState, touchEvents, upsertEvent } from "./knowledge";
 import { KnowledgeStore } from "./store";
-import { deriveProviderResult, unavailableResult } from "./views";
+import { KnowledgeValidationError } from "./validate";
+import { deriveProviderResult, selectCurrentEvent, unavailableResult } from "./views";
 
 export interface TrackerRunResult {
     result: ProviderResult;
@@ -26,10 +27,31 @@ export interface TrackerRunResult {
     changes: Change[];
     /** Events created by this run. */
     created: number;
+    /** Set when the knowledge file could not be written; the result is still served from memory. */
+    saveError?: string;
 }
 
 function errorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Persists knowledge without letting an I/O failure (read-only checkout, full
+ * disk) discard a result that is already correct in memory. Returns the error
+ * message so the orchestrator can surface it. A schema violation is not an I/O
+ * failure: invalid knowledge must never be published, so it propagates and the
+ * orchestrator falls back exactly as for a crashed provider.
+ */
+function trySave(store: KnowledgeStore, knowledge: GameKnowledge): string | undefined {
+    try {
+        store.save(knowledge);
+        return undefined;
+    } catch (error) {
+        if (error instanceof KnowledgeValidationError) throw error;
+        const message = errorMessage(error);
+        console.error(`✗ Knowledge for ${knowledge.game} could not be saved: ${message}`);
+        return message;
+    }
 }
 
 export async function runTracker(game: Game, topic: Topic, adapter: Adapter, store: KnowledgeStore, now: Date): Promise<TrackerRunResult> {
@@ -43,11 +65,21 @@ export async function runTracker(game: Game, topic: Topic, adapter: Adapter, sto
 
     let outcome;
     try {
-        outcome = await adapter({ now, game, topic });
+        outcome = await adapter({ now, game, topic, getSourceState: (id) => getSourceState(knowledge, id) });
     } catch (error) {
         const reason = errorMessage(error);
         const result = deriveProviderResult(topic, knowledge, { now, outcome: { ok: false, reason } });
         return { result, knowledge, changes: [], created: 0 };
+    }
+
+    // Fetch bookkeeping is persisted even when the source failed, so streaks are visible.
+    for (const state of outcome.sourceStates ?? []) putSourceState(knowledge, state);
+
+    if (outcome.failure) {
+        knowledge.updatedAt = now.toISOString();
+        const saveError = trySave(store, knowledge);
+        const result = deriveProviderResult(topic, knowledge, { now, outcome: { ok: false, reason: outcome.failure } });
+        return { result, knowledge, changes: [], created: 0, saveError };
     }
 
     const changes: Change[] = [];
@@ -57,16 +89,20 @@ export async function runTracker(game: Game, topic: Topic, adapter: Adapter, sto
         if (upsert.created) created++;
         changes.push(...upsert.changes);
     }
+    if (outcome.unchanged) {
+        const current = selectCurrentEvent(eventsForTopic(knowledge, topic.type), now);
+        if (current) touchEvents([current], now);
+    }
     changes.push(...endPastScheduled(knowledge, topic, now, "scheduled instant has passed"));
 
     knowledge.updatedAt = now.toISOString();
-    store.save(knowledge);
+    const saveError = trySave(store, knowledge);
 
     const result = deriveProviderResult(topic, knowledge, {
         now,
         outcome: { ok: true, httpStatus: outcome.fetch?.httpStatus, fetchMode: outcome.fetch?.mode }
     });
-    return { result, knowledge, changes, created };
+    return { result, knowledge, changes, created, saveError };
 }
 
 /** Entry point used by the orchestrator: resolves configuration by ids. */

@@ -4,7 +4,7 @@
  * change records live here so they can be unit-tested without files.
  */
 import { EventInput } from "./adapter";
-import { Change, Event, GameKnowledge, Topic } from "./domain";
+import { Change, Event, GameKnowledge, SourceState, Topic } from "./domain";
 import { eventKey } from "./identity";
 
 const COMPARED_FIELDS = ["label", "status", "at", "startAt", "endAt", "precision", "timezone"] as const;
@@ -82,6 +82,24 @@ export function upsertEvent(knowledge: GameKnowledge, topic: Topic, input: Event
     existing.lastVerified = nowIso;
     knowledge.changes.push(...changes);
     return { event: existing, created: false, changes };
+}
+
+export function getSourceState(knowledge: GameKnowledge, sourceId: string): SourceState | undefined {
+    return (knowledge.sources ?? []).find(s => s.id === sourceId);
+}
+
+/** Replaces (or adds) the fetch state for a source. Bookkeeping only; no Change record. */
+export function putSourceState(knowledge: GameKnowledge, state: SourceState): void {
+    if (!knowledge.sources) knowledge.sources = [];
+    const index = knowledge.sources.findIndex(s => s.id === state.id);
+    if (index >= 0) knowledge.sources[index] = state;
+    else knowledge.sources.push(state);
+}
+
+/** Marks the events of a topic as verified now without recording a change. */
+export function touchEvents(events: Event[], now: Date): void {
+    const nowIso = now.toISOString();
+    for (const event of events) event.lastVerified = nowIso;
 }
 
 /** Scheduled events whose instant has passed become "ended". Returns the Change records appended. */
