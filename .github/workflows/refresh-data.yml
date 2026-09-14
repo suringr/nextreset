@@ -1,6 +1,8 @@
 name: Build & Publish Dist
 
 on:
+  push:
+    branches: [ main ]
   pull_request:
     branches: [ main ]
   schedule:
@@ -26,11 +28,12 @@ jobs:
           node-version: "20"
           cache: "npm"
 
+      # No Chromium download here: package.json has no postinstall hook and this job only type-checks.
       - run: npm ci
       - run: npm run build
 
   publish:
-    name: Build site + publish dist (schedule/manual)
+    name: Build site + publish dist (push/schedule/manual)
     if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     permissions:
@@ -47,21 +50,41 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: Install deps
-        run: npm ci
-
+      # Restore the browser cache before anything that could download Chromium,
+      # so the install step below is a no-op on a cache hit.
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
 
+      - name: Install deps
+        run: npm ci
+
+      # The only place Chromium is installed (package.json has no postinstall hook).
       - name: Install Playwright Chromium
         run: npx playwright install chromium
+
+      # Seed public/data/_lkg from the previous publish so a provider that fails today
+      # falls back to its most recent success instead of the snapshot committed in git.
+      - name: Restore LKG vault from last publish
+        continue-on-error: true
+        run: bash .github/scripts/restore-lkg.sh
 
       # This runs: build (tsc) + refresh:data + export:site => dist/
       - name: Build site (includes refresh)
         run: npm run build:site
+
+      # Failed browser fetches write screenshots/HTML to build/debug (never under public/).
+      # Must run before the publish step, which wipes the working tree.
+      - name: Upload Playwright debug captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-debug-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/debug/
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Publish dist/ to gh-pages
         run: |

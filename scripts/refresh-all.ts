@@ -175,6 +175,20 @@ async function main() {
         });
     }
 
+    // GitHub Actions visibility: annotate every non-fresh provider in the run UI.
+    // Reporting only; the exit policy below is unchanged.
+    if (process.env.GITHUB_ACTIONS === "true") {
+        const escapeAnnotation = (s: string) => s.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+        for (const r of results) {
+            const id = `${r.game}.${r.type}`;
+            if (r.status === "stale") {
+                console.log(`::warning title=Provider stale::${escapeAnnotation(`${r.title} (${id}) is serving LKG data last fetched ${r.last_success_at_utc}. Reason: ${r.reason}`)}`);
+            } else if (r.status === "unavailable") {
+                console.log(`::warning title=Provider unavailable::${escapeAnnotation(`${r.title} (${id}) has no data. ${r.explanation}`)}`);
+            }
+        }
+    }
+
     // Exit Code Logic
     // Fail only if > 50% are unavailable (catastrophic)
     // 0 unavailable = Perfect/Safe (Exit 0)
