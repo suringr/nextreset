@@ -400,15 +400,66 @@ export interface DateEntry {
     /** The whole entry: the clause around the date, cut at neighbouring dates ("pc maintenance september 23 at 15:00 pt"). */
     entry: string;
     /**
-     * The part of the entry that can name the item: the text before the date, plus the text
-     * after it unless another date follows in the clause (then a following label belongs to
-     * that next entry: "PC ... September 23 at 15:00 PT, Console ... September 24 ..."); in that
-     * case only what precedes the first separator after the date is kept ("at 15:00 pt").
+     * The part of the entry that can name the item. Labels stay on their own side of a
+     * separator: before the date, text back to the nearest separator whose date-side piece
+     * carries a label ("PC ... TBD, Console maintenance September 23" names Console only);
+     * after the date, only label-free text (time, zone, weekday) when the label came before
+     * the date ("PC maintenance is September 23 at 15:00 PT, Console ... TBD" names PC only),
+     * otherwise the following label up to the first separator after it.
      */
     naming: string;
 }
 
-const LABEL_SEPARATOR = /[,;|•/]| - | – /;
+/** Separators between list entries; a slash between digits ("26.44/45", "9/23") is not one. */
+const LABEL_SEPARATOR = /[,;|•]|(?<!\d)\/|\/(?!\d)| - | – /;
+const LABEL_SEPARATOR_G = new RegExp(LABEL_SEPARATOR.source, "g");
+
+/** Words that describe, connect or date entries but never identify one. */
+const NAMING_FILLER = new Set([
+    "the", "and", "for", "of", "to", "in", "on", "at", "a", "an", "is", "it", "or", "by", "with", "from", "until", "till",
+    "be", "will", "are", "was", "were", "this", "its",
+    "patch", "patches", "update", "updates", "notes", "version", "season", "live", "maintenance", "hotfix", "release",
+    "releases", "released", "downtime", "servers", "server", "schedule", "scheduled", "changelog",
+    "date", "dates", "time", "times", "start", "starts", "starting", "begin", "begins", "end", "ends", "ending", "planned",
+    "expected", "estimated", "posted", "published", "updated", "launch", "launches", "now", "new", "next", "tbd", "tba", "day",
+    ...MONTHS, "jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep", "sept", "oct", "nov", "dec",
+    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "mon", "tue", "tues", "wed", "thu", "thur", "thurs", "fri", "sat", "sun"
+]);
+
+function isLabelToken(token: string): boolean {
+    if (/^\d+\.\d+$/.test(token)) return true; // a version such as 26.19
+    if (/^\d/.test(token) || /^t\d/.test(token) || token.length < 2 || !/[a-z]/.test(token)) return false; // clocks, ISO "t13", "000z", ordinals
+    return !NAMING_FILLER.has(token) && !(token in IANA_ALIASES) && !(token in FIXED_ALIASES);
+}
+
+/** Index of the first word that could identify an entry, or -1. */
+function labelTokenIndex(text: string): number {
+    for (const m of text.matchAll(/[a-z0-9.]+/g)) {
+        const token = m[0].replace(/^\.+|\.+$/g, "");
+        if (token && isLabelToken(token)) return (m.index ?? 0) + m[0].indexOf(token);
+    }
+    return -1;
+}
+
+function namingBefore(before: string): string {
+    const separators = [...before.matchAll(LABEL_SEPARATOR_G)];
+    for (let i = separators.length - 1; i >= 0; i--) {
+        const piece = before.slice((separators[i].index ?? 0) + separators[i][0].length);
+        if (labelTokenIndex(piece) >= 0) return piece;
+    }
+    return before;
+}
+
+function namingAfter(after: string, labelBefore: boolean): string {
+    const firstLabel = labelTokenIndex(after);
+    if (labelBefore) {
+        const stops = [firstLabel, after.search(LABEL_SEPARATOR)].filter(i => i >= 0);
+        return stops.length > 0 ? after.slice(0, Math.min(...stops)) : after;
+    }
+    if (firstLabel < 0) return after;
+    const separator = after.slice(firstLabel).search(LABEL_SEPARATOR);
+    return separator >= 0 ? after.slice(0, firstLabel + separator) : after;
+}
 
 /** Like dateSegments, but also returns each entry's full text so a caller can tell which entry names its item. */
 export function dateEntries(quote: string, value: ParsedDateValue): DateEntry[] {
@@ -420,29 +471,21 @@ export function dateEntries(quote: string, value: ParsedDateValue): DateEntry[] 
         let from = clause.from;
         let to = clause.to;
         let earlierDateInClause = false;
-        let laterDateInClause = false;
         for (const span of spans) {
             if (span.end <= mention.start && span.end > from) {
                 from = span.end;
                 earlierDateInClause = true;
             }
-            if (span.start >= mention.end && span.start < to) {
-                to = span.start;
-                laterDateInClause = true;
-            }
+            if (span.start >= mention.end && span.start < to) to = span.start;
         }
         const entry = q.slice(from, to).trim();
         // Clock times before the date belong to this entry ("starts at 15:00 PT on September 23 and ends
         // at 18:00 PT") unless an earlier date in the same clause claims them ("... September 23 15:00 PT
         // Patch 26.20 October 7 18:00 PT"): then only what follows the date is this entry's.
         const segment = earlierDateInClause ? q.slice(mention.start, to).trim() : entry;
-        const before = q.slice(from, mention.start);
-        const after = q.slice(mention.end, to);
-        // With a later date in the clause, text after this date is trusted only up to the first
-        // separator; without any separator it is not trusted at all (it may be the next label).
-        const cut = after.search(LABEL_SEPARATOR);
-        const trustedAfter = laterDateInClause ? (cut >= 0 ? after.slice(0, cut) : "") : after;
-        const naming = `${before} ${q.slice(mention.start, mention.end)} ${trustedAfter}`.replace(/\s+/g, " ").trim();
+        const before = namingBefore(q.slice(from, mention.start));
+        const after = namingAfter(q.slice(mention.end, to), labelTokenIndex(before) >= 0);
+        const naming = `${before} ${q.slice(mention.start, mention.end)} ${after}`.replace(/\s+/g, " ").trim();
         if (!entries.some(e => e.segment === segment && e.entry === entry)) entries.push({ segment, entry, naming });
     }
     return entries;

@@ -476,3 +476,40 @@ test("an embedded offset must be attached to the claimed clock, and a conflicted
     assert.deepEqual([three.stats.fields, three.stats.accepted, three.stats.rejected], [3, 0, 3]);
     assert.ok(three.rejected.every(r => r.reason === "conflicting values for the same field"));
 });
+
+test("undated neighbours on either side of a separator cannot claim an entry's date, and offset signs survive fuzzy matching", () => {
+    const now = new Date("2026-09-14T21:30:00Z");
+    const ground = (identity: string, value: string, quote: string, text: string) => groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: identity, identity, status: "scheduled", fields: [{ field: "at", value, timezone: "PT", quote }] }] }), text, { now });
+    const trailing = "PC maintenance is September 23, 2026 at 15:00 PT, Console maintenance date is TBD";
+    const trailingDoc = `All maintenance times are in PT. ${trailing}. Posted 2026.`;
+    const stolen = ground("Console maintenance September 23", "2026-09-23T15:00", trailing, trailingDoc);
+    assert.equal(stolen.items[0].facts.length, 0);
+    assert.match(stolen.rejected[0].reason, /belongs to another entry/);
+    assert.deepEqual(ground("PC maintenance September 23", "2026-09-23T15:00", trailing, trailingDoc).items[0].facts.map(f => [f.precision, f.at]), [["exact", "2026-09-23T22:00:00.000Z"]]);
+    const leading = "PC maintenance TBD, Console maintenance September 23 at 15:00 PT";
+    const leadingDoc = `All maintenance times are in PT. ${leading}. Posted 2026.`;
+    assert.equal(ground("PC maintenance September 23", "2026-09-23T15:00", leading, leadingDoc).items[0].facts.length, 0);
+    assert.equal(ground("Console maintenance September 23", "2026-09-23T15:00", leading, leadingDoc).items[0].facts[0].precision, "exact");
+
+    const doc = "Maintenance starts at 15:00 UTC-8 and patch 26.19 applies at 15:00-08:00 today.";
+    assert.equal(quoteOccursIn("Maintenance starts at 15:00 UTC+8", doc), false, "a flipped offset sign is not the same text");
+    assert.equal(quoteOccursIn("Maintenance starts at 15:00 UTC-8!", doc), true, "other punctuation stays tolerated");
+    assert.equal(quoteOccursIn("patch 26.19 applies at 15:00+08:00", doc), false);
+    assert.equal(quoteOccursIn("patch 26.19 applies at 15:00-08:00", doc), true);
+});
+
+test("a quote whose date belongs to another entry triggers the repair call like a non-verbatim one", async () => {
+    const now = new Date("2026-09-14T21:30:00Z");
+    const doc = { url: "https://example.test/maintenance", title: "Maintenance", text: "PC maintenance is September 23, 2026 at 15:00 PT, Console maintenance date is September 24, 2026. Posted 2026." };
+    const topic = { game: "example", gameName: "Example", type: "maintenance", description: "maintenance windows" };
+    const answer = (value: string, quote: string) => ({ items: [{ kind: "occurrence", label: "Console maintenance", identity: "Console maintenance", status: "scheduled", fields: [{ field: "at", value, timezone: "", quote }] }] });
+    const provider = new MockAiProvider("mock-model", scriptedResponder({
+        extract: answer("2026-09-23", "PC maintenance is September 23, 2026 at 15:00 PT, Console maintenance date is"),
+        "extract-repair": answer("2026-09-24", "Console maintenance date is September 24, 2026")
+    }));
+    const result = await extractFacts(provider, topic, doc, { now });
+    assert.equal(result.attempts, 2);
+    assert.match(provider.requests[1].prompt, /belongs to a different entry/);
+    assert.equal(result.repaired, true);
+    assert.deepEqual(result.grounded.items[0].facts.map(f => f.at), ["2026-09-24T00:00:00.000Z"]);
+});
