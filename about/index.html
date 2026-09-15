@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="About NextReset — a free, automated game reset and update tracker using official publisher sources. Learn how we work and why we built this.">
+  <meta property="og:title" content="About - NextReset">
+  <meta property="og:description" content="Learn about NextReset, a free automated game reset tracker.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://nextreset.co/og.png">
+  <link rel="canonical" href="https://nextreset.co/about/">
+  <title>About - NextReset</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#0b0f14">
+
+  <style>
+    body{margin:0;background:#0b0f14;color:#e5e7eb;font-family:system-ui,-apple-system,sans-serif;min-height:100vh}
+    .container{max-width:980px;margin:0 auto;padding:22px}
+    .page{max-width:720px;margin:0 auto}
+    h1{font-size:38px;font-weight:900;margin:0 0 24px;letter-spacing:-.02em}
+    h2{font-size:22px;font-weight:800;margin:32px 0 12px;color:#e5e7eb}
+    p{color:#9ca3af;line-height:1.8;font-size:15px;margin:0 0 16px}
+    ul{color:#9ca3af;line-height:1.8;padding-left:20px;margin:0 0 16px}
+    li{margin-bottom:6px;font-size:15px}
+    a{color:#22c55e}
+    .back-link{display:inline-flex;align-items:center;gap:6px;color:#6b7280;font-weight:600;font-size:14px;margin-bottom:24px;text-decoration:none;transition:color .15s ease}
+    .back-link:hover{color:#e5e7eb}
+    footer{text-align:center;padding:48px 20px 32px;color:#6b7280;font-size:13px;border-top:1px solid #1f2937;margin-top:64px}
+    footer p{margin:6px 0}
+    footer a{color:#9ca3af;text-decoration:none}
+  </style>
+
+  <link rel="stylesheet" href="/assets/styles.v2.css">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-YY6V5SR1DN');
+  </script>
+</head>
+<body>
+  <div class="container">
+    <div class="page">
+      <a href="/" class="back-link">← Back to Home</a>
+
+      <h1>About NextReset</h1>
+
+      <p>
+        NextReset is a free, fully automated website that tracks official game resets, updates, and patch releases for popular video games. Our mission is simple: give gamers accurate, honest information about when their games change — sourced directly from game publishers, with zero guesswork.
+      </p>
+
+      <h2>Why We Built This</h2>
+      <p>
+        If you've ever searched "when does Fortnite season end" or "GTA Online weekly reset time," you've probably landed on pages full of speculation, outdated information, or clickbait. We got tired of that. NextReset was built to be the opposite — a clean, fast site that shows you verified data from official sources and nothing else.
+      </p>
+
+      <h2>How It Works</h2>
+      <p>
+        NextReset runs on a fully automated pipeline with no manual intervention required:
+      </p>
+      <ul>
+        <li><strong>Every 6 hours</strong>, our system checks official game publisher websites, APIs, and news feeds for the latest dates and status information.</li>
+        <li><strong>Data is extracted</strong> using specialized scrapers for each game that understand the specific format of each publisher's announcements.</li>
+        <li><strong>Dates are validated</strong> with sanity checks — we reject anything that looks like a parsing error or falls outside a reasonable range.</li>
+        <li><strong>Results are published</strong> as static JSON files that power the countdown timers you see on each page.</li>
+        <li><strong>If a source fails</strong>, we preserve the last known good data rather than showing errors. You'll see a "Stale" indicator when this happens.</li>
+      </ul>
+
+      <h2>What We Track</h2>
+      <p>
+        We currently track 12 games covering battle royales, MOBAs, tactical shooters, sandbox games, and sports titles. Each game has its own dedicated tracker page with a live countdown, source attribution, confidence rating, and detailed information about what changes during each event.
+      </p>
+      <p>
+        Our sources include official game websites (fortnite.com, counter-strike.net, playvalorant.com), publisher APIs (Roblox status API), official news feeds (Steam RSS, Rockstar Newswire, EA Forums), and published patch schedules (Riot Games).
+      </p>
+
+      <h2>Our Principles</h2>
+      <ul>
+        <li><strong>Official sources only</strong> — We never rely on leaks, rumors, or community speculation.</li>
+        <li><strong>Honest data</strong> — If we don't have a date, we say so. We never fabricate or predict dates.</li>
+        <li><strong>Transparency</strong> — Every tracker shows its source, confidence level, and last update time.</li>
+        <li><strong>Zero maintenance</strong> — The system runs automatically with no manual updates needed.</li>
+        <li><strong>Privacy first</strong> — We don't require accounts, don't track personal data, and use minimal analytics.</li>
+      </ul>
+
+      <h2>Technical Details</h2>
+      <p>
+        NextReset is open source and built with TypeScript, running on GitHub Actions for automation and served as static files. The frontend uses vanilla HTML, CSS, and JavaScript with no framework overhead — resulting in near-instant page loads. Data extraction uses a combination of HTTP requests and headless browser rendering to handle both static and dynamic publisher websites.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        NextReset is a passion project. If you have suggestions, notice incorrect data, or want to request a new game tracker, feel free to open an issue on our <a href="https://github.com/suringr/nextreset" target="_blank" rel="noopener">GitHub repository</a>.
+      </p>
+    </div>
+
+    <footer>
+      <p>Data automatically updated every 6 hours from official sources.</p>
+      <p>Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
+      <p><a href="/about/">About</a> · <a href="/privacy/">Privacy Policy</a></p>
+    </footer>
+  </div>
+</body>
+</html>

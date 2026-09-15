@@ -1,0 +1,15 @@
+{
+  "provider_id": "ea-sports-fc",
+  "game": "ea-sports-fc",
+  "type": "last-title-update",
+  "title": "EA SPORTS FC Last Title Update",
+  "status": "fresh",
+  "nextEventUtc": "2026-07-22T14:00:01.000Z",
+  "fetched_at_utc": "2026-09-15T23:23:52.031Z",
+  "last_success_at_utc": "2026-09-15T23:23:52.031Z",
+  "source_url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1839041357024005",
+  "confidence": "high",
+  "http_status": 200,
+  "fetch_mode": "http",
+  "notes": "EA SPORTS FC 26 version 1.6.5"
+}

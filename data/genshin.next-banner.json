@@ -1,0 +1,15 @@
+{
+  "provider_id": "genshin",
+  "game": "genshin",
+  "type": "next-banner",
+  "title": "Genshin Impact Next Banner End",
+  "status": "fresh",
+  "nextEventUtc": "2026-09-22T06:59:59.000Z",
+  "fetched_at_utc": "2026-09-15T23:23:47.157Z",
+  "last_success_at_utc": "2026-09-15T23:23:47.157Z",
+  "source_url": "https://genshin.hoyoverse.com/en/news",
+  "confidence": "high",
+  "http_status": 200,
+  "fetch_mode": "http",
+  "notes": "The Lone Light Knocks at Night / Astral Actuation / Epitome Invocation: ends 2026-09-22 14:59 server time (Asia 06:59 UTC, Europe 13:59 UTC, America 19:59 UTC)"
+}
