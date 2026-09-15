@@ -25,10 +25,11 @@ function fakeClient(responses: Array<GeminiResponseLike | Error>): GeminiClientL
 
 test("readAiConfig reads provider, model and key from the environment", () => {
     assert.equal(readAiConfig({}), undefined, "gemini without a key is 'AI not configured'");
-    assert.deepEqual(readAiConfig({ GEMINI_API_KEY: "k-123456789" }), { provider: "gemini", model: DEFAULT_AI_MODEL, apiKey: "k-123456789" });
-    assert.deepEqual(readAiConfig({ AI_PROVIDER: "gemini", AI_MODEL: "gemini-x", GEMINI_API_KEY: " k-123456789 " }), { provider: "gemini", model: "gemini-x", apiKey: "k-123456789" });
-    assert.deepEqual(readAiConfig({ AI_PROVIDER: "mock" }), { provider: "mock", model: DEFAULT_AI_MODEL });
+    assert.deepEqual(readAiConfig({ GEMINI_API_KEY: "k-123456789" }), { provider: "gemini", model: DEFAULT_AI_MODEL, apiKey: "k-123456789", thinkingBudget: 0 });
+    assert.deepEqual(readAiConfig({ AI_PROVIDER: "gemini", AI_MODEL: "gemini-x", GEMINI_API_KEY: " k-123456789 ", AI_THINKING_BUDGET: "1024" }), { provider: "gemini", model: "gemini-x", apiKey: "k-123456789", thinkingBudget: 1024 });
+    assert.deepEqual(readAiConfig({ AI_PROVIDER: "mock" }), { provider: "mock", model: DEFAULT_AI_MODEL, thinkingBudget: 0 });
     assert.throws(() => readAiConfig({ AI_PROVIDER: "openai", GEMINI_API_KEY: "x" }), AiError);
+    assert.throws(() => readAiConfig({ GEMINI_API_KEY: "x", AI_THINKING_BUDGET: "lots" }), AiError);
     assert.equal(DEFAULT_AI_MODEL, "gemini-3.5-flash");
 });
 
@@ -70,6 +71,24 @@ test("GeminiProvider sends structured-output config and parses text plus usage",
     assert.equal(client.calls[0].config?.maxOutputTokens, 256);
     assert.equal(client.calls[0].config?.responseMimeType, "application/json");
     assert.deepEqual(client.calls[0].config?.responseJsonSchema, SCHEMA);
+    assert.deepEqual(client.calls[0].config?.thinkingConfig, { thinkingBudget: 0 }, "thinking is off by default so it cannot eat the output budget");
+
+    const budgeted = new GeminiProvider({ apiKey: "AIzaSecretKey123", model: "m", client: fakeClient([{ text: "{\"ok\":true}", candidates: [{ finishReason: "STOP" }] }]), thinkingBudget: 512, retryDelayMs: 0 });
+    await budgeted.generateJson(REQUEST);
+});
+
+test("GeminiProvider drops the thinking budget once if the model rejects it", async () => {
+    const rejectsThinking = Object.assign(new Error("400 thinkingBudget is not supported for this model"), { status: 400 });
+    const ok: GeminiResponseLike = { text: "{\"ok\":true}", candidates: [{ finishReason: "STOP" }] };
+    const client = fakeClient([rejectsThinking, ok, ok]);
+    const provider = new GeminiProvider({ apiKey: "AIzaSecretKey123", model: "m", client, retryDelayMs: 0, maxRetries: 0 });
+    const response = await provider.generateJson(REQUEST);
+    assert.deepEqual(response.data, { ok: true });
+    assert.equal(client.calls.length, 2);
+    assert.deepEqual(client.calls[0].config?.thinkingConfig, { thinkingBudget: 0 });
+    assert.equal(client.calls[1].config?.thinkingConfig, undefined);
+    await provider.generateJson(REQUEST);
+    assert.equal(client.calls[2].config?.thinkingConfig, undefined, "the setting stays off for later calls");
 });
 
 test("GeminiProvider retries transient failures, not client errors, and never leaks the key", async () => {

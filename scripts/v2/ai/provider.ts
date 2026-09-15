@@ -52,23 +52,29 @@ export interface AiConfig {
     provider: AiProviderName;
     model: string;
     apiKey?: string;
+    /** Gemini thinking budget in tokens (AI_THINKING_BUDGET); default 0 = thinking off. */
+    thinkingBudget?: number;
 }
 
 export const DEFAULT_AI_MODEL = "gemini-3.5-flash";
 
 /**
- * Reads AI_PROVIDER (default gemini), AI_MODEL (default gemini-3.5-flash) and
- * GEMINI_API_KEY. Returns undefined when the gemini provider is selected but no
- * key is present, so callers can run without AI instead of failing at call time.
+ * Reads AI_PROVIDER (default gemini), AI_MODEL (default gemini-3.5-flash),
+ * AI_THINKING_BUDGET (default 0) and GEMINI_API_KEY. Returns undefined when the
+ * gemini provider is selected but no key is present, so callers can run without
+ * AI instead of failing at call time.
  */
 export function readAiConfig(env: NodeJS.ProcessEnv = process.env): AiConfig | undefined {
     const provider = (env.AI_PROVIDER || "gemini").trim().toLowerCase();
     const model = (env.AI_MODEL || DEFAULT_AI_MODEL).trim();
-    if (provider === "mock") return { provider: "mock", model };
+    const budgetRaw = env.AI_THINKING_BUDGET?.trim();
+    const thinkingBudget = budgetRaw === undefined || budgetRaw === "" ? 0 : Number(budgetRaw);
+    if (!Number.isInteger(thinkingBudget) || thinkingBudget < 0) throw new AiError(`AI_THINKING_BUDGET must be a non-negative integer, got ${JSON.stringify(budgetRaw)}`, false);
+    if (provider === "mock") return { provider: "mock", model, thinkingBudget };
     if (provider !== "gemini") throw new AiError(`Unsupported AI_PROVIDER ${JSON.stringify(provider)} (expected gemini or mock)`, false);
     const apiKey = env.GEMINI_API_KEY?.trim();
     if (!apiKey) return undefined;
-    return { provider: "gemini", model, apiKey };
+    return { provider: "gemini", model, apiKey, thinkingBudget };
 }
 
 /** Replaces every occurrence of a secret in a string (error messages, URLs). */
@@ -143,7 +149,7 @@ export async function createAiProvider(config: AiConfig): Promise<AiProvider> {
     if (config.provider === "gemini") {
         if (!config.apiKey) throw new AiError("GEMINI_API_KEY is required for the gemini provider", false);
         const { GeminiProvider } = await import("./gemini");
-        return new GeminiProvider({ apiKey: config.apiKey, model: config.model });
+        return new GeminiProvider({ apiKey: config.apiKey, model: config.model, thinkingBudget: config.thinkingBudget });
     }
     const { MockAiProvider } = await import("./mock");
     return new MockAiProvider(config.model, () => {

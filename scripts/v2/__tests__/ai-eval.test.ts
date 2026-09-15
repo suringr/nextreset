@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { loadGoldCases, loadMockScript, mockGoldProvider, renderMarkdown, runGoldEval } from "../ai/eval";
+import { loadGoldCases, loadMockScript, mockGoldProvider, renderMarkdown, runGoldEval, validateGoldCases } from "../ai/eval";
 
 test("every gold case passes with the scripted responses, and hallucinated fields are rejected", async () => {
     const cases = loadGoldCases();
@@ -16,8 +16,16 @@ test("every gold case passes with the scripted responses, and hallucinated field
 
     // The scripts deliberately contain unsupported claims; grounding must have thrown them out.
     const lol = report.cases.find(c => c.id === "lol-schedule")!;
-    assert.ok(lol.rejected.some(r => r.identity === "26.25" && /not found/.test(r.reason)));
-    assert.ok(!lol.items.some(i => i.identity === "26.25" && i.facts.length > 0));
+    assert.ok(lol.rejected.some(r => r.identity === "26.25" && /identity not found/.test(r.reason)), "a patch the page never lists is rejected");
+    assert.ok(!lol.items.some(i => i.identity === "26.25"));
+    assert.ok(lol.rejected.some(r => r.identity === "99.99" && /identity not found/.test(r.reason)), "a fabricated identity with a real quote is rejected");
+    assert.ok(!lol.items.some(i => i.identity === "99.99"));
+
+    const minecraft = report.cases.find(c => c.id === "minecraft-article")!;
+    assert.ok(minecraft.rejected.some(r => r.identity === "26.44" && /does not mention the item/.test(r.reason)), "a posting date not tied to the version is not evidence for it");
+
+    const listing = report.cases.find(c => c.id === "lol-notes-listing")!;
+    assert.deepEqual(listing.items.find(i => i.identity === "26.18")!.facts.map(f => [f.at, f.precision]), [["2026-09-09T18:00:00.000Z", "exact"]]);
 
     const valorant = report.cases.find(c => c.id === "valorant-updates")!;
     assert.ok(valorant.rejected.some(r => r.value === "2026-08-19T13:00" && /day and month/.test(r.reason)));
@@ -29,6 +37,10 @@ test("every gold case passes with the scripted responses, and hallucinated field
     const pubg = report.cases.find(c => c.id === "pubg-article")!;
     const maintenance = pubg.items.find(i => /maintenance pc/i.test(i.identity))!;
     assert.deepEqual(maintenance.facts.map(f => [f.at, f.precision, f.timezone, f.yearInferred]), [["2026-03-11T00:00:00.000Z", "exact", "UTC", true]]);
+
+    // Exact-precision expectations must name the instant they expect.
+    assert.throws(() => validateGoldCases([{ ...cases[0], expect: [{ identityAnyOf: ["x"], date: "2026-01-01", precision: "exact" }] }]), /requires precision exact but gives no `at`/);
+    assert.doesNotThrow(() => validateGoldCases(cases));
 
     const genshin = report.cases.find(c => c.id === "genshin-article")!;
     assert.equal(genshin.items[0].facts[0].yearInferred, true);
@@ -53,8 +65,8 @@ test("a wrong or missing answer fails its case with a readable reason", async ()
     assert.ok(lol.failures.some(f => /no item with identity 26\.19/.test(f)));
 
     const synthetic = report.cases.find(c => c.id === "synthetic-no-date")!;
-    // The quote exists but does not mention the claimed date, so grounding still rejects it and the case passes.
+    // The quote exists but neither names the patch nor states the claimed date, so grounding rejects it and the case passes.
     assert.equal(synthetic.passed, true);
-    assert.ok(synthetic.rejected.some(r => /day and month/.test(r.reason)));
+    assert.ok(synthetic.rejected.some(r => /does not mention/.test(r.reason)));
     assert.equal(report.summary.failed, 1);
 });

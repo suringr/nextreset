@@ -5,7 +5,8 @@
  * decides what that means: parse the value without touching the runner's local
  * timezone, resolve the timezone phrase to an IANA zone or a fixed offset,
  * convert to a UTC instant, and decide the precision. It also checks that a
- * quote actually mentions the date it is supposed to support.
+ * quote actually mentions the date, and the clock time, it is supposed to
+ * support.
  */
 
 export interface ParsedDateValue {
@@ -50,18 +51,29 @@ function offsetToMinutes(text: string): number {
     return sign * (+m[2] * 60 + +m[3]);
 }
 
-const ZONE_ALIASES: Record<string, string> = {
+/** Generic phrases whose offset depends on the date: resolved through IANA rules (DST-aware). */
+const IANA_ALIASES: Record<string, string> = {
     "utc": "UTC", "gmt": "UTC", "z": "UTC", "coordinated universal time": "UTC",
-    "pt": "America/Los_Angeles", "pst": "America/Los_Angeles", "pdt": "America/Los_Angeles", "pacific": "America/Los_Angeles", "pacific time": "America/Los_Angeles", "pacific standard time": "America/Los_Angeles", "pacific daylight time": "America/Los_Angeles",
-    "et": "America/New_York", "est": "America/New_York", "edt": "America/New_York", "eastern": "America/New_York", "eastern time": "America/New_York",
-    "ct": "America/Chicago", "cdt": "America/Chicago", "central time": "America/Chicago",
-    "mt": "America/Denver", "mst": "America/Denver", "mdt": "America/Denver", "mountain time": "America/Denver",
-    "bst": "Europe/London", "uk time": "Europe/London",
-    "cet": "Europe/Berlin", "cest": "Europe/Berlin", "central european time": "Europe/Berlin",
-    "eet": "Europe/Athens", "eest": "Europe/Athens",
-    "kst": "Asia/Seoul", "korea standard time": "Asia/Seoul",
-    "jst": "Asia/Tokyo", "japan standard time": "Asia/Tokyo",
-    "aest": "Australia/Sydney", "aedt": "Australia/Sydney"
+    "pt": "America/Los_Angeles", "pacific": "America/Los_Angeles", "pacific time": "America/Los_Angeles",
+    "et": "America/New_York", "eastern": "America/New_York", "eastern time": "America/New_York",
+    "ct": "America/Chicago", "central time": "America/Chicago",
+    "mt": "America/Denver", "mountain time": "America/Denver",
+    "uk time": "Europe/London", "london time": "Europe/London",
+    "central european time": "Europe/Berlin", "paris time": "Europe/Paris", "berlin time": "Europe/Berlin",
+    "korea time": "Asia/Seoul", "japan time": "Asia/Tokyo"
+};
+
+/**
+ * Explicit standard/daylight abbreviations name a fixed offset; they must not
+ * drift with the date (12:00 PST in July is still UTC-8 by definition).
+ */
+const FIXED_ALIASES: Record<string, string> = {
+    "pst": "-08:00", "pdt": "-07:00", "pacific standard time": "-08:00", "pacific daylight time": "-07:00",
+    "est": "-05:00", "edt": "-04:00", "eastern standard time": "-05:00", "eastern daylight time": "-04:00",
+    "cdt": "-05:00", "mst": "-07:00", "mdt": "-06:00",
+    "bst": "+01:00", "cet": "+01:00", "cest": "+02:00", "eet": "+02:00", "eest": "+03:00",
+    "kst": "+09:00", "jst": "+09:00", "aest": "+10:00", "aedt": "+11:00",
+    "korea standard time": "+09:00", "japan standard time": "+09:00"
 };
 
 export interface ResolvedZone {
@@ -79,7 +91,7 @@ function isValidIana(zone: string): boolean {
     }
 }
 
-/** Resolves a timezone phrase as a document states it. Ambiguous or unknown phrases resolve to undefined. */
+/** Resolves a timezone phrase as a document states it. Ambiguous or unknown phrases ("IST", "server time") resolve to undefined. */
 export function resolveTimezone(raw: string | undefined): ResolvedZone | undefined {
     if (!raw) return undefined;
     const cleaned = raw.trim().replace(/[()]/g, "").replace(/\s+/g, " ");
@@ -94,8 +106,9 @@ export function resolveTimezone(raw: string | undefined): ResolvedZone | undefin
         const zone = `${offset[1]}${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
         return { zone, kind: "offset" };
     }
-    if (lower in ZONE_ALIASES) {
-        const zone = ZONE_ALIASES[lower];
+    if (lower in FIXED_ALIASES) return { zone: FIXED_ALIASES[lower], kind: "offset" };
+    if (lower in IANA_ALIASES) {
+        const zone = IANA_ALIASES[lower];
         return { zone, kind: zone === "UTC" ? "utc" : "iana" };
     }
     if (/^[A-Za-z]+\/[A-Za-z_]+(?:\/[A-Za-z_]+)?$/.test(cleaned) && isValidIana(cleaned)) {
@@ -116,7 +129,7 @@ function tzOffsetMinutes(zone: string, at: Date): number {
     return Math.round((asUtc - at.getTime()) / 60000);
 }
 
-/** Converts a wall-clock time in a zone (IANA name or "+HH:MM" offset or "UTC") to a UTC instant. DST-safe. */
+/** Converts a wall-clock time in a zone (IANA name, "+HH:MM" offset, or "UTC") to a UTC instant. DST-safe. */
 export function zonedToUtc(value: ParsedDateValue, zone: string): Date {
     const wall = Date.UTC(value.year, value.month - 1, value.day, value.hour ?? 0, value.minute ?? 0, value.second ?? 0);
     if (zone === "UTC") return new Date(wall);
@@ -136,8 +149,15 @@ export interface NormalizedDate {
     precision: "exact" | "day";
     /** Resolved zone the instant was computed in, when one was stated and understood. */
     timezone?: string;
-    /** Set when a stated time could not be converted (unknown zone): the day is kept, the time is dropped. */
+    /** Set when a stated time could not be used (unknown zone): the day is kept, the time is dropped. */
     note?: string;
+}
+
+function dayOnly(parsed: ParsedDateValue, note?: string, timezone?: string): NormalizedDate {
+    const result: NormalizedDate = { at: new Date(Date.UTC(parsed.year, parsed.month - 1, parsed.day)).toISOString(), precision: "day" };
+    if (timezone !== undefined) result.timezone = timezone;
+    if (note !== undefined) result.note = note;
+    return result;
 }
 
 /** Turns a model-reported value + timezone phrase into an Event-compatible instant. */
@@ -147,19 +167,17 @@ export function normalizeDateFact(value: string, timezoneRaw: string | undefined
 
     if (parsed.offsetMinutes !== undefined) {
         const wall = Date.UTC(parsed.year, parsed.month - 1, parsed.day, parsed.hour ?? 0, parsed.minute ?? 0, parsed.second ?? 0);
-        return { at: new Date(wall - parsed.offsetMinutes * 60000).toISOString(), precision: "exact", timezone: parsed.offsetMinutes === 0 ? "UTC" : `${parsed.offsetMinutes < 0 ? "-" : "+"}${String(Math.floor(Math.abs(parsed.offsetMinutes) / 60)).padStart(2, "0")}:${String(Math.abs(parsed.offsetMinutes) % 60).padStart(2, "0")}` };
+        const offset = parsed.offsetMinutes;
+        const zone = offset === 0 ? "UTC" : `${offset < 0 ? "-" : "+"}${String(Math.floor(Math.abs(offset) / 60)).padStart(2, "0")}:${String(Math.abs(offset) % 60).padStart(2, "0")}`;
+        return { at: new Date(wall - offset * 60000).toISOString(), precision: "exact", timezone: zone };
     }
 
     const zone = resolveTimezone(timezoneRaw);
-    if (!parsed.hasTime) {
-        return { at: new Date(Date.UTC(parsed.year, parsed.month - 1, parsed.day)).toISOString(), precision: "day", timezone: zone?.zone };
-    }
+    if (!parsed.hasTime) return dayOnly(parsed, undefined, zone?.zone);
     if (!zone) {
-        return {
-            at: new Date(Date.UTC(parsed.year, parsed.month - 1, parsed.day)).toISOString(),
-            precision: "day",
-            note: timezoneRaw && timezoneRaw.trim() ? `timezone "${timezoneRaw.trim()}" not understood; time dropped` : "time stated without a timezone; time dropped"
-        };
+        return dayOnly(parsed, timezoneRaw && timezoneRaw.trim()
+            ? `timezone "${timezoneRaw.trim()}" not understood; time dropped`
+            : "time stated without a timezone; time dropped");
     }
     return { at: zonedToUtc(parsed, zone.zone).toISOString(), precision: "exact", timezone: zone.zone };
 }
@@ -175,9 +193,10 @@ export interface QuoteDateCheck {
 
 /**
  * Does the quote actually mention the date it is claimed to support?
- * Day: the day number as its own token (or ordinal). Month: name/abbreviation
- * or a numeric form (m/d, mm-dd, yyyy.mm.dd, yyyy-mm-dd). Year: matching
- * four-digit year, or null when the quote states none.
+ * Day: the day number as its own token (or ordinal), never a component of a
+ * decimal/version number such as "26.19". Month: name/abbreviation or a
+ * numeric date form (yyyy-mm-dd, yyyy.mm.dd, mm/dd/yyyy, m/d, dd-mm-yyyy).
+ * Year: matching four-digit year, or null when the quote states none.
  */
 export function quoteMentionsDate(quote: string, value: ParsedDateValue): QuoteDateCheck {
     const q = quote.toLowerCase().replace(/\s+/g, " ");
@@ -185,17 +204,61 @@ export function quoteMentionsDate(quote: string, value: ParsedDateValue): QuoteD
     const dd = String(value.day).padStart(2, "0");
     const yyyy = String(value.year);
 
-    const numericDate = new RegExp(`(?:^|[^0-9])(?:${yyyy}[./-]${mm}[./-]${dd}|${mm}[./-]${dd}[./-]${yyyy}|${value.month}/${value.day}(?:/${yyyy})?|${dd}[./-]${mm}[./-]${yyyy}|${value.day}\\.${value.month}\\.)(?:[^0-9]|$)`);
+    const numericDate = new RegExp(
+        `(?:^|[^0-9.])(?:${yyyy}[./-]${mm}[./-]${dd}|${mm}[./-]${dd}[./-]${yyyy}|${value.month}/${value.day}(?:/${yyyy})?|${dd}[./-]${mm}[./-]${yyyy})(?:[^0-9.]|$)`
+    );
     const numeric = numericDate.test(q);
 
     const monthName = MONTHS[value.month - 1];
-    const monthAbbrev = monthName.slice(0, 3);
-    const month = numeric || new RegExp(`\\b${monthName}\\b|\\b${monthAbbrev}\\.?\\b|\\bsept\\.?\\b`.replace("\\bsept\\.?\\b", value.month === 9 ? "\\bsept\\.?\\b" : "\\b__never__\\b")).test(q);
+    const monthPattern = value.month === 9
+        ? `\\b(?:september|sept?\\.?)\\b`
+        : `\\b(?:${monthName}|${monthName.slice(0, 3)}\\.?)\\b`;
+    const month = numeric || new RegExp(monthPattern).test(q);
 
-    const day = numeric || new RegExp(`(?:^|[^0-9:])${value.day}(?:st|nd|rd|th)?(?:[^0-9:]|$)`).test(q) || new RegExp(`(?:^|[^0-9:])${dd}(?:[^0-9:]|$)`).test(q);
+    // A day token must stand alone: not preceded by a digit or a period (26.19 -> not day 19),
+    // not followed by a digit after an optional period/colon (26.19 -> not day 26; 11:00 -> not day 11).
+    const dayPattern = `(?:^|[^0-9.:])(?:${value.day}|${dd})(?:st|nd|rd|th)?(?![.:]?\\d)(?=[^0-9]|$)`;
+    const day = numeric || new RegExp(dayPattern).test(q);
 
     const years = q.match(/\b(19|20)\d{2}\b/g);
     const year = years ? years.includes(yyyy) : null;
 
     return { day, month, year };
+}
+
+/**
+ * Does the quote state the clock time claimed in a timed value?
+ * Accepts 24-hour "15:00", "3 PM", "3:00 pm", "00:00", "midnight" and "noon".
+ * Values without a time always pass.
+ */
+export function quoteMentionsTime(quote: string, value: ParsedDateValue): boolean {
+    if (!value.hasTime) return true;
+    const q = quote.toLowerCase();
+    const hour = value.hour ?? 0;
+    const minute = value.minute ?? 0;
+    if (hour === 0 && minute === 0 && /\bmidnight\b/.test(q)) return true;
+    if (hour === 12 && minute === 0 && /\bnoon\b/.test(q)) return true;
+
+    const times = q.matchAll(/(?:^|[^0-9.])(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?(?=[^0-9]|$)/g);
+    for (const m of times) {
+        let h = +m[1];
+        const mins = m[2] !== undefined ? +m[2] : undefined;
+        const meridiem = m[3]?.replace(/\./g, "");
+        if (meridiem === "pm" && h < 12) h += 12;
+        if (meridiem === "am" && h === 12) h = 0;
+        if (mins === undefined && !meridiem) continue; // a bare number is not a time
+        if (h === hour && (mins ?? 0) === minute) return true;
+    }
+    return false;
+}
+
+/** True when the document states the timezone phrase somewhere (or the quote carries an ISO "Z" for UTC). */
+export function timezoneMentioned(documentText: string, quote: string, timezoneRaw: string | undefined): boolean {
+    if (!timezoneRaw || timezoneRaw.trim().length === 0) return false;
+    const phrase = timezoneRaw.trim().replace(/[()]/g, "").replace(/\s+/g, " ").toLowerCase();
+    const doc = documentText.replace(/\s+/g, " ").toLowerCase();
+    if (doc.includes(phrase)) return true;
+    const resolved = resolveTimezone(timezoneRaw);
+    if (resolved?.zone === "UTC" && /\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?z\b/i.test(quote)) return true;
+    return false;
 }

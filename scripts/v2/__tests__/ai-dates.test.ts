@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeDateFact, parseDateValue, quoteMentionsDate, resolveTimezone, zonedToUtc } from "../ai/dates";
+import { normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, timezoneMentioned, zonedToUtc } from "../ai/dates";
 
 test("parseDateValue accepts ISO dates and local date-times, rejects everything else", () => {
     assert.deepEqual(parseDateValue("2026-09-23"), { year: 2026, month: 9, day: 23, hasTime: false });
@@ -18,6 +18,14 @@ test("timezone phrases resolve to IANA zones or fixed offsets; ambiguous ones do
     assert.deepEqual(resolveTimezone("PT"), { zone: "America/Los_Angeles", kind: "iana" });
     assert.deepEqual(resolveTimezone("Pacific Time"), { zone: "America/Los_Angeles", kind: "iana" });
     assert.deepEqual(resolveTimezone("(PT)"), { zone: "America/Los_Angeles", kind: "iana" });
+    // Explicit standard/daylight abbreviations are fixed offsets, whatever the date.
+    assert.deepEqual(resolveTimezone("PST"), { zone: "-08:00", kind: "offset" });
+    assert.deepEqual(resolveTimezone("PDT"), { zone: "-07:00", kind: "offset" });
+    assert.deepEqual(resolveTimezone("EST"), { zone: "-05:00", kind: "offset" });
+    assert.deepEqual(resolveTimezone("EDT"), { zone: "-04:00", kind: "offset" });
+    assert.deepEqual(resolveTimezone("KST"), { zone: "+09:00", kind: "offset" });
+    assert.equal(zonedToUtc(parseDateValue("2026-07-15T12:00")!, resolveTimezone("PST")!.zone).toISOString(), "2026-07-15T20:00:00.000Z");
+    assert.equal(zonedToUtc(parseDateValue("2026-01-15T12:00")!, resolveTimezone("PDT")!.zone).toISOString(), "2026-01-15T19:00:00.000Z");
     assert.deepEqual(resolveTimezone("UTC"), { zone: "UTC", kind: "utc" });
     assert.deepEqual(resolveTimezone("UTC+8"), { zone: "+08:00", kind: "offset" });
     assert.deepEqual(resolveTimezone("GMT-5"), { zone: "-05:00", kind: "offset" });
@@ -41,7 +49,7 @@ test("zonedToUtc is DST-aware and handles fixed offsets", () => {
 
 test("normalizeDateFact decides precision from what was stated", () => {
     assert.deepEqual(normalizeDateFact("2026-09-23", "PT"), { at: "2026-09-23T00:00:00.000Z", precision: "day", timezone: "America/Los_Angeles" });
-    assert.deepEqual(normalizeDateFact("2026-09-23", ""), { at: "2026-09-23T00:00:00.000Z", precision: "day", timezone: undefined });
+    assert.deepEqual(normalizeDateFact("2026-09-23", ""), { at: "2026-09-23T00:00:00.000Z", precision: "day" });
     assert.deepEqual(normalizeDateFact("2026-09-23T15:00", "PT"), { at: "2026-09-23T22:00:00.000Z", precision: "exact", timezone: "America/Los_Angeles" });
     assert.deepEqual(normalizeDateFact("2026-09-09T18:00", "UTC"), { at: "2026-09-09T18:00:00.000Z", precision: "exact", timezone: "UTC" });
     assert.deepEqual(normalizeDateFact("2026-09-09T18:00Z", "whatever"), { at: "2026-09-09T18:00:00.000Z", precision: "exact", timezone: "UTC" });
@@ -79,4 +87,38 @@ test("quoteMentionsDate checks day, month and year against the quote", () => {
 
     const aug20 = parseDateValue("2026-08-20")!;
     assert.deepEqual(quoteMentionsDate("Update: 20 August 2026 26.45 Hotfix", aug20), { day: true, month: true, year: true });
+
+    // Version numbers never supply a day: "26.19" is neither the 26th nor the 19th.
+    const sept26 = parseDateValue("2026-09-26")!;
+    assert.equal(quoteMentionsDate("Patch 26.19 will release in September 2026", sept26).day, false);
+    const sept19 = parseDateValue("2026-09-19")!;
+    assert.equal(quoteMentionsDate("Patch 26.19 will release in September 2026", sept19).day, false);
+    assert.equal(quoteMentionsDate("Patch 26.19 will release on September 19, 2026", sept19).day, true);
+    const sept9b = parseDateValue("2026-09-09")!;
+    assert.equal(quoteMentionsDate("Patch 26.9 notes", sept9b).day, false, "26.9 is a version, not September 9th");
+});
+
+test("quoteMentionsTime requires the stated clock time when a value carries one", () => {
+    assert.equal(quoteMentionsTime("26.19 September 23, 2026", parseDateValue("2026-09-23")!), true, "date-only values need no time");
+    const t1500 = parseDateValue("2026-09-23T15:00")!;
+    assert.equal(quoteMentionsTime("September 23 at 15:00 PT", t1500), true);
+    assert.equal(quoteMentionsTime("September 23 at 3 PM PT", t1500), true);
+    assert.equal(quoteMentionsTime("September 23 at 3:00 p.m.", t1500), true);
+    assert.equal(quoteMentionsTime("September 23 at 3:17 PM", t1500), false);
+    assert.equal(quoteMentionsTime("September 23, 2026", t1500), false, "no time in the quote");
+    assert.equal(quoteMentionsTime("Patch 15 notes on September 23", t1500), false, "a bare number is not a time");
+    assert.equal(quoteMentionsTime("PC: March 11, 00:00 - 08:30", parseDateValue("2026-03-11T00:00")!), true);
+    assert.equal(quoteMentionsTime("servers go down at midnight", parseDateValue("2026-03-11T00:00")!), true);
+    assert.equal(quoteMentionsTime("2026-09-09T18:00:00.000Z League of Legends Patch 26.18 Notes", parseDateValue("2026-09-09T18:00")!), true);
+    assert.equal(quoteMentionsTime("at 12:00 AM", parseDateValue("2026-03-11T00:00")!), true);
+});
+
+test("timezoneMentioned looks for the stated phrase in the document, or an ISO Z in the quote", () => {
+    const doc = "Live Maintenance Schedule (UTC) ※ PC: March 11, 00:00 - 08:30. Patches release on a Wednesday (PT).";
+    assert.equal(timezoneMentioned(doc, "PC: March 11, 00:00 - 08:30", "UTC"), true);
+    assert.equal(timezoneMentioned(doc, "PC: March 11, 00:00 - 08:30", "PT"), true);
+    assert.equal(timezoneMentioned(doc, "PC: March 11, 00:00 - 08:30", "KST"), false);
+    assert.equal(timezoneMentioned("no zones here", "2026-09-09T18:00:00.000Z Patch 26.18", "UTC"), true);
+    assert.equal(timezoneMentioned("no zones here", "2026-09-09T18:00:00.000Z Patch 26.18", "PT"), false);
+    assert.equal(timezoneMentioned(doc, "x", ""), false);
 });

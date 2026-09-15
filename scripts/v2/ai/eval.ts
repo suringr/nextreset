@@ -18,11 +18,13 @@ import { MockAiProvider, scriptedResponder } from "./mock";
 import { AiProvider, AiUsageTracker, TrackedAiProvider, createAiProvider, readAiConfig } from "./provider";
 
 export interface GoldExpectation {
-    /** Any of these normalized identities may satisfy the expectation. */
+    /** Any of these may satisfy the expectation, matched against the normalized identity or label. */
     identityAnyOf: string[];
     field?: "at" | "startAt" | "endAt";
     /** YYYY-MM-DD of the reported value (local to the stated zone). */
     date?: string;
+    /** The normalized UTC instant; required for exact-precision expectations. */
+    at?: string;
     status?: string[];
     precision?: "exact" | "day";
     yearInferred?: boolean;
@@ -88,10 +90,21 @@ export function loadGoldCases(dir = GOLD_DIR): GoldCase[] {
 }
 
 function matchesIdentity(item: GroundedItem, anyOf: string[]): boolean {
+    let labelKey = "";
+    try { labelKey = normalizeIdentity(item.label); } catch { /* unlabelled */ }
     return anyOf.some(candidate => {
         const c = normalizeIdentity(candidate);
-        return item.identityKey === c || item.identityKey.includes(c);
+        return item.identityKey === c || item.identityKey.includes(c) || labelKey === c || labelKey.includes(c);
     });
+}
+
+/** A gold case cannot ask for an exact instant without saying which one. */
+export function validateGoldCases(cases: GoldCase[]): void {
+    for (const c of cases) {
+        for (const e of c.expect) {
+            if (e.precision === "exact" && !e.at) throw new Error(`gold case ${c.id}: expectation ${e.identityAnyOf[0]} requires precision exact but gives no \`at\``);
+        }
+    }
 }
 
 function evaluateCase(gold: GoldCase, classification: CaseReport["classification"], items: GroundedItem[]): string[] {
@@ -116,12 +129,13 @@ function evaluateCase(gold: GoldCase, classification: CaseReport["classification
             const hit = candidates.find(i => i.facts.some(f =>
                 (!exp.field || f.field === exp.field) &&
                 f.value.slice(0, 10) === exp.date &&
+                (!exp.at || f.at === exp.at) &&
                 (!exp.precision || f.precision === exp.precision) &&
                 (exp.yearInferred === undefined || f.yearInferred === exp.yearInferred)
             ));
             if (!hit) {
-                const seen = candidates.flatMap(i => i.facts.map(f => `${f.field}=${f.value}${f.precision === "exact" ? "" : " (day)"}`)).join(", ") || "no accepted facts";
-                failures.push(`item ${exp.identityAnyOf[0]}: expected ${exp.field ?? "any field"} on ${exp.date}${exp.precision ? ` (${exp.precision})` : ""}; accepted: ${seen}`);
+                const seen = candidates.flatMap(i => i.facts.map(f => `${f.field}=${f.value} → ${f.at} (${f.precision})`)).join(", ") || "no accepted facts";
+                failures.push(`item ${exp.identityAnyOf[0]}: expected ${exp.field ?? "any field"} on ${exp.date}${exp.at ? ` = ${exp.at}` : ""}${exp.precision ? ` (${exp.precision})` : ""}; accepted: ${seen}`);
                 continue;
             }
             if (exp.status && !exp.status.includes(hit.status)) {
@@ -157,6 +171,7 @@ export interface RunGoldEvalOptions {
 export async function runGoldEval(options: RunGoldEvalOptions): Promise<EvalReport> {
     const goldDir = options.goldDir ?? GOLD_DIR;
     const cases = options.cases ?? loadGoldCases(goldDir);
+    validateGoldCases(cases);
     const tracker = new AiUsageTracker();
     const provider = new TrackedAiProvider(options.provider, tracker);
     const reports: CaseReport[] = [];

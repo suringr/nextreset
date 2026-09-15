@@ -39,6 +39,12 @@ export interface GeminiOptions {
     maxRetries?: number;
     retryDelayMs?: number;
     defaultMaxOutputTokens?: number;
+    /**
+     * Thinking budget in tokens. Thinking tokens count against maxOutputTokens
+     * on Gemini, so extraction runs with thinking off (0) by default; a model
+     * that rejects the setting is retried once without it.
+     */
+    thinkingBudget?: number;
 }
 
 const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504]);
@@ -53,6 +59,7 @@ export class GeminiProvider implements AiProvider {
     private readonly maxRetries: number;
     private readonly retryDelayMs: number;
     private readonly defaultMaxOutputTokens: number;
+    private thinkingBudget: number | undefined;
 
     constructor(options: GeminiOptions) {
         if (!options.apiKey) throw new AiError("Gemini API key is missing", false);
@@ -62,6 +69,21 @@ export class GeminiProvider implements AiProvider {
         this.maxRetries = options.maxRetries ?? 2;
         this.retryDelayMs = options.retryDelayMs ?? 1500;
         this.defaultMaxOutputTokens = options.defaultMaxOutputTokens ?? 8192;
+        this.thinkingBudget = options.thinkingBudget ?? 0;
+    }
+
+    private buildConfig(request: AiJsonRequest): Record<string, unknown> {
+        const config: Record<string, unknown> = {
+            systemInstruction: request.system,
+            temperature: 0,
+            maxOutputTokens: request.maxOutputTokens ?? this.defaultMaxOutputTokens,
+            responseMimeType: "application/json",
+            responseJsonSchema: request.schema
+        };
+        if (this.thinkingBudget !== undefined && this.thinkingBudget >= 0) {
+            config.thinkingConfig = { thinkingBudget: this.thinkingBudget };
+        }
+        return config;
     }
 
     private async getClient(): Promise<GeminiClientLike> {
@@ -81,17 +103,17 @@ export class GeminiProvider implements AiProvider {
                 const response = await client.models.generateContent({
                     model: this.model,
                     contents: request.prompt,
-                    config: {
-                        systemInstruction: request.system,
-                        temperature: 0,
-                        maxOutputTokens: request.maxOutputTokens ?? this.defaultMaxOutputTokens,
-                        responseMimeType: "application/json",
-                        responseJsonSchema: request.schema
-                    }
+                    config: this.buildConfig(request)
                 });
                 return this.parseResponse(response);
             } catch (error) {
                 lastError = this.toAiError(error);
+                // A model that does not accept a thinking budget: drop the setting and retry at once.
+                if (lastError.status === 400 && this.thinkingBudget !== undefined && /thinking/i.test(lastError.message)) {
+                    this.thinkingBudget = undefined;
+                    attempt--;
+                    continue;
+                }
                 if (!lastError.retryable || attempt === this.maxRetries) throw lastError;
                 if (this.retryDelayMs > 0) await sleep(this.retryDelayMs * Math.pow(2, attempt));
             }

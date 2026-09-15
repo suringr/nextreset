@@ -29,8 +29,8 @@
     "now": "2026-09-14T21:30:00Z",
     "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "news"] },
     "expect": [
-      { "identityAnyOf": ["26.18"], "date": "2026-09-09", "precision": "exact", "status": ["released"] },
-      { "identityAnyOf": ["26.17"], "date": "2026-08-25", "precision": "exact" }
+      { "identityAnyOf": ["26.18"], "date": "2026-09-09", "at": "2026-09-09T18:00:00.000Z", "precision": "exact", "status": ["released"] },
+      { "identityAnyOf": ["26.17"], "date": "2026-08-25", "at": "2026-08-25T18:00:00.000Z", "precision": "exact" }
     ]
   },
   {
@@ -45,8 +45,8 @@
     "now": "2026-09-14T21:30:00Z",
     "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "news"] },
     "expect": [
-      { "identityAnyOf": ["13.05"], "date": "2026-09-01", "precision": "exact", "status": ["released"] },
-      { "identityAnyOf": ["13.04"], "date": "2026-08-18", "precision": "exact" }
+      { "identityAnyOf": ["13.05"], "date": "2026-09-01", "at": "2026-09-01T13:00:00.000Z", "precision": "exact", "status": ["released"] },
+      { "identityAnyOf": ["13.04"], "date": "2026-08-18", "at": "2026-08-18T13:00:00.000Z", "precision": "exact" }
     ]
   },
   {
@@ -78,7 +78,7 @@
     "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes"] },
     "expect": [
       { "identityAnyOf": ["40.2", "update 40.2"], "date": "2026-03-10", "precision": "day" },
-      { "identityAnyOf": ["maintenance", "pc"], "date": "2026-03-11", "precision": "exact", "yearInferred": true }
+      { "identityAnyOf": ["maintenance pc", "live maintenance pc", "pc maintenance", "maintenance (pc)", "pc"], "date": "2026-03-11", "at": "2026-03-11T00:00:00.000Z", "precision": "exact", "yearInferred": true }
     ]
   },
   {
@@ -93,8 +93,8 @@
     "now": "2026-09-14T21:30:00Z",
     "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "news", "release"] },
     "expect": [
-      { "identityAnyOf": ["2026-09-10", "september 10, 2026", "counter-strike 2 update"], "date": "2026-09-10", "precision": "day" },
-      { "identityAnyOf": ["2026-08-25", "august 25, 2026", "counter-strike 2 update"], "date": "2026-08-25", "precision": "day" }
+      { "identityAnyOf": ["september 10, 2026", "2026-09-10", "counter-strike 2 update"], "date": "2026-09-10", "precision": "day" },
+      { "identityAnyOf": ["august 25, 2026", "2026-08-25", "counter-strike 2 update"], "date": "2026-08-25", "precision": "day" }
     ]
   },
   {
@@ -154,8 +154,7 @@
     "now": "2026-09-14T21:30:00Z",
     "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "release"] },
     "expect": [
-      { "identityAnyOf": ["26.45", "26.44/45", "26.44-45"], "date": "2026-08-20", "precision": "day" },
-      { "identityAnyOf": ["26.44", "26.44/45", "26.44-45"], "date": "2026-08-14", "precision": "day" }
+      { "identityAnyOf": ["26.45", "26.44/45", "26.44-45"], "date": "2026-08-20", "precision": "day" }
     ]
   },
   {

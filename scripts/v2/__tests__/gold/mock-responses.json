@@ -5,7 +5,8 @@
     { "kind": "version", "label": "Patch 26.19", "identity": "26.19", "status": "scheduled", "fields": [ { "field": "at", "value": "2026-09-23", "timezone": "Pacific Time", "quote": "26.19 September 23, 2026" } ] },
     { "kind": "version", "label": "Patch 26.20", "identity": "26.20", "status": "scheduled", "fields": [ { "field": "at", "value": "2026-10-07", "timezone": "Pacific Time", "quote": "26.20 October 7, 2026" } ] },
     { "kind": "version", "label": "Patch 26.21", "identity": "26.21", "status": "scheduled", "fields": [ { "field": "at", "value": "2026-10-21", "timezone": "Pacific Time", "quote": "26.21 October 21, 2026" } ] },
-    { "kind": "version", "label": "Patch 26.25", "identity": "26.25", "status": "scheduled", "fields": [ { "field": "at", "value": "2026-12-23", "timezone": "Pacific Time", "quote": "26.25 December 23, 2026" } ] }
+    { "kind": "version", "label": "Patch 26.25", "identity": "26.25", "status": "scheduled", "fields": [ { "field": "at", "value": "2026-12-23", "timezone": "Pacific Time", "quote": "26.25 December 23, 2026" } ] },
+    { "kind": "version", "label": "Patch 99.99", "identity": "99.99", "status": "scheduled", "fields": [ { "field": "at", "value": "2026-09-23", "timezone": "Pacific Time", "quote": "26.19 September 23, 2026" } ] }
   ] },
 
   "lol-notes-listing:classify": { "relevant": true, "docType": "patch-notes", "summary": "Listing of published League of Legends patch notes.", "reason": "Each entry names a patch and its publication timestamp." },
@@ -32,14 +33,14 @@
   "pubg-article:classify": { "relevant": true, "docType": "patch-notes", "summary": "Patch notes for PUBG Update 40.2 including the live maintenance schedule.", "reason": "States the update number, its date and maintenance windows." },
   "pubg-article:extract": { "items": [
     { "kind": "version", "label": "Patch Notes - Update 40.2", "identity": "Update 40.2", "status": "released", "fields": [ { "field": "at", "value": "2026-03-10", "timezone": "", "quote": "Patch Notes - Update 40.2 PATCH NOTES 2026.03.10" } ] },
-    { "kind": "occurrence", "label": "Live Maintenance (PC)", "identity": "Live Maintenance PC", "status": "ended", "fields": [ { "field": "startAt", "value": "2026-03-11T00:00", "timezone": "UTC", "quote": "Live Maintenance Schedule (UTC) ※ The times shown below are subject to change. PC: March 11, 00:00 - 08:30" } ] },
-    { "kind": "occurrence", "label": "Live Maintenance (Console)", "identity": "Live Maintenance Console", "status": "ended", "fields": [ { "field": "startAt", "value": "2026-03-19T01:00", "timezone": "UTC", "quote": "Console: March 19, 01:00 - 09:00" } ] }
+    { "kind": "occurrence", "label": "Live Maintenance (PC)", "identity": "Live Maintenance PC March 11", "status": "ended", "fields": [ { "field": "startAt", "value": "2026-03-11T00:00", "timezone": "UTC", "quote": "Live Maintenance Schedule (UTC) ※ The times shown below are subject to change. PC: March 11, 00:00 - 08:30" } ] },
+    { "kind": "occurrence", "label": "Live Maintenance (Console)", "identity": "Live Maintenance Console March 19", "status": "ended", "fields": [ { "field": "startAt", "value": "2026-03-19T01:00", "timezone": "UTC", "quote": "Console: March 19, 01:00 - 09:00" } ] }
   ] },
 
   "cs2-updates:classify": { "relevant": true, "docType": "patch-notes", "summary": "Counter-Strike 2 update notes, newest first.", "reason": "Every update is dated." },
   "cs2-updates:extract": { "items": [
-    { "kind": "version", "label": "Counter-Strike 2 Update (September 10, 2026)", "identity": "2026-09-10", "status": "released", "fields": [ { "field": "at", "value": "2026-09-10", "timezone": "", "quote": "September 10, 2026 Counter-Strike 2 Update" } ] },
-    { "kind": "version", "label": "Counter-Strike 2 Update (August 25, 2026)", "identity": "2026-08-25", "status": "released", "fields": [ { "field": "at", "value": "2026-08-25", "timezone": "", "quote": "August 25, 2026 Counter-Strike 2 Update" } ] }
+    { "kind": "version", "label": "Counter-Strike 2 Update (September 10, 2026)", "identity": "Counter-Strike 2 Update September 10, 2026", "status": "released", "fields": [ { "field": "at", "value": "2026-09-10", "timezone": "", "quote": "September 10, 2026 Counter-Strike 2 Update" } ] },
+    { "kind": "version", "label": "Counter-Strike 2 Update (August 25, 2026)", "identity": "Counter-Strike 2 Update August 25, 2026", "status": "released", "fields": [ { "field": "at", "value": "2026-08-25", "timezone": "", "quote": "August 25, 2026 Counter-Strike 2 Update" } ] }
   ] },
 
   "warzone-notes:classify": { "relevant": true, "docType": "patch-notes", "summary": "Call of Duty patch notes hub with Warzone season entries.", "reason": "Warzone patch notes entries are dated." },
