@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, timezoneMentioned, zonedToUtc } from "../ai/dates";
+import { clockTimesIn, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, timezoneMentioned, zonedToUtc } from "../ai/dates";
 
 test("parseDateValue accepts ISO dates and local date-times, rejects everything else", () => {
     assert.deepEqual(parseDateValue("2026-09-23"), { year: 2026, month: 9, day: 23, hasTime: false });
@@ -121,4 +121,15 @@ test("timezoneMentioned looks for the stated phrase in the document, or an ISO Z
     assert.equal(timezoneMentioned("no zones here", "2026-09-09T18:00:00.000Z Patch 26.18", "UTC"), true);
     assert.equal(timezoneMentioned("no zones here", "2026-09-09T18:00:00.000Z Patch 26.18", "PT"), false);
     assert.equal(timezoneMentioned(doc, "x", ""), false);
+    // Abbreviations must stand alone: "PT" is not inside "September", "ET" is not inside "Internet".
+    assert.equal(timezoneMentioned("Patch 26.19 releases September 23, 2026 at 15:00", "x", "PT"), false);
+    assert.equal(timezoneMentioned("Internet issues resolved", "x", "ET"), false);
+    assert.equal(timezoneMentioned("Patches release on a Wednesday (PT) unless noted", "x", "PT"), true);
+    assert.equal(timezoneMentioned("times are in Pacific   Time", "x", "Pacific Time"), true);
+});
+
+test("clockTimesIn lists times in order and ignores bare numbers", () => {
+    assert.deepEqual(clockTimesIn("PC: March 11, 00:00 - 08:30"), [0, 510]);
+    assert.deepEqual(clockTimesIn("at 3 PM and later 11:45 pm, patch 26"), [900, 1425]);
+    assert.deepEqual(clockTimesIn("Patch 26.19 September 23, 2026"), []);
 });

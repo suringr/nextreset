@@ -17,7 +17,7 @@
  * and never decides what gets published.
  */
 import { normalizeIdentity } from "../identity";
-import { NormalizedDate, ParsedDateValue, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, timezoneMentioned, zonedToUtc } from "./dates";
+import { NormalizedDate, ParsedDateValue, clockTimesIn, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, timezoneMentioned, zonedToUtc } from "./dates";
 import { AiProvider, AiUsage } from "./provider";
 
 export interface AiDocument {
@@ -231,10 +231,17 @@ function alnumOnly(text: string): string {
     return text.toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
+/**
+ * Word/number tokens of a text, lower-cased. Periods inside a token are kept so
+ * "26.19" stays one token distinct from "6.19"; surrounding punctuation is dropped.
+ */
+export function tokensOf(text: string): string[] {
+    return normalizeForSearch(text).split(/[^a-z0-9.]+/).map(t => t.replace(/^\.+|\.+$/g, "")).filter(t => t.length > 0);
+}
+
 /** Tokens that carry meaning for matching an identity: anything with a digit, or a word of 2+ letters that is not a stopword. */
 function significantTokens(identity: string): string[] {
-    return identity.toLowerCase().split(/[^a-z0-9.]+/).map(t => t.replace(/^\.+|\.+$/g, "")).filter(t =>
-        t.length > 0 && (/\d/.test(t) || (t.length >= 2 && !STOPWORDS.has(t))));
+    return tokensOf(identity).filter(t => /\d/.test(t) || (t.length >= 2 && !STOPWORDS.has(t)));
 }
 
 /** A token that is part of a date (month name, day number, year) cannot discriminate between items. */
@@ -242,12 +249,12 @@ function isDateToken(token: string): boolean {
     return MONTH_WORDS.has(token) || /^\d{1,2}$/.test(token) || /^(19|20)\d{2}$/.test(token);
 }
 
-interface PreparedDocument { normalized: string; alnum: string; years: Set<number> }
+interface PreparedDocument { normalized: string; alnum: string; tokens: Set<string>; years: Set<number> }
 
 function prepare(documentText: string): PreparedDocument {
     const years = new Set<number>();
     for (const m of documentText.matchAll(/\b(19|20)\d{2}\b/g)) years.add(+m[0]);
-    return { normalized: normalizeForSearch(documentText), alnum: alnumOnly(documentText), years };
+    return { normalized: normalizeForSearch(documentText), alnum: alnumOnly(documentText), tokens: new Set(tokensOf(documentText)), years };
 }
 
 /** True when the quote occurs verbatim in the document (whitespace/quote-mark tolerant, then punctuation tolerant). */
@@ -261,30 +268,46 @@ export function quoteOccursIn(quote: string, documentText: string, prepared?: Pr
 }
 
 /**
- * True when the document actually contains the identity: either verbatim
- * (punctuation-insensitive) or every significant token of it.
+ * True when the document actually contains the identity: every significant
+ * token of it occurs as a whole token ("6.19" does not occur in a document that
+ * only mentions "26.19").
  */
 export function identityOccursIn(identity: string, documentText: string, prepared?: PreparedDocument): boolean {
     const doc = prepared ?? prepare(documentText);
-    const whole = alnumOnly(identity);
-    if (whole.length >= 2 && doc.alnum.includes(whole)) return true;
     const tokens = significantTokens(identity);
-    return tokens.length > 0 && tokens.every(t => doc.alnum.includes(alnumOnly(t)));
+    return tokens.length > 0 && tokens.every(t => doc.tokens.has(t));
 }
 
 /**
  * True when the quote names the item it is evidence for. Every discriminating
  * token of the identity (not a date part, not a generic kind word) must occur in
- * the quote; an identity made only of date parts and kind words must occur in full.
+ * the quote as a whole token; an identity made only of date parts and kind words
+ * must occur in full.
  */
 export function quoteNamesIdentity(quote: string, identity: string): boolean {
-    const q = alnumOnly(quote);
-    const whole = alnumOnly(identity);
-    if (whole.length >= 2 && q.includes(whole)) return true;
+    const quoteTokens = new Set(tokensOf(quote));
     const tokens = significantTokens(identity);
     const discriminators = tokens.filter(t => !isDateToken(t) && !KIND_WORDS.has(t));
     const required = discriminators.length > 0 ? discriminators : tokens;
-    return required.length > 0 && required.every(t => q.includes(alnumOnly(t)));
+    return required.length > 0 && required.every(t => quoteTokens.has(t));
+}
+
+/**
+ * A start/end pair must be ordered, and when both come from one quote the start
+ * time must precede the end time in it ("00:00 - 08:30" cannot ground start=08:30).
+ */
+function rangeIsConsistent(start: GroundedFact, end: GroundedFact): boolean {
+    if (Date.parse(start.at) > Date.parse(end.at)) return false;
+    if (start.precision === "exact" && end.precision === "exact" && normalizeForSearch(start.quote) === normalizeForSearch(end.quote)) {
+        const times = clockTimesIn(start.quote);
+        const s = parseDateValue(start.value), e = parseDateValue(end.value);
+        if (s?.hasTime && e?.hasTime) {
+            const startIndex = times.indexOf((s.hour ?? 0) * 60 + (s.minute ?? 0));
+            const endIndex = times.lastIndexOf((e.hour ?? 0) * 60 + (e.minute ?? 0));
+            if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) return false;
+        }
+    }
+    return true;
 }
 
 /** An inferred year is credible only if the document states it, or it is this year or next. */
@@ -375,6 +398,19 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
             facts.push({ ...normalized, field: f.field, value: f.value, timezoneRaw: f.timezone, quote: f.quote, yearInferred: mention.year === null });
             accepted++;
         }
+
+        // A window whose grounded start is after its end, or whose times are read in the wrong order, is not evidence.
+        const start = facts.find(f => f.field === "startAt");
+        const end = facts.find(f => f.field === "endAt");
+        if (start && end && !rangeIsConsistent(start, end)) {
+            for (const f of [start, end]) {
+                rejected.push({ identity: item.identity, field: f.field, value: f.value, quote: f.quote, reason: "start/end are inverted or read out of order" });
+            }
+            accepted -= 2;
+            facts.splice(facts.indexOf(start), 1);
+            facts.splice(facts.indexOf(end), 1);
+        }
+
         items.push({ kind: item.kind, label: item.label, identity: item.identity, identityKey, status: item.status, facts });
     }
 

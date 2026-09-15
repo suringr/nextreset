@@ -54,6 +54,30 @@ test("identities must occur in the document and quotes must name their item", ()
     assert.equal(quoteNamesIdentity("PC maintenance is March 11, 2026", "PC maintenance March 11"), true);
     assert.equal(quoteNamesIdentity("Call of Duty: Warzone Season 04 Reloaded Patch Notes July 15, 2026", "Season 04 Reloaded"), true);
     assert.equal(quoteNamesIdentity("Call of Duty: Warzone Season 04 Patch Notes June 16, 2026", "Season 04 Reloaded"), false);
+    // Version tokens match whole: "6.19" is not contained in "26.19".
+    assert.equal(identityOccursIn("6.19", text), false);
+    assert.equal(quoteNamesIdentity("Patch 26.19 September 23, 2026", "6.19"), false);
+    assert.equal(identityOccursIn("26.19", "Patch 26.19: notes."), true, "trailing punctuation does not break the token");
+    assert.equal(identityOccursIn("Update 43.1", "Patch Notes - Update 43.1 Introducing Update 43.1:"), true);
+});
+
+test("inverted or misordered start/end windows are rejected as a pair", () => {
+    const text = "Live Maintenance Schedule (UTC). PC: March 11, 00:00 - 08:30. Console: March 19, 01:00 - 09:00. Posted 2026.03.10";
+    const raw = parseRawItems({ items: [
+        { kind: "occurrence", label: "PC", identity: "PC maintenance March 11", status: "ended", fields: [
+            { field: "startAt", value: "2026-03-11T08:30", timezone: "UTC", quote: "PC: March 11, 00:00 - 08:30" },
+            { field: "endAt", value: "2026-03-11T00:00", timezone: "UTC", quote: "PC: March 11, 00:00 - 08:30" }
+        ] },
+        { kind: "occurrence", label: "Console", identity: "Console maintenance March 19", status: "ended", fields: [
+            { field: "startAt", value: "2026-03-19T01:00", timezone: "UTC", quote: "Console: March 19, 01:00 - 09:00" },
+            { field: "endAt", value: "2026-03-19T09:00", timezone: "UTC", quote: "Console: March 19, 01:00 - 09:00" }
+        ] }
+    ] });
+    const grounded = groundExtraction(raw, text, { now: new Date("2026-09-14T21:30:00Z") });
+    assert.equal(grounded.items[0].facts.length, 0);
+    assert.equal(grounded.rejected.filter(r => /inverted or read out of order/.test(r.reason)).length, 2);
+    assert.deepEqual(grounded.items[1].facts.map(f => f.at), ["2026-03-19T01:00:00.000Z", "2026-03-19T09:00:00.000Z"]);
+    assert.equal(grounded.stats.accepted, 2);
 });
 
 test("inferred years and embedded offsets must be supported by evidence", () => {

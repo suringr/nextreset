@@ -252,13 +252,39 @@ export function quoteMentionsTime(quote: string, value: ParsedDateValue): boolea
     return false;
 }
 
-/** True when the document states the timezone phrase somewhere (or the quote carries an ISO "Z" for UTC). */
+function escapeRegExp(text: string): string {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * True when the document states the timezone phrase as a standalone phrase
+ * ("PT" must not match "sePTember"), or the quote carries an ISO "Z" for UTC.
+ */
 export function timezoneMentioned(documentText: string, quote: string, timezoneRaw: string | undefined): boolean {
     if (!timezoneRaw || timezoneRaw.trim().length === 0) return false;
     const phrase = timezoneRaw.trim().replace(/[()]/g, "").replace(/\s+/g, " ").toLowerCase();
+    if (phrase.length === 0) return false;
     const doc = documentText.replace(/\s+/g, " ").toLowerCase();
-    if (doc.includes(phrase)) return true;
+    const bounded = new RegExp(`(?:^|[^a-z0-9])${escapeRegExp(phrase).replace(/ /g, "\\s+")}(?:[^a-z0-9]|$)`);
+    if (bounded.test(doc)) return true;
     const resolved = resolveTimezone(timezoneRaw);
     if (resolved?.zone === "UTC" && /\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?z\b/i.test(quote)) return true;
     return false;
+}
+
+/** Clock times in the order they appear in a text, as minutes since midnight (24h or 12h with am/pm). */
+export function clockTimesIn(text: string): number[] {
+    const q = text.toLowerCase();
+    const times: number[] = [];
+    for (const m of q.matchAll(/(?:^|[^0-9.])(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?(?=[^0-9]|$)/g)) {
+        let h = +m[1];
+        const mins = m[2] !== undefined ? +m[2] : undefined;
+        const meridiem = m[3]?.replace(/\./g, "");
+        if (mins === undefined && !meridiem) continue;
+        if (h > 23 || (mins ?? 0) > 59) continue;
+        if (meridiem === "pm" && h < 12) h += 12;
+        if (meridiem === "am" && h === 12) h = 0;
+        times.push(h * 60 + (mins ?? 0));
+    }
+    return times;
 }
