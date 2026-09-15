@@ -194,6 +194,8 @@ function validateClaim(value: unknown, path: string): void {
     requireString(claim, "value", path);
     requireOneOf(claim, "method", path, CLAIM_METHODS);
     requireString(claim, "quote", path, true);
+    const link = requireString(claim, "linkUrl", path, true);
+    if (link !== undefined && !/^https:\/\//i.test(link)) fail(`${path}.linkUrl`, "must be an https URL");
     requireIso(claim, "extractedAt", path);
 }
 

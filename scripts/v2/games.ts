@@ -2,8 +2,8 @@
  * Static game configuration for the trackers on the V2 pipeline.
  *
  * Games migrated so far: League of Legends (next patch, evidence-based), Counter-Strike 2 (last update,
- * Steam news API), Minecraft (last Java Edition release, Mojang manifest), GTA Online (weekly reset rule)
- * and Roblox (status feed).
+ * Steam news API), PUBG (last patch, Steam news API), Minecraft (last Java Edition release, Mojang manifest),
+ * GTA Online (weekly reset rule) and Roblox (status feed).
  * Ids, types, titles, source URLs and confidence labels match the V1 providers
  * so the published `/data/<game>.<type>.json` files keep their contract.
  */
@@ -13,6 +13,7 @@ import { createAiDiscoveryAdapter } from "./adapters/ai-discovery";
 import { gtaWeeklyResetAdapter } from "./adapters/gta";
 import { CS2_NEWS_URL, CS2_UPDATES_PAGE, createCs2UpdatesAdapter } from "./adapters/cs2";
 import { MINECRAFT_CHANGELOGS_PAGE, MINECRAFT_MANIFEST_URL, createMinecraftJavaAdapter } from "./adapters/minecraft-java";
+import { PUBG_NEWS_URL, PUBG_PATCH_NOTES_PAGE, createPubgPatchAdapter } from "./adapters/pubg";
 import { createRobloxStatusAdapter } from "./adapters/roblox";
 import { Game, Topic } from "./domain";
 
@@ -101,6 +102,29 @@ export const GAMES: Game[] = [
         ]
     },
     {
+        id: "pubg",
+        name: "PUBG",
+        slug: "pubg",
+        sources: [
+            // Steam Web API news for app 578080, the publisher's community announcements (see adapters/pubg.ts).
+            { id: "pubg-steam-announcements", url: PUBG_NEWS_URL, kind: "json" }
+        ],
+        topics: [
+            {
+                game: "pubg",
+                type: "last-patch",
+                kind: "version",
+                sourceId: "pubg-steam-announcements",
+                view: {
+                    title: "PUBG Last Patch",
+                    sourceUrl: PUBG_PATCH_NOTES_PAGE,
+                    confidence: Confidence.High,
+                    notes: "{label}"
+                }
+            }
+        ]
+    },
+    {
         id: "gta",
         name: "GTA Online",
         slug: "gta",
@@ -157,6 +181,7 @@ const ADAPTERS: Record<string, Adapter> = {
     "lol/next-patch": createAiDiscoveryAdapter({ description: LOL_NEXT_PATCH_SPEC.description, docTypes: [...LOL_NEXT_PATCH_SPEC.docTypes], itemKinds: [...LOL_NEXT_PATCH_SPEC.itemKinds] }),
     "cs2/last-update": createCs2UpdatesAdapter(),
     "minecraft/last-release": createMinecraftJavaAdapter(),
+    "pubg/last-patch": createPubgPatchAdapter(),
     "gta/weekly-reset": gtaWeeklyResetAdapter,
     "roblox/status": createRobloxStatusAdapter()
 };

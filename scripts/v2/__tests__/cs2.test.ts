@@ -87,12 +87,14 @@ test("the first run publishes the latest update with its exact time and a link t
     assert.equal(k1.events.length, 19);
     assert.ok(k1.events.every(e => e.status === "observed" && e.precision === "exact" && e.timezone === "UTC" && e.kind === "occurrence"));
     assert.ok(k1.events.some(e => e.key === `cs2/last-update/${LATEST.gid}`));
-    assert.equal(k1.documents.length, 19);
+    assert.equal(k1.documents.length, 1, "one document: the response that was fetched");
     assert.equal(k1.claims.length, 19);
     const claim = k1.claims.find(c => c.eventKey === `cs2/last-update/${LATEST.gid}`)!;
     assert.deepEqual([claim.field, claim.value, claim.method], ["at", LATEST.at, "deterministic"]);
-    assert.equal(claim.quote, JSON.stringify({ gid: LATEST.gid, title: "Counter-Strike 2 Update", date: 1788994268 }), "the claim quotes the API fields it came from");
-    assert.equal(k1.documents.find(d => d.id === claim.documentId)?.url, LATEST.url);
+    assert.ok(FEED.includes(claim.quote!), "the claim quotes the post exactly as fetched");
+    assert.equal(JSON.parse(claim.quote!).date, 1788994268);
+    assert.equal(claim.linkUrl, LATEST.url, "the claim carries the post link visitors get");
+    assert.deepEqual([k1.documents[0].id, k1.documents[0].url], [k1.sources[0].textHash, CS2_NEWS_URL], "the evidence is the response that was fetched");
     assert.doesNotThrow(() => validateGameKnowledge(JSON.parse(JSON.stringify(k1))));
 
     const second = await runTracker(game, topic, adapter, store, new Date("2026-09-16T06:00:00Z"), { ai: gate });
@@ -102,7 +104,7 @@ test("the first run publishes the latest update with its exact time and a link t
     assert.deepEqual([second.created, second.changes.length], [0, 0]);
     assert.deepEqual(second.work, { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 });
     const k2 = store.load("cs2");
-    assert.deepEqual([k2.events.length, k2.documents.length, k2.claims.length, k2.changes.length], [19, 19, 19, 19], "idempotent: nothing duplicated");
+    assert.deepEqual([k2.events.length, k2.documents.length, k2.claims.length, k2.changes.length], [19, 1, 19, 19], "idempotent: nothing duplicated");
     assert.deepEqual(k2.documents, k1.documents);
     assert.deepEqual(k2.claims, k1.claims);
     assert.equal(k2.events.find(e => e.key === `cs2/last-update/${LATEST.gid}`)?.lastVerified, "2026-09-16T06:00:00.000Z");
@@ -122,7 +124,7 @@ test("a new update post is added without rewriting the history", async () => {
     assert.equal((run.result as any).source_url, newer.url);
     assert.deepEqual([run.created, run.changes.length], [1, 1]);
     const k = store.load("cs2");
-    assert.deepEqual([k.events.length, k.documents.length, k.claims.length], [20, 20, 20]);
+    assert.deepEqual([k.events.length, k.documents.length, k.claims.length], [20, 2, 20], "only the new post adds evidence");
 });
 
 test("no update post, a wrong shape or a challenge page keeps the last update published as stale, and is examined again next run", async () => {

@@ -31,6 +31,7 @@ import { Claim, Document, SourceState } from "../domain";
 import { FetchedDocument, smartFetch } from "../fetch/smart-fetch";
 import { Transport } from "../fetch/transport";
 import { eventKey } from "../identity";
+import { indexJsonObjects } from "../json-quote";
 
 export const MINECRAFT_MANIFEST_URL = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
 export const MINECRAFT_CHANGELOGS_PAGE = "https://feedback.minecraft.net/hc/en-us/sections/360001186971-Release-Changelogs";
@@ -46,17 +47,6 @@ export interface JavaRelease {
     excerpt: string;
 }
 
-/** The release's entry as a verbatim slice of the manifest text (entries hold no nested objects). */
-function entryExcerpt(text: string, id: string): string | undefined {
-    for (const match of text.matchAll(/\{[^{}]*\}/g)) {
-        try {
-            if ((JSON.parse(match[0]) as { id?: unknown }).id === id) return match[0];
-        } catch {
-            // Not a standalone object: keep scanning.
-        }
-    }
-    return undefined;
-}
 
 /** The latest Java Edition release named by the manifest. Throws when the manifest cannot vouch for one. */
 export function parseLatestJavaRelease(text: string): JavaRelease {
@@ -75,7 +65,7 @@ export function parseLatestJavaRelease(text: string): JavaRelease {
     if (entry.type !== "release") throw new Error(`latest.release ${JSON.stringify(id)} is listed as ${JSON.stringify(entry.type)}, not a release`);
     const at = typeof entry.releaseTime === "string" ? new Date(entry.releaseTime) : new Date(NaN);
     if (isNaN(at.getTime())) throw new Error(`Invalid releaseTime for ${id}: ${JSON.stringify(entry.releaseTime)}`);
-    const excerpt = entryExcerpt(text, id);
+    const excerpt = indexJsonObjects(text, "id").get(id);
     if (!excerpt) throw new Error(`The manifest entry for ${id} cannot be quoted verbatim`);
     return { id, at: at.toISOString(), releaseTime: entry.releaseTime, excerpt };
 }

@@ -151,6 +151,11 @@ export interface Claim {
     method: "deterministic" | "ai";
     /** Verbatim quote supporting the value (required for AI claims in later PRs). */
     quote?: string;
+    /**
+     * The page this claim is about, for visitors, when its document is a feed or API response covering many pages
+     * (for example one Steam post inside a news response). Views link it instead of the document URL.
+     */
+    linkUrl?: string;
     extractedAt: string;
 }
 
