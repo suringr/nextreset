@@ -31,15 +31,24 @@ export interface AiJsonResponse {
     usage: AiUsage;
     /** Model version the provider reports for this call. */
     model: string;
+    /** Retries the provider made inside this call; `usage` includes the tokens of every billed attempt. */
+    retries?: number;
 }
 
 export interface AiProvider {
     readonly name: string;
     readonly model: string;
+    /** Requests one call may send at most (first attempt plus retries); budget projections reserve all of them. Default 1. */
+    readonly maxAttempts?: number;
     generateJson(request: AiJsonRequest): Promise<AiJsonResponse>;
 }
 
 export class AiError extends Error {
+    /** Tokens of answers that came back but were unusable (they are billed), when the provider knows them. */
+    usage?: AiUsage;
+    /** Retries the provider made before giving up. */
+    retries?: number;
+
     constructor(message: string, public readonly retryable: boolean, public readonly status?: number) {
         super(message);
         this.name = "AiError";

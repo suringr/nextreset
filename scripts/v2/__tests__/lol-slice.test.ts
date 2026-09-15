@@ -55,7 +55,7 @@ function lolTransport(overrides: Parameters<typeof routedTransport>[0] = {}, ren
 }
 
 function lolAi(): MockAiProvider {
-    return new MockAiProvider("gemini-mock", (req: AiJsonRequest) => {
+    return new MockAiProvider("gemini-3.5-flash", (req: AiJsonRequest) => {
         const schedule = /Document title: Patch Schedule - League of Legends/.test(req.prompt);
         if (req.label === "classify") {
             return schedule
@@ -199,9 +199,11 @@ test("when the configured page is removed later, the learned page answers withou
     assert.equal(run.result.status, "fresh");
     const report = run.report as any;
     assert.deepEqual(report.knownSources, [{ url: FINAL, via: "learned" }]);
-    assert.equal(report.decision, undefined, "no discovery needed");
+    assert.equal(report.attempts[0].outcome, "unchanged", "the learned page serves the content already extracted, so it is not read again");
+    assert.equal(report.ai.calls, 0);
+    assert.equal(report.decision.discover, false, "no discovery needed");
     assert.equal(noSearch.official[0].queries.length, 0);
-    assert.equal(store.load("lol").discovered[0].successes, 2);
+    assert.equal(store.load("lol").discovered[0].successes, 1, "re-verifying unchanged content is not a new learning success");
 });
 
 test("a dead configured page is recovered by discovery, and its failure is recorded", async () => {
@@ -314,7 +316,7 @@ test("a page listing only past patches does not answer, and an unchanged page ne
     const topic = findTopic(game, "next-patch");
 
     // Verified but historical: nothing is published, and no past patch is presented as the next one.
-    const pastOnly = new MockAiProvider("gemini-mock", (req: AiJsonRequest) => req.label === "classify"
+    const pastOnly = new MockAiProvider("gemini-3.5-flash", (req: AiJsonRequest) => req.label === "classify"
         ? { relevant: true, docType: "patch-schedule", summary: "Schedule." }
         : { items: [SCHEDULE_ITEMS.items[0]] });
     const empty = tempStore();

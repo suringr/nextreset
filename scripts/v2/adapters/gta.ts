@@ -40,6 +40,8 @@ export const gtaWeeklyResetAdapter: Adapter = async ({ now }) => {
             at: next,
             precision: "exact",
             timezone: "UTC"
-        }]
+        }],
+        // A recurring rule: computed, never fetched or sent to a model.
+        work: { unchanged: 0, deterministic: 1, sentToAi: 0, deferred: 0 }
     };
 };

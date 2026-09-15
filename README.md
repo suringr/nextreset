@@ -96,7 +96,49 @@ Configuration is environment only (never committed):
 
 Gold evaluation over real publisher documents: `npm run ai:eval` (scripted mock responses, offline) or
 `npm run ai:eval:live` (needs the key). The "AI extraction gold evaluation" workflow runs the live
-evaluation on demand and uploads `build/ai-eval/report.md`.
+evaluation and uploads `build/ai-eval/report.md`. It never runs in routine production refreshes: it runs
+once when a pull request that changes prompts, schemas, extraction, grounding or date logic, or the gold
+set is opened, and on demand (for a model change, or after later fixes). Recorded fixture tests run in
+normal CI.
+
+### AI cost guardrails (V2)
+
+AI is last-mile language understanding, not the crawler. The cheapest reliable path is tried first:
+
+1. **Unchanged documents stop.** A 304 or an identical text hash ends the work with no model call.
+2. **Structured and rule-based sources are deterministic.** JSON feeds (Roblox status) and recurring
+   rules (GTA Online weekly reset) are parsed or computed by code and never sent to a model.
+3. **Only changed, relevant prose goes to Gemini**, and only within the daily budget.
+
+Every model call goes through one budget gate (`scripts/v2/cost/`). The limits are safety ceilings, not
+targets, per UTC day:
+
+| variable | default | meaning |
+|---|---|---|
+| `AI_DAILY_COST_LIMIT_USD` | `2.00` | estimated spend across all topics |
+| `AI_DAILY_CALL_LIMIT` | `100` | model calls across all topics |
+| `AI_PER_TOPIC_CALL_LIMIT` | `5` | model calls per topic |
+| `AI_PRICE_INPUT_PER_M`, `AI_PRICE_OUTPUT_PER_M` | price table | override the list prices used for estimates; a model with no known price makes no calls |
+
+- **Before a changed document is sent**, its worst case (classify, extract and one repair, each at its
+  output cap and with every retry the provider may make) must fit what is left of today's budget. Each call
+  is checked again right before it is made, against the UTC day it is made in. Repairs count against every
+  limit.
+- **When a limit is reached**, no call is made and nothing weaker is published: the work is marked
+  `deferred_due_to_budget`, stored knowledge stays published (served as stale), the document is not
+  marked as seen, and a later run retries it.
+- **Usage is recorded per call** (provider, model, game, topic, operation, tokens, estimated input, output
+  and total cost, success, retries, repair) in `knowledge/usage/ai/<date>.json` on the knowledge branch, so
+  the limits hold across the day's runs. Prompts, documents, responses and keys are never recorded. When CI
+  runs without the knowledge checkout, no model call is made that run.
+- **Costs are estimates** from the price table in `scripts/v2/cost/pricing.ts`, not billing data.
+- **Discovery runs at most once a day per topic** (`minIntervalHours` in the topic's discovery config), sooner
+  only when a scheduled event has passed since the last search or evidence is held. Known sources are still
+  re-checked on every 6-hourly refresh, which costs nothing when they are unchanged.
+
+Each refresh writes an "AI usage and cost guardrails" table to the GitHub Actions step summary: calls, tokens
+and estimated cost for the run and the day, remaining budget, and per tracker how many documents were skipped
+unchanged, handled deterministically, sent to AI or deferred.
 
 ### Web discovery (V2)
 
@@ -146,7 +188,8 @@ implemented by the generic adapter in `scripts/v2/adapters/ai-discovery.ts`:
    evidence and the winning page learned as a source. The V1-compatible view
    publishes the discovered URL as `source_url` and a computed confidence.
 
-Without `GEMINI_API_KEY` the tracker fails cleanly and serves stored knowledge.
+Without `GEMINI_API_KEY`, or when the AI budget is exhausted, the tracker fails cleanly and serves stored
+knowledge; the changed page is retried by a later run.
 `npm run slice:lol` runs the slice end to end against the live network into a
 throwaway store and prints the report; `--no-config-url` removes the configured
 page so discovery has to find it. The "Vertical slice evaluation" workflow does

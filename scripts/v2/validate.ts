@@ -197,6 +197,20 @@ function validateClaim(value: unknown, path: string): void {
     requireIso(claim, "extractedAt", path);
 }
 
+const DEFERRAL_REASONS = ["deferred_due_to_budget"] as const;
+
+function validateTopicState(value: unknown, path: string): void {
+    const t = requireRecord(value, path);
+    requireString(t, "topic", path);
+    requireIso(t, "lastDiscoveryAt", path, true);
+    if (t.deferred !== undefined) {
+        const d = requireRecord(t.deferred, `${path}.deferred`);
+        requireOneOf(d, "reason", `${path}.deferred`, DEFERRAL_REASONS);
+        requireString(d, "detail", `${path}.deferred`);
+        requireIso(d, "at", `${path}.deferred`);
+    }
+}
+
 /**
  * Validates an arbitrary parsed value as a GameKnowledge document.
  * Returns the same object, typed, or throws KnowledgeValidationError naming the path.
@@ -245,6 +259,17 @@ export function validateGameKnowledge(value: unknown, where = "knowledge"): Game
         const id = (d as Rec).id as string;
         if (discoveredIds.has(id)) fail(`${path}.id`, `duplicate discovered source id ${id}`);
         discoveredIds.add(id);
+    });
+
+    // `topicStates` arrived with the AI cost guardrails; treat absence as empty.
+    if (root.topicStates === undefined) root.topicStates = [];
+    const topicStateIds = new Set<string>();
+    requireArray(root, "topicStates", where).forEach((t, i) => {
+        const path = `${where}.topicStates[${i}]`;
+        validateTopicState(t, path);
+        const topic = (t as Rec).topic as string;
+        if (topicStateIds.has(topic)) fail(`${path}.topic`, `duplicate topic state ${topic}`);
+        topicStateIds.add(topic);
     });
 
     return root as unknown as GameKnowledge;
