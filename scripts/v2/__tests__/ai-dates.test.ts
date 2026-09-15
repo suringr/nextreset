@@ -242,10 +242,10 @@ test("an entry's naming text excludes the next entry's label when another date f
     const sept23 = parseDateValue("2026-09-23T15:00")!;
     const sept24 = parseDateValue("2026-09-24T18:00")!;
     const list = "PC maintenance September 23 at 15:00 PT, Console maintenance September 24 at 18:00 ET";
-    assert.deepEqual(dateEntries(list, sept23).map(e => [e.entry, e.naming]), [["pc maintenance september 23 at 15:00 pt, console maintenance", "pc maintenance at 15:00 pt"]]);
+    assert.deepEqual(dateEntries(list, sept23).map(e => [e.entry, e.naming]), [["pc maintenance september 23 at 15:00 pt, console maintenance", "pc maintenance september 23 at 15:00 pt"]]);
     assert.deepEqual(dateEntries(list, sept24).map(e => e.naming), ["at 15:00 pt, console maintenance september 24 at 18:00 et"], "the last entry keeps its whole text");
     // Label after the date, nothing following: the whole entry names it.
     assert.deepEqual(dateEntries("Update: 20 August 2026 26.45 Hotfix", parseDateValue("2026-08-20")!).map(e => e.naming), ["update: 20 august 2026 26.45 hotfix"]);
     // Chained without separators: only the text before the next label counts.
-    assert.deepEqual(dateEntries("Patch 26.19 September 23 15:00 PT Patch 26.20 October 7 18:00 PT", sept23).map(e => e.naming), ["patch 26.19"]);
+    assert.deepEqual(dateEntries("Patch 26.19 September 23 15:00 PT Patch 26.20 October 7 18:00 PT", sept23).map(e => e.naming), ["patch 26.19 september 23"], "the next label (26.20) is not part of this entry");
 });

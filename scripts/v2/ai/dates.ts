@@ -438,7 +438,11 @@ export function dateEntries(quote: string, value: ParsedDateValue): DateEntry[] 
         const segment = earlierDateInClause ? q.slice(mention.start, to).trim() : entry;
         const before = q.slice(from, mention.start);
         const after = q.slice(mention.end, to);
-        const naming = laterDateInClause ? `${before} ${after.split(LABEL_SEPARATOR)[0]}`.replace(/\s+/g, " ").trim() : entry;
+        // With a later date in the clause, text after this date is trusted only up to the first
+        // separator; without any separator it is not trusted at all (it may be the next label).
+        const cut = after.search(LABEL_SEPARATOR);
+        const trustedAfter = laterDateInClause ? (cut >= 0 ? after.slice(0, cut) : "") : after;
+        const naming = `${before} ${q.slice(mention.start, mention.end)} ${trustedAfter}`.replace(/\s+/g, " ").trim();
         if (!entries.some(e => e.segment === segment && e.entry === entry)) entries.push({ segment, entry, naming });
     }
     return entries;
