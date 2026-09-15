@@ -34,6 +34,11 @@ export interface TopicView {
     confidence: Confidence;
     /** V1 `notes`. May contain `{label}`, replaced with the current event's label. */
     notes?: string;
+    /**
+     * Whether `source_url` links the document the current event's evidence came from (default true). Set false when
+     * that document is machine data rather than a page for visitors (for example a JSON manifest); `sourceUrl` is used.
+     */
+    linkEvidence?: boolean;
 }
 
 /** How a topic finds its documents when no known source answers (see scripts/v2/discovery). */

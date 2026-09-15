@@ -2,7 +2,8 @@
  * Static game configuration for the trackers on the V2 pipeline.
  *
  * Games migrated so far: League of Legends (next patch, evidence-based), Counter-Strike 2 (last update,
- * Steam news API), GTA Online (weekly reset rule) and Roblox (status feed).
+ * Steam news API), Minecraft (last Java Edition release, Mojang manifest), GTA Online (weekly reset rule)
+ * and Roblox (status feed).
  * Ids, types, titles, source URLs and confidence labels match the V1 providers
  * so the published `/data/<game>.<type>.json` files keep their contract.
  */
@@ -11,6 +12,7 @@ import { Adapter } from "./adapter";
 import { createAiDiscoveryAdapter } from "./adapters/ai-discovery";
 import { gtaWeeklyResetAdapter } from "./adapters/gta";
 import { CS2_NEWS_URL, CS2_UPDATES_PAGE, createCs2UpdatesAdapter } from "./adapters/cs2";
+import { MINECRAFT_CHANGELOGS_PAGE, MINECRAFT_MANIFEST_URL, createMinecraftJavaAdapter } from "./adapters/minecraft-java";
 import { createRobloxStatusAdapter } from "./adapters/roblox";
 import { Game, Topic } from "./domain";
 
@@ -74,6 +76,31 @@ export const GAMES: Game[] = [
         ]
     },
     {
+        id: "minecraft",
+        name: "Minecraft",
+        slug: "minecraft",
+        sources: [
+            // Mojang's launcher version manifest: latest.release and its exact releaseTime (see adapters/minecraft-java.ts).
+            { id: "minecraft-java-manifest", url: MINECRAFT_MANIFEST_URL, kind: "json" }
+        ],
+        topics: [
+            {
+                game: "minecraft",
+                type: "last-release",
+                kind: "version",
+                sourceId: "minecraft-java-manifest",
+                view: {
+                    title: "Minecraft Last Release",
+                    sourceUrl: MINECRAFT_CHANGELOGS_PAGE,
+                    confidence: Confidence.High,
+                    notes: "Java Edition {label}",
+                    // The evidence is the manifest's JSON entry; visitors keep the official changelogs page.
+                    linkEvidence: false
+                }
+            }
+        ]
+    },
+    {
         id: "gta",
         name: "GTA Online",
         slug: "gta",
@@ -129,6 +156,7 @@ export const LOL_NEXT_PATCH_SPEC = {
 const ADAPTERS: Record<string, Adapter> = {
     "lol/next-patch": createAiDiscoveryAdapter({ description: LOL_NEXT_PATCH_SPEC.description, docTypes: [...LOL_NEXT_PATCH_SPEC.docTypes], itemKinds: [...LOL_NEXT_PATCH_SPEC.itemKinds] }),
     "cs2/last-update": createCs2UpdatesAdapter(),
+    "minecraft/last-release": createMinecraftJavaAdapter(),
     "gta/weekly-reset": gtaWeeklyResetAdapter,
     "roblox/status": createRobloxStatusAdapter()
 };
