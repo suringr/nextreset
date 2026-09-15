@@ -329,7 +329,8 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
         if (winner) {
             const finalUrl = canonicalUrl(winner.document.finalUrl) ?? winner.document.finalUrl;
             // A configured or learned page that answered is (re)learned under its final URL, so it survives config changes and redirects.
-            if (!learnedSuccesses.some(l => l.url === finalUrl)) {
+            // Compare canonical forms: a discovered page's final URL may differ only by a trailing slash.
+            if (!learnedSuccesses.some(l => (canonicalUrl(l.url) ?? l.url) === finalUrl)) {
                 learnedSuccesses.push({ url: finalUrl, tier: "official", via: winner.via, title: winner.document.title || undefined });
             }
             const confidence = confidenceFor(winner);

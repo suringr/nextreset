@@ -178,7 +178,7 @@ test("without any configured page, discovery finds the schedule through the offi
     assert.equal(report.discovery.candidates[0].url, FINAL);
     assert.equal(report.winner.via, "sitemap");
     const k = store.load("lol");
-    assert.deepEqual(k.discovered.map(d => [d.url, d.via, d.query]), [[FINAL, "sitemap", "League of Legends patch schedule"]]);
+    assert.deepEqual(k.discovered.map(d => [d.url, d.via, d.query, d.successes]), [[FINAL, "sitemap", "League of Legends patch schedule", 1]], "one run is one success, even when the final URL differs by a trailing slash");
     assert.equal(k.events.length, 3);
 });
 
