@@ -341,8 +341,11 @@ function quoteCarriesOffset(quote: string, offsetMinutes: number): boolean {
  */
 function evidencedZone(documentText: string, quote: string, segment: string, timezoneRaw: string, value: ParsedDateValue): { zone?: ResolvedZone; problem?: string } {
     const claimed = resolveTimezone(timezoneRaw);
-    // A zone next to the date, or in the quote's header before any date, is the one that applies.
-    const stated = zonesIn(segment)[0] ?? zonesIn(datePreamble(quote))[0];
+    // A zone next to the date applies; so does one the quote's header (before any date) declares
+    // for its times ("Live Maintenance Schedule (UTC) ..."), but not a header zone in some other
+    // context ("Support hours are PT.").
+    const preamble = datePreamble(quote);
+    const stated = zonesIn(segment)[0] ?? zonesIn(preamble).find(z => zoneDeclaredIn(preamble, z));
     if (stated) {
         if (claimed && stated.zone !== claimed.zone && zoneOffsetAt(stated, value) !== zoneOffsetAt(claimed, value)) {
             return { problem: `quote states ${stated.zone} next to this date, not "${timezoneRaw}"; time dropped` };
@@ -455,9 +458,13 @@ export interface ExtractionResult {
     attempts: number;
     /** True when the repaired answer replaced the first one. */
     repaired: boolean;
+    /** Set when the repair call itself failed (the first answer stands). */
+    repairError?: string;
 }
 
 const UNVERIFIABLE_QUOTE = "quote not found in document";
+/** Long changelogs can make the model enumerate many items; leave ample room so valid JSON is never cut off. */
+const EXTRACT_MAX_OUTPUT_TOKENS = 16384;
 
 function addUsage(a: AiUsage, b: AiUsage): AiUsage {
     const thought = (a.thoughtTokens ?? 0) + (b.thoughtTokens ?? 0);
@@ -508,27 +515,33 @@ export async function extractFacts(provider: AiProvider, topic: ExtractionTopic,
     const now = options.now ?? new Date();
     const { text, truncated } = documentBlock(doc);
     const prompt = `${topicBlock(topic, now)}\n\nDocument title: ${doc.title ?? ""}\n${truncated ? "(document truncated)\n" : ""}\n--- DOCUMENT ---\n${text}\n--- END ---`;
-    const response = await provider.generateJson({ label: "extract", system: EXTRACT_SYSTEM, prompt, schema: EXTRACT_SCHEMA, maxOutputTokens: 8192 });
+    const response = await provider.generateJson({ label: "extract", system: EXTRACT_SYSTEM, prompt, schema: EXTRACT_SCHEMA, maxOutputTokens: EXTRACT_MAX_OUTPUT_TOKENS });
     const raw = parseRawItems(response.data);
     // Ground against the text the model actually saw.
     let grounded = groundExtraction(raw, text, { now });
     let usage = response.usage;
     let attempts = 1;
     let repaired = false;
+    let repairError: string | undefined;
 
     const unverifiable = grounded.rejected.filter(r => r.reason === UNVERIFIABLE_QUOTE);
     if ((options.repair ?? true) && unverifiable.length > 0) {
         const list = unverifiable.map(r => `- item ${JSON.stringify(r.identity)}, field ${r.field}: ${JSON.stringify(r.quote)}`).join("\n");
         const repairPrompt = `${prompt}\n\n--- CORRECTIONS NEEDED ---\nThese quotes from your previous answer do not occur verbatim in the document (paraphrased, reordered, or stitched from separate passages):\n${list}\nAnswer again with the complete result. Every quote must be one contiguous passage copied exactly from the document. Leave out any date you cannot quote exactly.`;
-        const second = await provider.generateJson({ label: "extract-repair", system: EXTRACT_SYSTEM, prompt: repairPrompt, schema: EXTRACT_SCHEMA, maxOutputTokens: 8192 });
         attempts = 2;
-        usage = addUsage(usage, second.usage);
-        const groundedRepair = groundExtraction(parseRawItems(second.data), text, { now });
-        const { merged, filled } = mergeRepair(grounded, groundedRepair);
-        if (filled > 0) {
-            grounded = merged;
-            repaired = true;
+        try {
+            const second = await provider.generateJson({ label: "extract-repair", system: EXTRACT_SYSTEM, prompt: repairPrompt, schema: EXTRACT_SCHEMA, maxOutputTokens: EXTRACT_MAX_OUTPUT_TOKENS });
+            usage = addUsage(usage, second.usage);
+            const groundedRepair = groundExtraction(parseRawItems(second.data), text, { now });
+            const { merged, filled } = mergeRepair(grounded, groundedRepair);
+            if (filled > 0) {
+                grounded = merged;
+                repaired = true;
+            }
+        } catch (error) {
+            // The repair is best effort: a failed second call never costs the grounded first answer.
+            repairError = error instanceof Error ? error.message : String(error);
         }
     }
-    return { raw, grounded, usage, truncated, attempts, repaired };
+    return { raw, grounded, usage, truncated, attempts, repaired, ...(repairError !== undefined ? { repairError } : {}) };
 }

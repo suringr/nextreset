@@ -284,18 +284,51 @@ function dateForms(monthWord: string, monthNum: string, dayNum: string, year: st
     ];
 }
 
-/** Every coherent mention of the value's month and day in a collapsed quote, in order of position. */
+/**
+ * Every coherent mention of the value's month and day in a collapsed quote, in
+ * order of position. Numeric "a/b" dates are read month-first only when that is
+ * the only valid reading (a > 12 means day-first, b > 12 means month-first,
+ * a == b reads the same both ways); "9/10/2026" could be September 10 or
+ * October 9 and is never evidence for either.
+ */
 function findDateMentions(q: string, value: ParsedDateValue): DateMention[] {
     const mm = String(value.month).padStart(2, "0");
     const dd = String(value.day).padStart(2, "0");
-    const forms = dateForms(monthWordPattern(value.month), `(?:${value.month}|${mm})`, `(?:${value.day}|${dd})`, "((?:19|20)\\d{2})");
     const mentions: DateMention[] = [];
-    for (const form of forms) {
+    const add = (start: number, end: number, year: boolean | null) => {
+        if (mentions.some(m => m.start < end && start < m.end)) return;
+        mentions.push({ start, end, year });
+    };
+    // Unambiguous shapes: ISO-like year-first, and month names.
+    const wordForms = [
+        new RegExp(`(?<![0-9.])((?:19|20)\\d{2})[./-](?:${value.month}|${mm})[./-](?:${value.day}|${dd})${DAY_TAIL}`, "g"),
+        new RegExp(`\\b${monthWordPattern(value.month)} (?:${value.day}|${dd})(?:st|nd|rd|th)?${DAY_TAIL}(?:,? ((?:19|20)\\d{2})\\b)?`, "g"),
+        new RegExp(`(?<![0-9.:])(?:${value.day}|${dd})(?:st|nd|rd|th)? (?:of )?${monthWordPattern(value.month)}(?:,? ((?:19|20)\\d{2})\\b)?`, "g")
+    ];
+    for (const form of wordForms) {
         for (const match of q.matchAll(form)) {
             const start = match.index ?? 0;
-            const end = start + match[0].length;
-            if (mentions.some(m => m.start < end && start < m.end)) continue;
-            mentions.push({ start, end, year: match[1] === undefined ? null : +match[1] === value.year });
+            add(start, start + match[0].length, match[1] === undefined ? null : +match[1] === value.year);
+        }
+    }
+    // Numeric "a/b/yyyy", "a.b.yyyy", "a-b-yyyy" and "a/b": read both ways, keep only unambiguous readings.
+    const numericForms = [
+        new RegExp(`(?<![0-9.])(\\d{1,2})[./-](\\d{1,2})[./-]((?:19|20)\\d{2})${DAY_TAIL}`, "g"),
+        new RegExp(`(?<![0-9./-])(\\d{1,2})/(\\d{1,2})(?![0-9/])`, "g")
+    ];
+    for (const form of numericForms) {
+        for (const match of q.matchAll(form)) {
+            const a = +match[1];
+            const b = +match[2];
+            const readings: Array<[number, number]> = [];
+            if (a <= 12 && b <= 31) readings.push([a, b]); // month/day
+            if (b <= 12 && a <= 31) readings.push([b, a]); // day/month
+            const distinct = readings.filter(([m, d], i) => readings.findIndex(([m2, d2]) => m2 === m && d2 === d) === i);
+            if (distinct.length !== 1) continue; // ambiguous or invalid
+            const [month, day] = distinct[0];
+            if (month !== value.month || day !== value.day) continue;
+            const start = match.index ?? 0;
+            add(start, start + match[0].length, match[3] === undefined ? null : +match[3] === value.year);
         }
     }
     return mentions.sort((a, b) => a.start - b.start);
