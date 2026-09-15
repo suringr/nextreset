@@ -17,7 +17,7 @@
  * and never decides what gets published.
  */
 import { normalizeIdentity } from "../identity";
-import { NormalizedDate, ParsedDateValue, ResolvedZone, clockTimesIn, dateEntries, datePreamble, normalizeDateFact, zoneAfterClock, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneDeclaredIn, zoneOffsetAt, zonesIn } from "./dates";
+import { NormalizedDate, ParsedDateValue, ResolvedZone, clockTimesIn, dateEntries, entryBindsItem, datePreamble, normalizeDateFact, zoneAfterClock, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneDeclaredIn, zoneOffsetAt, zonesIn } from "./dates";
 import { AiProvider, AiUsage } from "./provider";
 
 export interface AiDocument {
@@ -246,41 +246,100 @@ function isDateToken(token: string): boolean {
     return MONTH_WORDS.has(token) || /^\d{1,2}$/.test(token) || /^(19|20)\d{2}$/.test(token);
 }
 
-/**
- * Tokens for the punctuation-tolerant quote match. A sign that belongs to a UTC offset
- * ("UTC-8", "15:00+01:00") becomes its own word, so dropping punctuation can never turn
- * UTC-8 into UTC+8.
- */
-function signedTokensOf(text: string): string[] {
-    const marked = normalizeForSearch(text)
-        .replace(/\b(utc|gmt)\s*\+\s*(?=\d)/g, "$1 plus ")
-        .replace(/\b(utc|gmt)\s*-\s*(?=\d)/g, "$1 minus ")
-        .replace(/(\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?)\s*\+\s*(?=\d{2}:?\d{2}\b)/g, "$1 plus ")
-        .replace(/(\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?)-(?=\d{2}:?\d{2}\b)/g, "$1 minus ");
-    return tokensOf(marked);
+
+interface TokenAt { token: string; start: number; end: number }
+
+/** normalizeForSearch, plus for every normalized character the index of the original character it came from. */
+function normalizeWithMap(text: string): { normalized: string; map: number[] } {
+    let normalized = "";
+    const map: number[] = [];
+    for (let i = 0; i < text.length; i++) {
+        let ch = text[i];
+        if (/[‘’‚′]/.test(ch)) ch = "'";
+        else if (/[“”„″]/.test(ch)) ch = "\"";
+        else if (/[–—−]/.test(ch)) ch = "-";
+        if (/\s/.test(ch)) {
+            if (normalized.length === 0 || normalized.endsWith(" ")) continue;
+            ch = " ";
+        }
+        const lower = ch.toLowerCase();
+        for (let k = 0; k < lower.length; k++) {
+            normalized += lower[k];
+            map.push(i);
+        }
+    }
+    if (normalized.endsWith(" ")) {
+        normalized = normalized.slice(0, -1);
+        map.pop();
+    }
+    return { normalized, map };
 }
 
-interface PreparedDocument { normalized: string; tokenText: string; tokens: Set<string>; years: Set<number> }
+/**
+ * Tokens of normalized text with positions, for the punctuation-tolerant quote match. A sign that
+ * belongs to a UTC offset ("UTC-8", "15:00+01:00") is its own token, so dropping punctuation can
+ * never turn UTC-8 into UTC+8.
+ */
+function signedTokenPositions(normalized: string): TokenAt[] {
+    const out: TokenAt[] = [];
+    for (const m of normalized.matchAll(/[a-z0-9.]+/g)) {
+        const lead = m[0].length - m[0].replace(/^\.+/, "").length;
+        const token = m[0].replace(/^\.+|\.+$/g, "");
+        if (!token) continue;
+        const start = (m.index ?? 0) + lead;
+        out.push({ token, start, end: start + token.length });
+    }
+    const signs = [
+        /\b(?:utc|gmt)\s*([+-])\s*(?=\d)/g,
+        /\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?\s*(\+)\s*(?=\d{2}:?\d{2}\b)/g,
+        /\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?(-)(?=\d{2}:?\d{2}\b)/g
+    ];
+    for (const re of signs) {
+        for (const m of normalized.matchAll(re)) {
+            const at = (m.index ?? 0) + m[0].lastIndexOf(m[1]);
+            out.push({ token: m[1] === "+" ? "plus" : "minus", start: at, end: at + 1 });
+        }
+    }
+    return out.sort((a, b) => a.start - b.start);
+}
+
+interface PreparedDocument { normalized: string; map: number[]; signedTokens: TokenAt[]; tokens: Set<string>; years: Set<number> }
 
 function prepare(documentText: string): PreparedDocument {
     const years = new Set<number>();
     for (const m of documentText.matchAll(/\b(19|20)\d{2}\b/g)) years.add(+m[0]);
-    const tokens = tokensOf(documentText);
-    return { normalized: normalizeForSearch(documentText), tokenText: ` ${signedTokensOf(documentText).join(" ")} `, tokens: new Set(tokens), years };
+    const { normalized, map } = normalizeWithMap(documentText);
+    return { normalized, map, signedTokens: signedTokenPositions(normalized), tokens: new Set(tokensOf(documentText)), years };
 }
 
 /**
- * True when the quote occurs verbatim in the document: whitespace/quote-mark
- * tolerant first, then punctuation tolerant with token boundaries kept, so
- * "September 2 3, 2026" never passes as "September 23, 2026".
+ * The document's own passage for a model quote, or undefined when the quote does not occur in the
+ * document. Matching is whitespace/quote-mark tolerant, then punctuation tolerant with token
+ * boundaries and offset signs kept ("September 2 3" never passes as "September 23"). Grounding reads
+ * the returned passage, never the model's copy, so a quote with a dropped semicolon or comma cannot
+ * change how the text is split into entries.
  */
-export function quoteOccursIn(quote: string, documentText: string, prepared?: PreparedDocument): boolean {
+export function resolveQuote(quote: string, documentText: string, prepared?: PreparedDocument): string | undefined {
     const q = normalizeForSearch(quote);
-    if (q.length < QUOTE_MIN_LENGTH) return false;
+    if (q.length < QUOTE_MIN_LENGTH) return undefined;
     const doc = prepared ?? prepare(documentText);
-    if (doc.normalized.includes(q)) return true;
-    const qt = signedTokensOf(quote).join(" ");
-    return qt.length >= QUOTE_MIN_LENGTH && doc.tokenText.includes(` ${qt} `);
+    const at = doc.normalized.indexOf(q);
+    if (at >= 0) return documentText.slice(doc.map[at], doc.map[at + q.length - 1] + 1);
+    const wanted = signedTokenPositions(q).map(x => x.token);
+    if (wanted.join(" ").length < QUOTE_MIN_LENGTH) return undefined;
+    const tokens = doc.signedTokens;
+    outer: for (let i = 0; i + wanted.length <= tokens.length; i++) {
+        for (let k = 0; k < wanted.length; k++) {
+            if (tokens[i + k].token !== wanted[k]) continue outer;
+        }
+        return documentText.slice(doc.map[tokens[i].start], doc.map[tokens[i + wanted.length - 1].end - 1] + 1);
+    }
+    return undefined;
+}
+
+/** True when the quote occurs in the document (see resolveQuote). */
+export function quoteOccursIn(quote: string, documentText: string, prepared?: PreparedDocument): boolean {
+    return resolveQuote(quote, documentText, prepared) !== undefined;
 }
 
 /**
@@ -308,17 +367,11 @@ export function quoteNamesIdentity(quote: string, identity: string): boolean {
     return required.length > 0 && required.every(t => quoteTokens.has(t));
 }
 
-/**
- * True when one entry of a quote (see dateEntries) belongs to the item: every
- * discriminating token of the identity occurs in it. An identity with nothing
- * to discriminate by ("Maintenance March 11") cannot be told apart, so the
- * quote-level check (quoteNamesIdentity) is all that applies to it.
- */
-export function entryNamesItem(entry: string, identity: string): boolean {
-    const discriminators = discriminatorsOf(identity);
-    if (discriminators.length === 0) return true;
-    const entryTokens = new Set(tokensOf(entry));
-    return discriminators.every(t => entryTokens.has(t));
+/** A model label is kept only when it adds no discriminating word the grounded identity lacks. */
+function groundedLabel(label: string, identity: string): string {
+    if (!label || label.trim().length === 0) return identity;
+    const identityTokens = new Set(tokensOf(identity));
+    return discriminatorsOf(label).every(token => identityTokens.has(token)) ? label : identity;
 }
 
 function discriminatorsOf(identity: string): string[] {
@@ -415,6 +468,8 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
     const prepared = prepare(documentText);
     const items: GroundedItem[] = [];
     const rejected: RejectedField[] = [];
+    // Duplicate raw items for one identity are one item: they share its facts and its conflicts.
+    const conflictsByKey = new Map<string, Set<DateField>>();
     let fieldsSeen = 0;
     let accepted = 0;
     let itemsRejected = 0;
@@ -439,18 +494,37 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
             continue;
         }
 
-        const facts: GroundedFact[] = [];
-        const conflicted = new Set<DateField>();
+        const discriminators = discriminatorsOf(item.identity);
+        // The other items the model reported: a date must not sit closer to one of them than to this item.
+        const competitors = raw.items
+            .filter(other => other !== item)
+            .map(other => discriminatorsOf(other.identity))
+            .filter(names => names.length > 0 && !names.some(name => discriminators.includes(name)));
+
+        let grounded = items.find(i => i.identityKey === identityKey);
+        if (!grounded) {
+            grounded = { kind: item.kind, label: groundedLabel(item.label, item.identity), identity: item.identity, identityKey, status: item.status, facts: [] };
+            items.push(grounded);
+        }
+        const facts = grounded.facts;
+        let conflicted = conflictsByKey.get(identityKey);
+        if (!conflicted) {
+            conflicted = new Set<DateField>();
+            conflictsByKey.set(identityKey, conflicted);
+        }
+
         for (const f of item.fields) {
             fieldsSeen++;
             const reject = (reason: string) => rejected.push({ identity: item.identity, field: f.field, value: f.value, quote: f.quote, reason });
 
             if (!f.quote || f.quote.trim().length < QUOTE_MIN_LENGTH) { reject("quote missing or too short"); continue; }
-            if (!quoteOccursIn(f.quote, documentText, prepared)) { reject("quote not found in document"); continue; }
-            if (!quoteNamesIdentity(f.quote, item.identity)) { reject("quote does not mention the item"); continue; }
+            // Every later check reads the document's own passage, not the model's copy of it.
+            const quote = resolveQuote(f.quote, documentText, prepared);
+            if (quote === undefined) { reject(UNVERIFIABLE_QUOTE); continue; }
+            if (!quoteNamesIdentity(quote, item.identity)) { reject("quote does not mention the item"); continue; }
             const parsed = parseDateValue(f.value);
             if (!parsed) { reject(`value is not an ISO date: ${JSON.stringify(f.value)}`); continue; }
-            const mention = quoteMentionsDate(f.quote, parsed);
+            const mention = quoteMentionsDate(quote, parsed);
             if (!mention.day || !mention.month) { reject("quote does not mention the claimed day and month"); continue; }
             if (mention.year === false) { reject("quote states a different year"); continue; }
             if (mention.year === null && !inferredYearSupported(parsed.year, prepared, now)) { reject(`inferred year ${parsed.year} is not supported by the document`); continue; }
@@ -458,11 +532,10 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
             let normalized = normalizeDateFact(f.value, f.timezone);
             if (!normalized) { reject("date could not be normalized"); continue; }
 
-            // The date must sit in an entry of the quote that names this item: a quote listing several
-            // entries ("PC ... September 23 ...; Console ... TBD") cannot lend one entry's date, time or
-            // zone to another.
-            const entries = dateEntries(f.quote, parsed);
-            const own = entries.filter(e => entryNamesItem(e.naming, item.identity));
+            // The date must sit in an entry of the passage that belongs to this item: a passage listing several
+            // entries cannot lend one entry's date, time or zone to another (see entryBindsItem).
+            const entries = dateEntries(quote, parsed);
+            const own = entries.filter(e => entryBindsItem(e, discriminators, competitors));
             if (entries.length > 0 && own.length === 0) { reject(ENTRY_MISMATCH); continue; }
 
             // A clock time, and the zone or offset it is expressed in, must be evidenced by that
@@ -471,24 +544,24 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
                 const dayFallback = (note: string) => ({ ...normalizeDateFact(f.value.slice(0, 10), undefined)!, note });
                 // Several same-date entries that the identity cannot tell apart never lend a time.
                 const timed = own.length > 1 && !hasDiscriminators(item.identity) ? [] : own.filter(e => quoteMentionsTime(e.segment, parsed));
-                const segment = entries.length === 0 ? f.quote : timed.length === 1 ? timed[0].segment : undefined;
+                const segment = entries.length === 0 ? quote : timed.length === 1 ? timed[0].segment : undefined;
                 if (segment === undefined) {
                     normalized = dayFallback(own.length > 1
                         ? "several entries in the quote share this date and none is clearly this item; time dropped"
                         : "quote does not state the claimed clock time next to the date; time dropped");
                 } else if (parsed.offsetMinutes !== undefined) {
-                    const evidence = evidencedZone(documentText, f.quote, segment, f.timezone, parsed);
+                    const evidence = evidencedZone(documentText, quote, segment, f.timezone, parsed);
                     const statedOffset = evidence.zone ? zoneOffsetAt(evidence.zone, parsed) : undefined;
                     if (!quoteCarriesOffset(segment, parsed) && statedOffset !== parsed.offsetMinutes) {
                         normalized = dayFallback("embedded UTC offset is not evidenced by the quote or a stated timezone; time dropped");
                     }
                 } else {
-                    const evidence = evidencedZone(documentText, f.quote, segment, f.timezone, parsed);
+                    const evidence = evidencedZone(documentText, quote, segment, f.timezone, parsed);
                     if (evidence.problem) normalized = dayFallback(evidence.problem);
                 }
             }
 
-            // One value per item and field: a repeated identical fact is dropped quietly; a
+            // One value per identity and field: a repeated identical fact is dropped quietly; a
             // conflicting one makes the field ambiguous for good and takes the earlier fact down with it.
             if (conflicted.has(f.field)) { reject("conflicting values for the same field"); continue; }
             const earlier = facts.find(x => x.field === f.field);
@@ -502,23 +575,21 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
                 continue;
             }
 
-            facts.push({ ...normalized, field: f.field, value: f.value, timezoneRaw: f.timezone, quote: f.quote, yearInferred: mention.year === null });
+            facts.push({ ...normalized, field: f.field, value: f.value, timezoneRaw: f.timezone, quote, yearInferred: mention.year === null });
             accepted++;
         }
 
         // A window whose grounded start is after its end, or whose times are read in the wrong order, is not evidence.
-        const start = facts.find(f => f.field === "startAt");
-        const end = facts.find(f => f.field === "endAt");
+        const start = facts.find(x => x.field === "startAt");
+        const end = facts.find(x => x.field === "endAt");
         if (start && end && !rangeIsConsistent(start, end)) {
-            for (const f of [start, end]) {
-                rejected.push({ identity: item.identity, field: f.field, value: f.value, quote: f.quote, reason: "start/end are inverted or read out of order" });
+            for (const x of [start, end]) {
+                rejected.push({ identity: item.identity, field: x.field, value: x.value, quote: x.quote, reason: "start/end are inverted or read out of order" });
             }
             accepted -= 2;
             facts.splice(facts.indexOf(start), 1);
             facts.splice(facts.indexOf(end), 1);
         }
-
-        items.push({ kind: item.kind, label: item.label, identity: item.identity, identityKey, status: item.status, facts });
     }
 
     // stats.rejected counts fields, so fields == accepted + rejected; a rejected item without fields adds only a list entry.
