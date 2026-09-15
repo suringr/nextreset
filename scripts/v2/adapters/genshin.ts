@@ -109,7 +109,11 @@ export function parseWishPhases(text: string): RegionalWishes {
             const [, y, mo, d, h, mi, s] = wall.map(Number) as unknown as number[];
             const local = Date.UTC(y, mo - 1, d, h, mi, s);
             const check = new Date(local);
-            if (check.getUTCFullYear() !== y || check.getUTCMonth() !== mo - 1 || check.getUTCDate() !== d) continue;
+            // Date.UTC normalizes out-of-range fields (14:60:00 becomes 15:00:00, September 31 becomes October 1):
+            // a malformed wall clock rejects the response instead of publishing a shifted end.
+            if (h > 23 || mi > 59 || s > 59 || check.getUTCFullYear() !== y || check.getUTCMonth() !== mo - 1 || check.getUTCDate() !== d) {
+                throw new Error(`Invalid end_time ${JSON.stringify(item.end_time)} for Genshin announcement ${item.ann_id}`);
+            }
             const endAt = new Date(local - timezone * 3_600_000).toISOString();
             const phase: WishPhase = byEnd.get(item.end_time) ?? { endWall: item.end_time, endAt, names: [], annIds: [], excerpt };
             phase.names.push(name);

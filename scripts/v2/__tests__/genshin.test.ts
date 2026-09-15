@@ -56,6 +56,8 @@ test("a response that is not the announcement shape is rejected", () => {
     const noZone = JSON.parse(ASIA);
     delete noZone.data.timezone;
     assert.throws(() => parseWishPhases(JSON.stringify(noZone)), /data.timezone/);
+    assert.throws(() => parseWishPhases(ASIA.split("2026-09-22 14:59:59").join("2026-09-22 14:60:00")), /Invalid end_time/, "an out-of-range minute is rejected, not rolled into the next hour");
+    assert.throws(() => parseWishPhases(ASIA.split("2026-09-22 14:59:59").join("2026-09-31 14:59:59")), /Invalid end_time/, "an impossible day is rejected, not rolled into the next month");
 });
 
 test("the earliest regional end is published with all three regional instants named; an unchanged run changes nothing", async () => {
