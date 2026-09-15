@@ -104,3 +104,21 @@ test("a case whose calls fail meets none of its expectations", async () => {
     assert.equal(report.summary.expectations, lolExpectations + genshinExpectations);
     assert.equal(report.summary.expectationsMet, genshinExpectations, "the errored case is credited with nothing");
 });
+
+test("an expectation's date and status must hold on the same extracted item", async () => {
+    const cases = loadGoldCases().filter(c => c.id === "lol-notes-listing");
+    const script = JSON.parse(JSON.stringify(loadMockScript())) as Record<string, any>;
+    // Two items claim 26.18: a stale duplicate with the right date but the wrong status, then the real one.
+    const items = script["lol-notes-listing:extract"].items as any[];
+    const real = items.find(i => i.identity === "26.18");
+    items.unshift({ ...JSON.parse(JSON.stringify(real)), identity: "Patch 26.18", status: "scheduled" });
+    const report = await runGoldEval({ provider: mockGoldProvider(script, cases), cases, mode: "mock" });
+    const listing = report.cases.find(c => c.id === "lol-notes-listing")!;
+    assert.deepEqual(listing.failures, [], "the item that satisfies date and status together is found");
+
+    // With only the wrong-status item, the failure names the status.
+    const only = JSON.parse(JSON.stringify(script)) as Record<string, any>;
+    only["lol-notes-listing:extract"].items = only["lol-notes-listing:extract"].items.filter((i: any) => i.identity !== "26.18");
+    const bad = await runGoldEval({ provider: mockGoldProvider(only, cases), cases, mode: "mock" });
+    assert.ok(bad.cases[0].failures.some(f => /with status released/.test(f)));
+});

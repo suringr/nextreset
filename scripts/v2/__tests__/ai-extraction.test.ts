@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { MAX_DOCUMENT_CHARS, classifyDocument, extractFacts, groundExtraction, identityOccursIn, mergeRepair, parseClassification, parseRawItems, quoteNamesIdentity, quoteOccursIn } from "../ai/extraction";
 import { MockAiProvider, scriptedResponder } from "../ai/mock";
+import { AiJsonRequest } from "../ai/provider";
 
 const topic = { game: "lol", gameName: "League of Legends", type: "next-patch", description: "Patch numbers and their scheduled dates." };
 const doc = {
@@ -288,6 +289,16 @@ test("same-day entries bind time and zone to the entry that names the item; othe
         "All maintenance times are in PT. PC maintenance September 23 at 15:00. Posted 2026.", { now });
     assert.equal(declared.items[0].facts[0].precision, "exact");
 
+    // A zone in the quote's header applies only when the header declares it for times, not for support hours.
+    const hoursQuote = "Support hours are PT. PC maintenance September 23, 2026 at 15:00";
+    const hours = groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: "PC", identity: "PC maintenance September 23", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T15:00", timezone: "PT", quote: hoursQuote }] }] }),
+        `${hoursQuote}. Posted 2026.`, { now });
+    assert.equal(hours.items[0].facts[0].precision, "day");
+    const scheduleQuote = "Live Maintenance Schedule (PT) ※ PC maintenance September 23, 2026 at 15:00";
+    const schedule = groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: "PC", identity: "PC maintenance September 23", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T15:00", timezone: "PT", quote: scheduleQuote }] }] }),
+        `${scheduleQuote}. Posted 2026.`, { now });
+    assert.equal(schedule.items[0].facts[0].precision, "exact");
+
     // Seconds the quote does not state are not accepted as exact.
     const seconds = groundExtraction(parseRawItems({ items: [{ kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T15:00:59", timezone: "PT", quote: "Patch 26.19 releases September 23 at 15:00 PT" }] }] }), "Patch 26.19 releases September 23 at 15:00 PT. Posted 2026.", { now });
     assert.equal(seconds.items[0].facts[0].precision, "day");
@@ -321,6 +332,17 @@ test("quotes that are not verbatim trigger one repair call, and the repaired ans
     assert.equal(once.repaired, false);
     const off = await extractFacts(new MockAiProvider("mock-model", scriptedResponder({ extract: stitched })), topic, doc, { now, repair: false });
     assert.equal(off.attempts, 1);
+
+    // A repair call that fails (say, MAX_TOKENS) never costs the first answer.
+    const crashing = new MockAiProvider("mock-model", (req: AiJsonRequest) => req.label === "extract" ? verbatim : new Error("Gemini stopped with finishReason MAX_TOKENS"));
+    const partial = await extractFacts(crashing, topic, { ...doc, text: doc.text }, { now });
+    assert.equal(partial.attempts, 1, "a verbatim first answer needs no repair");
+    const broken = new MockAiProvider("mock-model", (req: AiJsonRequest) => req.label === "extract" ? stitched : new Error("Gemini stopped with finishReason MAX_TOKENS"));
+    const survived = await extractFacts(broken, topic, doc, { now });
+    assert.equal(survived.attempts, 2);
+    assert.equal(survived.repaired, false);
+    assert.match(survived.repairError ?? "", /MAX_TOKENS/);
+    assert.equal(survived.grounded.items[0].facts.length, 0, "the first answer (with its rejection) stands");
 });
 
 test("a repair only fills the gaps the first answer left; grounded facts are never replaced", () => {

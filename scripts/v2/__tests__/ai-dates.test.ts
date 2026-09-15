@@ -124,6 +124,16 @@ test("quoteMentionsDate checks day, month and year against the quote", () => {
     assert.deepEqual(quoteMentionsDate("on the 23rd of September", sept23), { day: true, month: true, year: null });
     assert.deepEqual(quoteMentionsDate("23.09.2026 release", sept23), { day: true, month: true, year: true });
     assert.deepEqual(quoteMentionsDate("9/23/2026", sept23), { day: true, month: true, year: true });
+    // Numeric dates are evidence only when they have a single valid reading.
+    const sept10 = parseDateValue("2026-09-10")!;
+    const oct9 = parseDateValue("2026-10-09")!;
+    assert.equal(quoteMentionsDate("Update 9/10/2026", sept10).day, false, "9/10 could be October 9");
+    assert.equal(quoteMentionsDate("Update 9/10/2026", oct9).day, false, "or September 10: neither is grounded");
+    assert.deepEqual(quoteMentionsDate("Update 10/13/2026", parseDateValue("2026-10-13")!), { day: true, month: true, year: true }, "13 cannot be a month: month-first");
+    assert.deepEqual(quoteMentionsDate("Update 13.10.2026", parseDateValue("2026-10-13")!), { day: true, month: true, year: true }, "day-first");
+    assert.equal(quoteMentionsDate("Update 13.10.2026", parseDateValue("2026-10-13")!).day, true);
+    assert.equal(quoteMentionsDate("Update 10/13/2026", parseDateValue("2026-01-10")!).day, false);
+    assert.deepEqual(quoteMentionsDate("2026-09-10 release", sept10), { day: true, month: true, year: true }, "year-first is never ambiguous");
     assert.deepEqual(quoteMentionsDate("9/23/2025", sept23), { day: true, month: true, year: false }, "a numeric date carries its own year");
 });
 
