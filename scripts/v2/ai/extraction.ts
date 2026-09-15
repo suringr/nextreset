@@ -17,7 +17,7 @@
  * and never decides what gets published.
  */
 import { normalizeIdentity } from "../identity";
-import { NormalizedDate, ParsedDateValue, ResolvedZone, clockTimesIn, dateEntries, entryBindsItem, datePreamble, normalizeDateFact, zoneAfterClock, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneDeclaredIn, zoneOffsetAt, zonesIn } from "./dates";
+import { DatedStatement, NormalizedDate, ParsedDateValue, ResolvedZone, clockTimesIn, dateEntries, datesWithYearIn, entryBindsItem, datePreamble, normalizeDateFact, zoneAfterClock, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneDeclaredIn, zoneOffsetAt, zonesIn } from "./dates";
 import { AiProvider, AiUsage } from "./provider";
 
 export interface AiDocument {
@@ -303,13 +303,14 @@ function signedTokenPositions(normalized: string): TokenAt[] {
     return out.sort((a, b) => a.start - b.start);
 }
 
-interface PreparedDocument { normalized: string; map: number[]; signedTokens: TokenAt[]; tokens: Set<string>; years: Set<number> }
+interface PreparedDocument { normalized: string; map: number[]; signedTokens: TokenAt[]; tokens: Set<string>; years: Set<number>; fullDates: DatedStatement[] }
 
 function prepare(documentText: string): PreparedDocument {
     const years = new Set<number>();
     for (const m of documentText.matchAll(/\b(19|20)\d{2}\b/g)) years.add(+m[0]);
     const { normalized, map } = normalizeWithMap(documentText);
-    return { normalized, map, signedTokens: signedTokenPositions(normalized), tokens: new Set(tokensOf(documentText)), years };
+    // Positions of dated statements are taken in the normalized text, the same coordinates passages are found in.
+    return { normalized, map, signedTokens: signedTokenPositions(normalized), tokens: new Set(tokensOf(documentText)), years, fullDates: datesWithYearIn(normalized) };
 }
 
 /**
@@ -405,10 +406,30 @@ function rangeIsConsistent(start: GroundedFact, end: GroundedFact): boolean {
     return true;
 }
 
-/** An inferred year is credible only if the document states it, or it is this year or next. */
-function inferredYearSupported(year: number, prepared: PreparedDocument, now: Date): boolean {
-    const thisYear = now.getUTCFullYear();
-    return prepared.years.has(year) || year === thisYear || year === thisYear + 1;
+/**
+ * The one year a yearless date can take: the year that places it nearest the document's own
+ * chronology at that point, meaning the date stated with a year closest to the passage in the text
+ * (a posting date above a maintenance table, say), or today when the document states none.
+ * Undefined when two years are equally near.
+ */
+function inferredYear(value: ParsedDateValue, prepared: PreparedDocument, now: Date, passage: string): number | undefined {
+    const needle = normalizeForSearch(passage);
+    const at = prepared.normalized.indexOf(needle);
+    let reference = now.getTime();
+    if (at >= 0 && prepared.fullDates.length > 0) {
+        const end = at + needle.length;
+        const distance = (d: DatedStatement) => (d.index < at ? at - d.index : d.index > end ? d.index - end : 0);
+        reference = prepared.fullDates.reduce((best, d) => (distance(d) < distance(best) ? d : best)).time;
+    }
+    const referenceYear = new Date(reference).getUTCFullYear();
+    const candidates = [referenceYear - 1, referenceYear, referenceYear + 1]
+        .map(year => ({ year, t: Date.UTC(year, value.month - 1, value.day) }))
+        .filter(c => new Date(c.t).getUTCDate() === value.day)
+        .map(c => ({ year: c.year, distance: Math.abs(c.t - reference) }))
+        .sort((a, b) => a.distance - b.distance);
+    if (candidates.length === 0) return undefined;
+    if (candidates.length > 1 && candidates[0].distance === candidates[1].distance) return undefined;
+    return candidates[0].year;
 }
 
 /**
@@ -527,7 +548,10 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
             const mention = quoteMentionsDate(quote, parsed);
             if (!mention.day || !mention.month) { reject("quote does not mention the claimed day and month"); continue; }
             if (mention.year === false) { reject("quote states a different year"); continue; }
-            if (mention.year === null && !inferredYearSupported(parsed.year, prepared, now)) { reject(`inferred year ${parsed.year} is not supported by the document`); continue; }
+            if (mention.year === null) {
+                const expected = inferredYear(parsed, prepared, now, quote);
+                if (expected !== parsed.year) { reject(`inferred year ${parsed.year} is not supported by the document (its chronology gives ${expected ?? "no single year"})`); continue; }
+            }
 
             let normalized = normalizeDateFact(f.value, f.timezone);
             if (!normalized) { reject("date could not be normalized"); continue; }
@@ -633,7 +657,10 @@ export function mergeRepair(first: GroundedExtraction, repair: GroundedExtractio
     const rejected = [...first.rejected];
     const fromRepair = new Set<GroundedFact>();
     for (const gap of first.rejected.filter(r => REPAIRABLE.has(r.reason))) {
-        const item = items.find(i => i.identity === gap.identity);
+        // Duplicate raw items were consolidated by normalized identity; find the gap's item the same way.
+        let gapKey: string | undefined;
+        try { gapKey = normalizeIdentity(gap.identity); } catch { gapKey = undefined; }
+        const item = items.find(i => i.identityKey === gapKey);
         if (!item || item.facts.some(f => f.field === gap.field)) continue;
         const fact = repair.items.find(i => i.identityKey === item.identityKey)?.facts.find(f => f.field === gap.field);
         if (!fact) continue;

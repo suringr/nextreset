@@ -410,6 +410,8 @@ export interface DateEntry {
 /** Separators between list entries; a slash between digits ("26.44/45", "9/23") is not one. */
 const LABEL_SEPARATOR = /[,;|•]|(?<!\d)\/|\/(?!\d)| - | – /;
 const LABEL_SEPARATOR_G = new RegExp(LABEL_SEPARATOR.source, "g");
+/** Words that join two entries in running text ("... September 23 at 15:00 PT and Console maintenance ..."). */
+const CONJUNCTION = /\s(?:and|&|while|whereas)\s/;
 
 /** Words that describe, connect, categorise or date entries but never identify one. */
 const NAMING_FILLER = new Set([
@@ -521,6 +523,12 @@ export function entryBindsItem(entry: DateEntry, discriminators: string[], compe
             if (hasForeignLabel(adjacent, own)) continue;
             const [from, to] = sideRange(entry, opposite, true);
             if (hasForeignLabel(entry.text.slice(from, to), own)) continue;
+        } else if (side === "after" && CONJUNCTION.test(found.gap)) {
+            // After a conjunction, a label starts a new entry unless the date has no label of its own before
+            // it: "PC maintenance September 23 at 15:00 PT and Console maintenance ..." is PC's date, while
+            // "Maintenance September 23 for PC and Console" is both items' date.
+            const [from, to] = sideRange(entry, "before", true);
+            if (hasForeignLabel(entry.text.slice(from, to), own)) continue;
         }
         const closer = competitors.some(names => {
             const theirs = placement(entry, opposite, names, true);
@@ -559,6 +567,36 @@ export function dateEntries(quote: string, value: ParsedDateValue): DateEntry[] 
         }
     }
     return entries;
+}
+
+export interface DatedStatement {
+    /** UTC epoch milliseconds of the calendar day. */
+    time: number;
+    /** Position of the expression in the collapsed text. */
+    index: number;
+}
+
+/**
+ * Calendar dates a text states with a year, with their positions: "September 23, 2026",
+ * "23 September 2026", "2026-09-23", "2026.03.10". Numeric day/month forms are skipped (ambiguous).
+ */
+export function datesWithYearIn(text: string): DatedStatement[] {
+    const q = collapse(text);
+    const out: DatedStatement[] = [];
+    const monthOf = (word: string) => {
+        const w = word.replace(/\.$/, "");
+        return MONTHS.findIndex(name => name === w || (w.length >= 3 && name.startsWith(w))) + 1;
+    };
+    const push = (index: number, year: number, month: number, day: number) => {
+        if (month < 1 || month > 12 || day < 1 || day > 31) return;
+        const time = Date.UTC(year, month - 1, day);
+        const check = new Date(time);
+        if (check.getUTCMonth() === month - 1 && check.getUTCDate() === day) out.push({ time, index });
+    };
+    for (const m of q.matchAll(new RegExp(`\\b(${ANY_MONTH}) (\\d{1,2})(?:st|nd|rd|th)?,? ((?:19|20)\\d{2})\\b`, "g"))) push(m.index ?? 0, +m[3], monthOf(m[1]), +m[2]);
+    for (const m of q.matchAll(new RegExp(`(?<![0-9.:])(\\d{1,2})(?:st|nd|rd|th)? (?:of )?(${ANY_MONTH}),? ((?:19|20)\\d{2})\\b`, "g"))) push(m.index ?? 0, +m[3], monthOf(m[2]), +m[1]);
+    for (const m of q.matchAll(/(?<![0-9.])((?:19|20)\d{2})[./-](\d{1,2})[./-](\d{1,2})(?![.:]?\d)/g)) push(m.index ?? 0, +m[1], +m[2], +m[3]);
+    return out.sort((a, b) => a.index - b.index);
 }
 
 /** Timezone phrases stated in a text, resolved (deduplicated by zone). */
