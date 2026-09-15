@@ -29,7 +29,7 @@ const item = (overrides: Item): Item => ({
     feedname: "steam_community_announcements", feed_type: 1, appid: 4080220, tags: [], ...overrides
 });
 const withItem = (feed: string, extra: Item) => { const d = JSON.parse(feed); d.appnews.newsitems.unshift(extra); return JSON.stringify(d); };
-const latestFc26 = () => (JSON.parse(FC26).appnews.newsitems as Array<{ gid: string; url: string; title: string }>).find(i => i.title === "FC 26 v1.5.3 Update")!;
+const latestFc26 = () => (JSON.parse(FC26).appnews.newsitems as Array<{ gid: string; url: string; title: string }>).find(i => i.title === "EA SPORTS FC 26 version 1.6.5")!;
 
 const transportFor = (bodies: { fc27?: string; fc26?: string; fc27Headers?: Record<string, string> } = {}) => routedTransport({
     [eafcNewsUrl(4080220)]: { body: bodies.fc27 ?? FC27, headers: bodies.fc27Headers ?? { "content-type": "application/json" } },
@@ -44,20 +44,36 @@ function noModelGate(ledger: AiUsageLedger) {
 test("versioned title update posts are read per title year at their exact publication time", () => {
     const fc26 = parseEafcTitleUpdates(FC26, 26);
     assert.deepEqual(fc26.map(p => [p.identity, p.at]), [
+        ["fc26-1.6.5", "2026-07-22T14:00:01.000Z"],
+        ["fc26-1.6.4", "2026-07-14T12:10:49.000Z"],
+        ["fc26-1.6.2", "2026-06-16T12:07:08.000Z"],
+        ["fc26-1.6.1", "2026-06-03T10:37:08.000Z"],
+        ["fc26-1.5.6", "2026-05-12T11:47:47.000Z"],
+        ["fc26-1.5.4", "2026-04-28T11:34:00.000Z"],
         ["fc26-1.5.3", "2026-04-07T09:32:06.000Z"],
         ["fc26-1.5.2", "2026-03-30T13:24:02.000Z"],
         ["fc26-1.5.1", "2026-03-24T13:31:38.000Z"],
         ["fc26-1.5.0", "2026-03-04T16:54:48.000Z"],
         ["fc26-1.4.2", "2026-02-03T12:52:46.000Z"]
-    ], "feedback updates, unversioned updates and the FC 27 cross-post are not title updates");
+    ], "version-only titles are title updates; feedback updates, unversioned updates and the FC 27 cross-post are not");
     assert.deepEqual(parseEafcTitleUpdates(FC27, 27), [], "FC 27 has not posted a title update yet");
     for (const p of fc26) assert.ok(FC26.includes(p.excerpt));
 });
 
 test("each title year's pattern accepts only its own year's versioned updates", () => {
     const mixed = withItem(withItem(FC26, item({ gid: "1", title: "FC 27 v1.0.1 Update" })), item({ gid: "2", title: "EA SPORTS FC™ 26 | September Feedback Update 1.6" }));
-    assert.deepEqual(parseEafcTitleUpdates(mixed, 26).map(p => p.identity).slice(0, 1), ["fc26-1.5.3"], "an FC 27 title and a feedback post are ignored by the FC 26 feed");
+    assert.deepEqual(parseEafcTitleUpdates(mixed, 26).map(p => p.identity).slice(0, 1), ["fc26-1.6.5"], "an FC 27 title and a feedback post are ignored by the FC 26 feed");
     assert.deepEqual(parseEafcTitleUpdates(withItem(FC27, item({})), 27).map(p => p.identity), ["fc27-1.0.1"]);
+});
+
+test("a title update needs a version marked by v, version or update", () => {
+    const read = (title: string) => parseEafcTitleUpdates(withItem(FC27, item({ title })), 27).map(p => p.identity);
+    assert.deepEqual(read("EA SPORTS FC 27 version 1.0.3"), ["fc27-1.0.3"], "a version-only title is a title update");
+    assert.deepEqual(read("EA SPORTS FC 27 v1.0.3"), ["fc27-1.0.3"]);
+    assert.deepEqual(read("FC 27 Holiday Update (v1.3.0)"), ["fc27-1.3.0"]);
+    assert.deepEqual(read("EA SPORTS FC 27 Title Update 1.0.3"), ["fc27-1.0.3"]);
+    assert.deepEqual(read("EA SPORTS FC 27 - Match Outcomes Update"), [], "an unversioned update is not a title update");
+    assert.deepEqual(read("EA SPORTS FC 27 Ratings Refresh 2.5"), [], "a number without a version marker is not a version");
 });
 
 test("today the last FC 26 title update is published; an unchanged run changes nothing and makes no model call", async () => {
@@ -70,13 +86,13 @@ test("today the last FC 26 title update is published; an unchanged run changes n
     const fresh = first.result as Extract<typeof first.result, { status: "fresh" }>;
     assert.deepEqual(Object.keys(fresh), V1_ROBLOX_FRESH_KEYS);
     assert.deepEqual([fresh.provider_id, fresh.game, fresh.type, fresh.title], ["ea-sports-fc", "ea-sports-fc", "last-title-update", "EA SPORTS FC Last Title Update"], "same data file and page as V1");
-    assert.deepEqual([fresh.nextEventUtc, fresh.notes, fresh.source_url, fresh.confidence], ["2026-04-07T09:32:06.000Z", "FC 26 v1.5.3 Update", latestFc26().url, "high"]);
+    assert.deepEqual([fresh.nextEventUtc, fresh.notes, fresh.source_url, fresh.confidence], ["2026-07-22T14:00:01.000Z", "EA SPORTS FC 26 version 1.6.5", latestFc26().url, "high"]);
     assert.deepEqual(first.work, { unchanged: 0, deterministic: 2, sentToAi: 0, deferred: 0 });
 
     const k1 = store.load("ea-sports-fc");
-    assert.equal(k1.events.length, 5);
+    assert.equal(k1.events.length, 11);
     assert.deepEqual(k1.sources.map(s => s.id).sort(), EAFC_TITLE_YEARS.map(t => eafcSourceId(t.year)).sort());
-    assert.deepEqual([k1.documents.length, k1.claims.length], [1, 5], "only the FC 26 response holds evidence");
+    assert.deepEqual([k1.documents.length, k1.claims.length], [1, 11], "only the FC 26 response holds evidence");
     assert.equal(k1.documents[0].sourceId, eafcSourceId(26));
     assert.doesNotThrow(() => validateGameKnowledge(JSON.parse(JSON.stringify(k1))));
 
@@ -97,7 +113,7 @@ test("the new title year's first title update takes over by date", async () => {
     assert.equal(launched.created, 1);
     const k = store.load("ea-sports-fc");
     assert.ok(k.events.some(e => e.key === "ea-sports-fc/last-title-update/fc27-1.0.1"));
-    assert.ok(k.events.some(e => e.key === "ea-sports-fc/last-title-update/fc26-1.5.3"), "the previous year's history stays");
+    assert.ok(k.events.some(e => e.key === "ea-sports-fc/last-title-update/fc26-1.6.5"), "the previous year's history stays");
 });
 
 test("a blocked feed keeps the last title update published as stale", async () => {
@@ -106,7 +122,7 @@ test("a blocked feed keeps the last title update published as stale", async () =
     const blocked = await runTracker(game, topic, createEafcTitleUpdateAdapter(transportFor({ fc27: "<html><body>Just a moment...</body></html>", fc27Headers: { "content-type": "text/html" } })), store, new Date("2026-09-16T06:00:00Z"));
     assert.equal(blocked.result.status, "stale");
     assert.match((blocked.result as any).reason, /^eafc-steam-fc27: /);
-    assert.equal((blocked.result as any).nextEventUtc, "2026-04-07T09:32:06.000Z");
+    assert.equal((blocked.result as any).nextEventUtc, "2026-07-22T14:00:01.000Z");
 });
 
 test("the production registry reads one Steam feed per title year, newest first", () => {

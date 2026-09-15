@@ -2,9 +2,10 @@
  * EA SPORTS FC last title update, read from Steam news (see steam-news.ts).
  *
  * Source: the Steam Web API news endpoint for each EA SPORTS FC title year, restricted to EA's community
- * announcements. EA announces title updates there with a version number in the title, in several forms:
- * "FC 26 v1.5.3 Update", "EA SPORTS FC 26 Title Update 1.4.2", "FC 26 Holiday Update (v1.3.0)",
- * "EA SPORTS FC 26 - Version 1.0.2 Update Notes". Monthly "Feedback Update" posts, unversioned updates
+ * announcements. EA announces title updates there with a marked version number in the title, in several forms:
+ * "EA SPORTS FC 26 version 1.6.5", "EA SPORTS FC 26 v1.6.2", "FC 26 v1.5.3 Update", "EA SPORTS FC 26 Title Update 1.4.2",
+ * "FC 26 Holiday Update (v1.3.0)", "EA SPORTS FC 26 - Version 1.0.2 Update Notes". The number must follow "v", "version"
+ * or "update", so a bare number is not read as a version. Monthly "Feedback Update" posts, unversioned updates
  * ("Match Outcomes Update") and posts naming another title year (cross-posted into this app) are ignored.
  *
  * Each title year is its own Steam app, so the topic reads one feed per year, newest first, and combines them.
@@ -46,7 +47,7 @@ export function eafcNewsUrl(appId: number): string {
 
 /** A versioned title update post for that title year; capture group 1 is the version. */
 export function eafcTitlePattern(year: number): RegExp {
-    return new RegExp(`^(?!.*feedback)(?=.*\\bFC(?:™)?\\s*${year}\\b)(?=.*\\bupdate\\b).*?\\bv?(\\d+\\.\\d+(?:\\.\\d+)?)\\b`, "i");
+    return new RegExp(`^(?!.*feedback)(?=.*\\bFC(?:™)?\\s*${year}\\b).*?(?:\\bv|\\bversion\\s+|\\bupdate\\s+)(\\d+\\.\\d+(?:\\.\\d+)?)\\b`, "i");
 }
 
 export function eafcSpec(year: number): SteamNewsSpec {
