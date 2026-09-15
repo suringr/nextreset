@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "game": "minecraft",
+  "updatedAt": "2026-09-15T22:01:55.174Z",
+  "events": [
+    {
+      "key": "minecraft/last-release/26.3",
+      "game": "minecraft",
+      "topic": "last-release",
+      "kind": "version",
+      "label": "26.3",
+      "status": "observed",
+      "at": "2026-09-15T11:23:02.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T22:01:55.174Z",
+      "lastVerified": "2026-09-15T22:01:55.174Z",
+      "publishState": "published"
+    }
+  ],
+  "changes": [
+    {
+      "entityKey": "minecraft/last-release/26.3",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "26.3 @ 2026-09-15T11:23:02.000Z",
+      "at": "2026-09-15T22:01:55.174Z",
+      "reason": "observed by minecraft-java-manifest",
+      "decision": "applied"
+    }
+  ],
+  "overrides": [],
+  "documents": [
+    {
+      "id": "b62da92edd237708855a26d3f84da09123f53eb02a62f2119c3f90493e4b6476",
+      "url": "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
+      "sourceId": "minecraft-java-manifest",
+      "fetchedAt": "2026-09-15T22:01:55.174Z",
+      "title": "Mojang version manifest",
+      "fetchMode": "http",
+      "confidence": "high"
+    }
+  ],
+  "claims": [
+    {
+      "id": "23baf33fe850ea67bc379d84",
+      "documentId": "b62da92edd237708855a26d3f84da09123f53eb02a62f2119c3f90493e4b6476",
+      "eventKey": "minecraft/last-release/26.3",
+      "field": "at",
+      "value": "2026-09-15T11:23:02.000Z",
+      "method": "deterministic",
+      "quote": "{\"id\": \"26.3\", \"type\": \"release\", \"url\": \"https://piston-meta.mojang.com/v1/packages/96c00d95a31328714d3811cfade2804bb050e455/26.3.json\", \"time\": \"2026-09-15T11:29:26+00:00\", \"releaseTime\": \"2026-09-15T11:23:02+00:00\", \"sha1\": \"96c00d95a31328714d3811cfade2804bb050e455\", \"complianceLevel\": 1}",
+      "extractedAt": "2026-09-15T22:01:55.174Z"
+    }
+  ],
+  "sources": [
+    {
+      "id": "minecraft-java-manifest",
+      "url": "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
+      "lastModified": "Tue, 15 Sep 2026 15:03:18 GMT",
+      "textHash": "b62da92edd237708855a26d3f84da09123f53eb02a62f2119c3f90493e4b6476",
+      "lastFetchedAt": "2026-09-15T22:01:55.174Z",
+      "lastUsableAt": "2026-09-15T22:01:55.174Z",
+      "lastVerdict": "usable",
+      "lastMode": "http",
+      "consecutiveFailures": 0
+    }
+  ],
+  "discovered": [],
+  "topicStates": []
+}
