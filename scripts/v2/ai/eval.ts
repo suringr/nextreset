@@ -13,7 +13,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { normalizeIdentity } from "../identity";
-import { AiDocument, DocType, ExtractionTopic, GroundedItem, classifyDocument, extractFacts } from "./extraction";
+import { AiDocument, DocType, ExtractionTopic, GroundedItem, classifyDocument, extractFacts, tokensOf } from "./extraction";
 import { MockAiProvider, scriptedResponder } from "./mock";
 import { AiProvider, AiUsageTracker, TrackedAiProvider, createAiProvider, readAiConfig } from "./provider";
 
@@ -89,12 +89,20 @@ export function loadGoldCases(dir = GOLD_DIR): GoldCase[] {
     return JSON.parse(fs.readFileSync(path.join(dir, "cases.json"), "utf8")) as GoldCase[];
 }
 
-function matchesIdentity(item: GroundedItem, anyOf: string[]): boolean {
-    let labelKey = "";
-    try { labelKey = normalizeIdentity(item.label); } catch { /* unlabelled */ }
+/**
+ * An alias matches when it equals the normalized identity, or when every one of
+ * its tokens occurs as a whole token in the identity or the label ("6.19" does
+ * not match "26.19"; "update 43.1" matches "Update 43.1: Sunlit Skies").
+ */
+export function matchesIdentity(item: GroundedItem, anyOf: string[]): boolean {
+    const identityTokens = new Set(tokensOf(item.identity));
+    const labelTokens = new Set(tokensOf(item.label));
     return anyOf.some(candidate => {
-        const c = normalizeIdentity(candidate);
-        return item.identityKey === c || item.identityKey.includes(c) || labelKey === c || labelKey.includes(c);
+        let key: string | undefined;
+        try { key = normalizeIdentity(candidate); } catch { key = undefined; }
+        if (key !== undefined && item.identityKey === key) return true;
+        const needed = tokensOf(candidate);
+        return needed.length > 0 && (needed.every(t => identityTokens.has(t)) || needed.every(t => labelTokens.has(t)));
     });
 }
 

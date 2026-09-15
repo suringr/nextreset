@@ -1,6 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { loadGoldCases, loadMockScript, mockGoldProvider, renderMarkdown, runGoldEval, validateGoldCases } from "../ai/eval";
+import { loadGoldCases, loadMockScript, matchesIdentity, mockGoldProvider, renderMarkdown, runGoldEval, validateGoldCases } from "../ai/eval";
+import { GroundedItem } from "../ai/extraction";
+
+test("gold identities match as complete tokens, never as substrings", () => {
+    const item = (identity: string, label = identity): GroundedItem => ({ kind: "version", label, identity, identityKey: identity.toLowerCase().replace(/[^a-z0-9]+/g, "-"), status: "scheduled", facts: [] });
+    assert.equal(matchesIdentity(item("Patch 26.19"), ["26.19"]), true);
+    assert.equal(matchesIdentity(item("Patch 26.19"), ["6.19"]), false);
+    assert.equal(matchesIdentity(item("Patch 26.19"), ["26.1"]), false);
+    assert.equal(matchesIdentity(item("Update 43.1: Sunlit Skies"), ["update 43.1"]), true);
+    assert.equal(matchesIdentity(item("Season 05"), ["05"]), true);
+    assert.equal(matchesIdentity(item("Season 105"), ["05"]), false);
+    assert.equal(matchesIdentity(item("Live Maintenance PC March 11", "PC"), ["pc maintenance"]), true, "token order does not matter");
+    assert.equal(matchesIdentity(item("26.44/45 Hotfix"), ["26.44/45"]), true);
+    assert.equal(matchesIdentity(item("x", "Counter-Strike 2 Update"), ["september 10, 2026", "counter-strike 2 update"]), true, "the label may satisfy an alias");
+});
 
 test("every gold case passes with the scripted responses, and hallucinated fields are rejected", async () => {
     const cases = loadGoldCases();

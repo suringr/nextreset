@@ -96,6 +96,17 @@ test("quoteMentionsDate checks day, month and year against the quote", () => {
     assert.equal(quoteMentionsDate("Patch 26.19 will release on September 19, 2026", sept19).day, true);
     const sept9b = parseDateValue("2026-09-09")!;
     assert.equal(quoteMentionsDate("Patch 26.9 notes", sept9b).day, false, "26.9 is a version, not September 9th");
+
+    // Month, day and year must belong to one date expression; parts of different dates never combine.
+    assert.equal(quoteMentionsDate("Patch 26.19 was posted September 9 and releases October 23, 2026", sept23).day, false);
+    assert.deepEqual(quoteMentionsDate("Posted in 2026. Patch 26.19 launches September 23", sept23), { day: true, month: true, year: null }, "a year elsewhere in the quote is not attached to the mention");
+    assert.deepEqual(quoteMentionsDate("Patch 26.19 launches September 23, 2025", sept23), { day: true, month: true, year: false });
+    assert.deepEqual(quoteMentionsDate("September 23, 2025 was the plan; now September 23, 2026", sept23), { day: true, month: true, year: true });
+    assert.deepEqual(quoteMentionsDate("23 September 2026", sept23), { day: true, month: true, year: true });
+    assert.deepEqual(quoteMentionsDate("on the 23rd of September", sept23), { day: true, month: true, year: null });
+    assert.deepEqual(quoteMentionsDate("23.09.2026 release", sept23), { day: true, month: true, year: true });
+    assert.deepEqual(quoteMentionsDate("9/23/2026", sept23), { day: true, month: true, year: true });
+    assert.deepEqual(quoteMentionsDate("9/23/2025", sept23), { day: true, month: true, year: false }, "a numeric date carries its own year");
 });
 
 test("quoteMentionsTime requires the stated clock time when a value carries one", () => {

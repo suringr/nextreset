@@ -193,37 +193,50 @@ export interface QuoteDateCheck {
 
 /**
  * Does the quote actually mention the date it is claimed to support?
- * Day: the day number as its own token (or ordinal), never a component of a
- * decimal/version number such as "26.19". Month: name/abbreviation or a
- * numeric date form (yyyy-mm-dd, yyyy.mm.dd, mm/dd/yyyy, m/d, dd-mm-yyyy).
- * Year: matching four-digit year, or null when the quote states none.
+ *
+ * The month and day must form one date expression ("September 23", "23 Sept.",
+ * "2026-09-23", "9/23"); components of different dates in the same quote never
+ * combine. A day number is never a component of a decimal/version number such as
+ * "26.19". Year: true/false when a four-digit year is attached to that same
+ * expression, null when the expression states none.
  */
 export function quoteMentionsDate(quote: string, value: ParsedDateValue): QuoteDateCheck {
     const q = quote.toLowerCase().replace(/\s+/g, " ");
-    const mm = String(value.month).padStart(2, "0");
-    const dd = String(value.day).padStart(2, "0");
-    const yyyy = String(value.year);
+    const m = value.month;
+    const d = value.day;
+    const mm = String(m).padStart(2, "0");
+    const dd = String(d).padStart(2, "0");
+    const monthName = MONTHS[m - 1];
+    const monthWord = m === 9 ? "(?:september|sept?\\.?)" : `(?:${monthName}|${monthName.slice(0, 3)}\\.?)`;
+    const monthNum = `(?:${m}|${mm})`;
+    const dayNum = `(?:${d}|${dd})`;
+    const year = "((?:19|20)\\d{2})";
+    // A day token stands alone: not preceded by a digit or period (26.19 -> not day 19) and not
+    // followed by a digit after an optional period/colon (26.19 -> not day 26; 11:00 -> not day 11).
+    const dayTail = "(?![.:]?\\d)";
 
-    const numericDate = new RegExp(
-        `(?:^|[^0-9.])(?:${yyyy}[./-]${mm}[./-]${dd}|${mm}[./-]${dd}[./-]${yyyy}|${value.month}/${value.day}(?:/${yyyy})?|${dd}[./-]${mm}[./-]${yyyy})(?:[^0-9.]|$)`
-    );
-    const numeric = numericDate.test(q);
+    const forms = [
+        new RegExp(`(?:^|[^0-9.])${year}[./-]${monthNum}[./-]${dayNum}${dayTail}`, "g"),                  // 2026-09-23, 2026.09.23
+        new RegExp(`(?:^|[^0-9.])${monthNum}[./-]${dayNum}[./-]${year}${dayTail}`, "g"),                  // 09/23/2026
+        new RegExp(`(?:^|[^0-9.])${dayNum}[./-]${monthNum}[./-]${year}${dayTail}`, "g"),                  // 23.09.2026
+        new RegExp(`(?:^|[^0-9./-])${monthNum}/${dayNum}(?:/${year})?(?![0-9/])`, "g"),                   // 9/23
+        new RegExp(`\\b${monthWord} ${dayNum}(?:st|nd|rd|th)?${dayTail}(?:,? ${year}\\b)?`, "g"),         // September 23(, 2026)
+        new RegExp(`(?:^|[^0-9.:])${dayNum}(?:st|nd|rd|th)? (?:of )?${monthWord}(?:,? ${year}\\b)?`, "g") // 23 September( 2026)
+    ];
 
-    const monthName = MONTHS[value.month - 1];
-    const monthPattern = value.month === 9
-        ? `\\b(?:september|sept?\\.?)\\b`
-        : `\\b(?:${monthName}|${monthName.slice(0, 3)}\\.?)\\b`;
-    const month = numeric || new RegExp(monthPattern).test(q);
+    let best: QuoteDateCheck | undefined;
+    for (const form of forms) {
+        for (const match of q.matchAll(form)) {
+            const stated = match[1] === undefined ? null : +match[1] === value.year;
+            if (stated === true) return { day: true, month: true, year: true };
+            if (!best || (best.year === false && stated === null)) best = { day: true, month: true, year: stated };
+        }
+    }
+    if (best) return best;
 
-    // A day token must stand alone: not preceded by a digit or a period (26.19 -> not day 19),
-    // not followed by a digit after an optional period/colon (26.19 -> not day 26; 11:00 -> not day 11).
-    const dayPattern = `(?:^|[^0-9.:])(?:${value.day}|${dd})(?:st|nd|rd|th)?(?![.:]?\\d)(?=[^0-9]|$)`;
-    const day = numeric || new RegExp(dayPattern).test(q);
-
+    const monthOnly = new RegExp(`\\b${monthWord}\\b`).test(q);
     const years = q.match(/\b(19|20)\d{2}\b/g);
-    const year = years ? years.includes(yyyy) : null;
-
-    return { day, month, year };
+    return { day: false, month: monthOnly, year: years ? years.includes(String(value.year)) : null };
 }
 
 /**

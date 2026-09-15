@@ -59,6 +59,10 @@ test("identities must occur in the document and quotes must name their item", ()
     assert.equal(quoteNamesIdentity("Patch 26.19 September 23, 2026", "6.19"), false);
     assert.equal(identityOccursIn("26.19", "Patch 26.19: notes."), true, "trailing punctuation does not break the token");
     assert.equal(identityOccursIn("Update 43.1", "Patch Notes - Update 43.1 Introducing Update 43.1:"), true);
+    // Punctuation may differ, token boundaries may not: "September 2 3" is not "September 23".
+    assert.equal(quoteOccursIn("Patch 26.19 releases September 23, 2026", "Patch 26.19 releases September 23 2026!"), true);
+    assert.equal(quoteOccursIn("Patch 26.19 releases September 2 3, 2026", "Patch 26.19 releases September 23, 2026"), false);
+    assert.equal(quoteOccursIn("Patch 26.19 releases September 23, 2026", "Patch 2 6.19 releases September 23, 2026"), false);
 });
 
 test("inverted or misordered start/end windows are rejected as a pair", () => {

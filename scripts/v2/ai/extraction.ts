@@ -227,10 +227,6 @@ function normalizeForSearch(text: string): string {
         .toLowerCase();
 }
 
-function alnumOnly(text: string): string {
-    return text.toLowerCase().replace(/[^a-z0-9]+/g, "");
-}
-
 /**
  * Word/number tokens of a text, lower-cased. Periods inside a token are kept so
  * "26.19" stays one token distinct from "6.19"; surrounding punctuation is dropped.
@@ -249,22 +245,27 @@ function isDateToken(token: string): boolean {
     return MONTH_WORDS.has(token) || /^\d{1,2}$/.test(token) || /^(19|20)\d{2}$/.test(token);
 }
 
-interface PreparedDocument { normalized: string; alnum: string; tokens: Set<string>; years: Set<number> }
+interface PreparedDocument { normalized: string; tokenText: string; tokens: Set<string>; years: Set<number> }
 
 function prepare(documentText: string): PreparedDocument {
     const years = new Set<number>();
     for (const m of documentText.matchAll(/\b(19|20)\d{2}\b/g)) years.add(+m[0]);
-    return { normalized: normalizeForSearch(documentText), alnum: alnumOnly(documentText), tokens: new Set(tokensOf(documentText)), years };
+    const tokens = tokensOf(documentText);
+    return { normalized: normalizeForSearch(documentText), tokenText: ` ${tokens.join(" ")} `, tokens: new Set(tokens), years };
 }
 
-/** True when the quote occurs verbatim in the document (whitespace/quote-mark tolerant, then punctuation tolerant). */
+/**
+ * True when the quote occurs verbatim in the document: whitespace/quote-mark
+ * tolerant first, then punctuation tolerant with token boundaries kept, so
+ * "September 2 3, 2026" never passes as "September 23, 2026".
+ */
 export function quoteOccursIn(quote: string, documentText: string, prepared?: PreparedDocument): boolean {
     const q = normalizeForSearch(quote);
     if (q.length < QUOTE_MIN_LENGTH) return false;
     const doc = prepared ?? prepare(documentText);
     if (doc.normalized.includes(q)) return true;
-    const qa = alnumOnly(quote);
-    return qa.length >= QUOTE_MIN_LENGTH && doc.alnum.includes(qa);
+    const qt = tokensOf(quote).join(" ");
+    return qt.length >= QUOTE_MIN_LENGTH && doc.tokenText.includes(` ${qt} `);
 }
 
 /**
