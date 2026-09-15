@@ -61,3 +61,10 @@ test("scoring prefers official pages that match the query and the topic's prefer
     assert.deepEqual(rankCandidates([schedule, champion, reddit]).map(c => c.url), ranked.map(c => c.url), "ranking is order-independent");
     assert.deepEqual(publishableCandidates(ranked).map(c => c.url), [schedule.url, champion.url]);
 });
+
+test("a candidate with a malformed escape is scored like any other", () => {
+    const malformed = candidateFrom(result("https://support.riotgames.com/en-us/patch-%E0%A4%A-schedule%ZZ", "Patch Schedule"), "web", "patch schedule", DOMAINS);
+    assert.ok(malformed);
+    const scored = scoreCandidate(malformed!, { terms: ["patch", "schedule"], preferred: ["patch schedule"] });
+    assert.ok(scored.score > 0);
+});

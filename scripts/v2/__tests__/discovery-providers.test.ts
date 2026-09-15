@@ -127,3 +127,27 @@ test("content validation accepts redirects that stay within allowed domains", ()
     const elsewhere = validateContent({ requestedUrl: "https://support-leagueoflegends.riotgames.com/hc/en-us/articles/1", finalUrl: "https://evil.example/x", status: 200, body, expect: { kind: "html", allowDomains: ["riotgames.com"] } });
     assert.equal(elsewhere.code, "redirect");
 });
+
+test("every sitemap declared in robots.txt is read, not just the first non-empty one", async () => {
+    const urlset = (locs: string[]) => `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${locs.map(l => `<url><loc>${l}</loc></url>`).join("")}</urlset>`;
+    const xml = { "content-type": "application/xml" };
+    const transport = routedTransport({
+        "https://support.example.com/robots.txt": { body: "Sitemap: https://support.example.com/a.xml\nSitemap: https://support.example.com/b.xml\n", headers: { "content-type": "text/plain" } },
+        "https://support.example.com/a.xml": { body: urlset(["https://support.example.com/en-us/billing/refunds"]), headers: xml },
+        "https://support.example.com/b.xml": { body: urlset(["https://support.example.com/en-us/gameplay/patch-schedule"]), headers: xml }
+    });
+    const provider = new SitemapSearch({ hosts: ["support.example.com"], transport });
+    assert.deepEqual((await provider.search({ text: "patch schedule" })).map(r => r.url), ["https://support.example.com/en-us/gameplay/patch-schedule"]);
+    assert.deepEqual(provider.fetches.map(f => f.url), ["https://support.example.com/a.xml", "https://support.example.com/b.xml"]);
+    assert.deepEqual((await provider.search({ text: "billing refunds" })).map(r => r.url), ["https://support.example.com/en-us/billing/refunds"], "both sitemaps stay cached for the run");
+    assert.equal(transport.gets.length, 3);
+
+    // Without declarations, the conventional locations are alternatives: the first non-empty one is enough.
+    const fallback = routedTransport({
+        "https://plain.example.com/sitemap.xml": { body: urlset(["https://plain.example.com/patch-schedule"]), headers: xml },
+        "https://plain.example.com/sitemap_index.xml": { body: urlset(["https://plain.example.com/other"]), headers: xml }
+    });
+    const plain = new SitemapSearch({ hosts: ["plain.example.com"], transport: fallback });
+    assert.equal((await plain.search({ text: "patch schedule" }))[0].url, "https://plain.example.com/patch-schedule");
+    assert.ok(!fallback.gets.some(g => g.url.endsWith("sitemap_index.xml")));
+});
