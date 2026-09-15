@@ -101,6 +101,24 @@ test("regions that disagree about a phase keep the stored banner end as stale", 
     assert.equal((run.result as any).nextEventUtc, "2026-09-22T06:59:59.000Z");
 });
 
+test("a region that cannot be fetched keeps every region's last accepted hash, so a changed region is examined again", async () => {
+    const { store } = tempStore();
+    await runTracker(game, topic, createGenshinWishAdapter(transportFor()), store, NOW);
+    const accepted = store.load("genshin").sources.map(s => [s.id, s.textHash]);
+    const corrected = (body: string) => body.split("2026-09-22 14:59:59").join("2026-09-23 14:59:59");
+    const usaDown = routedTransport({
+        [genshinAnnouncementsUrl("os_asia")]: { body: corrected(ASIA), headers: { "content-type": "application/json" } },
+        [genshinAnnouncementsUrl("os_euro")]: { body: corrected(EURO), headers: { "content-type": "application/json" } },
+        [genshinAnnouncementsUrl("os_usa")]: { status: 403, body: "<html><body>forbidden</body></html>", headers: { "content-type": "text/html" } }
+    });
+    const failed = await runTracker(game, topic, createGenshinWishAdapter(usaDown), store, new Date("2026-09-16T06:00:00Z"));
+    assert.equal(failed.result.status, "stale");
+    assert.deepEqual(store.load("genshin").sources.map(s => [s.id, s.textHash]), accepted, "Asia and Europe were fetched but never parsed");
+    const recovered = await runTracker(game, topic, createGenshinWishAdapter(transportFor({ asia: corrected(ASIA), euro: corrected(EURO), usa: corrected(USA) })), store, new Date("2026-09-16T12:00:00Z"));
+    assert.equal(recovered.result.status, "fresh");
+    assert.equal((recovered.result as any).nextEventUtc, "2026-09-23T06:59:59.000Z");
+});
+
 test("once the earliest regional end has passed the phase is ended", async () => {
     const { store } = tempStore();
     await runTracker(game, topic, createGenshinWishAdapter(transportFor()), store, NOW);

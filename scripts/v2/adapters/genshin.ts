@@ -148,6 +148,11 @@ export function createGenshinWishAdapter(transport?: Transport): Adapter {
             const fetched = await smartFetch(source.url, { expect: { kind: "json" }, allowRender: false, previous, transport, label: `${game.id}-${topic.type}-${region}`, now });
             sourceStates.push({ id, url: source.url, ...fetched.state, etag: undefined, lastModified: undefined });
             if (fetched.outcome === "unusable" || !fetched.document) {
+                // Regions fetched earlier in this run were never parsed: keep their last accepted hashes, so a changed
+                // region is examined again next run instead of passing as unchanged.
+                for (let i = 0; i < sourceStates.length - 1; i++) {
+                    sourceStates[i] = { ...sourceStates[i], textHash: getSourceState(sourceStates[i].id)?.textHash };
+                }
                 return { events: [], failure: `${region}: ${fetched.error ?? fetched.verdict?.reason ?? "fetch failed"}`, sourceStates };
             }
             if (fetched.outcome === "unchanged") unchanged++;
