@@ -7,11 +7,47 @@
  */
 import { Confidence } from "../types";
 import { Adapter } from "./adapter";
+import { createAiDiscoveryAdapter } from "./adapters/ai-discovery";
 import { gtaWeeklyResetAdapter } from "./adapters/gta";
 import { createRobloxStatusAdapter } from "./adapters/roblox";
 import { Game, Topic } from "./domain";
 
+/** The V1 League of Legends URL (now redirects to support.riotgames.com); kept as the configured known source. */
+export const LOL_PATCH_SCHEDULE_URL = "https://support-leagueoflegends.riotgames.com/hc/en-us/articles/360018987893-League-of-Legends-Patch-Schedule";
+
 export const GAMES: Game[] = [
+    {
+        id: "lol",
+        name: "League of Legends",
+        slug: "lol",
+        sources: [
+            { id: "lol-patch-schedule", url: LOL_PATCH_SCHEDULE_URL, kind: "html" }
+        ],
+        topics: [
+            {
+                game: "lol",
+                type: "next-patch",
+                kind: "version",
+                sourceId: "lol-patch-schedule",
+                view: {
+                    title: "League of Legends Next Patch",
+                    sourceUrl: LOL_PATCH_SCHEDULE_URL,
+                    confidence: Confidence.High,
+                    notes: "Patch {label}"
+                },
+                discovery: {
+                    queries: ["{game} patch schedule", "{game} patch notes", "{game} patch {next}"],
+                    terms: ["patch schedule"],
+                    answeredWhen: "future-scheduled"
+                }
+            }
+        ],
+        discovery: {
+            officialDomains: ["riotgames.com", "leagueoflegends.com"],
+            sitemapHosts: ["support.riotgames.com"],
+            seeds: ["https://www.leagueoflegends.com/en-us/news/tags/patch-notes/"]
+        }
+    },
     {
         id: "gta",
         name: "GTA Online",
@@ -59,7 +95,14 @@ export const GAMES: Game[] = [
     }
 ];
 
+export const LOL_NEXT_PATCH_SPEC = {
+    description: "the scheduled release date of each League of Legends patch (version numbers like 26.19), especially the next one",
+    docTypes: ["patch-schedule", "patch-notes"] as const,
+    itemKinds: ["version"] as const
+};
+
 const ADAPTERS: Record<string, Adapter> = {
+    "lol/next-patch": createAiDiscoveryAdapter({ description: LOL_NEXT_PATCH_SPEC.description, docTypes: [...LOL_NEXT_PATCH_SPEC.docTypes], itemKinds: [...LOL_NEXT_PATCH_SPEC.itemKinds] }),
     "gta/weekly-reset": gtaWeeklyResetAdapter,
     "roblox/status": createRobloxStatusAdapter()
 };

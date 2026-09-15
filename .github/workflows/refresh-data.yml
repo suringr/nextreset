@@ -79,7 +79,14 @@ jobs:
         run: bash .github/scripts/knowledge-checkout.sh
 
       # This runs: build (tsc) + refresh:data + export:site => dist/
+      # Evidence-based trackers (League of Legends) use Gemini through the secret below; without it
+      # they fail cleanly and serve stored knowledge. Web search is best effort and key-free.
       - name: Build site (includes refresh)
+        env:
+          AI_PROVIDER: gemini
+          AI_MODEL: gemini-3.5-flash
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SEARCH_PROVIDER: duckduckgo
         run: npm run build:site
 
       # Commit and push knowledge changes (fast-forward only, never force) and detach the

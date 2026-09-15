@@ -10,6 +10,7 @@
     "build": "tsc",
     "test": "node build/run-tests.js",
     "ai:eval": "node build/v2/ai/eval.js",
+    "slice:lol": "node build/v2/tools/run-slice.js lol next-patch",
     "ai:eval:live": "node build/v2/ai/eval.js --live",
     "refresh:data": "node build/refresh-all.js",
     "export:site": "node build/export-site.js",

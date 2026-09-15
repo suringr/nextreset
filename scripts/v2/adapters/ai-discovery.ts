@@ -279,14 +279,22 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
             const result = await attempt(source.url, source.via, stateId);
             if (!result.ok) { failures.push(source.url); continue; }
             usable++;
-            if (result.unchanged) { unchangedFetch = unchangedFetch ?? result.fetch; continue; }
-            winner = { ...result, via: source.via };
-            break;
+            if (!result.unchanged) {
+                winner = { ...result, via: source.via };
+                break;
+            }
+            unchangedFetch = unchangedFetch ?? result.fetch;
+            // An unchanged page whose stored knowledge still answers the question settles the run;
+            // otherwise the next known page (or discovery) gets its turn.
+            if (!shouldDiscover({ topic, knowledge, now, knownSources: known.length, usableKnownSources: usable }).discover) break;
         }
 
         // 2. Discovery, only when the known sources do not answer the open question.
         const learnedSuccesses: LearnInput[] = [];
-        if (!winner) {
+        if (!winner && !ai) {
+            // Nothing could be extracted from a discovered page either; do not spend fetches and renders on it.
+            report.decision = { discover: false, reason: "AI provider not configured (GEMINI_API_KEY missing); discovery skipped" };
+        } else if (!winner) {
             const decision = shouldDiscover({ topic, knowledge, now, knownSources: known.length, usableKnownSources: usable });
             report.decision = decision;
             if (decision.discover) {
@@ -339,9 +347,15 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
         if (unchangedFetch) {
             return { events: [], unchanged: true, fetch: unchangedFetch, sourceStates, learned: { successes: [], failures }, report: report as unknown as Record<string, unknown> };
         }
-        const reason = report.attempts.length === 0
-            ? (report.decision?.reason ?? "no known source and nothing discovered")
-            : report.attempts.map(a => `${a.url}: ${a.reason ?? a.outcome}`).join("; ");
+        let reason: string;
+        if (report.attempts.length > 0) {
+            reason = report.attempts.map(a => `${a.url}: ${a.reason ?? a.outcome}`).join("; ");
+        } else if (report.discovery) {
+            const d = report.discovery;
+            reason = `no official page found by discovery (${d.candidates.length} candidate(s), web ${d.searchedWeb ? "searched" : "not searched"}${d.unavailable.length > 0 ? `, unavailable: ${d.unavailable.join(", ")}` : ""})`;
+        } else {
+            reason = report.decision?.reason ?? "no known source and nothing discovered";
+        }
         return { events: [], failure: reason, sourceStates, learned: { successes: [], failures }, report: report as unknown as Record<string, unknown> };
     };
 }

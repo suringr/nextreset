@@ -6,7 +6,7 @@
  * Key order mirrors what the V1 providers emitted, so the published files stay
  * byte-for-byte comparable apart from values.
  */
-import { FailureType, FreshResult, ProviderResult, StaleResult, UnavailableResult } from "../types";
+import { Confidence, FailureType, FreshResult, ProviderResult, StaleResult, UnavailableResult } from "../types";
 import { Event, GameKnowledge, Topic } from "./domain";
 import { eventsForTopic } from "./knowledge";
 
@@ -17,6 +17,21 @@ export type RunOutcome =
 export interface ViewContext {
     now: Date;
     outcome: RunOutcome;
+    /** Confidence computed by this run's adapter; the topic's static label otherwise. */
+    confidence?: Confidence;
+}
+
+/**
+ * The attribution link for an event: the page its most recent claim came from
+ * (evidence-based topics), else the topic's configured link.
+ */
+export function sourceUrlFor(event: Event, knowledge: GameKnowledge, topic: Topic): string {
+    const claims = knowledge.claims.filter(c => c.eventKey === event.key).sort((a, b) => b.extractedAt.localeCompare(a.extractedAt));
+    for (const claim of claims) {
+        const doc = knowledge.documents.find(d => d.id === claim.documentId);
+        if (doc) return doc.url;
+    }
+    return topic.view.sourceUrl;
 }
 
 /**
@@ -68,6 +83,8 @@ export function deriveProviderResult(topic: Topic, knowledge: GameKnowledge, ctx
     }
 
     const notes = renderNotes(topic.view.notes, event.label);
+    const sourceUrl = sourceUrlFor(event, knowledge, topic);
+    const confidence = ctx.confidence ?? topic.view.confidence;
 
     if (ctx.outcome.ok) {
         const fresh: FreshResult = {
@@ -79,8 +96,8 @@ export function deriveProviderResult(topic: Topic, knowledge: GameKnowledge, ctx
             nextEventUtc: event.at!,
             fetched_at_utc: nowIso,
             last_success_at_utc: nowIso,
-            source_url: topic.view.sourceUrl,
-            confidence: topic.view.confidence,
+            source_url: sourceUrl,
+            confidence,
             ...(ctx.outcome.httpStatus !== undefined ? { http_status: ctx.outcome.httpStatus } : {}),
             ...(ctx.outcome.fetchMode !== undefined ? { fetch_mode: ctx.outcome.fetchMode } : {}),
             ...(notes !== undefined ? { notes } : {})
@@ -97,8 +114,8 @@ export function deriveProviderResult(topic: Topic, knowledge: GameKnowledge, ctx
         nextEventUtc: event.at!,
         fetched_at_utc: nowIso,
         last_success_at_utc: event.lastVerified,
-        source_url: topic.view.sourceUrl,
-        confidence: topic.view.confidence,
+        source_url: sourceUrl,
+        confidence,
         ...(notes !== undefined ? { notes } : {}),
         reason: ctx.outcome.reason
     };
