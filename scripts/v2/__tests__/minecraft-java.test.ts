@@ -38,7 +38,8 @@ function noModelGate(ledger: AiUsageLedger) {
 test("the latest release is read from latest.release at its exact releaseTime, never a snapshot", () => {
     const current = parseLatestJavaRelease(CURRENT);
     assert.deepEqual([current.id, current.at, current.releaseTime], ["26.3", "2026-09-15T11:23:02.000Z", "2026-09-15T11:23:02+00:00"]);
-    assert.match(current.url, /^https:\/\/piston-meta\.mojang\.com\//);
+    assert.ok(CURRENT.includes(current.excerpt), "the excerpt is a verbatim slice of the manifest");
+    assert.deepEqual(JSON.parse(current.excerpt), manifest(CURRENT).versions.find(v => v.id === "26.3"));
 
     const earlier = manifest(EARLIER);
     assert.notEqual(earlier.latest.snapshot, earlier.latest.release, "this capture has a snapshot ahead of the release");
@@ -77,8 +78,10 @@ test("the first run publishes the release at its exact time on the existing page
     const k1 = store.load("minecraft");
     assert.deepEqual(k1.events.map(e => [e.key, e.kind, e.status, e.at, e.precision, e.timezone]), [["minecraft/last-release/26.3", "version", "observed", "2026-09-15T11:23:02.000Z", "exact", "UTC"]]);
     assert.equal(k1.documents.length, 1);
-    assert.match(k1.documents[0].url, /^https:\/\/piston-meta\.mojang\.com\//, "the evidence records where the instant came from");
-    assert.deepEqual(k1.claims.map(c => [c.field, c.value, c.method, c.quote]), [["at", "2026-09-15T11:23:02.000Z", "deterministic", JSON.stringify({ id: "26.3", type: "release", releaseTime: "2026-09-15T11:23:02+00:00" })]]);
+    assert.deepEqual([k1.documents[0].url, k1.documents[0].id], [MINECRAFT_MANIFEST_URL, k1.sources[0].textHash], "the evidence is the manifest that was fetched");
+    assert.deepEqual(k1.claims.map(c => [c.field, c.value, c.method, c.documentId]), [["at", "2026-09-15T11:23:02.000Z", "deterministic", k1.documents[0].id]]);
+    assert.ok(CURRENT.includes(k1.claims[0].quote!), "the quote is copied from the fetched response");
+    assert.equal(JSON.parse(k1.claims[0].quote!).releaseTime, "2026-09-15T11:23:02+00:00");
     assert.doesNotThrow(() => validateGameKnowledge(JSON.parse(JSON.stringify(k1))));
 
     const second = await runTracker(game, topic, adapter, store, new Date("2026-09-16T06:00:00Z"), { ai: gate });
@@ -110,6 +113,8 @@ test("a new release is added, and a manifest that only gains snapshots changes n
     assert.equal(snapshot.result.status, "fresh");
     assert.equal((snapshot.result as any).nextEventUtc, "2026-09-15T11:23:02.000Z", "a snapshot is not a release");
     assert.deepEqual([snapshot.created, snapshot.changes.length], [0, 0]);
+    const evidenced = store.load("minecraft");
+    assert.deepEqual([evidenced.documents.length, evidenced.claims.length], [2, 2], "a manifest that changed only for snapshots adds no evidence copies");
 });
 
 test("a manifest that cannot vouch for a release keeps the last release published as stale and is examined again next run", async () => {

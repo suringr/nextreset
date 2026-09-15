@@ -13,9 +13,13 @@
  *
  * Each run upserts only the latest release, so the knowledge file does not
  * import hundreds of old versions; history accumulates from the first run on.
- * Evidence is the manifest entry, recorded as a document with one deterministic
- * claim quoting the fields the instant came from. That entry is machine data,
- * so visitors keep the official changelogs page as the link (TopicView.linkEvidence).
+ *
+ * Evidence is the fetched manifest itself: the document is the manifest URL and
+ * its content hash, and the claim quotes the release's entry exactly as it
+ * appears in that response. Evidence is recorded only when the release instant
+ * is new to the knowledge file, so a manifest that changes for snapshots does
+ * not add copies. The manifest is machine data, so visitors keep the official
+ * changelogs page as the link (TopicView.linkEvidence).
  *
  * No model is involved: an unchanged manifest stops at the text hash, and a
  * changed one is parsed by code.
@@ -24,7 +28,7 @@ import * as crypto from "crypto";
 import { Confidence } from "../../types";
 import { Adapter } from "../adapter";
 import { Claim, Document, SourceState } from "../domain";
-import { smartFetch } from "../fetch/smart-fetch";
+import { FetchedDocument, smartFetch } from "../fetch/smart-fetch";
 import { Transport } from "../fetch/transport";
 import { eventKey } from "../identity";
 
@@ -38,8 +42,20 @@ export interface JavaRelease {
     at: string;
     /** `releaseTime` exactly as the manifest gives it. */
     releaseTime: string;
-    /** The version's own metadata URL on piston-meta. */
-    url: string;
+    /** The release's entry exactly as it appears in the manifest text. */
+    excerpt: string;
+}
+
+/** The release's entry as a verbatim slice of the manifest text (entries hold no nested objects). */
+function entryExcerpt(text: string, id: string): string | undefined {
+    for (const match of text.matchAll(/\{[^{}]*\}/g)) {
+        try {
+            if ((JSON.parse(match[0]) as { id?: unknown }).id === id) return match[0];
+        } catch {
+            // Not a standalone object: keep scanning.
+        }
+    }
+    return undefined;
 }
 
 /** The latest Java Edition release named by the manifest. Throws when the manifest cannot vouch for one. */
@@ -59,32 +75,28 @@ export function parseLatestJavaRelease(text: string): JavaRelease {
     if (entry.type !== "release") throw new Error(`latest.release ${JSON.stringify(id)} is listed as ${JSON.stringify(entry.type)}, not a release`);
     const at = typeof entry.releaseTime === "string" ? new Date(entry.releaseTime) : new Date(NaN);
     if (isNaN(at.getTime())) throw new Error(`Invalid releaseTime for ${id}: ${JSON.stringify(entry.releaseTime)}`);
-    return {
-        id,
-        at: at.toISOString(),
-        releaseTime: entry.releaseTime,
-        url: typeof entry.url === "string" && /^https:\/\//i.test(entry.url) ? entry.url : MINECRAFT_MANIFEST_URL
-    };
+    const excerpt = entryExcerpt(text, id);
+    if (!excerpt) throw new Error(`The manifest entry for ${id} cannot be quoted verbatim`);
+    return { id, at: at.toISOString(), releaseTime: entry.releaseTime, excerpt };
 }
 
 function sha(text: string): string {
     return crypto.createHash("sha256").update(text).digest("hex");
 }
 
-/** The document and claim behind a release's event. Ids are content-derived, so re-reading adds nothing. */
-export function javaReleaseEvidence(release: JavaRelease, gameId: string, topicType: string, sourceId: string, fetchedAt: string): { document: Document; claim: Claim } {
-    const quote = JSON.stringify({ id: release.id, type: "release", releaseTime: release.releaseTime });
-    const documentId = sha(`mojang-version-manifest|${quote}`);
+/** The fetched manifest as the evidence document, and the claim quoting the release entry from it. */
+export function javaReleaseEvidence(release: JavaRelease, manifest: FetchedDocument, gameId: string, topicType: string, sourceId: string): { document: Document; claim: Claim } {
     const key = eventKey(gameId, topicType, release.id);
+    const documentId = manifest.textHash;
     return {
-        document: { id: documentId, url: release.url, sourceId, fetchedAt, title: `Minecraft: Java Edition ${release.id}`, fetchMode: "http", confidence: Confidence.High },
-        claim: { id: sha(`${documentId}|${key}|at|${release.at}`).slice(0, 24), documentId, eventKey: key, field: "at", value: release.at, method: "deterministic", quote, extractedAt: fetchedAt }
+        document: { id: documentId, url: manifest.finalUrl, sourceId, fetchedAt: manifest.fetchedAt, title: "Mojang version manifest", fetchMode: manifest.mode, confidence: Confidence.High },
+        claim: { id: sha(`${documentId}|${key}|at|${release.at}`).slice(0, 24), documentId, eventKey: key, field: "at", value: release.at, method: "deterministic", quote: release.excerpt, extractedAt: manifest.fetchedAt }
     };
 }
 
 /** `transport` is injectable for tests; production uses the default HTTP transport (no rendering for JSON). */
 export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
-    return async ({ game, topic, now, getSourceState }) => {
+    return async ({ game, topic, now, getSourceState, knowledge }) => {
         const source = game.sources.find(s => s.id === topic.sourceId);
         if (!source) throw new Error(`Source ${topic.sourceId} is not configured for ${game.id}`);
 
@@ -120,13 +132,16 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
             return { events: [], failure: error instanceof Error ? error.message : String(error), sourceStates };
         }
 
-        const evidence = javaReleaseEvidence(release, game.id, topic.type, source.id, fetched.document!.fetchedAt);
+        // Evidence only when this release instant is new: a manifest that changed for snapshots adds no copies.
+        const key = eventKey(game.id, topic.type, release.id);
+        const alreadyEvidenced = knowledge.claims.some(c => c.eventKey === key && c.field === "at" && c.value === release.at);
+        const evidence = alreadyEvidenced ? undefined : javaReleaseEvidence(release, fetched.document!, game.id, topic.type, source.id);
         return {
             events: [{ identity: release.id, label: release.id, status: "observed", at: release.at, precision: "exact", timezone: "UTC" }],
             // The manifest is authoritative about which release is current: a rolled-back latest.release retires the newer one.
             currentIdentity: release.id,
-            documents: [evidence.document],
-            claims: [evidence.claim],
+            documents: evidence ? [evidence.document] : [],
+            claims: evidence ? [evidence.claim] : [],
             confidence: Confidence.High,
             sourceStates,
             fetch,
