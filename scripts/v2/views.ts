@@ -23,9 +23,11 @@ export interface ViewContext {
 
 /**
  * The attribution link for an event: the page its most recent claim came from
- * (evidence-based topics), else the topic's configured link.
+ * (evidence-based topics), else the topic's configured link. Topics whose evidence is machine data opt out
+ * with `view.linkEvidence: false`.
  */
 export function sourceUrlFor(event: Event, knowledge: GameKnowledge, topic: Topic): string {
+    if (topic.view.linkEvidence === false) return topic.view.sourceUrl;
     const claims = knowledge.claims.filter(c => c.eventKey === event.key).sort((a, b) => b.extractedAt.localeCompare(a.extractedAt));
     for (const claim of claims) {
         const doc = knowledge.documents.find(d => d.id === claim.documentId);

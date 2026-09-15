@@ -16,7 +16,7 @@ import { AiGate } from "./cost/budget";
 import { recordSourceFailure, recordSourceSuccess } from "./discovery/learning";
 import { Change, Game, GameKnowledge, Topic } from "./domain";
 import { adapterFor, findGame, findTopic } from "./games";
-import { endPastScheduled, eventsForTopic, getSourceState, putSourceState, recordTopicRun, touchEvents, upsertEvent } from "./knowledge";
+import { applyCurrentPointer, endPastScheduled, eventsForTopic, getSourceState, putSourceState, recordTopicRun, touchEvents, upsertEvent } from "./knowledge";
 import { KnowledgeStore } from "./store";
 import { KnowledgeValidationError } from "./validate";
 import { deriveProviderResult, selectCurrentEvent, unavailableResult } from "./views";
@@ -111,6 +111,10 @@ export async function runTracker(game: Game, topic: Topic, adapter: Adapter, sto
     if (outcome.unchanged) {
         const current = selectCurrentEvent(eventsForTopic(knowledge, topic.type), now);
         if (current) touchEvents([current], now);
+    }
+    // A source that names its current event retires later-dated events it no longer vouches for (a withdrawn release).
+    if (outcome.currentIdentity) {
+        changes.push(...applyCurrentPointer(knowledge, topic, outcome.currentIdentity, now, `${topic.sourceId} names ${outcome.currentIdentity} as current`));
     }
     changes.push(...endPastScheduled(knowledge, topic, now, "scheduled instant has passed"));
 
