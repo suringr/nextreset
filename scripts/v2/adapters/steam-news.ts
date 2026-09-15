@@ -188,7 +188,19 @@ async function runFeeds(ctx: AdapterContext, feeds: SteamNewsFeed[], transport: 
         }
     }
     const posts = firstPublications(parsed.flatMap(p => p.posts));
-    if (posts.length === 0) return reject("no-update-posts", feeds[0].spec.noPostReason);
+    // A feed that has produced update posts before must keep producing them. With several feeds a naming change in one
+    // feed would otherwise pass unnoticed, because another feed's older posts keep the topic looking freshly verified.
+    // A feed that has never produced one (a title year before its first update) is allowed to stay empty.
+    const identityOf = (key: string): string => key.slice(key.lastIndexOf("/") + 1);
+    const established = (feed: SteamNewsFeed): boolean =>
+        knowledge.events.some(e => e.topic === topic.type && identityOf(e.key).startsWith(feed.spec.identityPrefix ?? ""));
+    for (const { document, posts: feedPosts } of parsed) {
+        if (feedPosts.length > 0) continue;
+        const feed = responses.find(r => r.document === document)!.feed;
+        if (!established(feed)) continue;
+        return reject("no-update-posts", `${feeds.length > 1 ? `${feed.sourceId}: ` : ""}${feed.spec.noPostReason}`);
+    }
+    if (posts.length === 0 && !feeds.some(established)) return reject("no-update-posts", feeds[0].spec.noPostReason);
 
     // A post whose identity is already stored with an earlier instant is a re-post: the stored first publication
     // stands (the original may have rolled out of the feed), and the re-post adds no evidence.

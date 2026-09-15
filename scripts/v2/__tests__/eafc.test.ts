@@ -116,6 +116,30 @@ test("the new title year's first title update takes over by date", async () => {
     assert.ok(k.events.some(e => e.key === "ea-sports-fc/last-title-update/fc26-1.6.5"), "the previous year's history stays");
 });
 
+test("a feed that has produced title updates and stops matching keeps the topic stale", async () => {
+    const { store } = tempStore();
+    const withFc27 = withItem(FC27, item({}));
+    const both = await runTracker(game, topic, createEafcTitleUpdateAdapter(transportFor({ fc27: withFc27 })), store, new Date("2026-09-27T00:00:00Z"));
+    assert.equal(both.result.status, "fresh");
+
+    // EA renames FC 26's posts so none are recognised, while FC 27's title update still is.
+    const renamed = FC26.split("FC 26").join("FC 2026");
+    const broken = await runTracker(game, topic, createEafcTitleUpdateAdapter(transportFor({ fc26: renamed, fc27: withFc27 })), store, new Date("2026-09-27T06:00:00Z"));
+    assert.equal(broken.result.status, "stale", "the other feed's older posts must not stand in for the renamed feed");
+    assert.match((broken.result as any).reason, /^eafc-steam-fc26: /);
+    assert.equal((broken.result as any).nextEventUtc, new Date(1790409600 * 1000).toISOString(), "FC 27's title update stays published");
+});
+
+test("a title year with no update yet may stay empty, and an unrelated post there keeps the topic fresh", async () => {
+    const { store } = tempStore();
+    await runTracker(game, topic, createEafcTitleUpdateAdapter(transportFor()), store, NOW);
+    const chatter = withItem(FC27, item({ gid: "7", title: "EA SPORTS FC 27 Pitch Notes", contents: "Nothing versioned here." }));
+    const run = await runTracker(game, topic, createEafcTitleUpdateAdapter(transportFor({ fc27: chatter })), store, new Date("2026-09-16T06:00:00Z"));
+    assert.equal(run.result.status, "fresh", "FC 27 has never posted a title update, so its feed may hold none");
+    assert.deepEqual([run.created, run.changes.length], [0, 0]);
+    assert.equal((run.result as any).nextEventUtc, "2026-07-22T14:00:01.000Z");
+});
+
 test("a blocked feed keeps the last title update published as stale", async () => {
     const { store } = tempStore();
     await runTracker(game, topic, createEafcTitleUpdateAdapter(transportFor()), store, NOW);
