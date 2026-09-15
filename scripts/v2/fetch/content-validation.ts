@@ -31,6 +31,8 @@ export interface ContentExpectation {
     markers?: string[];
     /** Hosts the final URL may be on; defaults to the requested host (www-insensitive). */
     allowHosts?: string[];
+    /** Domains (and their subdomains) the final URL may be on, in addition to allowHosts. */
+    allowDomains?: string[];
     /** Accept a redirect to the site root. */
     allowHomepage?: boolean;
 }
@@ -155,7 +157,9 @@ export function validateContent(input: ValidationInput): Verdict {
     }
 
     // Unexpected destination: another host, or the site root when a deeper page was requested.
-    if (!allowedHosts.includes(finalHost)) {
+    const allowedDomains = (expect.allowDomains ?? []).map(d => d.toLowerCase().replace(/^www\./, ""));
+    const hostAllowed = allowedHosts.includes(finalHost) || allowedDomains.some(d => d.length > 0 && (finalHost === d || finalHost.endsWith(`.${d}`)));
+    if (!hostAllowed) {
         return verdict("redirect", `redirected to unexpected host ${finalHost}`, false, base);
     }
     const requestedPath = pathOf(requestedUrl).replace(/\/+$/, "");

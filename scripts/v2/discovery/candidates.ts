@@ -6,6 +6,7 @@
  * candidates are publishable; a secondary page can lead to an official one
  * (links.ts) but never becomes evidence itself.
  */
+import { DiscoveryVia } from "../domain";
 import { SearchResult } from "./search-provider";
 import { matchedTerms, significantTerms, tokenize } from "./terms";
 import { canonicalUrl, contentUrlProblem, dedupeKey, isEnglishLocale, isOfficialUrl, localeAgnosticKey, localeOf, slugTokens } from "./urls";
@@ -13,8 +14,7 @@ import { canonicalUrl, contentUrlProblem, dedupeKey, isEnglishLocale, isOfficial
 export type SourceTier = "official" | "secondary";
 
 /** How a candidate was found; earlier entries are trusted more when duplicates merge. */
-export const VIA_ORDER = ["config", "learned", "sitemap", "seed", "secondary-link", "web"] as const;
-export type DiscoveryVia = typeof VIA_ORDER[number];
+export const VIA_ORDER: readonly DiscoveryVia[] = ["config", "learned", "sitemap", "seed", "secondary-link", "web"];
 
 export interface Candidate {
     url: string;
@@ -181,11 +181,15 @@ export function scoreCandidate(candidate: Candidate, ctx: ScoringContext): Candi
     return { ...candidate, score, reasons: [...candidate.reasons, ...reasons] };
 }
 
-/** Deterministic order: score, then official first, then how it was found, then URL. */
+/**
+ * Deterministic order: official pages before secondary ones whatever their
+ * scores (official evidence outranks secondary reporting), then score, then how
+ * the page was found, then URL.
+ */
 export function rankCandidates(candidates: Candidate[]): Candidate[] {
     return [...candidates].sort((a, b) =>
-        b.score - a.score ||
         (a.tier === b.tier ? 0 : a.tier === "official" ? -1 : 1) ||
+        b.score - a.score ||
         viaRank(a.via) - viaRank(b.via) ||
         a.url.localeCompare(b.url)
     );

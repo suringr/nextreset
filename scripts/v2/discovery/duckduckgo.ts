@@ -70,7 +70,7 @@ export class DuckDuckGoSearch implements SearchProvider {
     /** Queries actually sent this run. */
     queriesRun = 0;
     private disabledReason?: string;
-    private lastRequestAt = 0;
+    private lastRequestAt?: number;
     private readonly transport: Transport;
     private readonly maxQueries: number;
     private readonly minIntervalMs: number;
@@ -96,7 +96,7 @@ export class DuckDuckGoSearch implements SearchProvider {
         if (this.queriesRun >= this.maxQueries) {
             throw new SearchUnavailableError(`web search budget of ${this.maxQueries} queries per run is used up`, "budget", this.name);
         }
-        const wait = this.lastRequestAt + this.minIntervalMs - this.now();
+        const wait = this.lastRequestAt === undefined ? 0 : this.lastRequestAt + this.minIntervalMs - this.now();
         if (wait > 0) await this.sleep(wait);
 
         const url = `${DUCKDUCKGO_ENDPOINT}?q=${encodeURIComponent(formatQuery(query))}`;

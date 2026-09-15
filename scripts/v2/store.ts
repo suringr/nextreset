@@ -12,7 +12,7 @@
  */
 import * as fs from "fs";
 import * as path from "path";
-import { Change, Claim, Document, Event, GameKnowledge, Override, SourceState, emptyKnowledge } from "./domain";
+import { Change, Claim, DiscoveredSource, Document, Event, GameKnowledge, Override, SourceState, emptyKnowledge } from "./domain";
 import { KnowledgeValidationError, validateGameKnowledge } from "./validate";
 
 export class KnowledgeStoreError extends Error {
@@ -114,8 +114,28 @@ export function canonicalizeKnowledge(k: GameKnowledge): GameKnowledge {
         claims: k.claims.map(canonicalClaim),
         sources: [...(k.sources ?? [])]
             .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
-            .map(canonicalSourceState)
+            .map(canonicalSourceState),
+        discovered: [...(k.discovered ?? [])]
+            .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+            .map(canonicalDiscoveredSource)
     };
+}
+
+function canonicalDiscoveredSource(d: DiscoveredSource): DiscoveredSource {
+    return dropUndefined({
+        id: d.id,
+        url: d.url,
+        topic: d.topic,
+        tier: d.tier,
+        via: d.via,
+        query: d.query,
+        title: d.title,
+        discoveredAt: d.discoveredAt,
+        lastSuccessAt: d.lastSuccessAt,
+        lastFailureAt: d.lastFailureAt,
+        successes: d.successes,
+        failures: d.failures
+    });
 }
 
 function canonicalSourceState(s: SourceState): SourceState {
