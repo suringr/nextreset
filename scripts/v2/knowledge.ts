@@ -4,7 +4,7 @@
  * change records live here so they can be unit-tested without files.
  */
 import { EventInput } from "./adapter";
-import { Change, DatePrecision, Event, GameKnowledge, SourceState, Topic, TopicState } from "./domain";
+import { Change, DatePrecision, Event, GameKnowledge, PublishState, SourceState, Topic, TopicState } from "./domain";
 import { eventKey } from "./identity";
 
 const COMPARED_FIELDS = ["label", "status", "at", "startAt", "endAt", "precision", "timezone"] as const;
@@ -82,6 +82,29 @@ export function upsertEvent(knowledge: GameKnowledge, topic: Topic, input: Event
     existing.lastVerified = nowIso;
     knowledge.changes.push(...changes);
     return { event: existing, created: false, changes };
+}
+
+/**
+ * Applies a source's pointer to its current event (see AdapterOutcome.currentIdentity): later-dated published events
+ * of the topic are held, and the named event is published again if it was held. Returns the Change records appended.
+ */
+export function applyCurrentPointer(knowledge: GameKnowledge, topic: Topic, identity: string, now: Date, reason: string): Change[] {
+    const current = findEvent(knowledge, eventKey(topic.game, topic.type, identity));
+    if (!current || !current.at) return [];
+    const currentAt = Date.parse(current.at);
+    const nowIso = now.toISOString();
+    const changes: Change[] = [];
+    const setState = (event: Event, state: PublishState) => {
+        changes.push({ entityKey: event.key, field: "publishState", oldValue: event.publishState, newValue: state, at: nowIso, reason, decision: state === "held" ? "held" : "applied" });
+        event.publishState = state;
+    };
+    if (current.publishState === "held") setState(current, "published");
+    for (const event of eventsForTopic(knowledge, topic.type)) {
+        if (event.key === current.key || event.publishState !== "published" || !event.at) continue;
+        if (Date.parse(event.at) > currentAt) setState(event, "held");
+    }
+    knowledge.changes.push(...changes);
+    return changes;
 }
 
 export function getSourceState(knowledge: GameKnowledge, sourceId: string): SourceState | undefined {

@@ -86,6 +86,12 @@ export interface AdapterOutcome {
     discoveryRanAt?: string;
     /** Documents skipped, parsed, sent to AI or deferred this run. */
     work?: WorkStats;
+    /**
+     * The identity the source names as current (for example a manifest's latest release). Published events of the
+     * topic dated later than it are held, so a withdrawn release stops being published, and the named event is
+     * published again if it was held.
+     */
+    currentIdentity?: string;
     /** Diagnostics for logs and reports (discovery queries, candidates, AI usage). Never persisted. */
     report?: Record<string, unknown>;
 }

@@ -131,6 +131,25 @@ test("a manifest that cannot vouch for a release keeps the last release publishe
     assert.equal(recovered.result.status, "fresh");
 });
 
+test("when the manifest rolls latest.release back, the withdrawn release is held, and published again only if it returns", async () => {
+    const { store } = tempStore();
+    await runTracker(game, topic, createMinecraftJavaAdapter(fakeTransport({ http: [{ body: CURRENT }] })), store, NOW);
+
+    const rolledBack = await runTracker(game, topic, createMinecraftJavaAdapter(fakeTransport({ http: [{ body: EARLIER }] })), store, new Date("2026-09-16T06:00:00Z"));
+    assert.equal(rolledBack.result.status, "fresh");
+    assert.equal((rolledBack.result as any).nextEventUtc, "2026-06-16T12:03:33.000Z", "the manifest's current release is published");
+    assert.equal((rolledBack.result as any).notes, "Java Edition 26.2");
+    assert.equal(store.load("minecraft").events.find(e => e.label === "26.3")!.publishState, "held");
+    assert.ok(rolledBack.changes.some(c => c.entityKey === "minecraft/last-release/26.3" && c.field === "publishState" && c.newValue === "held" && c.decision === "held"));
+    assert.doesNotThrow(() => validateGameKnowledge(JSON.parse(JSON.stringify(store.load("minecraft")))));
+
+    const restored = await runTracker(game, topic, createMinecraftJavaAdapter(fakeTransport({ http: [{ body: CURRENT }] })), store, new Date("2026-09-16T12:00:00Z"));
+    assert.equal((restored.result as any).nextEventUtc, "2026-09-15T11:23:02.000Z");
+    assert.equal(store.load("minecraft").events.find(e => e.label === "26.3")!.publishState, "published");
+    assert.ok(restored.changes.some(c => c.entityKey === "minecraft/last-release/26.3" && c.field === "publishState" && c.newValue === "published"));
+    assert.equal(store.load("minecraft").events.find(e => e.label === "26.2")!.publishState, "published", "an older release is never held by a newer pointer");
+});
+
 test("the production registry runs Minecraft on the Java manifest adapter with the changelogs page as its link", () => {
     assert.equal(game.sources[0].url, MINECRAFT_MANIFEST_URL);
     assert.equal(topic.view.sourceUrl, MINECRAFT_CHANGELOGS_PAGE);

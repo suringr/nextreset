@@ -123,6 +123,8 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
         const evidence = javaReleaseEvidence(release, game.id, topic.type, source.id, fetched.document!.fetchedAt);
         return {
             events: [{ identity: release.id, label: release.id, status: "observed", at: release.at, precision: "exact", timezone: "UTC" }],
+            // The manifest is authoritative about which release is current: a rolled-back latest.release retires the newer one.
+            currentIdentity: release.id,
             documents: [evidence.document],
             claims: [evidence.claim],
             confidence: Confidence.High,
