@@ -156,7 +156,7 @@ test("groundExtraction accepts supported facts and rejects unsupported ones with
     assert.match(reasons["!!!"], /identity cannot be normalized/);
     assert.match(reasons["99.99"], /identity not found in document/);
     assert.match(reasons["26.24"], /does not mention the item/);
-    assert.deepEqual(grounded.stats, { fields: 10, accepted: 3, rejected: 8, itemsDropped: 0, itemsRejected: 3 });
+    assert.deepEqual(grounded.stats, { fields: 10, accepted: 3, rejected: 7, itemsDropped: 0, itemsRejected: 3 });
 });
 
 test("exact instants need the time and the zone to be stated; otherwise the day is kept", () => {
@@ -386,4 +386,28 @@ test("a window with an exact start and a day-only end is not inverted", () => {
     ] }] }), text, { now });
     assert.deepEqual(grounded.items[0].facts.map(f => [f.field, f.precision]), [["startAt", "exact"], ["endAt", "day"]]);
     assert.equal(grounded.rejected.length, 0);
+});
+
+test("a date is evidence only inside the entry that names the item, even when it is the only dated entry", () => {
+    const now = new Date("2026-09-14T21:30:00Z");
+    const text = "Maintenance. PC maintenance is September 23, 2026 at 15:00 PT; Console maintenance date is TBD. All times PT.";
+    const quote = "PC maintenance is September 23, 2026 at 15:00 PT; Console maintenance date is TBD";
+    const run = (identity: string, value: string) => groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: identity, identity, status: "scheduled", fields: [{ field: "at", value, timezone: "PT", quote }] }] }), text, { now });
+    const console_ = run("Console maintenance September 23", "2026-09-23T15:00");
+    assert.equal(console_.items[0].facts.length, 0);
+    assert.match(console_.rejected[0].reason, /belongs to another entry/);
+    assert.equal(run("Console maintenance September 23", "2026-09-23").items[0].facts.length, 0, "day-only facts are bound too");
+    const pc = run("PC maintenance September 23", "2026-09-23T15:00");
+    assert.deepEqual(pc.items[0].facts.map(f => [f.precision, f.at]), [["exact", "2026-09-23T22:00:00.000Z"]]);
+
+    // Every field of a rejected item is reported, so fields == accepted + rejected.
+    const bogus = groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: "Mobile", identity: "Mobile maintenance", status: "scheduled", fields: [
+        { field: "startAt", value: "2026-09-23T15:00", timezone: "PT", quote },
+        { field: "endAt", value: "2026-09-23T18:00", timezone: "PT", quote }
+    ] }, { kind: "occurrence", label: "Nothing", identity: "Nothing here", status: "unknown", fields: [] }] }), text, { now });
+    assert.equal(bogus.stats.fields, 2);
+    assert.equal(bogus.stats.rejected, 2);
+    assert.equal(bogus.stats.accepted, 0);
+    assert.equal(bogus.stats.itemsRejected, 2);
+    assert.deepEqual(bogus.rejected.map(r => [r.identity, r.field]), [["Mobile maintenance", "startAt"], ["Mobile maintenance", "endAt"], ["Nothing here", "at"]]);
 });
