@@ -17,7 +17,7 @@
  * and never decides what gets published.
  */
 import { normalizeIdentity } from "../identity";
-import { NormalizedDate, ParsedDateValue, ResolvedZone, clockTimesIn, dateEntries, datePreamble, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneDeclaredIn, zoneOffsetAt, zonesIn } from "./dates";
+import { NormalizedDate, ParsedDateValue, ResolvedZone, clockTimesIn, dateEntries, datePreamble, normalizeDateFact, zoneAfterClock, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneDeclaredIn, zoneOffsetAt, zonesIn } from "./dates";
 import { AiProvider, AiUsage } from "./provider";
 
 export interface AiDocument {
@@ -365,9 +365,19 @@ function evidencedZone(documentText: string, quote: string, segment: string, tim
     const claimed = resolveTimezone(timezoneRaw);
     // A zone next to the date applies; so does one the quote's header (before any date) declares
     // for its times ("Live Maintenance Schedule (UTC) ..."), but not a header zone in some other
-    // context ("Support hours are PT.").
+    // context ("Support hours are PT."). When the entry states several clock/zone pairs
+    // ("15:00 PT / 18:00 ET"), only the zone right after the claimed clock counts.
+    const inSegment = zonesIn(segment);
+    if (inSegment.length > 1) {
+        const adjacent = zoneAfterClock(segment, value);
+        if (!adjacent) return { problem: "the entry states several timezones and none is next to the claimed clock time; time dropped" };
+        if (claimed && adjacent.zone !== claimed.zone && zoneOffsetAt(adjacent, value) !== zoneOffsetAt(claimed, value)) {
+            return { problem: `the claimed clock time is stated in ${adjacent.zone}, not "${timezoneRaw}"; time dropped` };
+        }
+        return { zone: adjacent };
+    }
     const preamble = datePreamble(quote);
-    const stated = zonesIn(segment)[0] ?? zonesIn(preamble).find(z => zoneDeclaredIn(preamble, z));
+    const stated = inSegment[0] ?? zonesIn(preamble).find(z => zoneDeclaredIn(preamble, z));
     if (stated) {
         if (claimed && stated.zone !== claimed.zone && zoneOffsetAt(stated, value) !== zoneOffsetAt(claimed, value)) {
             return { problem: `quote states ${stated.zone} next to this date, not "${timezoneRaw}"; time dropped` };
@@ -456,6 +466,18 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
                 }
             }
 
+            // One value per item and field: a repeated identical fact is dropped quietly; a
+            // conflicting one makes the field ambiguous and takes the earlier fact down with it.
+            const earlier = facts.find(x => x.field === f.field);
+            if (earlier) {
+                if (earlier.at === normalized.at && earlier.precision === normalized.precision) { fieldsSeen--; continue; }
+                facts.splice(facts.indexOf(earlier), 1);
+                accepted--;
+                rejected.push({ identity: item.identity, field: earlier.field, value: earlier.value, quote: earlier.quote, reason: "conflicting values for the same field" });
+                reject("conflicting values for the same field");
+                continue;
+            }
+
             facts.push({ ...normalized, field: f.field, value: f.value, timezoneRaw: f.timezone, quote: f.quote, yearInferred: mention.year === null });
             accepted++;
         }
@@ -533,7 +555,8 @@ export function mergeRepair(first: GroundedExtraction, repair: GroundedExtractio
         }
     }
     const filled = fromRepair.size;
-    return { merged: { items, rejected, stats: { ...first.stats, accepted: first.stats.accepted + filled, rejected: rejected.length } }, filled };
+    const accepted = first.stats.accepted + filled;
+    return { merged: { items, rejected, stats: { ...first.stats, accepted, rejected: first.stats.fields - accepted } }, filled };
 }
 
 /**

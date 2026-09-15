@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { clockTimesIn, dateSegment, dateSegments, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneDeclaredIn, zonedToUtc, zonedToUtcDetailed, zonesIn } from "../ai/dates";
+import { clockTimesIn, dateSegment, dateSegments, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneAfterClock, zoneDeclaredIn, zonedToUtc, zonedToUtcDetailed, zonesIn } from "../ai/dates";
 
 test("parseDateValue accepts ISO dates and local date-times, rejects everything else", () => {
     assert.deepEqual(parseDateValue("2026-09-23"), { year: 2026, month: 9, day: 23, hasTime: false });
@@ -225,4 +225,15 @@ test("zonesIn finds stated timezone phrases", () => {
     assert.deepEqual(zonesIn("Patch 26.19 releases September 23, 2026"), [], "no zone words, no zones");
     assert.deepEqual(zonesIn("Internet time is fun"), []);
     assert.deepEqual(zonesIn("2026-09-09T18:00:00.000Z League of Legends Patch 26.18 Notes").map(z => z.zone), ["UTC"], "an ISO Z states UTC");
+});
+
+test("zoneAfterClock pairs each clock with the zone that follows it", () => {
+    const row = "Patch 26.19 releases September 23 at 15:00 PT / 18:00 ET / 22:00 UTC";
+    assert.equal(zoneAfterClock(row, parseDateValue("2026-09-23T15:00")!)?.zone, "America/Los_Angeles");
+    assert.equal(zoneAfterClock(row, parseDateValue("2026-09-23T18:00")!)?.zone, "America/New_York");
+    assert.equal(zoneAfterClock(row, parseDateValue("2026-09-23T22:00")!)?.zone, "UTC");
+    assert.equal(zoneAfterClock(row, parseDateValue("2026-09-23T09:00")!), undefined, "no such clock");
+    assert.equal(zoneAfterClock("September 23 at 3 PM PT and 6 PM", parseDateValue("2026-09-23T18:00")!), undefined, "no zone after the second clock");
+    assert.equal(zoneAfterClock("September 23 at 3 PM PT and 6 PM", parseDateValue("2026-09-23T15:00")!)?.zone, "America/Los_Angeles");
+    assert.equal(zoneAfterClock("September 23, 2026", parseDateValue("2026-09-23")!), undefined, "date-only values have no clock");
 });
