@@ -127,8 +127,13 @@ export class GeminiProvider implements AiProvider {
         }
         const finish = response.candidates?.[0]?.finishReason;
         if (finish && finish !== "STOP") {
-            // MAX_TOKENS, SAFETY, RECITATION, ...: the answer is incomplete or withheld.
-            throw new AiError(`Gemini stopped with finishReason ${finish}`, finish === "OTHER");
+            // MAX_TOKENS, SAFETY, RECITATION, ...: the answer is incomplete or withheld. Say how much
+            // came back and how it starts and ends, so a runaway or looping answer can be diagnosed.
+            const partial = (response.text ?? "").replace(/\s+/g, " ");
+            const detail = partial.length > 0
+                ? ` after ${partial.length} chars (starts ${JSON.stringify(partial.slice(0, 120))}, ends ${JSON.stringify(partial.slice(-120))})`
+                : "";
+            throw new AiError(`Gemini stopped with finishReason ${finish}${detail}`, finish === "OTHER");
         }
         const text = response.text;
         if (!text || text.trim().length === 0) {

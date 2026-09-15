@@ -148,6 +148,8 @@ test("quoteMentionsTime requires the stated clock time when a value carries one"
     assert.equal(quoteMentionsTime("Patch 15 notes on September 23", t1500), false, "a bare number is not a time");
     assert.equal(quoteMentionsTime("PC: March 11, 00:00 - 08:30", parseDateValue("2026-03-11T00:00")!), true);
     assert.equal(quoteMentionsTime("servers go down at midnight", parseDateValue("2026-03-11T00:00")!), true);
+    assert.equal(quoteMentionsTime("servers go down at midnight", parseDateValue("2026-03-11T00:00:59")!), false, "midnight has no seconds");
+    assert.equal(quoteMentionsTime("servers return at noon", parseDateValue("2026-03-11T12:00:30")!), false);
     assert.equal(quoteMentionsTime("2026-09-09T18:00:00.000Z League of Legends Patch 26.18 Notes", parseDateValue("2026-09-09T18:00")!), true);
     assert.equal(quoteMentionsTime("at 12:00 AM", parseDateValue("2026-03-11T00:00")!), true);
     // Seconds are part of the claim: ":59" needs a quote that states it.
@@ -189,21 +191,29 @@ test("dateSegment isolates the part of a quote that belongs to one date", () => 
     const sept23 = parseDateValue("2026-09-23T15:00")!;
     const sept24 = parseDateValue("2026-09-24T18:00")!;
     const two = "PC: patch 26.19 releases September 23 at 15:00 PT; Console: patch 26.19 releases September 24 at 18:00 ET";
-    assert.equal(dateSegment(two, sept23), "september 23 at 15:00 pt");
-    assert.equal(dateSegment(two, sept24), "september 24 at 18:00 et");
+    assert.equal(dateSegment(two, sept23), "pc: patch 26.19 releases september 23 at 15:00 pt");
+    assert.equal(dateSegment(two, sept24), "console: patch 26.19 releases september 24 at 18:00 et");
     assert.equal(quoteMentionsTime(dateSegment(two, sept23)!, parseDateValue("2026-09-23T18:00")!), false, "the other entry's time is not evidence");
     // Time before the date, in the same clause.
     assert.equal(dateSegment("Servers go down at 15:00 PT on September 23 for maintenance", sept23), "servers go down at 15:00 pt on september 23 for maintenance");
     // Maintenance windows: the segment keeps both times of its own entry only.
     const windows = "PC: March 11, 00:00 - 08:30. Console: March 19, 01:00 - 09:00";
-    assert.equal(dateSegment(windows, parseDateValue("2026-03-11T00:00")!), "march 11, 00:00 - 08:30");
-    assert.equal(dateSegment(windows, parseDateValue("2026-03-19T01:00")!), "march 19, 01:00 - 09:00");
+    assert.equal(dateSegment(windows, parseDateValue("2026-03-11T00:00")!), "pc: march 11, 00:00 - 08:30");
+    assert.equal(dateSegment(windows, parseDateValue("2026-03-19T01:00")!), "console: march 19, 01:00 - 09:00");
+    // A window that straddles its date keeps the clock before the date.
+    const straddle = "Maintenance starts at 15:00 PT on September 23, 2026 and ends at 18:00 PT";
+    assert.equal(dateSegment(straddle, sept23), "maintenance starts at 15:00 pt on september 23, 2026 and ends at 18:00 pt");
+    assert.equal(quoteMentionsTime(dateSegment(straddle, sept23)!, sept23), true);
+    // ...unless an earlier date in the same clause owns that clock.
+    const chained = "Patch 26.19 September 23 15:00 PT Patch 26.20 October 7 18:00 PT";
+    assert.equal(dateSegment(chained, parseDateValue("2026-10-07T18:00")!), "october 7 18:00 pt");
+    assert.equal(quoteMentionsTime(dateSegment(chained, parseDateValue("2026-10-07T15:00")!)!, parseDateValue("2026-10-07T15:00")!), false);
     // "Sept. 23" is not a clause boundary.
     assert.equal(dateSegment("Sept. 23 at 3 PM PT", sept23), "sept. 23 at 3 pm pt");
     assert.equal(dateSegment("no date here", sept23), undefined);
     // Several entries on the same day yield one segment each.
     const sameDay = "PC maintenance September 23 at 15:00 PT; Console maintenance September 23 at 18:00 ET";
-    assert.deepEqual(dateSegments(sameDay, sept23), ["september 23 at 15:00 pt", "september 23 at 18:00 et"]);
+    assert.deepEqual(dateSegments(sameDay, sept23), ["pc maintenance september 23 at 15:00 pt", "console maintenance september 23 at 18:00 et"]);
     assert.deepEqual(dateSegments("no date here", sept23), []);
 });
 

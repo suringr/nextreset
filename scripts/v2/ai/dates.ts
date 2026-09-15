@@ -410,13 +410,19 @@ export function dateEntries(quote: string, value: ParsedDateValue): DateEntry[] 
         const clause = clauseBounds(q, mention.start);
         let from = clause.from;
         let to = clause.to;
+        let earlierDateInClause = false;
         for (const span of spans) {
-            if (span.end <= mention.start && span.end > from) from = span.end;
+            if (span.end <= mention.start && span.end > from) {
+                from = span.end;
+                earlierDateInClause = true;
+            }
             if (span.start >= mention.end && span.start < to) to = span.start;
         }
-        const entry = q.slice(from, to);
-        const after = q.slice(mention.start, to);
-        const segment = clockTimesIn(after).length > 0 ? after : entry;
+        const entry = q.slice(from, to).trim();
+        // Clock times before the date belong to this entry ("starts at 15:00 PT on September 23 and ends
+        // at 18:00 PT") unless an earlier date in the same clause claims them ("... September 23 15:00 PT
+        // Patch 26.20 October 7 18:00 PT"): then only what follows the date is this entry's.
+        const segment = earlierDateInClause ? q.slice(mention.start, to).trim() : entry;
         if (!entries.some(e => e.segment === segment && e.entry === entry)) entries.push({ segment, entry });
     }
     return entries;
@@ -455,10 +461,10 @@ export function quoteMentionsTime(quote: string, value: ParsedDateValue): boolea
     const q = quote.toLowerCase();
     const hour = value.hour ?? 0;
     const minute = value.minute ?? 0;
-    if (hour === 0 && minute === 0 && /\bmidnight\b/.test(q)) return true;
-    if (hour === 12 && minute === 0 && /\bnoon\b/.test(q)) return true;
-
     const second = value.second ?? 0;
+    if (hour === 0 && minute === 0 && second === 0 && /\bmidnight\b/.test(q)) return true;
+    if (hour === 12 && minute === 0 && second === 0 && /\bnoon\b/.test(q)) return true;
+
     const times = q.matchAll(/(?:^|[^0-9.])(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?(?:\.\d+)?\s*(a\.?m\.?|p\.?m\.?)?(?=[^0-9]|$)/g);
     for (const m of times) {
         let h = +m[1];
