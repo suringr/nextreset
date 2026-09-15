@@ -1,0 +1,307 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { clockTimesIn, dateEntries, dateSegment, datesWithYearIn, entryBindsItem, dateSegments, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneAfterClock, zoneDeclaredIn, zonedToUtc, zonedToUtcDetailed, zonesIn } from "../ai/dates";
+
+test("parseDateValue accepts ISO dates and local date-times, rejects everything else", () => {
+    assert.deepEqual(parseDateValue("2026-09-23"), { year: 2026, month: 9, day: 23, hasTime: false });
+    assert.deepEqual(parseDateValue("2026-09-23T18:00"), { year: 2026, month: 9, day: 23, hour: 18, minute: 0, second: 0, hasTime: true });
+    assert.equal(parseDateValue("2026-09-09T18:00:00.000Z"), undefined, "milliseconds are not part of the contract");
+    assert.equal(parseDateValue("2026-09-09T18:00Z")?.offsetMinutes, 0);
+    assert.equal(parseDateValue("2026-09-09T18:00+08:00")?.offsetMinutes, 480);
+    assert.equal(parseDateValue("September 23, 2026"), undefined);
+    assert.equal(parseDateValue("2026-02-30"), undefined);
+    assert.equal(parseDateValue("2026-13-01"), undefined);
+    assert.equal(parseDateValue("2026-09-23Z"), undefined);
+});
+
+test("timezone phrases resolve to IANA zones or fixed offsets; ambiguous ones do not", () => {
+    assert.deepEqual(resolveTimezone("PT"), { zone: "America/Los_Angeles", kind: "iana" });
+    assert.deepEqual(resolveTimezone("Pacific Time"), { zone: "America/Los_Angeles", kind: "iana" });
+    assert.deepEqual(resolveTimezone("(PT)"), { zone: "America/Los_Angeles", kind: "iana" });
+    // Explicit standard/daylight abbreviations are fixed offsets, whatever the date.
+    assert.deepEqual(resolveTimezone("PST"), { zone: "-08:00", kind: "offset" });
+    assert.deepEqual(resolveTimezone("PDT"), { zone: "-07:00", kind: "offset" });
+    assert.deepEqual(resolveTimezone("EST"), { zone: "-05:00", kind: "offset" });
+    assert.deepEqual(resolveTimezone("EDT"), { zone: "-04:00", kind: "offset" });
+    assert.deepEqual(resolveTimezone("KST"), { zone: "+09:00", kind: "offset" });
+    assert.equal(zonedToUtc(parseDateValue("2026-07-15T12:00")!, resolveTimezone("PST")!.zone)!.toISOString(), "2026-07-15T20:00:00.000Z");
+    assert.equal(zonedToUtc(parseDateValue("2026-01-15T12:00")!, resolveTimezone("PDT")!.zone)!.toISOString(), "2026-01-15T19:00:00.000Z");
+    assert.deepEqual(resolveTimezone("UTC"), { zone: "UTC", kind: "utc" });
+    assert.deepEqual(resolveTimezone("UTC+8"), { zone: "+08:00", kind: "offset" });
+    assert.deepEqual(resolveTimezone("GMT-5"), { zone: "-05:00", kind: "offset" });
+    assert.deepEqual(resolveTimezone("UTC+0"), { zone: "UTC", kind: "utc" });
+    assert.deepEqual(resolveTimezone("Asia/Seoul"), { zone: "Asia/Seoul", kind: "iana" });
+    assert.equal(resolveTimezone("server time"), undefined);
+    assert.equal(resolveTimezone("IST"), undefined, "ambiguous abbreviations stay unresolved");
+    assert.equal(resolveTimezone(""), undefined);
+    assert.equal(resolveTimezone(undefined), undefined);
+});
+
+test("zonedToUtc is DST-aware and handles fixed offsets", () => {
+    const sept = parseDateValue("2026-09-23T15:00")!;
+    assert.equal(zonedToUtc(sept, "America/Los_Angeles")!.toISOString(), "2026-09-23T22:00:00.000Z");
+    const jan = parseDateValue("2026-01-08T15:00")!;
+    assert.equal(zonedToUtc(jan, "America/Los_Angeles")!.toISOString(), "2026-01-08T23:00:00.000Z");
+    assert.equal(zonedToUtc(parseDateValue("2026-09-23T04:00")!, "+08:00")!.toISOString(), "2026-09-22T20:00:00.000Z");
+    assert.equal(zonedToUtc(parseDateValue("2026-09-23T04:00")!, "UTC")!.toISOString(), "2026-09-23T04:00:00.000Z");
+    assert.equal(zonedToUtc(parseDateValue("2026-09-23T00:00")!, "Asia/Seoul")!.toISOString(), "2026-09-22T15:00:00.000Z");
+    // The skipped hour of a spring-forward transition has no instant.
+    assert.equal(zonedToUtc(parseDateValue("2026-03-08T02:30")!, "America/Los_Angeles"), undefined);
+    assert.equal(zonedToUtc(parseDateValue("2026-03-08T03:30")!, "America/Los_Angeles")!.toISOString(), "2026-03-08T10:30:00.000Z");
+    assert.equal(zonedToUtc(parseDateValue("2026-03-08T01:30")!, "America/Los_Angeles")!.toISOString(), "2026-03-08T09:30:00.000Z");
+    // A repeated fall-back hour is ambiguous in a named zone; a fixed offset settles it.
+    assert.equal(zonedToUtc(parseDateValue("2026-11-01T01:30")!, "America/Los_Angeles"), undefined);
+    assert.equal(zonedToUtcDetailed(parseDateValue("2026-11-01T01:30")!, "America/Los_Angeles").problem, "ambiguous");
+    assert.equal(zonedToUtcDetailed(parseDateValue("2026-03-08T02:30")!, "America/Los_Angeles").problem, "nonexistent");
+    assert.equal(zonedToUtc(parseDateValue("2026-11-01T00:30")!, "America/Los_Angeles")!.toISOString(), "2026-11-01T07:30:00.000Z");
+    assert.equal(zonedToUtc(parseDateValue("2026-11-01T02:30")!, "America/Los_Angeles")!.toISOString(), "2026-11-01T10:30:00.000Z");
+    assert.equal(zonedToUtc(parseDateValue("2026-11-01T01:30")!, "-07:00")!.toISOString(), "2026-11-01T08:30:00.000Z");
+    const overlap = normalizeDateFact("2026-11-01T01:30", "PT");
+    assert.equal(overlap?.precision, "day");
+    assert.match(overlap?.note ?? "", /occurs twice/);
+    assert.equal(normalizeDateFact("2026-11-01T01:30", "PDT")?.at, "2026-11-01T08:30:00.000Z");
+    const gap = normalizeDateFact("2026-03-08T02:30", "PT");
+    assert.equal(gap?.precision, "day");
+    assert.match(gap?.note ?? "", /does not exist/);
+});
+
+test("normalizeDateFact decides precision from what was stated", () => {
+    assert.deepEqual(normalizeDateFact("2026-09-23", "PT"), { at: "2026-09-23T00:00:00.000Z", precision: "day", timezone: "America/Los_Angeles" });
+    assert.deepEqual(normalizeDateFact("2026-09-23", ""), { at: "2026-09-23T00:00:00.000Z", precision: "day" });
+    assert.deepEqual(normalizeDateFact("2026-09-23T15:00", "PT"), { at: "2026-09-23T22:00:00.000Z", precision: "exact", timezone: "America/Los_Angeles" });
+    assert.deepEqual(normalizeDateFact("2026-09-09T18:00", "UTC"), { at: "2026-09-09T18:00:00.000Z", precision: "exact", timezone: "UTC" });
+    assert.deepEqual(normalizeDateFact("2026-09-09T18:00Z", "whatever"), { at: "2026-09-09T18:00:00.000Z", precision: "exact", timezone: "UTC" });
+    assert.deepEqual(normalizeDateFact("2026-03-11T00:00+08:00", ""), { at: "2026-03-10T16:00:00.000Z", precision: "exact", timezone: "+08:00" });
+
+    const unknownZone = normalizeDateFact("2026-09-23T15:00", "server time");
+    assert.equal(unknownZone?.precision, "day");
+    assert.equal(unknownZone?.at, "2026-09-23T00:00:00.000Z");
+    assert.match(unknownZone?.note ?? "", /not understood/);
+
+    const noZone = normalizeDateFact("2026-09-23T15:00", "");
+    assert.equal(noZone?.precision, "day");
+    assert.match(noZone?.note ?? "", /without a timezone/);
+
+    assert.equal(normalizeDateFact("not a date", ""), undefined);
+});
+
+test("quoteMentionsDate checks day, month and year against the quote", () => {
+    const sept23 = parseDateValue("2026-09-23")!;
+    assert.deepEqual(quoteMentionsDate("26.19 September 23, 2026", sept23), { day: true, month: true, year: true });
+    assert.deepEqual(quoteMentionsDate("launches on September 23!", sept23), { day: true, month: true, year: null });
+    assert.deepEqual(quoteMentionsDate("Sept. 23rd", sept23), { day: true, month: true, year: null });
+    assert.deepEqual(quoteMentionsDate("26.19 September 23, 2025", sept23), { day: true, month: true, year: false });
+    assert.deepEqual(quoteMentionsDate("26.20 October 7, 2026", sept23), { day: false, month: false, year: true });
+
+    const sep9 = parseDateValue("2026-09-09")!;
+    assert.deepEqual(quoteMentionsDate("PATCH NOTES 2026.09.09", sep9), { day: true, month: true, year: true });
+    assert.deepEqual(quoteMentionsDate("2026-09-09T18:00:00.000Z League of Legends Patch 26.18 Notes", sep9), { day: true, month: true, year: true });
+    assert.deepEqual(quoteMentionsDate("9/9 update", sep9), { day: true, month: true, year: null });
+
+    const mar11 = parseDateValue("2026-03-11")!;
+    assert.deepEqual(quoteMentionsDate("PC: March 11, 00:00 - 08:30", mar11), { day: true, month: true, year: null });
+    assert.equal(quoteMentionsDate("PC: March 1, 00:00 - 08:30", mar11).day, false, "day 1 is not day 11");
+    assert.equal(quoteMentionsDate("at 11:00 in March", mar11).day, false, "a clock hour is not a day");
+
+    const aug20 = parseDateValue("2026-08-20")!;
+    assert.deepEqual(quoteMentionsDate("Update: 20 August 2026 26.45 Hotfix", aug20), { day: true, month: true, year: true });
+
+    // Version numbers never supply a day: "26.19" is neither the 26th nor the 19th.
+    const sept26 = parseDateValue("2026-09-26")!;
+    assert.equal(quoteMentionsDate("Patch 26.19 will release in September 2026", sept26).day, false);
+    const sept19 = parseDateValue("2026-09-19")!;
+    assert.equal(quoteMentionsDate("Patch 26.19 will release in September 2026", sept19).day, false);
+    assert.equal(quoteMentionsDate("Patch 26.19 will release on September 19, 2026", sept19).day, true);
+    const sept9b = parseDateValue("2026-09-09")!;
+    assert.equal(quoteMentionsDate("Patch 26.9 notes", sept9b).day, false, "26.9 is a version, not September 9th");
+
+    // Month, day and year must belong to one date expression; parts of different dates never combine.
+    assert.equal(quoteMentionsDate("Patch 26.19 was posted September 9 and releases October 23, 2026", sept23).day, false);
+    assert.deepEqual(quoteMentionsDate("Posted in 2026. Patch 26.19 launches September 23", sept23), { day: true, month: true, year: null }, "a year elsewhere in the quote is not attached to the mention");
+    assert.deepEqual(quoteMentionsDate("Patch 26.19 launches September 23, 2025", sept23), { day: true, month: true, year: false });
+    assert.deepEqual(quoteMentionsDate("September 23, 2025 was the plan; now September 23, 2026", sept23), { day: true, month: true, year: true });
+    assert.deepEqual(quoteMentionsDate("23 September 2026", sept23), { day: true, month: true, year: true });
+    assert.deepEqual(quoteMentionsDate("on the 23rd of September", sept23), { day: true, month: true, year: null });
+    assert.deepEqual(quoteMentionsDate("23.09.2026 release", sept23), { day: true, month: true, year: true });
+    assert.deepEqual(quoteMentionsDate("9/23/2026", sept23), { day: true, month: true, year: true });
+    // Numeric dates are evidence only when they have a single valid reading.
+    const sept10 = parseDateValue("2026-09-10")!;
+    const oct9 = parseDateValue("2026-10-09")!;
+    assert.equal(quoteMentionsDate("Update 9/10/2026", sept10).day, false, "9/10 could be October 9");
+    assert.equal(quoteMentionsDate("Update 9/10/2026", oct9).day, false, "or September 10: neither is grounded");
+    assert.deepEqual(quoteMentionsDate("Update 10/13/2026", parseDateValue("2026-10-13")!), { day: true, month: true, year: true }, "13 cannot be a month: month-first");
+    assert.deepEqual(quoteMentionsDate("Update 13.10.2026", parseDateValue("2026-10-13")!), { day: true, month: true, year: true }, "day-first");
+    assert.equal(quoteMentionsDate("Update 13.10.2026", parseDateValue("2026-10-13")!).day, true);
+    assert.equal(quoteMentionsDate("Update 10/13/2026", parseDateValue("2026-01-10")!).day, false);
+    assert.deepEqual(quoteMentionsDate("2026-09-10 release", sept10), { day: true, month: true, year: true }, "year-first is never ambiguous");
+    assert.deepEqual(quoteMentionsDate("9/23/2025", sept23), { day: true, month: true, year: false }, "a numeric date carries its own year");
+});
+
+test("quoteMentionsTime requires the stated clock time when a value carries one", () => {
+    assert.equal(quoteMentionsTime("26.19 September 23, 2026", parseDateValue("2026-09-23")!), true, "date-only values need no time");
+    const t1500 = parseDateValue("2026-09-23T15:00")!;
+    assert.equal(quoteMentionsTime("September 23 at 15:00 PT", t1500), true);
+    assert.equal(quoteMentionsTime("September 23 at 3 PM PT", t1500), true);
+    assert.equal(quoteMentionsTime("September 23 at 3:00 p.m.", t1500), true);
+    assert.equal(quoteMentionsTime("September 23 at 3:17 PM", t1500), false);
+    assert.equal(quoteMentionsTime("September 23, 2026", t1500), false, "no time in the quote");
+    assert.equal(quoteMentionsTime("Patch 15 notes on September 23", t1500), false, "a bare number is not a time");
+    assert.equal(quoteMentionsTime("PC: March 11, 00:00 - 08:30", parseDateValue("2026-03-11T00:00")!), true);
+    assert.equal(quoteMentionsTime("servers go down at midnight", parseDateValue("2026-03-11T00:00")!), true);
+    assert.equal(quoteMentionsTime("servers go down at midnight", parseDateValue("2026-03-11T00:00:59")!), false, "midnight has no seconds");
+    assert.equal(quoteMentionsTime("servers return at noon", parseDateValue("2026-03-11T12:00:30")!), false);
+    assert.equal(quoteMentionsTime("2026-09-09T18:00:00.000Z League of Legends Patch 26.18 Notes", parseDateValue("2026-09-09T18:00")!), true);
+    assert.equal(quoteMentionsTime("at 12:00 AM", parseDateValue("2026-03-11T00:00")!), true);
+    // Seconds are part of the claim: ":59" needs a quote that states it.
+    assert.equal(quoteMentionsTime("September 23 at 15:00 PT", parseDateValue("2026-09-23T15:00:59")!), false);
+    assert.equal(quoteMentionsTime("September 23 at 15:00:59 PT", parseDateValue("2026-09-23T15:00:59")!), true);
+    assert.equal(quoteMentionsTime("2026-09-09T18:00:00.000Z", parseDateValue("2026-09-09T18:00:00")!), true);
+});
+
+test("zoneDeclaredIn accepts a zone only where the document declares it for its times", () => {
+    const utc = resolveTimezone("UTC")!;
+    const pt = resolveTimezone("PT")!;
+    const kst = resolveTimezone("KST")!;
+    const doc = "Live Maintenance Schedule (UTC) ※ PC: March 11, 00:00 - 08:30. Patches release on a Wednesday (PT) unless otherwise indicated.";
+    assert.equal(zoneDeclaredIn(doc, utc), true);
+    assert.equal(zoneDeclaredIn(doc, pt), true);
+    assert.equal(zoneDeclaredIn(doc, kst), false);
+    assert.equal(zoneDeclaredIn("All times are Pacific Time.", pt), true);
+    assert.equal(zoneDeclaredIn("Times shown in KST. Patch 26.19 lands September 23", kst), true);
+    assert.equal(zoneDeclaredIn("Patch Scheduled Date (Pacific Time) 26.01 January 8, 2026", pt), true, "a table header declares the zone");
+    assert.equal(zoneDeclaredIn("Dates are listed in Korea Standard Time", resolveTimezone("KST")!), true);
+    assert.equal(zoneDeclaredIn("Shown in the PT time zone", pt), true);
+    // A zone stated for something else, or attached to another clock time, does not apply to dated events.
+    assert.equal(zoneDeclaredIn("PC maintenance September 23 at 15:00. Support hours are PT.", pt), false);
+    assert.equal(zoneDeclaredIn("PC maintenance September 23 at 15:00. Support is available 9-5 PT during maintenance.", pt), false);
+    assert.equal(zoneDeclaredIn("Maintenance is scheduled; call 9 PT for help", pt), false);
+    assert.equal(zoneDeclaredIn("Contact us (PT office). Patch 26.19 lands September 23 at 15:00", pt), false);
+    // Abbreviations must stand alone: "PT" is not inside "September", "ET" is not inside "Internet".
+    assert.equal(zoneDeclaredIn("Patch 26.19 releases September 23, 2026 at 15:00", pt), false);
+    assert.equal(zoneDeclaredIn("Internet time issues resolved", resolveTimezone("ET")!), false);
+});
+
+test("clockTimesIn lists times in order and ignores bare numbers", () => {
+    assert.deepEqual(clockTimesIn("PC: March 11, 00:00 - 08:30"), [0, 510]);
+    assert.deepEqual(clockTimesIn("at 3 PM and later 11:45 pm, patch 26"), [900, 1425]);
+    assert.deepEqual(clockTimesIn("Patch 26.19 September 23, 2026"), []);
+});
+
+test("dateSegment isolates the part of a quote that belongs to one date", () => {
+    const sept23 = parseDateValue("2026-09-23T15:00")!;
+    const sept24 = parseDateValue("2026-09-24T18:00")!;
+    const two = "PC: patch 26.19 releases September 23 at 15:00 PT; Console: patch 26.19 releases September 24 at 18:00 ET";
+    assert.equal(dateSegment(two, sept23), "pc: patch 26.19 releases september 23 at 15:00 pt");
+    assert.equal(dateSegment(two, sept24), "console: patch 26.19 releases september 24 at 18:00 et");
+    assert.equal(quoteMentionsTime(dateSegment(two, sept23)!, parseDateValue("2026-09-23T18:00")!), false, "the other entry's time is not evidence");
+    // Time before the date, in the same clause.
+    assert.equal(dateSegment("Servers go down at 15:00 PT on September 23 for maintenance", sept23), "servers go down at 15:00 pt on september 23 for maintenance");
+    // Maintenance windows: the segment keeps both times of its own entry only.
+    const windows = "PC: March 11, 00:00 - 08:30. Console: March 19, 01:00 - 09:00";
+    assert.equal(dateSegment(windows, parseDateValue("2026-03-11T00:00")!), "pc: march 11, 00:00 - 08:30");
+    assert.equal(dateSegment(windows, parseDateValue("2026-03-19T01:00")!), "console: march 19, 01:00 - 09:00");
+    // A window that straddles its date keeps the clock before the date.
+    const straddle = "Maintenance starts at 15:00 PT on September 23, 2026 and ends at 18:00 PT";
+    assert.equal(dateSegment(straddle, sept23), "maintenance starts at 15:00 pt on september 23, 2026 and ends at 18:00 pt");
+    assert.equal(quoteMentionsTime(dateSegment(straddle, sept23)!, sept23), true);
+    // ...unless an earlier date in the same clause owns that clock.
+    const chained = "Patch 26.19 September 23 15:00 PT Patch 26.20 October 7 18:00 PT";
+    assert.equal(dateSegment(chained, parseDateValue("2026-10-07T18:00")!), "october 7 18:00 pt");
+    assert.equal(quoteMentionsTime(dateSegment(chained, parseDateValue("2026-10-07T15:00")!)!, parseDateValue("2026-10-07T15:00")!), false);
+    // "Sept. 23" is not a clause boundary.
+    assert.equal(dateSegment("Sept. 23 at 3 PM PT", sept23), "sept. 23 at 3 pm pt");
+    assert.equal(dateSegment("no date here", sept23), undefined);
+    // Several entries on the same day yield one segment each.
+    const sameDay = "PC maintenance September 23 at 15:00 PT; Console maintenance September 23 at 18:00 ET";
+    assert.deepEqual(dateSegments(sameDay, sept23), ["pc maintenance september 23 at 15:00 pt", "console maintenance september 23 at 18:00 et"]);
+    assert.deepEqual(dateSegments("no date here", sept23), []);
+});
+
+test("zonesIn finds stated timezone phrases", () => {
+    assert.deepEqual(zonesIn("September 23 at 15:00 PT").map(z => z.zone), ["America/Los_Angeles"]);
+    assert.deepEqual(zonesIn("all times are Pacific Time (PDT)").map(z => z.zone), ["America/Los_Angeles", "-07:00"]);
+    assert.deepEqual(zonesIn("Maintenance (UTC+8) starts").map(z => z.zone), ["+08:00"]);
+    assert.deepEqual(zonesIn("Live Maintenance Schedule (UTC)").map(z => z.zone), ["UTC"]);
+    assert.deepEqual(zonesIn("Patch 26.19 releases September 23, 2026"), [], "no zone words, no zones");
+    assert.deepEqual(zonesIn("Internet time is fun"), []);
+    assert.deepEqual(zonesIn("2026-09-09T18:00:00.000Z League of Legends Patch 26.18 Notes").map(z => z.zone), ["UTC"], "an ISO Z states UTC");
+});
+
+test("zoneAfterClock pairs each clock with the zone that follows it", () => {
+    const row = "Patch 26.19 releases September 23 at 15:00 PT / 18:00 ET / 22:00 UTC";
+    assert.equal(zoneAfterClock(row, parseDateValue("2026-09-23T15:00")!)?.zone, "America/Los_Angeles");
+    assert.equal(zoneAfterClock(row, parseDateValue("2026-09-23T18:00")!)?.zone, "America/New_York");
+    assert.equal(zoneAfterClock(row, parseDateValue("2026-09-23T22:00")!)?.zone, "UTC");
+    assert.equal(zoneAfterClock(row, parseDateValue("2026-09-23T09:00")!), undefined, "no such clock");
+    assert.equal(zoneAfterClock("September 23 at 3 PM PT and 6 PM", parseDateValue("2026-09-23T18:00")!), undefined, "no zone after the second clock");
+    assert.equal(zoneAfterClock("September 23 at 3 PM PT and 6 PM", parseDateValue("2026-09-23T15:00")!)?.zone, "America/Los_Angeles");
+    assert.equal(zoneAfterClock("September 23, 2026", parseDateValue("2026-09-23")!), undefined, "date-only values have no clock");
+});
+
+test("a date binds to an item only through that item's own entry", () => {
+    const sept23 = parseDateValue("2026-09-23T15:00")!;
+    const binds = (quote: string, names: string[], competitors: string[][] = [], value = sept23) => dateEntries(quote, value).some(e => entryBindsItem(e, names, competitors));
+
+    // Neighbouring entries across a separator, in both directions and with a later date.
+    const trailing = "PC maintenance is September 23, 2026 at 15:00 PT, Console maintenance date is TBD";
+    assert.equal(binds(trailing, ["pc"]), true);
+    assert.equal(binds(trailing, ["console"]), false, "an undated entry after the date does not own it");
+    const leading = "PC maintenance TBD, Console maintenance September 23 at 15:00 PT";
+    assert.equal(binds(leading, ["pc"]), false, "an undated entry before the date does not own it");
+    assert.equal(binds(leading, ["console"]), true);
+    const list = "PC maintenance September 23 at 15:00 PT, Console maintenance September 24 at 18:00 ET";
+    assert.equal(binds(list, ["console"]), false);
+    assert.equal(binds(list, ["console"], [], parseDateValue("2026-09-24T18:00")!), true);
+    const afterColon = "September 23 at 15:00 PT: PC maintenance, Console maintenance TBD";
+    assert.equal(binds(afterColon, ["pc"]), true);
+    assert.equal(binds(afterColon, ["console"]), false);
+
+    // A separator between a label and its own date is fine when nothing else is named there.
+    assert.equal(binds("Patch 26.19 - September 23, 2026", ["26.19"]), true);
+    assert.equal(binds("September 23, 2026 - Patch 26.19", ["26.19"]), true);
+
+    // Real listing layouts: a category heading before the date, the item after it.
+    assert.equal(binds("Game Updates 2026-09-23T15:00:00.000Z League of Legends Patch 26.19 Notes", ["26.19"]), true);
+    const aug20 = parseDateValue("2026-08-20")!;
+    const changelog = "Minecraft: Bedrock Edition 26.44/45 Hotfix Changelog Update: 20 August 2026 26.45 Hotfix";
+    assert.equal(binds(changelog, ["26.45"], [["26.44"]], aug20), true);
+    assert.equal(binds(changelog, ["26.44"], [["26.45"]], aug20), false, "the nearer item on the other side owns the date");
+
+    // Table rows: the label next to the date wins over the next row's label.
+    const sept10 = parseDateValue("2026-09-10")!;
+    const row = "26.18 September 10, 2026 (Thursday) 26.19";
+    assert.equal(binds(row, ["26.18"], [["26.19"]], sept10), true);
+    assert.equal(binds(row, ["26.19"], [["26.18"]], sept10), false);
+    const chained = "Patch 26.19 September 23 15:00 PT Patch 26.20 October 7 18:00 PT";
+    assert.equal(binds(chained, ["26.19"], [["26.20"]]), true);
+    assert.equal(binds(chained, ["26.20"], [["26.19"]]), false);
+
+    // Items named together share a date; identities without discriminators always bind.
+    assert.equal(binds("PC and Console maintenance September 23", ["pc"], [["console"]]), true);
+    assert.equal(binds("PC and Console maintenance September 23", ["console"], [["pc"]]), true);
+    assert.equal(binds("Maintenance September 23", []), true);
+});
+
+test("zoneAfterClock pairs clocks down to the second", () => {
+    const row = "Patch 26.19 releases September 23 at 15:00:00 PT / 15:00:30 ET";
+    assert.equal(zoneAfterClock(row, parseDateValue("2026-09-23T15:00:30")!)?.zone, "America/New_York");
+    assert.equal(zoneAfterClock(row, parseDateValue("2026-09-23T15:00")!)?.zone, "America/Los_Angeles");
+});
+
+test("a conjunction after a labelled date starts a new entry", () => {
+    const sept23 = parseDateValue("2026-09-23T15:00")!;
+    const binds = (quote: string, names: string[], value = sept23) => dateEntries(quote, value).some(e => entryBindsItem(e, names));
+    const joined = "PC maintenance September 23 at 15:00 PT and Console maintenance September 24 at 18:00 ET";
+    assert.equal(binds(joined, ["console"]), false, "Console cannot take PC's date across 'and'");
+    assert.equal(binds(joined, ["pc"]), true);
+    assert.equal(binds(joined, ["console"], parseDateValue("2026-09-24T18:00")!), true);
+    assert.equal(binds("PC maintenance is September 23, 2026 at 15:00 PT and Console maintenance date is TBD", ["console"]), false);
+    assert.equal(binds("Maintenance September 23 for PC and Console", ["console"]), true, "a date with no label of its own is shared");
+    assert.equal(binds("PC and Console maintenance September 23", ["pc"]), true);
+});
+
+test("datesWithYearIn finds dated statements in order, skipping ambiguous and impossible ones", () => {
+    const found = datesWithYearIn("Posted Sept. 12, 2026. Patch notes 2026.03.10; update 20 August 2026; 9/10/2026 is ambiguous; Feb 30, 2026 is not a date");
+    assert.deepEqual(found.map(d => new Date(d.time).toISOString().slice(0, 10)), ["2026-09-12", "2026-03-10", "2026-08-20"]);
+    assert.ok(found[0].index < found[1].index && found[1].index < found[2].index);
+});

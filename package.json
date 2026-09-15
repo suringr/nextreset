@@ -3,9 +3,14 @@
   "version": "1.0.0",
   "description": "Automated game countdown and status tracking website",
   "main": "dist/refresh-all.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tsc",
     "test": "node build/run-tests.js",
+    "ai:eval": "node build/v2/ai/eval.js",
+    "ai:eval:live": "node build/v2/ai/eval.js --live",
     "refresh:data": "node build/refresh-all.js",
     "export:site": "node build/export-site.js",
     "build:site": "npm run build && (npm run refresh:data || true) && npm run export:site",
@@ -19,6 +24,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@google/genai": "^2.22.0",
     "cheerio": "^1.0.0-rc.12",
     "fast-xml-parser": "^4.3.2",
     "node-fetch": "^2.7.0",

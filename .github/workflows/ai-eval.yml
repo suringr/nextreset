@@ -1,0 +1,60 @@
+name: AI extraction gold evaluation
+
+# Runs the gold cases in scripts/v2/__tests__/gold against the live model and
+# uploads the report. Triggers: on demand, and on pull requests that touch the
+# AI layer or the gold set (same-repository branches only can use the secret).
+# The API key comes from the GEMINI_API_KEY repository secret and is never
+# printed; the report contains facts, quotes and token counts, never prompts.
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Model id to evaluate
+        required: false
+        default: gemini-3.5-flash
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "scripts/v2/ai/**"
+      - "scripts/v2/__tests__/gold/**"
+      - ".github/workflows/ai-eval.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-eval-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evaluate:
+    name: Gold evaluation (live)
+    # Forked pull requests cannot read the secret; skip instead of failing them.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Run gold evaluation against the live model
+        env:
+          AI_PROVIDER: gemini
+          AI_MODEL: ${{ inputs.model || 'gemini-3.5-flash' }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: node build/v2/ai/eval.js --live
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-eval-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/ai-eval/
+          if-no-files-found: ignore
+          retention-days: 30

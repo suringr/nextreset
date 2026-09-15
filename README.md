@@ -35,7 +35,7 @@ nextreset/
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+ (the Gemini SDK requires it)
 - npm
 
 ### Installation
@@ -77,6 +77,26 @@ still runs its V1 provider; `REGISTRY` in `scripts/refresh-all.ts` shows which e
 In CI, `knowledge/` is a git worktree of the `knowledge` branch: checked out before the refresh and
 pushed back afterwards (`.github/scripts/knowledge-*.sh`). Locally the directory is created on demand
 and is gitignored.
+
+### AI-assisted extraction (V2)
+
+`scripts/v2/ai/` holds the language-model layer behind a small `AiProvider` interface. The production
+provider is Google Gemini (`@google/genai`); a mock provider serves tests and offline evaluation.
+Every date the model reports must come with a verbatim quote, and deterministic code verifies the quote
+occurs in the document and names the claimed day/month before anything is accepted. The model never
+assigns confidence, never decides what is published, and never sees URLs it could echo as evidence.
+
+Configuration is environment only (never committed):
+
+| variable | meaning |
+|---|---|
+| `AI_PROVIDER` | `gemini` (default) or `mock` |
+| `AI_MODEL` | model id, default `gemini-3.5-flash` |
+| `GEMINI_API_KEY` | API key; in CI the `GEMINI_API_KEY` repository secret |
+
+Gold evaluation over real publisher documents: `npm run ai:eval` (scripted mock responses, offline) or
+`npm run ai:eval:live` (needs the key). The "AI extraction gold evaluation" workflow runs the live
+evaluation on demand and uploads `build/ai-eval/report.md`.
 
 ## 🎮 How It Works
 

@@ -1,0 +1,740 @@
+/**
+ * AI-assisted extraction with deterministic grounding.
+ *
+ *   classifyDocument  -> is this document about the topic, and what kind is it?
+ *   extractFacts      -> items (version / period / occurrence) with date fields,
+ *                        each field carrying the verbatim quote that states it
+ *   groundExtraction  -> deterministic checks: the item's identity occurs in the
+ *                        document; the quote occurs in the document and names the
+ *                        item's discriminating words; the quote states the claimed
+ *                        day and month; a stated year must match and an inferred
+ *                        year must be supported by the document or by today; a
+ *                        claimed clock time, timezone or offset must be evidenced
+ *                        or the fact is downgraded to day precision. Anything else
+ *                        is rejected with a reason.
+ *
+ * The model never sees a URL it could echo as evidence, never assigns confidence,
+ * and never decides what gets published.
+ */
+import { normalizeIdentity } from "../identity";
+import { DatedStatement, NormalizedDate, declaredZoneFor, ParsedDateValue, ResolvedZone, clockTimesIn, dateEntries, datesWithYearIn, entryBindsItem, datePreamble, normalizeDateFact, zoneAfterClock, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneDeclaredIn, zoneOffsetAt, zonesIn } from "./dates";
+import { AiProvider, AiUsage } from "./provider";
+
+export interface AiDocument {
+    url: string;
+    title?: string;
+    /** Normalized visible text (see fetch/text.ts). */
+    text: string;
+}
+
+export interface ExtractionTopic {
+    game: string;
+    gameName: string;
+    /** Topic slug, e.g. "next-patch". */
+    type: string;
+    /** One or two sentences describing what facts matter for this topic. */
+    description: string;
+}
+
+export type DocType = "patch-notes" | "patch-schedule" | "season" | "banner" | "maintenance" | "release" | "news" | "unrelated";
+const DOC_TYPES: DocType[] = ["patch-notes", "patch-schedule", "season", "banner", "maintenance", "release", "news", "unrelated"];
+
+export interface Classification {
+    relevant: boolean;
+    docType: DocType;
+    summary: string;
+    reason: string;
+}
+
+export const CLASSIFY_SCHEMA: Record<string, unknown> = {
+    type: "object",
+    properties: {
+        relevant: { type: "boolean", description: "True only if the document states facts useful for the topic." },
+        docType: { type: "string", enum: DOC_TYPES, description: "patch-notes = published notes for one or more released updates (including a list of them); patch-schedule = a plan of upcoming patch dates; season = season/act/split information; banner = gacha banner information; maintenance = downtime notice; release = launch/version announcement; news = other news; unrelated = none of these" },
+        summary: { type: "string", description: "One sentence: what the document is." },
+        reason: { type: "string", description: "One sentence: why it is or is not relevant to the topic." }
+    },
+    required: ["relevant", "docType", "summary", "reason"]
+};
+
+export type ItemKind = "version" | "period" | "occurrence";
+export type ItemStatus = "scheduled" | "released" | "active" | "ended" | "announced" | "unknown";
+export type DateField = "at" | "startAt" | "endAt";
+const ITEM_KINDS: ItemKind[] = ["version", "period", "occurrence"];
+const ITEM_STATUSES: ItemStatus[] = ["scheduled", "released", "active", "ended", "announced", "unknown"];
+const DATE_FIELDS: DateField[] = ["at", "startAt", "endAt"];
+
+export const EXTRACT_SCHEMA: Record<string, unknown> = {
+    type: "object",
+    properties: {
+        items: {
+            type: "array",
+            items: {
+                type: "object",
+                properties: {
+                    kind: { type: "string", enum: ITEM_KINDS, description: "version = patch/update/hotfix; period = season/act/banner/version window; occurrence = maintenance, launch, one-off event" },
+                    label: { type: "string", description: "Human label exactly as the document names it." },
+                    identity: { type: "string", description: "What identifies this item, using words that appear in the document: a version number (26.19, Update 43.1), a season or version name (Season 05, Version 7.1), or for an occurrence the occurrence itself plus its date (Live maintenance PC March 11). For updates without a number, use the update name plus its date (Counter-Strike 2 Update September 10, 2026)." },
+                    status: { type: "string", enum: ITEM_STATUSES },
+                    fields: {
+                        type: "array",
+                        items: {
+                            type: "object",
+                            properties: {
+                                field: { type: "string", enum: DATE_FIELDS, description: "at = the instant of a version release or one-off event; startAt/endAt = bounds of a period or maintenance window" },
+                                value: { type: "string", description: "ISO 8601: YYYY-MM-DD when only a date is stated, YYYY-MM-DDTHH:MM when a time is stated (local to the stated timezone). Never append an offset or Z; put the timezone in the timezone field." },
+                                timezone: { type: "string", description: "The timezone exactly as the document states it (e.g. PT, UTC, UTC+8, server time), or an empty string when none is stated." },
+                                quote: { type: "string", description: "The exact fragment of the document that states this date, copied verbatim, including the item name (or version) and the date text (and the time, if you report one)." }
+                            },
+                            required: ["field", "value", "timezone", "quote"]
+                        }
+                    }
+                },
+                required: ["kind", "label", "identity", "status", "fields"]
+            }
+        }
+    },
+    required: ["items"]
+};
+
+export const MAX_DOCUMENT_CHARS = 24000;
+
+const CLASSIFY_SYSTEM = `You classify a single web document for a video game tracking site.
+Answer only from the document text. Decide whether the document states facts that are useful for the given topic (dates, versions, seasons, banners, maintenance windows) and what kind of document it is:
+- patch-notes: published notes for one or more released updates, including an index or listing of them
+- patch-schedule: a plan of upcoming patch dates
+- season: season, act or split information; banner: gacha banner information; maintenance: a downtime notice; release: a launch or version announcement; news: other news; unrelated: none of these
+Output JSON matching the schema and nothing else.`;
+
+const EXTRACT_SYSTEM = `You extract time-sensitive facts about a video game from a single document.
+Rules:
+- Use only information stated in the document. Never guess or invent a date. If the document states no date for an item, return the item with an empty fields array.
+- For every date field, copy the exact fragment of the document that states it into "quote", verbatim, character for character. The quote must be one contiguous passage as it appears in the document: never join separate passages, reorder text, or insert line breaks between fragments. It must include the item's name or version and the date text, and the time when you report one. Keep it short: the smallest such passage (one sentence, heading or table row, normally under 200 characters). Do not paraphrase, shorten words, or fix punctuation.
+- Return at most 40 items; when a document lists more, keep the most recent ones.
+- "value" is ISO 8601: YYYY-MM-DD when only a date is stated; YYYY-MM-DDTHH:MM when a time is stated (local to the stated timezone). Never append an offset or Z. If the document states a day and month but no year, take the year from the document's own posting/update dates.
+- "timezone" is the timezone phrase exactly as the document states it (e.g. "PT", "Pacific Time", "UTC", "UTC+8", "server time"); an empty string if none is stated.
+- "identity" uses words that appear in the document: a version number (26.19, Update 43.1), a season/version name (Season 05, Version 7.1), or for an occurrence the occurrence itself plus its date (Live maintenance PC March 11), never the version it belongs to. For updates without a number, use the update name plus its date.
+- For patch notes or update pages, the date the notes are dated or published is the version's "at" unless a different release date is stated.
+- "status": "released" if the document indicates the item is out or live as of today's date, "scheduled" if it is announced for a future date, "ended" if it is over, "active" for a period currently running, "announced" if announced without a date, otherwise "unknown".
+- Only include items relevant to the topic. Include every dated occurrence of the topic's kind that the document lists.
+Output JSON matching the schema and nothing else.`;
+
+function documentBlock(doc: AiDocument): { text: string; truncated: boolean } {
+    const truncated = doc.text.length > MAX_DOCUMENT_CHARS;
+    return { text: truncated ? doc.text.slice(0, MAX_DOCUMENT_CHARS) : doc.text, truncated };
+}
+
+function topicBlock(topic: ExtractionTopic, now: Date): string {
+    return `Game: ${topic.gameName} (${topic.game})\nTopic: ${topic.type}\nWhat matters: ${topic.description}\nToday's date (UTC): ${now.toISOString().slice(0, 10)}`;
+}
+
+export async function classifyDocument(provider: AiProvider, topic: ExtractionTopic, doc: AiDocument, options: { now?: Date } = {}): Promise<{ classification: Classification; usage: AiUsage }> {
+    const now = options.now ?? new Date();
+    const { text, truncated } = documentBlock(doc);
+    const prompt = `${topicBlock(topic, now)}\n\nDocument title: ${doc.title ?? ""}\n${truncated ? "(document truncated)\n" : ""}\n--- DOCUMENT ---\n${text}\n--- END ---`;
+    const response = await provider.generateJson({ label: "classify", system: CLASSIFY_SYSTEM, prompt, schema: CLASSIFY_SCHEMA, maxOutputTokens: 1024 });
+    return { classification: parseClassification(response.data), usage: response.usage };
+}
+
+export function parseClassification(data: unknown): Classification {
+    const obj = (typeof data === "object" && data !== null ? data : {}) as Record<string, unknown>;
+    const docType = typeof obj.docType === "string" && (DOC_TYPES as string[]).includes(obj.docType) ? obj.docType as DocType : "unrelated";
+    return {
+        relevant: obj.relevant === true,
+        docType,
+        summary: typeof obj.summary === "string" ? obj.summary : "",
+        reason: typeof obj.reason === "string" ? obj.reason : ""
+    };
+}
+
+export interface RawField { field: DateField; value: string; timezone: string; quote: string }
+export interface RawItem { kind: ItemKind; label: string; identity: string; status: ItemStatus; fields: RawField[] }
+
+/** Coerces the model's JSON into RawItems, dropping anything that does not fit the schema. */
+export function parseRawItems(data: unknown): { items: RawItem[]; dropped: number } {
+    const obj = (typeof data === "object" && data !== null ? data : {}) as Record<string, unknown>;
+    const list = Array.isArray(obj.items) ? obj.items : [];
+    const items: RawItem[] = [];
+    let dropped = 0;
+    for (const entry of list) {
+        if (typeof entry !== "object" || entry === null) { dropped++; continue; }
+        const e = entry as Record<string, unknown>;
+        const kind = typeof e.kind === "string" && (ITEM_KINDS as string[]).includes(e.kind) ? e.kind as ItemKind : undefined;
+        const label = typeof e.label === "string" ? e.label.trim() : "";
+        const identity = typeof e.identity === "string" ? e.identity.trim() : "";
+        const status = typeof e.status === "string" && (ITEM_STATUSES as string[]).includes(e.status) ? e.status as ItemStatus : "unknown";
+        if (!kind || !identity) { dropped++; continue; }
+        const fields: RawField[] = [];
+        for (const f of Array.isArray(e.fields) ? e.fields : []) {
+            if (typeof f !== "object" || f === null) { dropped++; continue; }
+            const r = f as Record<string, unknown>;
+            if (typeof r.field !== "string" || !(DATE_FIELDS as string[]).includes(r.field) || typeof r.value !== "string" || typeof r.quote !== "string") { dropped++; continue; }
+            fields.push({ field: r.field as DateField, value: r.value.trim(), timezone: typeof r.timezone === "string" ? r.timezone.trim() : "", quote: r.quote });
+        }
+        items.push({ kind, label: label || identity, identity, status, fields });
+    }
+    return { items, dropped };
+}
+
+export interface GroundedFact extends NormalizedDate {
+    field: DateField;
+    /** The model's value as reported (ISO local). */
+    value: string;
+    timezoneRaw: string;
+    quote: string;
+    /** The quote states day and month but no year; the year was inferred and checked against the document. */
+    yearInferred: boolean;
+}
+
+export interface GroundedItem {
+    kind: ItemKind;
+    label: string;
+    identity: string;
+    /** normalizeIdentity(identity) */
+    identityKey: string;
+    status: ItemStatus;
+    facts: GroundedFact[];
+}
+
+export interface RejectedField {
+    identity: string;
+    field: DateField;
+    value: string;
+    quote: string;
+    reason: string;
+}
+
+export interface GroundedExtraction {
+    items: GroundedItem[];
+    rejected: RejectedField[];
+    stats: { fields: number; accepted: number; rejected: number; itemsDropped: number; itemsRejected: number };
+}
+
+const QUOTE_MIN_LENGTH = 6;
+/** Generic words that never identify an item on their own. */
+const STOPWORDS = new Set(["the", "and", "for", "of", "to", "in", "on", "at", "a", "an", "is", "it"]);
+/** Words that describe the kind of item; they cannot be the discriminator between two items of that kind. */
+const KIND_WORDS = new Set(["patch", "update", "updates", "notes", "version", "season", "live", "maintenance", "hotfix", "release", "downtime", "servers", "server", "schedule", "changelog"]);
+const MONTH_WORDS = new Set(["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december", "jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep", "sept", "oct", "nov", "dec"]);
+
+function normalizeForSearch(text: string): string {
+    return text
+        .replace(/[‘’‚′]/g, "'")
+        .replace(/[“”„″]/g, "\"")
+        .replace(/[–—−]/g, "-")
+        .replace(/ /g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+}
+
+/**
+ * Word/number tokens of a text, lower-cased. Periods inside a token are kept so
+ * "26.19" stays one token distinct from "6.19"; surrounding punctuation is dropped.
+ */
+export function tokensOf(text: string): string[] {
+    return normalizeForSearch(text).split(/[^a-z0-9.]+/).map(t => t.replace(/^\.+|\.+$/g, "")).filter(t => t.length > 0);
+}
+
+/** Tokens that carry meaning for matching an identity: anything with a digit, or a word of 2+ letters that is not a stopword. */
+function significantTokens(identity: string): string[] {
+    return tokensOf(identity).filter(t => /\d/.test(t) || (t.length >= 2 && !STOPWORDS.has(t)));
+}
+
+/** A token that is part of a date (month name, day number, year) cannot discriminate between items. */
+function isDateToken(token: string): boolean {
+    return MONTH_WORDS.has(token) || /^\d{1,2}$/.test(token) || /^(19|20)\d{2}$/.test(token);
+}
+
+
+interface TokenAt { token: string; start: number; end: number }
+
+/** normalizeForSearch, plus for every normalized character the index of the original character it came from. */
+function normalizeWithMap(text: string): { normalized: string; map: number[] } {
+    let normalized = "";
+    const map: number[] = [];
+    for (let i = 0; i < text.length; i++) {
+        let ch = text[i];
+        if (/[‘’‚′]/.test(ch)) ch = "'";
+        else if (/[“”„″]/.test(ch)) ch = "\"";
+        else if (/[–—−]/.test(ch)) ch = "-";
+        if (/\s/.test(ch)) {
+            if (normalized.length === 0 || normalized.endsWith(" ")) continue;
+            ch = " ";
+        }
+        const lower = ch.toLowerCase();
+        for (let k = 0; k < lower.length; k++) {
+            normalized += lower[k];
+            map.push(i);
+        }
+    }
+    if (normalized.endsWith(" ")) {
+        normalized = normalized.slice(0, -1);
+        map.pop();
+    }
+    return { normalized, map };
+}
+
+/**
+ * Tokens of normalized text with positions, for the punctuation-tolerant quote match. A sign that
+ * belongs to a UTC offset ("UTC-8", "15:00+01:00") is its own token, so dropping punctuation can
+ * never turn UTC-8 into UTC+8.
+ */
+function signedTokenPositions(normalized: string): TokenAt[] {
+    const out: TokenAt[] = [];
+    for (const m of normalized.matchAll(/[a-z0-9.]+/g)) {
+        const lead = m[0].length - m[0].replace(/^\.+/, "").length;
+        const token = m[0].replace(/^\.+|\.+$/g, "");
+        if (!token) continue;
+        const start = (m.index ?? 0) + lead;
+        out.push({ token, start, end: start + token.length });
+    }
+    const signs = [
+        /\b(?:utc|gmt)\s*([+-])\s*(?=\d)/g,
+        /\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?\s*(\+)\s*(?=\d{2}:?\d{2}\b)/g,
+        /\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?(-)(?=\d{2}:?\d{2}\b)/g
+    ];
+    for (const re of signs) {
+        for (const m of normalized.matchAll(re)) {
+            const at = (m.index ?? 0) + m[0].lastIndexOf(m[1]);
+            out.push({ token: m[1] === "+" ? "plus" : "minus", start: at, end: at + 1 });
+        }
+    }
+    return out.sort((a, b) => a.start - b.start);
+}
+
+interface PreparedDocument { normalized: string; map: number[]; signedTokens: TokenAt[]; tokens: Set<string>; years: Set<number>; fullDates: DatedStatement[] }
+
+function prepare(documentText: string): PreparedDocument {
+    const years = new Set<number>();
+    for (const m of documentText.matchAll(/\b(19|20)\d{2}\b/g)) years.add(+m[0]);
+    const { normalized, map } = normalizeWithMap(documentText);
+    // Positions of dated statements are taken in the normalized text, the same coordinates passages are found in.
+    return { normalized, map, signedTokens: signedTokenPositions(normalized), tokens: new Set(tokensOf(documentText)), years, fullDates: datesWithYearIn(normalized) };
+}
+
+/**
+ * The document's own passage for a model quote, or undefined when the quote does not occur in the
+ * document. Matching is whitespace/quote-mark tolerant, then punctuation tolerant with token
+ * boundaries and offset signs kept ("September 2 3" never passes as "September 23"). Grounding reads
+ * the returned passage, never the model's copy, so a quote with a dropped semicolon or comma cannot
+ * change how the text is split into entries.
+ */
+export function resolveQuote(quote: string, documentText: string, prepared?: PreparedDocument): string | undefined {
+    const q = normalizeForSearch(quote);
+    if (q.length < QUOTE_MIN_LENGTH) return undefined;
+    const doc = prepared ?? prepare(documentText);
+    const at = doc.normalized.indexOf(q);
+    if (at >= 0) return documentText.slice(doc.map[at], doc.map[at + q.length - 1] + 1);
+    const wanted = signedTokenPositions(q).map(x => x.token);
+    if (wanted.join(" ").length < QUOTE_MIN_LENGTH) return undefined;
+    const tokens = doc.signedTokens;
+    outer: for (let i = 0; i + wanted.length <= tokens.length; i++) {
+        for (let k = 0; k < wanted.length; k++) {
+            if (tokens[i + k].token !== wanted[k]) continue outer;
+        }
+        return documentText.slice(doc.map[tokens[i].start], doc.map[tokens[i + wanted.length - 1].end - 1] + 1);
+    }
+    return undefined;
+}
+
+/** True when the quote occurs in the document (see resolveQuote). */
+export function quoteOccursIn(quote: string, documentText: string, prepared?: PreparedDocument): boolean {
+    return resolveQuote(quote, documentText, prepared) !== undefined;
+}
+
+/**
+ * True when the document actually contains the identity: every significant
+ * token of it occurs as a whole token ("6.19" does not occur in a document that
+ * only mentions "26.19").
+ */
+export function identityOccursIn(identity: string, documentText: string, prepared?: PreparedDocument): boolean {
+    const doc = prepared ?? prepare(documentText);
+    const tokens = significantTokens(identity);
+    return tokens.length > 0 && tokens.every(t => doc.tokens.has(t));
+}
+
+/**
+ * True when the quote names the item it is evidence for. Every discriminating
+ * token of the identity (not a date part, not a generic kind word) must occur in
+ * the quote as a whole token; an identity made only of date parts and kind words
+ * must occur in full.
+ */
+export function quoteNamesIdentity(quote: string, identity: string): boolean {
+    const quoteTokens = new Set(tokensOf(quote));
+    const tokens = significantTokens(identity);
+    const discriminators = tokens.filter(t => !isDateToken(t) && !KIND_WORDS.has(t));
+    const required = discriminators.length > 0 ? discriminators : tokens;
+    return required.length > 0 && required.every(t => quoteTokens.has(t));
+}
+
+/** A model label is kept only when it adds no discriminating word the grounded identity lacks. */
+function groundedLabel(label: string, identity: string): string {
+    if (!label || label.trim().length === 0) return identity;
+    const identityTokens = new Set(tokensOf(identity));
+    return discriminatorsOf(label).every(token => identityTokens.has(token)) ? label : identity;
+}
+
+function discriminatorsOf(identity: string): string[] {
+    return significantTokens(identity).filter(t => !isDateToken(t) && !KIND_WORDS.has(t));
+}
+
+function hasDiscriminators(identity: string): boolean {
+    return discriminatorsOf(identity).length > 0;
+}
+
+/**
+ * A start/end pair must be ordered, and when both come from one quote the start
+ * time must precede the end time in it ("00:00 - 08:30" cannot ground start=08:30).
+ */
+function rangeIsConsistent(start: GroundedFact, end: GroundedFact): boolean {
+    if (start.precision === "exact" && end.precision === "exact") {
+        if (Date.parse(start.at) > Date.parse(end.at)) return false;
+    } else if (start.value.slice(0, 10) > end.value.slice(0, 10)) {
+        // A day-precision bound is a calendar day, not an instant: compare the stated days.
+        return false;
+    }
+    if (start.precision === "exact" && end.precision === "exact" && normalizeForSearch(start.quote) === normalizeForSearch(end.quote)) {
+        const times = clockTimesIn(start.quote);
+        const s = parseDateValue(start.value), e = parseDateValue(end.value);
+        if (s?.hasTime && e?.hasTime) {
+            const startIndex = times.indexOf((s.hour ?? 0) * 60 + (s.minute ?? 0));
+            const endIndex = times.lastIndexOf((e.hour ?? 0) * 60 + (e.minute ?? 0));
+            if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * The one year a yearless date can take: the year that places it nearest the document's own
+ * chronology at that point, meaning the date stated with a year closest to the passage in the text
+ * (a posting date above a maintenance table, say), or today when the document states none.
+ * Undefined when two years are equally near.
+ */
+function inferredYear(value: ParsedDateValue, prepared: PreparedDocument, now: Date, passage: string): number | undefined {
+    const needle = normalizeForSearch(passage);
+    const at = prepared.normalized.indexOf(needle);
+    let reference = now.getTime();
+    if (at >= 0 && prepared.fullDates.length > 0) {
+        const end = at + needle.length;
+        const distance = (d: DatedStatement) => (d.index < at ? at - d.index : d.index > end ? d.index - end : 0);
+        reference = prepared.fullDates.reduce((best, d) => (distance(d) < distance(best) ? d : best)).time;
+    }
+    const referenceYear = new Date(reference).getUTCFullYear();
+    const candidates = [referenceYear - 1, referenceYear, referenceYear + 1]
+        .map(year => ({ year, t: Date.UTC(year, value.month - 1, value.day) }))
+        .filter(c => new Date(c.t).getUTCDate() === value.day)
+        .map(c => ({ year: c.year, distance: Math.abs(c.t - reference) }))
+        .sort((a, b) => a.distance - b.distance);
+    if (candidates.length === 0) return undefined;
+    if (candidates.length > 1 && candidates[0].distance === candidates[1].distance) return undefined;
+    return candidates[0].year;
+}
+
+/**
+ * True when the quote states the claimed clock time with the same offset the
+ * value embeds attached to it ("15:00+01:00", "18:00:00.000Z"). The offset must
+ * belong to that clock: in "15:00+01:00 / 18:00+02:00" the value 18:00+01:00 is not evidenced.
+ */
+function quoteCarriesOffset(quote: string, value: ParsedDateValue): boolean {
+    const offsetMinutes = value.offsetMinutes ?? 0;
+    const wanted = (value.hour ?? 0) * 60 + (value.minute ?? 0);
+    for (const m of quote.matchAll(/(?<![0-9.])(\d{1,2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?\s*(z|[+-]\d{2}:?\d{2})\b/gi)) {
+        if (+m[1] * 60 + +m[2] !== wanted || (+(m[3] ?? 0)) !== (value.second ?? 0)) continue;
+        const token = m[4].toUpperCase();
+        if (token === "Z" && offsetMinutes === 0) return true;
+        const o = /^([+-])(\d{2}):?(\d{2})$/.exec(token);
+        if (o && (o[1] === "-" ? -1 : 1) * (+o[2] * 60 + +o[3]) === offsetMinutes) return true;
+    }
+    return false;
+}
+
+/**
+ * Which stated timezone applies to a fact: a zone next to the date (inside its
+ * segment) wins; a zone stated elsewhere in the quote belongs to another entry
+ * and makes the fact ambiguous; otherwise a zone stated anywhere in the document
+ * (typically a header such as "all times PT") applies.
+ */
+function evidencedZone(documentText: string, quote: string, segment: string, timezoneRaw: string, value: ParsedDateValue): { zone?: ResolvedZone; problem?: string } {
+    const claimed = resolveTimezone(timezoneRaw);
+    // A zone next to the date applies; so does one the quote's header (before any date) declares
+    // for its times ("Live Maintenance Schedule (UTC) ..."), but not a header zone in some other
+    // context ("Support hours are PT."). When the entry states several clock/zone pairs
+    // ("15:00 PT / 18:00 ET"), only the zone right after the claimed clock counts.
+    const inSegment = zonesIn(segment);
+    if (inSegment.length > 1) {
+        const adjacent = zoneAfterClock(segment, value);
+        if (!adjacent) return { problem: "the entry states several timezones and none is next to the claimed clock time; time dropped" };
+        if (claimed && adjacent.zone !== claimed.zone && zoneOffsetAt(adjacent, value) !== zoneOffsetAt(claimed, value)) {
+            return { problem: `the claimed clock time is stated in ${adjacent.zone}, not "${timezoneRaw}"; time dropped` };
+        }
+        return { zone: adjacent };
+    }
+    const preamble = datePreamble(quote);
+    const stated = inSegment[0] ?? zonesIn(preamble).find(z => zoneDeclaredIn(preamble, z));
+    if (stated) {
+        if (claimed && stated.zone !== claimed.zone && zoneOffsetAt(stated, value) !== zoneOffsetAt(claimed, value)) {
+            return { problem: `quote states ${stated.zone} next to this date, not "${timezoneRaw}"; time dropped` };
+        }
+        return { zone: stated };
+    }
+    if (zonesIn(quote).length > 0) return { problem: "the timezone in the quote belongs to another entry; time dropped" };
+    const declared = declaredZoneFor(documentText, quote, value);
+    if (!declared.zone) {
+        return { problem: declared.ambiguous
+            ? "the document declares different timezones for different sections and none precedes this passage; time dropped"
+            : `timezone "${timezoneRaw}" is not declared for times in the document; time dropped` };
+    }
+    if (!claimed || (declared.zone.zone !== claimed.zone && zoneOffsetAt(declared.zone, value) !== zoneOffsetAt(claimed, value))) {
+        return { problem: `the document declares ${declared.zone.zone} for this passage, not "${timezoneRaw}"; time dropped` };
+    }
+    return { zone: declared.zone };
+}
+
+export function groundExtraction(raw: { items: RawItem[]; dropped: number }, documentText: string, options: { now?: Date } = {}): GroundedExtraction {
+    const now = options.now ?? new Date();
+    const prepared = prepare(documentText);
+    const items: GroundedItem[] = [];
+    const rejected: RejectedField[] = [];
+    // Duplicate raw items for one identity are one item: they share its facts and its conflicts.
+    const conflictsByKey = new Map<string, Set<DateField>>();
+    let fieldsSeen = 0;
+    let accepted = 0;
+    let itemsRejected = 0;
+
+    for (const item of raw.items) {
+        let identityKey: string;
+        // A rejected item discards every field it carried: one rejection per field (or one for the item when it had none).
+        const rejectItem = (reason: string) => {
+            itemsRejected++;
+            fieldsSeen += item.fields.length;
+            if (item.fields.length === 0) rejected.push({ identity: item.identity, field: "at", value: "", quote: "", reason });
+            for (const f of item.fields) rejected.push({ identity: item.identity, field: f.field, value: f.value, quote: f.quote, reason });
+        };
+        try {
+            identityKey = normalizeIdentity(item.identity);
+        } catch {
+            rejectItem("identity cannot be normalized");
+            continue;
+        }
+        if (!identityOccursIn(item.identity, documentText, prepared)) {
+            rejectItem("identity not found in document");
+            continue;
+        }
+
+        const discriminators = discriminatorsOf(item.identity);
+        // The other items the model reported: a date must not sit closer to one of them than to this item.
+        const competitors = raw.items
+            .filter(other => other !== item)
+            .map(other => discriminatorsOf(other.identity))
+            .filter(names => names.length > 0 && !names.some(name => discriminators.includes(name)));
+
+        let grounded = items.find(i => i.identityKey === identityKey);
+        if (!grounded) {
+            grounded = { kind: item.kind, label: groundedLabel(item.label, item.identity), identity: item.identity, identityKey, status: item.status, facts: [] };
+            items.push(grounded);
+        }
+        const facts = grounded.facts;
+        let conflicted = conflictsByKey.get(identityKey);
+        if (!conflicted) {
+            conflicted = new Set<DateField>();
+            conflictsByKey.set(identityKey, conflicted);
+        }
+
+        for (const f of item.fields) {
+            fieldsSeen++;
+            const reject = (reason: string) => rejected.push({ identity: item.identity, field: f.field, value: f.value, quote: f.quote, reason });
+
+            if (!f.quote || f.quote.trim().length < QUOTE_MIN_LENGTH) { reject("quote missing or too short"); continue; }
+            // Every later check reads the document's own passage, not the model's copy of it.
+            const quote = resolveQuote(f.quote, documentText, prepared);
+            if (quote === undefined) { reject(UNVERIFIABLE_QUOTE); continue; }
+            if (!quoteNamesIdentity(quote, item.identity)) { reject("quote does not mention the item"); continue; }
+            const parsed = parseDateValue(f.value);
+            if (!parsed) { reject(`value is not an ISO date: ${JSON.stringify(f.value)}`); continue; }
+            const mention = quoteMentionsDate(quote, parsed);
+            if (!mention.day || !mention.month) { reject("quote does not mention the claimed day and month"); continue; }
+
+            // The date must sit in an entry of the passage that belongs to this item: a passage listing several
+            // entries cannot lend one entry's date, year, time or zone to another (see entryBindsItem).
+            const entries = dateEntries(quote, parsed);
+            const own = entries.filter(e => entryBindsItem(e, discriminators, competitors));
+            if (entries.length > 0 && own.length === 0) { reject(ENTRY_MISMATCH); continue; }
+
+            // The year is judged on the occurrences bound to this item, not on any date elsewhere in the passage.
+            const statedYear: boolean | null = own.length > 0
+                ? (own.some(e => e.year === true) ? true : own.some(e => e.year === null) ? null : false)
+                : mention.year;
+            const bound = own.length > 0 ? own.filter(e => e.year === statedYear) : own;
+            if (statedYear === false) { reject("quote states a different year"); continue; }
+            if (statedYear === null) {
+                const expected = inferredYear(parsed, prepared, now, quote);
+                if (expected !== parsed.year) { reject(`inferred year ${parsed.year} is not supported by the document (its chronology gives ${expected ?? "no single year"})`); continue; }
+            }
+
+            let normalized = normalizeDateFact(f.value, f.timezone);
+            if (!normalized) { reject("date could not be normalized"); continue; }
+
+            // A clock time, and the zone or offset it is expressed in, must be evidenced by that
+            // entry too. Otherwise keep the day and drop the time.
+            if (normalized.precision === "exact") {
+                const dayFallback = (note: string) => ({ ...normalizeDateFact(f.value.slice(0, 10), undefined)!, note });
+                // Several same-date entries that the identity cannot tell apart never lend a time.
+                const timed = bound.length > 1 && !hasDiscriminators(item.identity) ? [] : bound.filter(e => quoteMentionsTime(e.segment, parsed));
+                const segment = entries.length === 0 ? quote : timed.length === 1 ? timed[0].segment : undefined;
+                if (segment === undefined) {
+                    normalized = dayFallback(bound.length > 1
+                        ? "several entries in the quote share this date and none is clearly this item; time dropped"
+                        : "quote does not state the claimed clock time next to the date; time dropped");
+                } else if (parsed.offsetMinutes !== undefined) {
+                    const evidence = evidencedZone(documentText, quote, segment, f.timezone, parsed);
+                    const statedOffset = evidence.zone ? zoneOffsetAt(evidence.zone, parsed) : undefined;
+                    if (!quoteCarriesOffset(segment, parsed) && statedOffset !== parsed.offsetMinutes) {
+                        normalized = dayFallback("embedded UTC offset is not evidenced by the quote or a stated timezone; time dropped");
+                    }
+                } else {
+                    const evidence = evidencedZone(documentText, quote, segment, f.timezone, parsed);
+                    if (evidence.problem) normalized = dayFallback(evidence.problem);
+                }
+            }
+
+            // One value per identity and field: a repeated identical fact is dropped quietly; a
+            // conflicting one makes the field ambiguous for good and takes the earlier fact down with it.
+            if (conflicted.has(f.field)) { reject("conflicting values for the same field"); continue; }
+            const earlier = facts.find(x => x.field === f.field);
+            if (earlier) {
+                if (earlier.at === normalized.at && earlier.precision === normalized.precision) { fieldsSeen--; continue; }
+                facts.splice(facts.indexOf(earlier), 1);
+                accepted--;
+                conflicted.add(f.field);
+                rejected.push({ identity: item.identity, field: earlier.field, value: earlier.value, quote: earlier.quote, reason: "conflicting values for the same field" });
+                reject("conflicting values for the same field");
+                continue;
+            }
+
+            facts.push({ ...normalized, field: f.field, value: f.value, timezoneRaw: f.timezone, quote, yearInferred: statedYear === null });
+            accepted++;
+        }
+
+        // A window whose grounded start is after its end, or whose times are read in the wrong order, is not evidence.
+        const start = facts.find(x => x.field === "startAt");
+        const end = facts.find(x => x.field === "endAt");
+        if (start && end && !rangeIsConsistent(start, end)) {
+            for (const x of [start, end]) {
+                rejected.push({ identity: item.identity, field: x.field, value: x.value, quote: x.quote, reason: "start/end are inverted or read out of order" });
+            }
+            accepted -= 2;
+            facts.splice(facts.indexOf(start), 1);
+            facts.splice(facts.indexOf(end), 1);
+        }
+    }
+
+    // stats.rejected counts fields, so fields == accepted + rejected; a rejected item without fields adds only a list entry.
+    return { items, rejected, stats: { fields: fieldsSeen, accepted, rejected: fieldsSeen - accepted, itemsDropped: raw.dropped, itemsRejected } };
+}
+
+export interface ExtractionResult {
+    raw: { items: RawItem[]; dropped: number };
+    grounded: GroundedExtraction;
+    /** Usage of all calls made (one, or two when a repair was attempted). */
+    usage: AiUsage;
+    truncated: boolean;
+    /** Model calls made: 1, or 2 when quotes had to be repaired. */
+    attempts: number;
+    /** True when the repaired answer replaced the first one. */
+    repaired: boolean;
+    /** Set when the repair call itself failed (the first answer stands). */
+    repairError?: string;
+}
+
+const UNVERIFIABLE_QUOTE = "quote not found in document";
+const ENTRY_MISMATCH = "the date in the quote belongs to another entry, not this item";
+/** Rejections a second, corrected answer can plausibly fix: the quote, not the fact, was the problem. */
+const REPAIRABLE = new Set([UNVERIFIABLE_QUOTE, ENTRY_MISMATCH]);
+/** Long changelogs can make the model enumerate many items; leave ample room so valid JSON is never cut off. */
+const EXTRACT_MAX_OUTPUT_TOKENS = 16384;
+
+function addUsage(a: AiUsage, b: AiUsage): AiUsage {
+    const thought = (a.thoughtTokens ?? 0) + (b.thoughtTokens ?? 0);
+    return { inputTokens: a.inputTokens + b.inputTokens, outputTokens: a.outputTokens + b.outputTokens, ...(thought > 0 ? { thoughtTokens: thought } : {}) };
+}
+
+/**
+ * Fills the first answer's unverifiable gaps from the repaired answer: a fact
+ * is taken from the repair only for an item and field the first answer could
+ * not evidence. Facts the first answer already grounded are never replaced, and
+ * items the repair invents are ignored.
+ */
+export function mergeRepair(first: GroundedExtraction, repair: GroundedExtraction): { merged: GroundedExtraction; filled: number } {
+    const items = first.items.map(i => ({ ...i, facts: [...i.facts] }));
+    const rejected = [...first.rejected];
+    const fromRepair = new Set<GroundedFact>();
+    for (const gap of first.rejected.filter(r => REPAIRABLE.has(r.reason))) {
+        // Duplicate raw items were consolidated by normalized identity; find the gap's item the same way.
+        let gapKey: string | undefined;
+        try { gapKey = normalizeIdentity(gap.identity); } catch { gapKey = undefined; }
+        const item = items.find(i => i.identityKey === gapKey);
+        if (!item || item.facts.some(f => f.field === gap.field)) continue;
+        const fact = repair.items.find(i => i.identityKey === item.identityKey)?.facts.find(f => f.field === gap.field);
+        if (!fact) continue;
+        item.facts.push(fact);
+        fromRepair.add(fact);
+        rejected.splice(rejected.indexOf(gap), 1);
+    }
+    // A filled bound must still form a consistent window with what was already accepted.
+    for (const item of items) {
+        const start = item.facts.find(f => f.field === "startAt");
+        const end = item.facts.find(f => f.field === "endAt");
+        if (!start || !end || rangeIsConsistent(start, end)) continue;
+        for (const f of [start, end].filter(f => fromRepair.has(f))) {
+            item.facts.splice(item.facts.indexOf(f), 1);
+            fromRepair.delete(f);
+            rejected.push({ identity: item.identity, field: f.field, value: f.value, quote: f.quote, reason: "start/end are inverted or read out of order" });
+        }
+    }
+    const filled = fromRepair.size;
+    const accepted = first.stats.accepted + filled;
+    return { merged: { items, rejected, stats: { ...first.stats, accepted, rejected: first.stats.fields - accepted } }, filled };
+}
+
+/**
+ * Extracts and grounds. When the model's quotes are not verbatim (paraphrased,
+ * reordered or stitched from separate passages), one repair call names the
+ * offending quotes and asks again; the repaired answer is grounded exactly like
+ * the first and only fills the gaps it left (see mergeRepair). Never more than two calls.
+ */
+export async function extractFacts(provider: AiProvider, topic: ExtractionTopic, doc: AiDocument, options: { now?: Date; repair?: boolean } = {}): Promise<ExtractionResult> {
+    const now = options.now ?? new Date();
+    const { text, truncated } = documentBlock(doc);
+    const prompt = `${topicBlock(topic, now)}\n\nDocument title: ${doc.title ?? ""}\n${truncated ? "(document truncated)\n" : ""}\n--- DOCUMENT ---\n${text}\n--- END ---`;
+    const response = await provider.generateJson({ label: "extract", system: EXTRACT_SYSTEM, prompt, schema: EXTRACT_SCHEMA, maxOutputTokens: EXTRACT_MAX_OUTPUT_TOKENS });
+    const raw = parseRawItems(response.data);
+    // Ground against the text the model actually saw.
+    let grounded = groundExtraction(raw, text, { now });
+    let usage = response.usage;
+    let attempts = 1;
+    let repaired = false;
+    let repairError: string | undefined;
+
+    const unverifiable = grounded.rejected.filter(r => REPAIRABLE.has(r.reason));
+    if ((options.repair ?? true) && unverifiable.length > 0) {
+        const list = unverifiable.map(r => `- item ${JSON.stringify(r.identity)}, field ${r.field} (${r.reason === ENTRY_MISMATCH ? "its date belongs to a different entry in that passage" : "not copied verbatim"}): ${JSON.stringify(r.quote)}`).join("\n");
+        const repairPrompt = `${prompt}\n\n--- CORRECTIONS NEEDED ---\nThese quotes from your previous answer could not be verified (paraphrased, reordered, stitched from separate passages, or taken from another entry's date):\n${list}\nAnswer again with the complete result. Every quote must be one contiguous passage copied exactly from the document and taken from the item's own entry: its own name or version together with its own date. Leave out any date you cannot quote that way.`;
+        attempts = 2;
+        try {
+            const second = await provider.generateJson({ label: "extract-repair", system: EXTRACT_SYSTEM, prompt: repairPrompt, schema: EXTRACT_SCHEMA, maxOutputTokens: EXTRACT_MAX_OUTPUT_TOKENS });
+            usage = addUsage(usage, second.usage);
+            const groundedRepair = groundExtraction(parseRawItems(second.data), text, { now });
+            const { merged, filled } = mergeRepair(grounded, groundedRepair);
+            if (filled > 0) {
+                grounded = merged;
+                repaired = true;
+            }
+        } catch (error) {
+            // The repair is best effort: a failed second call never costs the grounded first answer.
+            repairError = error instanceof Error ? error.message : String(error);
+        }
+    }
+    return { raw, grounded, usage, truncated, attempts, repaired, ...(repairError !== undefined ? { repairError } : {}) };
+}

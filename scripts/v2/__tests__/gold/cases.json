@@ -1,0 +1,173 @@
+[
+  {
+    "id": "lol-schedule",
+    "game": "lol",
+    "gameName": "League of Legends",
+    "topicType": "next-patch",
+    "topicDescription": "The League of Legends patch schedule: which patch numbers exist and the date each patch is scheduled to release or was released.",
+    "doc": "docs/lol-patch-schedule.txt",
+    "url": "https://support.riotgames.com/en-us/league-of-legends/gameplay/patch-schedule-league-of-legends/",
+    "title": "Patch Schedule - League of Legends - League of Legends Support",
+    "now": "2026-09-14T21:30:00Z",
+    "classification": { "relevant": true, "docTypeAnyOf": ["patch-schedule"] },
+    "expect": [
+      { "identityAnyOf": ["26.19"], "field": "at", "date": "2026-09-23", "precision": "day", "status": ["scheduled", "announced"] },
+      { "identityAnyOf": ["26.20"], "date": "2026-10-07", "precision": "day" },
+      { "identityAnyOf": ["26.21"], "date": "2026-10-21", "precision": "day" },
+      { "identityAnyOf": ["26.18"], "date": "2026-09-10", "precision": "day" }
+    ]
+  },
+  {
+    "id": "lol-notes-listing",
+    "game": "lol",
+    "gameName": "League of Legends",
+    "topicType": "last-patch",
+    "topicDescription": "Which League of Legends patches have been released and when their patch notes were published.",
+    "doc": "docs/lol-patch-notes-listing.txt",
+    "url": "https://www.leagueoflegends.com/en-us/news/tags/patch-notes/",
+    "title": "Patch Notes",
+    "now": "2026-09-14T21:30:00Z",
+    "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "patch-schedule", "news"] },
+    "expect": [
+      { "identityAnyOf": ["26.18"], "date": "2026-09-09", "at": "2026-09-09T18:00:00.000Z", "precision": "exact", "allowDay": true, "status": ["released"] },
+      { "identityAnyOf": ["26.17"], "date": "2026-08-25", "at": "2026-08-25T18:00:00.000Z", "precision": "exact", "allowDay": true }
+    ]
+  },
+  {
+    "id": "valorant-updates",
+    "game": "valorant",
+    "gameName": "VALORANT",
+    "topicType": "last-patch",
+    "topicDescription": "Which VALORANT patches have been released and when.",
+    "doc": "docs/valorant-game-updates.txt",
+    "url": "https://playvalorant.com/en-us/news/game-updates/",
+    "title": "Game Updates",
+    "now": "2026-09-14T21:30:00Z",
+    "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "patch-schedule", "news"] },
+    "expect": [
+      { "identityAnyOf": ["13.05"], "date": "2026-09-01", "at": "2026-09-01T13:00:00.000Z", "precision": "exact", "allowDay": true, "status": ["released"] },
+      { "identityAnyOf": ["13.04"], "date": "2026-08-18", "at": "2026-08-18T13:00:00.000Z", "precision": "exact", "allowDay": true }
+    ]
+  },
+  {
+    "id": "pubg-listing",
+    "game": "pubg",
+    "gameName": "PUBG: BATTLEGROUNDS",
+    "topicType": "last-patch",
+    "topicDescription": "PUBG update (patch) numbers and the date each update was released.",
+    "doc": "docs/pubg-patch-notes-listing.txt",
+    "url": "https://pubg.com/en/news?category=patch_notes",
+    "title": "NEWS - PUBG: BATTLEGROUNDS",
+    "now": "2026-09-14T21:30:00Z",
+    "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "patch-schedule", "news"] },
+    "expect": [
+      { "identityAnyOf": ["43.1", "update 43.1"], "date": "2026-09-09", "precision": "day" },
+      { "identityAnyOf": ["42.3", "update 42.3"], "date": "2026-08-11", "precision": "day" }
+    ]
+  },
+  {
+    "id": "pubg-article",
+    "game": "pubg",
+    "gameName": "PUBG: BATTLEGROUNDS",
+    "topicType": "last-patch",
+    "topicDescription": "PUBG update numbers, their release dates, and the live maintenance windows announced for them.",
+    "doc": "docs/pubg-patch-article.txt",
+    "url": "https://pubg.com/en/news/9809",
+    "title": "Patch Notes - Update 40.2 - NEWS - PUBG: BATTLEGROUNDS",
+    "now": "2026-09-14T21:30:00Z",
+    "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes"] },
+    "expect": [
+      { "identityAnyOf": ["40.2", "update 40.2"], "date": "2026-03-10", "precision": "day" },
+      { "identityAnyOf": ["maintenance pc", "live maintenance pc", "pc maintenance", "maintenance (pc)", "pc"], "date": "2026-03-11", "at": "2026-03-11T00:00:00.000Z", "precision": "exact", "yearInferred": true }
+    ]
+  },
+  {
+    "id": "cs2-updates",
+    "game": "cs2",
+    "gameName": "Counter-Strike 2",
+    "topicType": "last-update",
+    "topicDescription": "Counter-Strike 2 game updates and the date each update was released.",
+    "doc": "docs/cs2-updates.txt",
+    "url": "https://www.counter-strike.net/news/updates",
+    "title": "News",
+    "now": "2026-09-14T21:30:00Z",
+    "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "news", "release"] },
+    "expect": [
+      { "identityAnyOf": ["september 10, 2026", "2026-09-10", "counter-strike 2 update"], "date": "2026-09-10", "precision": "day" },
+      { "identityAnyOf": ["august 25, 2026", "2026-08-25", "counter-strike 2 update"], "date": "2026-08-25", "precision": "day" }
+    ]
+  },
+  {
+    "id": "warzone-notes",
+    "game": "warzone",
+    "gameName": "Call of Duty: Warzone",
+    "topicType": "last-patch",
+    "topicDescription": "Warzone patch notes (season and reloaded updates) and the date each was published.",
+    "doc": "docs/warzone-patch-notes.txt",
+    "url": "https://www.callofduty.com/patchnotes",
+    "title": "Call of Duty® Patch Notes",
+    "now": "2026-09-14T21:30:00Z",
+    "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "patch-schedule", "news"] },
+    "expect": [
+      { "identityAnyOf": ["season 05", "season 5", "05"], "date": "2026-08-12", "precision": "day" },
+      { "identityAnyOf": ["season 04 reloaded", "season 4 reloaded", "04 reloaded"], "date": "2026-07-15", "precision": "day" }
+    ]
+  },
+  {
+    "id": "genshin-article",
+    "game": "genshin",
+    "gameName": "Genshin Impact",
+    "topicType": "next-version",
+    "topicDescription": "Genshin Impact version updates: version numbers and the date each version launches.",
+    "doc": "docs/genshin-article.txt",
+    "url": "https://genshin.hoyoverse.com/en/news/detail/166086",
+    "title": "Version 7.1 Benefits Overview",
+    "now": "2026-09-14T21:30:00Z",
+    "classification": { "relevant": true, "docTypeAnyOf": ["release", "news", "season", "patch-notes"] },
+    "expect": [
+      { "identityAnyOf": ["7.1", "version 7.1"], "date": "2026-09-23", "precision": "day", "yearInferred": true, "status": ["scheduled", "announced"] }
+    ]
+  },
+  {
+    "id": "eafc-news",
+    "game": "ea-sports-fc",
+    "gameName": "EA SPORTS FC 26",
+    "topicType": "last-title-update",
+    "topicDescription": "EA SPORTS FC title updates (game patches published as Title Update notes) and their release dates.",
+    "doc": "docs/eafc-news.txt",
+    "url": "https://www.ea.com/games/ea-sports-fc/fc-26/news",
+    "title": "Get the latest EA SPORTS FC™ 26 News, Updates and Announcements",
+    "now": "2026-09-14T21:30:00Z",
+    "classification": { "docTypeAnyOf": ["news", "unrelated"] },
+    "expect": [],
+    "noItemsMatching": "title update"
+  },
+  {
+    "id": "minecraft-article",
+    "game": "minecraft",
+    "gameName": "Minecraft",
+    "topicType": "last-release",
+    "topicDescription": "Minecraft Bedrock and Java releases and hotfixes: version numbers and the date each was released.",
+    "doc": "docs/minecraft-article.txt",
+    "url": "https://feedback.minecraft.net/hc/en-us/articles/48149564061965-Minecraft-Bedrock-Edition-26-44-45-Hotfix-Changelog",
+    "title": "Minecraft: Bedrock Edition 26.44/45 Hotfix Changelog – Minecraft Feedback",
+    "now": "2026-09-14T21:30:00Z",
+    "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "release"] },
+    "expect": [
+      { "identityAnyOf": ["26.45", "26.44/45", "26.44-45"], "date": "2026-08-20", "precision": "day" }
+    ]
+  },
+  {
+    "id": "synthetic-no-date",
+    "game": "lol",
+    "gameName": "League of Legends",
+    "topicType": "next-patch",
+    "topicDescription": "The League of Legends patch schedule: which patch numbers exist and the date each patch is scheduled to release or was released.",
+    "doc": "docs/synthetic-no-date.txt",
+    "url": "https://example.test/patch-99-9",
+    "title": "Patch 99.9 notes",
+    "now": "2026-09-14T21:30:00Z",
+    "expect": [],
+    "noDates": true
+  }
+]
