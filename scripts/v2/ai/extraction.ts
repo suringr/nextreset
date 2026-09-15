@@ -109,7 +109,8 @@ Output JSON matching the schema and nothing else.`;
 const EXTRACT_SYSTEM = `You extract time-sensitive facts about a video game from a single document.
 Rules:
 - Use only information stated in the document. Never guess or invent a date. If the document states no date for an item, return the item with an empty fields array.
-- For every date field, copy the exact fragment of the document that states it into "quote", verbatim, character for character. The quote must be one contiguous passage as it appears in the document: never join separate passages, reorder text, or insert line breaks between fragments. It must include the item's name or version and the date text, and the time when you report one. Do not paraphrase, shorten words, or fix punctuation.
+- For every date field, copy the exact fragment of the document that states it into "quote", verbatim, character for character. The quote must be one contiguous passage as it appears in the document: never join separate passages, reorder text, or insert line breaks between fragments. It must include the item's name or version and the date text, and the time when you report one. Keep it short: the smallest such passage (one sentence, heading or table row, normally under 200 characters). Do not paraphrase, shorten words, or fix punctuation.
+- Return at most 40 items; when a document lists more, keep the most recent ones.
 - "value" is ISO 8601: YYYY-MM-DD when only a date is stated; YYYY-MM-DDTHH:MM when a time is stated (local to the stated timezone). Never append an offset or Z. If the document states a day and month but no year, take the year from the document's own posting/update dates.
 - "timezone" is the timezone phrase exactly as the document states it (e.g. "PT", "Pacific Time", "UTC", "UTC+8", "server time"); an empty string if none is stated.
 - "identity" uses words that appear in the document: a version number (26.19, Update 43.1), a season/version name (Season 05, Version 7.1), or for an occurrence the occurrence itself plus its date (Live maintenance PC March 11), never the version it belongs to. For updates without a number, use the update name plus its date.
@@ -294,6 +295,27 @@ export function quoteNamesIdentity(quote: string, identity: string): boolean {
 }
 
 /**
+ * True when one entry of a quote (see dateEntries) belongs to the item: every
+ * discriminating token of the identity occurs in it. An identity with nothing
+ * to discriminate by ("Maintenance March 11") cannot be told apart, so the
+ * quote-level check (quoteNamesIdentity) is all that applies to it.
+ */
+export function entryNamesItem(entry: string, identity: string): boolean {
+    const discriminators = discriminatorsOf(identity);
+    if (discriminators.length === 0) return true;
+    const entryTokens = new Set(tokensOf(entry));
+    return discriminators.every(t => entryTokens.has(t));
+}
+
+function discriminatorsOf(identity: string): string[] {
+    return significantTokens(identity).filter(t => !isDateToken(t) && !KIND_WORDS.has(t));
+}
+
+function hasDiscriminators(identity: string): boolean {
+    return discriminatorsOf(identity).length > 0;
+}
+
+/**
  * A start/end pair must be ordered, and when both come from one quote the start
  * time must precede the end time in it ("00:00 - 08:30" cannot ground start=08:30).
  */
@@ -368,18 +390,21 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
 
     for (const item of raw.items) {
         let identityKey: string;
+        // A rejected item discards every field it carried: one rejection per field (or one for the item when it had none).
+        const rejectItem = (reason: string) => {
+            itemsRejected++;
+            fieldsSeen += item.fields.length;
+            if (item.fields.length === 0) rejected.push({ identity: item.identity, field: "at", value: "", quote: "", reason });
+            for (const f of item.fields) rejected.push({ identity: item.identity, field: f.field, value: f.value, quote: f.quote, reason });
+        };
         try {
             identityKey = normalizeIdentity(item.identity);
         } catch {
-            itemsRejected++;
-            fieldsSeen += item.fields.length;
-            rejected.push({ identity: item.identity, field: "at", value: "", quote: "", reason: "identity cannot be normalized" });
+            rejectItem("identity cannot be normalized");
             continue;
         }
         if (!identityOccursIn(item.identity, documentText, prepared)) {
-            itemsRejected++;
-            fieldsSeen += item.fields.length;
-            rejected.push({ identity: item.identity, field: "at", value: "", quote: "", reason: "identity not found in document" });
+            rejectItem("identity not found in document");
             continue;
         }
 
@@ -401,19 +426,24 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
             let normalized = normalizeDateFact(f.value, f.timezone);
             if (!normalized) { reject("date could not be normalized"); continue; }
 
-            // A clock time, and the zone or offset it is expressed in, must be evidenced too, and
-            // by the part of the quote that belongs to this date (a quote listing several entries
-            // cannot lend one entry's time to another). Otherwise keep the day and drop the time.
+            // The date must sit in an entry of the quote that names this item: a quote listing several
+            // entries ("PC ... September 23 ...; Console ... TBD") cannot lend one entry's date, time or
+            // zone to another.
+            const entries = dateEntries(f.quote, parsed);
+            const own = entries.filter(e => entryNamesItem(e.entry, item.identity));
+            if (entries.length > 0 && own.length === 0) { reject("the date in the quote belongs to another entry, not this item"); continue; }
+
+            // A clock time, and the zone or offset it is expressed in, must be evidenced by that
+            // entry too. Otherwise keep the day and drop the time.
             if (normalized.precision === "exact") {
                 const dayFallback = (note: string) => ({ ...normalizeDateFact(f.value.slice(0, 10), undefined)!, note });
-                // When the quote lists several entries on this date, only the one naming the item is evidence.
-                const entries = dateEntries(f.quote, parsed);
-                const own = entries.length > 1 ? entries.filter(e => quoteNamesIdentity(e.entry, item.identity)) : entries;
-                const segment = own.length === 1 ? own[0].segment : entries.length === 0 ? f.quote : undefined;
+                // Several same-date entries that the identity cannot tell apart never lend a time.
+                const timed = own.length > 1 && !hasDiscriminators(item.identity) ? [] : own.filter(e => quoteMentionsTime(e.segment, parsed));
+                const segment = entries.length === 0 ? f.quote : timed.length === 1 ? timed[0].segment : undefined;
                 if (segment === undefined) {
-                    normalized = dayFallback("several entries in the quote share this date and none is clearly this item; time dropped");
-                } else if (!quoteMentionsTime(segment, parsed)) {
-                    normalized = dayFallback("quote does not state the claimed clock time next to the date; time dropped");
+                    normalized = dayFallback(own.length > 1
+                        ? "several entries in the quote share this date and none is clearly this item; time dropped"
+                        : "quote does not state the claimed clock time next to the date; time dropped");
                 } else if (parsed.offsetMinutes !== undefined) {
                     const evidence = evidencedZone(documentText, f.quote, segment, f.timezone, parsed);
                     const statedOffset = evidence.zone ? zoneOffsetAt(evidence.zone, parsed) : undefined;
@@ -445,7 +475,8 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
         items.push({ kind: item.kind, label: item.label, identity: item.identity, identityKey, status: item.status, facts });
     }
 
-    return { items, rejected, stats: { fields: fieldsSeen, accepted, rejected: rejected.length, itemsDropped: raw.dropped, itemsRejected } };
+    // stats.rejected counts fields, so fields == accepted + rejected; a rejected item without fields adds only a list entry.
+    return { items, rejected, stats: { fields: fieldsSeen, accepted, rejected: fieldsSeen - accepted, itemsDropped: raw.dropped, itemsRejected } };
 }
 
 export interface ExtractionResult {
