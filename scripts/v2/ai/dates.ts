@@ -405,6 +405,8 @@ export interface DateEntry {
     mentionEnd: number;
     clauseFrom: number;
     clauseTo: number;
+    /** This occurrence states the value's year (true), another year (false), or none (null). */
+    year: boolean | null;
 }
 
 /** Separators between list entries; a slash between digits ("26.44/45", "9/23") is not one. */
@@ -563,7 +565,7 @@ export function dateEntries(quote: string, value: ParsedDateValue): DateEntry[] 
         // Patch 26.20 October 7 18:00 PT"): then only what follows the date is this entry's.
         const segment = earlierDateInClause ? q.slice(mention.start, to).trim() : entry;
         if (!entries.some(e => e.segment === segment && e.entry === entry)) {
-            entries.push({ segment, entry, text: q, mentionStart: mention.start, mentionEnd: mention.end, clauseFrom: clause.from, clauseTo: clause.to });
+            entries.push({ segment, entry, text: q, mentionStart: mention.start, mentionEnd: mention.end, clauseFrom: clause.from, clauseTo: clause.to, year: mention.year });
         }
     }
     return entries;
@@ -666,10 +668,23 @@ function escapeRegExp(text: string): string {
  * maintenance") or context ("Support hours are PT") does not apply to a dated event.
  */
 export function zoneDeclaredIn(documentText: string, zone: ResolvedZone): boolean {
-    const doc = documentText.replace(/\s+/g, " ").toLowerCase();
-    for (const clause of doc.split(/[.;|•]\s+/)) {
+    return zoneDeclarationsIn(documentText).some(d => d.zone.zone === zone.zone);
+}
+
+export interface ZoneDeclaration {
+    zone: ResolvedZone;
+    /** Position of the declaring clause in the collapsed text. */
+    index: number;
+}
+
+/** Every timezone declaration for times in a text (see zoneDeclaredIn for the recognised forms), in order. */
+export function zoneDeclarationsIn(documentText: string): ZoneDeclaration[] {
+    const doc = collapse(documentText);
+    const found: ZoneDeclaration[] = [];
+    for (const { clause, index } of clausesWithIndex(doc)) {
         for (const phrase of zonePhrasesIn(clause)) {
-            if (resolveTimezone(phrase)?.zone !== zone.zone) continue;
+            const resolved = resolveTimezone(phrase);
+            if (!resolved) continue;
             const p = escapeRegExp(phrase.toLowerCase()).replace(/ /g, "\\s+");
             const forms = [
                 new RegExp(`\\b(?:times?|dates?|schedules?|scheduled dates?|windows?|deadlines?)\\b[^()]{0,40}\\(\\s*${p}\\s*\\)`),
@@ -677,10 +692,38 @@ export function zoneDeclaredIn(documentText: string, zone: ResolvedZone): boolea
                 new RegExp(`\\b${p}\\b\\s*(?:time ?zone)\\b|\\b(?:time ?zone)\\b[^.;]{0,20}\\b${p}\\b`),
                 new RegExp(`\\b(?:patch(?:es)?|release[sd]?|updates?|maintenance|servers?|launch(?:es)?|deploy(?:s|ed|ment)?|downtime)\\b[^.;()]{0,60}\\(\\s*${p}\\s*\\)`)
             ];
-            if (forms.some(f => f.test(clause))) return true;
+            if (forms.some(f => f.test(clause)) && !found.some(d => d.index === index && d.zone.zone === resolved.zone)) found.push({ zone: resolved, index });
         }
     }
-    return false;
+    return found;
+}
+
+function clausesWithIndex(doc: string): Array<{ clause: string; index: number }> {
+    const out: Array<{ clause: string; index: number }> = [];
+    let start = 0;
+    for (const m of doc.matchAll(/[.;|•]\s+/g)) {
+        out.push({ clause: doc.slice(start, m.index ?? 0), index: start });
+        start = (m.index ?? 0) + m[0].length;
+    }
+    out.push({ clause: doc.slice(start), index: start });
+    return out;
+}
+
+/**
+ * The timezone a document declares for the times in one passage. A single declared zone (or several
+ * with the same offset on that date) applies everywhere. When sections declare different zones
+ * ("PC: all times PT ... Console: all times ET"), the declaration nearest before the passage
+ * applies; with none before it, no declaration can be trusted (ambiguous).
+ */
+export function declaredZoneFor(documentText: string, passage: string, value: ParsedDateValue): { zone?: ResolvedZone; ambiguous: boolean } {
+    const declarations = zoneDeclarationsIn(documentText);
+    if (declarations.length === 0) return { ambiguous: false };
+    const offsets = new Set(declarations.map(d => zoneOffsetAt(d.zone, value)));
+    if (offsets.size === 1) return { zone: declarations[0].zone, ambiguous: false };
+    const at = collapse(documentText).indexOf(collapse(passage).trim());
+    const preceding = at >= 0 ? declarations.filter(d => d.index <= at) : [];
+    if (preceding.length === 0) return { ambiguous: true };
+    return { zone: preceding[preceding.length - 1].zone, ambiguous: false };
 }
 
 /** Timezone phrases in a text, as written (lower-cased), for callers that need the text rather than the zone. */
