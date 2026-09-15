@@ -3,8 +3,8 @@
  *
  * Games migrated so far: League of Legends (next patch, evidence-based), Counter-Strike 2 (last update,
  * Steam news API), PUBG (last patch, Steam news API), VALORANT (last patch, playvalorant.com page data),
- * Warzone (last patch day, callofduty.com patch notes), Minecraft (last Java Edition release, Mojang manifest),
- * GTA Online (weekly reset rule) and Roblox (status feed).
+ * Warzone (last patch day, callofduty.com patch notes), Genshin Impact (current banner end, regional announcement
+ * lists), Minecraft (last Java Edition release, Mojang manifest), GTA Online (weekly reset rule) and Roblox (status feed).
  * Ids, types, titles, source URLs and confidence labels match the V1 providers
  * so the published `/data/<game>.<type>.json` files keep their contract.
  */
@@ -17,6 +17,7 @@ import { MINECRAFT_CHANGELOGS_PAGE, MINECRAFT_MANIFEST_URL, createMinecraftJavaA
 import { PUBG_NEWS_URL, PUBG_PATCH_NOTES_PAGE, createPubgPatchAdapter } from "./adapters/pubg";
 import { VALORANT_PATCH_NOTES_URL, createValorantPatchAdapter } from "./adapters/valorant";
 import { WARZONE_PATCH_NOTES_URL, createWarzonePatchAdapter } from "./adapters/warzone";
+import { GENSHIN_NEWS_PAGE, GENSHIN_REGIONS, createGenshinWishAdapter, genshinAnnouncementsUrl, genshinSourceId } from "./adapters/genshin";
 import { createRobloxStatusAdapter } from "./adapters/roblox";
 import { Game, Topic } from "./domain";
 
@@ -174,6 +175,29 @@ export const GAMES: Game[] = [
         ]
     },
     {
+        id: "genshin",
+        name: "Genshin Impact",
+        slug: "genshin",
+        // One official announcement list per server region; each states its own UTC offset (see adapters/genshin.ts).
+        sources: GENSHIN_REGIONS.map(({ region }) => ({ id: genshinSourceId(region), url: genshinAnnouncementsUrl(region), kind: "json" as const })),
+        topics: [
+            {
+                game: "genshin",
+                type: "next-banner",
+                kind: "occurrence",
+                sourceId: genshinSourceId("os_asia"),
+                view: {
+                    title: "Genshin Impact Next Banner End",
+                    sourceUrl: GENSHIN_NEWS_PAGE,
+                    confidence: Confidence.High,
+                    notes: "{label}",
+                    // The evidence is the announcement JSON; visitors keep the official news page.
+                    linkEvidence: false
+                }
+            }
+        ]
+    },
+    {
         id: "gta",
         name: "GTA Online",
         slug: "gta",
@@ -233,6 +257,7 @@ const ADAPTERS: Record<string, Adapter> = {
     "pubg/last-patch": createPubgPatchAdapter(),
     "valorant/last-patch": createValorantPatchAdapter(),
     "warzone/last-patch": createWarzonePatchAdapter(),
+    "genshin/next-banner": createGenshinWishAdapter(),
     "gta/weekly-reset": gtaWeeklyResetAdapter,
     "roblox/status": createRobloxStatusAdapter()
 };
