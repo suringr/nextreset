@@ -239,6 +239,7 @@ function canonicalClaim(c: Claim): Claim {
         value: c.value,
         method: c.method,
         quote: c.quote,
+        linkUrl: c.linkUrl,
         extractedAt: c.extractedAt
     });
 }

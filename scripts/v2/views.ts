@@ -30,6 +30,8 @@ export function sourceUrlFor(event: Event, knowledge: GameKnowledge, topic: Topi
     if (topic.view.linkEvidence === false) return topic.view.sourceUrl;
     const claims = knowledge.claims.filter(c => c.eventKey === event.key).sort((a, b) => b.extractedAt.localeCompare(a.extractedAt));
     for (const claim of claims) {
+        // A claim taken from a feed names the page it is about (a post); otherwise the document itself is that page.
+        if (claim.linkUrl) return claim.linkUrl;
         const doc = knowledge.documents.find(d => d.id === claim.documentId);
         if (doc) return doc.url;
     }

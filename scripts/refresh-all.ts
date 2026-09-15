@@ -48,7 +48,7 @@ const REGISTRY: RegistryEntry[] = [
     { id: "gta", type: "weekly-reset", name: "GTA Online", engine: "v2", run: gta.run },
     { id: "warzone", type: "last-patch", name: "Warzone", engine: "v1", run: warzone.run },
     { id: "genshin", type: "next-banner", name: "Genshin Impact", engine: "v1", run: genshin.run },
-    { id: "pubg", type: "last-patch", name: "PUBG", engine: "v1", run: pubg.run },
+    { id: "pubg", type: "last-patch", name: "PUBG", engine: "v2", run: pubg.run },
     { id: "red-dead-redemption-2", type: "last-update", name: "Red Dead Redemption 2", engine: "v1", run: rdr2.run },
     { id: "ea-sports-fc", type: "last-title-update", name: "EA SPORTS FC", engine: "v1", run: eafc.run }
 ];
