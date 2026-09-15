@@ -3,7 +3,8 @@
  *
  * Games migrated so far: League of Legends (next patch, evidence-based), Counter-Strike 2 (last update,
  * Steam news API), PUBG (last patch, Steam news API), VALORANT (last patch, playvalorant.com page data),
- * Minecraft (last Java Edition release, Mojang manifest), GTA Online (weekly reset rule) and Roblox (status feed).
+ * Warzone (last patch day, callofduty.com patch notes), Minecraft (last Java Edition release, Mojang manifest),
+ * GTA Online (weekly reset rule) and Roblox (status feed).
  * Ids, types, titles, source URLs and confidence labels match the V1 providers
  * so the published `/data/<game>.<type>.json` files keep their contract.
  */
@@ -15,6 +16,7 @@ import { CS2_NEWS_URL, CS2_UPDATES_PAGE, createCs2UpdatesAdapter } from "./adapt
 import { MINECRAFT_CHANGELOGS_PAGE, MINECRAFT_MANIFEST_URL, createMinecraftJavaAdapter } from "./adapters/minecraft-java";
 import { PUBG_NEWS_URL, PUBG_PATCH_NOTES_PAGE, createPubgPatchAdapter } from "./adapters/pubg";
 import { VALORANT_PATCH_NOTES_URL, createValorantPatchAdapter } from "./adapters/valorant";
+import { WARZONE_PATCH_NOTES_URL, createWarzonePatchAdapter } from "./adapters/warzone";
 import { createRobloxStatusAdapter } from "./adapters/roblox";
 import { Game, Topic } from "./domain";
 
@@ -149,6 +151,29 @@ export const GAMES: Game[] = [
         ]
     },
     {
+        id: "warzone",
+        name: "Call of Duty: Warzone",
+        slug: "warzone",
+        sources: [
+            // The official Call of Duty patch notes page; the Warzone card's data-date is the last update day (see adapters/warzone.ts).
+            { id: "warzone-patch-notes-page", url: WARZONE_PATCH_NOTES_URL, kind: "html" }
+        ],
+        topics: [
+            {
+                game: "warzone",
+                type: "last-patch",
+                kind: "occurrence",
+                sourceId: "warzone-patch-notes-page",
+                view: {
+                    title: "Call of Duty Warzone Last Patch",
+                    sourceUrl: WARZONE_PATCH_NOTES_URL,
+                    confidence: Confidence.High,
+                    notes: "{label}"
+                }
+            }
+        ]
+    },
+    {
         id: "gta",
         name: "GTA Online",
         slug: "gta",
@@ -207,6 +232,7 @@ const ADAPTERS: Record<string, Adapter> = {
     "minecraft/last-release": createMinecraftJavaAdapter(),
     "pubg/last-patch": createPubgPatchAdapter(),
     "valorant/last-patch": createValorantPatchAdapter(),
+    "warzone/last-patch": createWarzonePatchAdapter(),
     "gta/weekly-reset": gtaWeeklyResetAdapter,
     "roblox/status": createRobloxStatusAdapter()
 };

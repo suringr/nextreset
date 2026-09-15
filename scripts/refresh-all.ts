@@ -46,7 +46,7 @@ const REGISTRY: RegistryEntry[] = [
     { id: "minecraft", type: "last-release", name: "Minecraft", engine: "v2", run: minecraft.run },
     { id: "roblox", type: "status", name: "Roblox", engine: "v2", run: roblox.run },
     { id: "gta", type: "weekly-reset", name: "GTA Online", engine: "v2", run: gta.run },
-    { id: "warzone", type: "last-patch", name: "Warzone", engine: "v1", run: warzone.run },
+    { id: "warzone", type: "last-patch", name: "Warzone", engine: "v2", run: warzone.run },
     { id: "genshin", type: "next-banner", name: "Genshin Impact", engine: "v1", run: genshin.run },
     { id: "pubg", type: "last-patch", name: "PUBG", engine: "v2", run: pubg.run },
     { id: "red-dead-redemption-2", type: "last-update", name: "Red Dead Redemption 2", engine: "v1", run: rdr2.run },
