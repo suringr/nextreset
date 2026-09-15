@@ -582,3 +582,32 @@ test("a repair fills a gap left under a differently spelled duplicate of the sam
     assert.equal(filled, 1);
     assert.deepEqual(merged.items[0].facts.map(f => [f.field, f.at]), [["startAt", "2026-09-23T15:00:00.000Z"], ["endAt", "2026-09-23T18:00:00.000Z"]]);
 });
+
+test("a document-level timezone declaration applies only to its own section", () => {
+    const now = new Date("2026-09-14T21:30:00Z");
+    const doc = "PC maintenance. All times are in PT. PC servers go down September 23 at 15:00. Console maintenance. All times are in ET. Console servers go down September 24 at 15:00. Posted 2026.";
+    const run = (text: string, identity: string, value: string, timezone: string, quote: string) =>
+        groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: identity, identity, status: "scheduled", fields: [{ field: "at", value, timezone, quote }] }] }), text, { now }).items[0].facts[0];
+    const borrowed = run(doc, "Console servers September 24", "2026-09-24T15:00", "PT", "Console servers go down September 24 at 15:00");
+    assert.equal(borrowed.precision, "day", "the Console section declares ET, so PT is not its zone");
+    assert.match(borrowed.note ?? "", /declares America\/New_York for this passage, not "PT"/);
+    assert.equal(run(doc, "Console servers September 24", "2026-09-24T15:00", "ET", "Console servers go down September 24 at 15:00").at, "2026-09-24T19:00:00.000Z");
+    assert.equal(run(doc, "PC servers September 23", "2026-09-23T15:00", "PT", "PC servers go down September 23 at 15:00").at, "2026-09-23T22:00:00.000Z");
+
+    // Different declarations and none before the passage: neither can be trusted.
+    const after = "Console servers go down September 24 at 15:00. All PC times are in PT. All Console times are in ET. Posted 2026.";
+    const unanchored = run(after, "Console servers September 24", "2026-09-24T15:00", "ET", "Console servers go down September 24 at 15:00");
+    assert.equal(unanchored.precision, "day");
+    assert.match(unanchored.note ?? "", /different timezones for different sections/);
+});
+
+test("the year is checked on the occurrence bound to the item", () => {
+    const now = new Date("2026-09-14T21:30:00Z");
+    const doc = "Console maintenance September 23, 2025; PC maintenance September 23, 2026. Posted 2026.";
+    const quote = "Console maintenance September 23, 2025; PC maintenance September 23, 2026";
+    const run = (identity: string) => groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: identity, identity, status: "scheduled", fields: [{ field: "at", value: "2026-09-23", timezone: "", quote }] }] }), doc, { now });
+    const stolen = run("Console maintenance September 23");
+    assert.equal(stolen.items[0].facts.length, 0, "PC's year cannot validate Console's 2025 occurrence");
+    assert.match(stolen.rejected[0].reason, /different year/);
+    assert.equal(run("PC maintenance September 23").items[0].facts.length, 1);
+});
