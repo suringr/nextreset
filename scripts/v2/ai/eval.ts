@@ -161,20 +161,20 @@ function evaluateCase(gold: GoldCase, classification: CaseReport["classification
         }
         if (exp.date) {
             const dayOk = (f: { precision: string }) => exp.allowDay === true && f.precision === "day";
-            const hit = candidates.find(i => i.facts.some(f =>
-                (!exp.field || f.field === exp.field) &&
-                f.value.slice(0, 10) === exp.date &&
-                (!exp.at || f.at === exp.at || dayOk(f)) &&
-                (!exp.precision || f.precision === exp.precision || dayOk(f)) &&
-                (exp.yearInferred === undefined || f.yearInferred === exp.yearInferred)
-            ));
+            // Every constraint (date, instant, precision, status) must hold on one and the same candidate.
+            const hit = candidates.find(i =>
+                (!exp.status || exp.status.includes(i.status)) &&
+                i.facts.some(f =>
+                    (!exp.field || f.field === exp.field) &&
+                    f.value.slice(0, 10) === exp.date &&
+                    (!exp.at || f.at === exp.at || dayOk(f)) &&
+                    (!exp.precision || f.precision === exp.precision || dayOk(f)) &&
+                    (exp.yearInferred === undefined || f.yearInferred === exp.yearInferred)
+                ));
             if (!hit) {
-                const seen = candidates.flatMap(i => i.facts.map(f => `${f.field}=${f.value} → ${f.at} (${f.precision})`)).join(", ") || "no accepted facts";
-                failures.push(`item ${exp.identityAnyOf[0]}: expected ${exp.field ?? "any field"} on ${exp.date}${exp.at ? ` = ${exp.at}` : ""}${exp.precision ? ` (${exp.precision})` : ""}; accepted: ${seen}`);
+                const seen = candidates.map(i => `[${i.status}] ${i.facts.map(f => `${f.field}=${f.value} → ${f.at} (${f.precision})`).join(", ") || "no accepted facts"}`).join("; ");
+                failures.push(`item ${exp.identityAnyOf[0]}: expected ${exp.field ?? "any field"} on ${exp.date}${exp.at ? ` = ${exp.at}` : ""}${exp.precision ? ` (${exp.precision})` : ""}${exp.status ? ` with status ${exp.status.join("|")}` : ""}; accepted: ${seen}`);
                 return;
-            }
-            if (exp.status && !exp.status.includes(hit.status)) {
-                failures.push(`item ${exp.identityAnyOf[0]}: expected status ${exp.status.join("|")}, got ${hit.status}`);
             }
         } else if (exp.status && !candidates.some(i => exp.status!.includes(i.status))) {
             failures.push(`item ${exp.identityAnyOf[0]}: expected status ${exp.status.join("|")}, got ${candidates.map(i => i.status).join(",")}`);
