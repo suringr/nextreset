@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { clockTimesIn, dateSegment, dateSegments, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneDeclaredIn, zonedToUtc, zonesIn } from "../ai/dates";
+import { clockTimesIn, dateSegment, dateSegments, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneDeclaredIn, zonedToUtc, zonedToUtcDetailed, zonesIn } from "../ai/dates";
 
 test("parseDateValue accepts ISO dates and local date-times, rejects everything else", () => {
     assert.deepEqual(parseDateValue("2026-09-23"), { year: 2026, month: 9, day: 23, hasTime: false });
@@ -49,8 +49,17 @@ test("zonedToUtc is DST-aware and handles fixed offsets", () => {
     assert.equal(zonedToUtc(parseDateValue("2026-03-08T02:30")!, "America/Los_Angeles"), undefined);
     assert.equal(zonedToUtc(parseDateValue("2026-03-08T03:30")!, "America/Los_Angeles")!.toISOString(), "2026-03-08T10:30:00.000Z");
     assert.equal(zonedToUtc(parseDateValue("2026-03-08T01:30")!, "America/Los_Angeles")!.toISOString(), "2026-03-08T09:30:00.000Z");
-    // A repeated fall-back hour still resolves to one instant that reads back correctly.
-    assert.ok(zonedToUtc(parseDateValue("2026-11-01T01:30")!, "America/Los_Angeles") instanceof Date);
+    // A repeated fall-back hour is ambiguous in a named zone; a fixed offset settles it.
+    assert.equal(zonedToUtc(parseDateValue("2026-11-01T01:30")!, "America/Los_Angeles"), undefined);
+    assert.equal(zonedToUtcDetailed(parseDateValue("2026-11-01T01:30")!, "America/Los_Angeles").problem, "ambiguous");
+    assert.equal(zonedToUtcDetailed(parseDateValue("2026-03-08T02:30")!, "America/Los_Angeles").problem, "nonexistent");
+    assert.equal(zonedToUtc(parseDateValue("2026-11-01T00:30")!, "America/Los_Angeles")!.toISOString(), "2026-11-01T07:30:00.000Z");
+    assert.equal(zonedToUtc(parseDateValue("2026-11-01T02:30")!, "America/Los_Angeles")!.toISOString(), "2026-11-01T10:30:00.000Z");
+    assert.equal(zonedToUtc(parseDateValue("2026-11-01T01:30")!, "-07:00")!.toISOString(), "2026-11-01T08:30:00.000Z");
+    const overlap = normalizeDateFact("2026-11-01T01:30", "PT");
+    assert.equal(overlap?.precision, "day");
+    assert.match(overlap?.note ?? "", /occurs twice/);
+    assert.equal(normalizeDateFact("2026-11-01T01:30", "PDT")?.at, "2026-11-01T08:30:00.000Z");
     const gap = normalizeDateFact("2026-03-08T02:30", "PT");
     assert.equal(gap?.precision, "day");
     assert.match(gap?.note ?? "", /does not exist/);
@@ -147,8 +156,13 @@ test("zoneDeclaredIn accepts a zone only where the document declares it for its 
     assert.equal(zoneDeclaredIn(doc, kst), false);
     assert.equal(zoneDeclaredIn("All times are Pacific Time.", pt), true);
     assert.equal(zoneDeclaredIn("Times shown in KST. Patch 26.19 lands September 23", kst), true);
-    // A zone stated for something else does not apply to dated events.
+    assert.equal(zoneDeclaredIn("Patch Scheduled Date (Pacific Time) 26.01 January 8, 2026", pt), true, "a table header declares the zone");
+    assert.equal(zoneDeclaredIn("Dates are listed in Korea Standard Time", resolveTimezone("KST")!), true);
+    assert.equal(zoneDeclaredIn("Shown in the PT time zone", pt), true);
+    // A zone stated for something else, or attached to another clock time, does not apply to dated events.
     assert.equal(zoneDeclaredIn("PC maintenance September 23 at 15:00. Support hours are PT.", pt), false);
+    assert.equal(zoneDeclaredIn("PC maintenance September 23 at 15:00. Support is available 9-5 PT during maintenance.", pt), false);
+    assert.equal(zoneDeclaredIn("Maintenance is scheduled; call 9 PT for help", pt), false);
     assert.equal(zoneDeclaredIn("Contact us (PT office). Patch 26.19 lands September 23 at 15:00", pt), false);
     // Abbreviations must stand alone: "PT" is not inside "September", "ET" is not inside "Internet".
     assert.equal(zoneDeclaredIn("Patch 26.19 releases September 23, 2026 at 15:00", pt), false);
