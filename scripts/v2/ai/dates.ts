@@ -531,6 +531,32 @@ export function zonePhrasesIn(text: string): string[] {
     return found;
 }
 
+/**
+ * The zone stated right after the clock that matches the value ("15:00 PT / 18:00 ET":
+ * for 15:00 that is PT, for 18:00 ET). Undefined when the clock is absent or no zone
+ * follows it before the next clock.
+ */
+export function zoneAfterClock(text: string, value: ParsedDateValue): ResolvedZone | undefined {
+    if (!value.hasTime) return undefined;
+    const q = text.toLowerCase();
+    const wanted = (value.hour ?? 0) * 60 + (value.minute ?? 0);
+    const clocks: Array<{ start: number; end: number; minutes: number }> = [];
+    for (const m of q.matchAll(/(?:^|[^0-9.])(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?(?:\.\d+)?\s*(a\.?m\.?|p\.?m\.?)?(?=[^0-9]|$)/g)) {
+        let h = +m[1];
+        const mins = m[2] !== undefined ? +m[2] : undefined;
+        const meridiem = m[4]?.replace(/\./g, "");
+        if (mins === undefined && !meridiem) continue;
+        if (meridiem === "pm" && h < 12) h += 12;
+        if (meridiem === "am" && h === 12) h = 0;
+        const lead = /^[0-9]/.test(m[0]) ? 0 : 1;
+        clocks.push({ start: (m.index ?? 0) + lead, end: (m.index ?? 0) + m[0].length, minutes: h * 60 + (mins ?? 0) });
+    }
+    const index = clocks.findIndex(c => c.minutes === wanted);
+    if (index === -1) return undefined;
+    const until = index + 1 < clocks.length ? clocks[index + 1].start : q.length;
+    return zonesIn(q.slice(clocks[index].end, until))[0];
+}
+
 /** Clock times in the order they appear in a text, as minutes since midnight (24h or 12h with am/pm). */
 export function clockTimesIn(text: string): number[] {
     const q = text.toLowerCase();

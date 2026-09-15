@@ -411,3 +411,37 @@ test("a date is evidence only inside the entry that names the item, even when it
     assert.equal(bogus.stats.itemsRejected, 2);
     assert.deepEqual(bogus.rejected.map(r => [r.identity, r.field]), [["Mobile maintenance", "startAt"], ["Mobile maintenance", "endAt"], ["Nothing here", "at"]]);
 });
+
+test("a row with several clock/zone pairs lends a clock only its own zone", () => {
+    const now = new Date("2026-09-14T21:30:00Z");
+    const text = "Patch 26.19 releases September 23 at 15:00 PT / 18:00 ET. Posted 2026.";
+    const quote = "Patch 26.19 releases September 23 at 15:00 PT / 18:00 ET";
+    const run = (value: string, timezone: string) => groundExtraction(parseRawItems({ items: [{ kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields: [{ field: "at", value, timezone, quote }] }] }), text, { now }).items[0].facts[0];
+    const wrong = run("2026-09-23T18:00", "PT");
+    assert.equal(wrong.precision, "day");
+    assert.match(wrong.note ?? "", /stated in America\/New_York, not "PT"/);
+    assert.deepEqual([run("2026-09-23T15:00", "PT").at, run("2026-09-23T18:00", "ET").at], ["2026-09-23T22:00:00.000Z", "2026-09-23T22:00:00.000Z"]);
+    const unpaired = groundExtraction(parseRawItems({ items: [{ kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T18:00", timezone: "ET", quote: "Patch 26.19 releases September 23 at 15:00 PT, 18:00 (ET server), 21:00" }] }] }),
+        "Patch 26.19 releases September 23 at 15:00 PT, 18:00 (ET server), 21:00. Posted 2026.", { now }).items[0].facts[0];
+    assert.equal(unpaired.precision, "exact", "a zone right after the clock, even in parentheses, is its zone");
+});
+
+test("one value per item and field: identical repeats collapse, conflicts reject both", () => {
+    const now = new Date("2026-09-14T21:30:00Z");
+    const text = "Patch 26.19 was posted September 22, 2026. Patch 26.19 releases September 23, 2026. Patch 26.20 releases October 7, 2026. Posted 2026.";
+    const item = (fields: any[]) => ({ kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields });
+    const conflict = groundExtraction(parseRawItems({ items: [item([
+        { field: "at", value: "2026-09-22", timezone: "", quote: "Patch 26.19 was posted September 22, 2026" },
+        { field: "at", value: "2026-09-23", timezone: "", quote: "Patch 26.19 releases September 23, 2026" }
+    ])] }), text, { now });
+    assert.equal(conflict.items[0].facts.length, 0);
+    assert.deepEqual(conflict.rejected.map(r => [r.value, r.reason]), [["2026-09-22", "conflicting values for the same field"], ["2026-09-23", "conflicting values for the same field"]]);
+    assert.deepEqual([conflict.stats.fields, conflict.stats.accepted, conflict.stats.rejected], [2, 0, 2]);
+
+    const repeat = groundExtraction(parseRawItems({ items: [item([
+        { field: "at", value: "2026-09-23", timezone: "", quote: "Patch 26.19 releases September 23, 2026" },
+        { field: "at", value: "2026-09-23", timezone: "", quote: "Patch 26.19 releases September 23, 2026. Patch 26.20" }
+    ])] }), text, { now });
+    assert.equal(repeat.items[0].facts.length, 1);
+    assert.deepEqual([repeat.stats.fields, repeat.stats.accepted, repeat.stats.rejected], [1, 1, 0], "an identical repeat is not a second field");
+});
