@@ -129,8 +129,12 @@ function tzOffsetMinutes(zone: string, at: Date): number {
     return Math.round((asUtc - at.getTime()) / 60000);
 }
 
-/** Converts a wall-clock time in a zone (IANA name, "+HH:MM" offset, or "UTC") to a UTC instant. DST-safe. */
-export function zonedToUtc(value: ParsedDateValue, zone: string): Date {
+/**
+ * Converts a wall-clock time in a zone (IANA name, "+HH:MM" offset, or "UTC")
+ * to a UTC instant. DST-safe; a wall time that does not exist in the zone (the
+ * skipped hour of a spring-forward transition) has no instant and yields undefined.
+ */
+export function zonedToUtc(value: ParsedDateValue, zone: string): Date | undefined {
     const wall = Date.UTC(value.year, value.month - 1, value.day, value.hour ?? 0, value.minute ?? 0, value.second ?? 0);
     if (zone === "UTC") return new Date(wall);
     const fixed = /^([+-])(\d{2}):(\d{2})$/.exec(zone);
@@ -140,7 +144,17 @@ export function zonedToUtc(value: ParsedDateValue, zone: string): Date {
     }
     let guess = wall - tzOffsetMinutes(zone, new Date(wall)) * 60000;
     guess = wall - tzOffsetMinutes(zone, new Date(guess)) * 60000;
+    // Round trip: the instant must read back as the requested wall time in that zone.
+    const readBack = guess + tzOffsetMinutes(zone, new Date(guess)) * 60000;
+    if (readBack !== wall) return undefined;
     return new Date(guess);
+}
+
+/** Minutes east of UTC that a resolved zone has at a wall-clock value; undefined for a nonexistent wall time. */
+export function zoneOffsetAt(zone: ResolvedZone, value: ParsedDateValue): number | undefined {
+    const wall = Date.UTC(value.year, value.month - 1, value.day, value.hour ?? 0, value.minute ?? 0, value.second ?? 0);
+    const at = zonedToUtc({ ...value, offsetMinutes: undefined }, zone.zone);
+    return at ? Math.round((wall - at.getTime()) / 60000) : undefined;
 }
 
 export interface NormalizedDate {
@@ -179,7 +193,9 @@ export function normalizeDateFact(value: string, timezoneRaw: string | undefined
             ? `timezone "${timezoneRaw.trim()}" not understood; time dropped`
             : "time stated without a timezone; time dropped");
     }
-    return { at: zonedToUtc(parsed, zone.zone).toISOString(), precision: "exact", timezone: zone.zone };
+    const at = zonedToUtc(parsed, zone.zone);
+    if (!at) return dayOnly(parsed, `${value.slice(11, 16)} does not exist in ${zone.zone} on that day (DST transition); time dropped`, zone.zone);
+    return { at: at.toISOString(), precision: "exact", timezone: zone.zone };
 }
 
 const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
@@ -201,42 +217,142 @@ export interface QuoteDateCheck {
  * expression, null when the expression states none.
  */
 export function quoteMentionsDate(quote: string, value: ParsedDateValue): QuoteDateCheck {
-    const q = quote.toLowerCase().replace(/\s+/g, " ");
-    const m = value.month;
-    const d = value.day;
-    const mm = String(m).padStart(2, "0");
-    const dd = String(d).padStart(2, "0");
-    const monthName = MONTHS[m - 1];
-    const monthWord = m === 9 ? "(?:september|sept?\\.?)" : `(?:${monthName}|${monthName.slice(0, 3)}\\.?)`;
-    const monthNum = `(?:${m}|${mm})`;
-    const dayNum = `(?:${d}|${dd})`;
-    const year = "((?:19|20)\\d{2})";
-    // A day token stands alone: not preceded by a digit or period (26.19 -> not day 19) and not
-    // followed by a digit after an optional period/colon (26.19 -> not day 26; 11:00 -> not day 11).
-    const dayTail = "(?![.:]?\\d)";
+    const q = collapse(quote);
+    const mention = findDateMention(q, value);
+    if (mention) return { day: true, month: true, year: mention.year };
 
-    const forms = [
-        new RegExp(`(?:^|[^0-9.])${year}[./-]${monthNum}[./-]${dayNum}${dayTail}`, "g"),                  // 2026-09-23, 2026.09.23
-        new RegExp(`(?:^|[^0-9.])${monthNum}[./-]${dayNum}[./-]${year}${dayTail}`, "g"),                  // 09/23/2026
-        new RegExp(`(?:^|[^0-9.])${dayNum}[./-]${monthNum}[./-]${year}${dayTail}`, "g"),                  // 23.09.2026
-        new RegExp(`(?:^|[^0-9./-])${monthNum}/${dayNum}(?:/${year})?(?![0-9/])`, "g"),                   // 9/23
-        new RegExp(`\\b${monthWord} ${dayNum}(?:st|nd|rd|th)?${dayTail}(?:,? ${year}\\b)?`, "g"),         // September 23(, 2026)
-        new RegExp(`(?:^|[^0-9.:])${dayNum}(?:st|nd|rd|th)? (?:of )?${monthWord}(?:,? ${year}\\b)?`, "g") // 23 September( 2026)
+    const monthOnly = new RegExp(`\\b${monthWordPattern(value.month)}\\b`).test(q);
+    const years = q.match(/\b(19|20)\d{2}\b/g);
+    return { day: false, month: monthOnly, year: years ? years.includes(String(value.year)) : null };
+}
+
+function collapse(text: string): string {
+    return text.toLowerCase().replace(/\s+/g, " ");
+}
+
+function monthWordPattern(month: number): string {
+    const name = MONTHS[month - 1];
+    return month === 9 ? "(?:september|sept?\\.?)" : `(?:${name}|${name.slice(0, 3)}\\.?)`;
+}
+
+interface DateMention {
+    start: number;
+    end: number;
+    /** true/false when a year is attached to the expression, null when none is. */
+    year: boolean | null;
+}
+
+// A day token stands alone: not preceded by a digit or period (26.19 -> not day 19) and not
+// followed by a digit after an optional period/colon (26.19 -> not day 26; 11:00 -> not day 11).
+const DAY_TAIL = "(?![.:]?\\d)";
+const ANY_MONTH = "(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept|sep|oct|nov|dec)\\.?";
+const ANY_YEAR = "(?:19|20)\\d{2}";
+const ANY_DAY = "(?:0?[1-9]|[12]\\d|3[01])";
+const ANY_MONTH_NUM = "(?:0?[1-9]|1[0-2])";
+
+/** The six date-expression shapes, for a specific month/day (year captured) or for any date. */
+function dateForms(monthWord: string, monthNum: string, dayNum: string, year: string): RegExp[] {
+    return [
+        new RegExp(`(?<![0-9.])${year}[./-]${monthNum}[./-]${dayNum}${DAY_TAIL}`, "g"),                  // 2026-09-23, 2026.09.23
+        new RegExp(`(?<![0-9.])${monthNum}[./-]${dayNum}[./-]${year}${DAY_TAIL}`, "g"),                  // 09/23/2026
+        new RegExp(`(?<![0-9.])${dayNum}[./-]${monthNum}[./-]${year}${DAY_TAIL}`, "g"),                  // 23.09.2026
+        new RegExp(`(?<![0-9./-])${monthNum}/${dayNum}(?:/${year})?(?![0-9/])`, "g"),                    // 9/23
+        new RegExp(`\\b${monthWord} ${dayNum}(?:st|nd|rd|th)?${DAY_TAIL}(?:,? ${year}\\b)?`, "g"),        // September 23(, 2026)
+        new RegExp(`(?<![0-9.:])${dayNum}(?:st|nd|rd|th)? (?:of )?${monthWord}(?:,? ${year}\\b)?`, "g")  // 23 September( 2026)
     ];
+}
 
-    let best: QuoteDateCheck | undefined;
+/** The best coherent mention of the value's month and day in a collapsed quote. */
+function findDateMention(q: string, value: ParsedDateValue): DateMention | undefined {
+    const mm = String(value.month).padStart(2, "0");
+    const dd = String(value.day).padStart(2, "0");
+    const forms = dateForms(monthWordPattern(value.month), `(?:${value.month}|${mm})`, `(?:${value.day}|${dd})`, "((?:19|20)\\d{2})");
+    let best: DateMention | undefined;
     for (const form of forms) {
         for (const match of q.matchAll(form)) {
             const stated = match[1] === undefined ? null : +match[1] === value.year;
-            if (stated === true) return { day: true, month: true, year: true };
-            if (!best || (best.year === false && stated === null)) best = { day: true, month: true, year: stated };
+            const mention = { start: match.index ?? 0, end: (match.index ?? 0) + match[0].length, year: stated };
+            if (stated === true) return mention;
+            if (!best || (best.year === false && stated === null)) best = mention;
         }
     }
-    if (best) return best;
+    return best;
+}
 
-    const monthOnly = new RegExp(`\\b${monthWord}\\b`).test(q);
-    const years = q.match(/\b(19|20)\d{2}\b/g);
-    return { day: false, month: monthOnly, year: years ? years.includes(String(value.year)) : null };
+/** Spans of every date expression in a collapsed text, whatever date it names, in order of position. */
+function dateExpressionSpans(q: string): Array<{ start: number; end: number }> {
+    const spans: Array<{ start: number; end: number }> = [];
+    for (const form of dateForms(ANY_MONTH, ANY_MONTH_NUM, ANY_DAY, ANY_YEAR)) {
+        for (const match of q.matchAll(form)) {
+            const start = match.index ?? 0;
+            const end = start + match[0].length;
+            if (!spans.some(s => s.start < end && start < s.end)) spans.push({ start, end });
+        }
+    }
+    return spans.sort((a, b) => a.start - b.start);
+}
+
+/** Clause boundaries: ";", "|", "•", line breaks, and ". " that does not follow a month abbreviation or "a.m."/"p.m.". */
+function clauseBounds(q: string, index: number): { from: number; to: number } {
+    let from = 0;
+    let to = q.length;
+    for (const m of q.matchAll(/[;|•\n]|\. /g)) {
+        const at = m.index ?? 0;
+        if (m[0] === ". " && /(?:\b(?:jan|feb|mar|apr|jun|jul|aug|sept?|oct|nov|dec)|\b[ap]\.m|\b[a-z])$/.test(q.slice(0, at))) continue;
+        if (at + m[0].length <= index) from = Math.max(from, at + m[0].length);
+        else if (at >= index) to = Math.min(to, at);
+    }
+    return { from, to };
+}
+
+/** The collapsed quote up to its first date expression: a header that applies to every entry ("All times UTC. PC: ..."). */
+export function datePreamble(quote: string): string {
+    const q = collapse(quote);
+    const spans = dateExpressionSpans(q);
+    return spans.length > 0 ? q.slice(0, spans[0].start) : q;
+}
+
+/**
+ * The part of a quote that belongs to one date: the clause containing the
+ * value's date expression, cut at neighbouring date expressions. Text after the
+ * date is preferred; the text before it is included only when nothing after the
+ * date reads as a clock time ("at 15:00 on September 23"). Clock times and zones
+ * are only evidence for the value when they occur in this segment.
+ */
+export function dateSegment(quote: string, value: ParsedDateValue): string | undefined {
+    const q = collapse(quote);
+    const mention = findDateMention(q, value);
+    if (!mention) return undefined;
+    const clause = clauseBounds(q, mention.start);
+    let from = clause.from;
+    let to = clause.to;
+    for (const span of dateExpressionSpans(q)) {
+        if (span.end <= mention.start && span.end > from) from = span.end;
+        if (span.start >= mention.end && span.start < to) to = span.start;
+    }
+    const after = q.slice(mention.start, to);
+    return clockTimesIn(after).length > 0 ? after : q.slice(from, to);
+}
+
+/** Timezone phrases stated in a text, resolved (deduplicated by zone). */
+export function zonesIn(text: string): ResolvedZone[] {
+    const q = text.replace(/\s+/g, " ");
+    const found: ResolvedZone[] = [];
+    const push = (raw: string) => {
+        const zone = resolveTimezone(raw);
+        if (zone && !found.some(z => z.zone === zone.zone)) found.push(zone);
+    };
+    for (const m of q.matchAll(/\b(?:utc|gmt)\s*[+-]\s*\d{1,2}(?::?\d{2})?\b/gi)) push(m[0]);
+    for (const m of q.matchAll(/\b(?:[a-z]+ )?(?:[a-z]+ )?(?:standard |daylight |summer )?time\b/gi)) {
+        const words = m[0].toLowerCase().split(" ");
+        for (let i = 0; i < words.length - 1; i++) push(words.slice(i).join(" "));
+    }
+    for (const m of q.matchAll(/\b[A-Z][A-Za-z]+\/[A-Z][A-Za-z_]+(?:\/[A-Z][A-Za-z_]+)?\b/g)) push(m[0]);
+    for (const m of q.matchAll(/(?<![a-z])([a-z]{2,4})(?![a-z])(?!\s*[+-]\s*\d)/gi)) {
+        const word = m[1].toLowerCase();
+        if (word in FIXED_ALIASES || word in IANA_ALIASES) push(word);
+    }
+    return found;
 }
 
 /**

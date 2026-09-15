@@ -208,7 +208,8 @@ export async function runGoldEval(options: RunGoldEvalOptions): Promise<EvalRepo
         }
         const expCount = gold.expect.length + (gold.classification ? 1 : 0) + (gold.noDates ? 1 : 0) + (gold.noItemsMatching ? 1 : 0);
         expectations += expCount;
-        expectationsMet += Math.max(0, expCount - report.failures.length);
+        // A case that errored before evaluation met none of its expectations.
+        expectationsMet += report.error ? 0 : Math.max(0, expCount - report.failures.length);
         report.passed = report.failures.length === 0;
         reports.push(report);
     }

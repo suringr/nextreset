@@ -17,7 +17,7 @@
  * and never decides what gets published.
  */
 import { normalizeIdentity } from "../identity";
-import { NormalizedDate, ParsedDateValue, clockTimesIn, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, timezoneMentioned, zonedToUtc } from "./dates";
+import { NormalizedDate, ParsedDateValue, ResolvedZone, clockTimesIn, datePreamble, dateSegment, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, timezoneMentioned, zoneOffsetAt, zonesIn } from "./dates";
 import { AiProvider, AiUsage } from "./provider";
 
 export interface AiDocument {
@@ -328,12 +328,25 @@ function quoteCarriesOffset(quote: string, offsetMinutes: number): boolean {
     return false;
 }
 
-/** The offset (minutes east of UTC) a stated zone has at the value's wall-clock time. */
-function statedZoneOffset(timezoneRaw: string, value: ParsedDateValue): number | undefined {
-    const zone = resolveTimezone(timezoneRaw);
-    if (!zone) return undefined;
-    const wall = Date.UTC(value.year, value.month - 1, value.day, value.hour ?? 0, value.minute ?? 0, value.second ?? 0);
-    return Math.round((wall - zonedToUtc({ ...value, offsetMinutes: undefined }, zone.zone).getTime()) / 60000);
+/**
+ * Which stated timezone applies to a fact: a zone next to the date (inside its
+ * segment) wins; a zone stated elsewhere in the quote belongs to another entry
+ * and makes the fact ambiguous; otherwise a zone stated anywhere in the document
+ * (typically a header such as "all times PT") applies.
+ */
+function evidencedZone(documentText: string, quote: string, segment: string, timezoneRaw: string, value: ParsedDateValue): { zone?: ResolvedZone; problem?: string } {
+    const claimed = resolveTimezone(timezoneRaw);
+    // A zone next to the date, or in the quote's header before any date, is the one that applies.
+    const stated = zonesIn(segment)[0] ?? zonesIn(datePreamble(quote))[0];
+    if (stated) {
+        if (claimed && stated.zone !== claimed.zone && zoneOffsetAt(stated, value) !== zoneOffsetAt(claimed, value)) {
+            return { problem: `quote states ${stated.zone} next to this date, not "${timezoneRaw}"; time dropped` };
+        }
+        return { zone: stated };
+    }
+    if (zonesIn(quote).length > 0) return { problem: "the timezone in the quote belongs to another entry; time dropped" };
+    if (!timezoneMentioned(documentText, quote, timezoneRaw)) return { problem: `timezone "${timezoneRaw}" not stated in the document; time dropped` };
+    return { zone: claimed };
 }
 
 export function groundExtraction(raw: { items: RawItem[]; dropped: number }, documentText: string, options: { now?: Date } = {}): GroundedExtraction {
@@ -380,19 +393,23 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
             let normalized = normalizeDateFact(f.value, f.timezone);
             if (!normalized) { reject("date could not be normalized"); continue; }
 
-            // A clock time, and the zone or offset it is expressed in, must be evidenced too;
-            // otherwise keep the day and drop the time rather than publish a wrong instant.
+            // A clock time, and the zone or offset it is expressed in, must be evidenced too, and
+            // by the part of the quote that belongs to this date (a quote listing several entries
+            // cannot lend one entry's time to another). Otherwise keep the day and drop the time.
             if (normalized.precision === "exact") {
                 const dayFallback = (note: string) => ({ ...normalizeDateFact(f.value.slice(0, 10), undefined)!, note });
-                if (!quoteMentionsTime(f.quote, parsed)) {
-                    normalized = dayFallback("quote does not state the claimed clock time; time dropped");
+                const segment = dateSegment(f.quote, parsed) ?? f.quote;
+                if (!quoteMentionsTime(segment, parsed)) {
+                    normalized = dayFallback("quote does not state the claimed clock time next to the date; time dropped");
                 } else if (parsed.offsetMinutes !== undefined) {
-                    const statedOffset = timezoneMentioned(documentText, f.quote, f.timezone) ? statedZoneOffset(f.timezone, parsed) : undefined;
-                    if (!quoteCarriesOffset(f.quote, parsed.offsetMinutes) && statedOffset !== parsed.offsetMinutes) {
+                    const evidence = evidencedZone(documentText, f.quote, segment, f.timezone, parsed);
+                    const statedOffset = evidence.zone ? zoneOffsetAt(evidence.zone, parsed) : undefined;
+                    if (!quoteCarriesOffset(segment, parsed.offsetMinutes) && statedOffset !== parsed.offsetMinutes) {
                         normalized = dayFallback("embedded UTC offset is not evidenced by the quote or a stated timezone; time dropped");
                     }
-                } else if (!timezoneMentioned(documentText, f.quote, f.timezone)) {
-                    normalized = dayFallback(`timezone "${f.timezone}" not stated in the document; time dropped`);
+                } else {
+                    const evidence = evidencedZone(documentText, f.quote, segment, f.timezone, parsed);
+                    if (evidence.problem) normalized = dayFallback(evidence.problem);
                 }
             }
 
