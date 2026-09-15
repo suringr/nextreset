@@ -27,7 +27,7 @@ import { Adapter, AdapterContext, AdapterOutcome, EventInput, WorkStats } from "
 import { AiDocument, DocType, ExtractionResult, ExtractionTopic, GroundedItem, ItemKind, MAX_DOCUMENT_CHARS, classifyDocument, extractFacts } from "../ai/extraction";
 import { AiJsonRequest, AiProvider, AiUsage, createAiProvider, readAiConfig } from "../ai/provider";
 import { AiBudgetExceededError, AiGate, PlannedCall, createAiGate, currentRunId, readAiBudgetLimits } from "../cost/budget";
-import { AiCallRecord, AiUsageLedger, utcDate } from "../cost/ledger";
+import { AiCallRecord, AiUsageLedger } from "../cost/ledger";
 import { discoveryDue } from "../discovery/cadence";
 import { discoveredSourceId, knownSourcesFor, LearnInput } from "../discovery/learning";
 import { DiscoveryResult, createSearchProviders, discoverSources, shouldDiscover } from "../discovery/discovery";
@@ -144,8 +144,8 @@ async function defaultAi(): Promise<AiProvider | undefined> {
     return config ? createAiProvider(config) : undefined;
 }
 
-function aiUsageReport(gate: AiGate, date: string, start: number, game: string, topic: string, model?: string): AiDiscoveryReport["ai"] {
-    const records = gate.ledger.calls(date).slice(start).filter(r => r.game === game && r.topic === topic);
+function aiUsageReport(gate: AiGate, start: number, game: string, topic: string, model?: string): AiDiscoveryReport["ai"] {
+    const records = gate.callsMade(game, topic).slice(start);
     const sum = (pick: (r: AiCallRecord) => number) => records.reduce((n, r) => n + pick(r), 0);
     return {
         model,
@@ -243,11 +243,10 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
         // The run's gate carries the daily budget. A standalone call (tests, tools) gets a fresh in-memory one.
         const gate: AiGate = ctx.ai ?? createAiGate({ ledger: AiUsageLedger.inMemory(), limits: readAiBudgetLimits(), runId: currentRunId(), loadProvider: deps.ai ?? defaultAi });
         const ai = await gate.providerFor(game.id, topic.type, now);
-        const usageDate = utcDate(now);
-        const ledgerStart = gate.ledger.calls(usageDate).length;
+        const callsBefore = gate.callsMade(game.id, topic.type).length;
         const extractionTopic: ExtractionTopic = { game: game.id, gameName: game.name, type: topic.type, description: spec.description };
 
-        const report: AiDiscoveryReport = { knownSources: [], attempts: [], ai: aiUsageReport(gate, usageDate, ledgerStart, game.id, topic.type, ai?.model) };
+        const report: AiDiscoveryReport = { knownSources: [], attempts: [], ai: aiUsageReport(gate, callsBefore, game.id, topic.type, ai?.model) };
         const sourceStates: SourceState[] = [];
         const tried = new Set<string>();
         const failures: string[] = [];
@@ -489,7 +488,7 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
             }
         }
 
-        report.ai = aiUsageReport(gate, usageDate, ledgerStart, game.id, topic.type, ai?.model);
+        report.ai = aiUsageReport(gate, callsBefore, game.id, topic.type, ai?.model);
         const shared = { sourceStates, work, report: report as unknown as Record<string, unknown>, ...(discoveryRanAt ? { discoveryRanAt } : {}) };
 
         if (winner) {
@@ -517,7 +516,9 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
         // Work the budget deferred: nothing new is published, stored knowledge is served, and a later run retries.
         if (budget.refusal) {
             const detail = budget.refusal.message;
-            return { events: [], failure: `deferred_due_to_budget: ${detail}`, deferred: { reason: "deferred_due_to_budget", detail }, learned: { successes: [], failures }, ...shared };
+            // Visitors see this reason next to the cached value: keep it short, without budget figures. The detail goes to
+            // the knowledge file, the logs and the step summary.
+            return { events: [], failure: "deferred_due_to_budget: an updated official page is waiting to be verified", deferred: { reason: "deferred_due_to_budget", detail }, learned: { successes: [], failures }, ...shared };
         }
         // An unchanged page is a success only while stored knowledge still answers the question; otherwise the
         // failed search for an answer surfaces, and the pipeline serves stored knowledge as stale.

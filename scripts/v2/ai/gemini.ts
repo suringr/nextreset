@@ -70,6 +70,11 @@ export class GeminiProvider implements AiProvider {
     private readonly defaultMaxOutputTokens: number;
     private thinkingBudget: number | undefined;
 
+    /** The first attempt plus retries: how many billed requests one call can make. */
+    get maxAttempts(): number {
+        return this.maxRetries + 1;
+    }
+
     constructor(options: GeminiOptions) {
         if (!options.apiKey) throw new AiError("Gemini API key is missing", false);
         this.apiKey = options.apiKey;

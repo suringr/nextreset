@@ -55,12 +55,14 @@ async function main(): Promise<void> {
         ledger: AiUsageLedger.inDirectory(usageLedgerDir(knowledgeDir)),
         limits: readAiBudgetLimits(),
         runId: `${currentRunId(process.env, now)}-${path.basename(outFile, ".json")}`,
+        // A simulated --now keeps budget days on the simulated time; a real run follows the wall clock.
+        ...(arg("--now") ? {} : { clock: () => new Date() }),
         loadProvider: async () => (ai ? createAiProvider(ai) : undefined)
     });
 
     const started = Date.now();
     const run = await runTracker(game, topic, adapterFor(topic), store, now, { ai: gate });
-    const aiCalls = gate.ledger.calls(utcDate(now)).filter(r => r.runId === gate.runId);
+    const aiCalls = gate.callsMade();
     const elapsedMs = Date.now() - started;
     const knowledge = run.knowledge;
     const summary = {

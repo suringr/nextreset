@@ -43,6 +43,8 @@ export function createRunAiGate(options: RunAiGateOptions): { gate: AiGate; unav
         runId: currentRunId(env, options.now),
         unavailable,
         env,
+        // Budget days follow the wall clock, so a run that crosses UTC midnight counts later calls against the new day.
+        clock: () => new Date(),
         loadProvider: async () => {
             const config = readAiConfig(env);
             return config ? createAiProvider(config) : undefined;
@@ -88,11 +90,11 @@ function add(totals: LedgerTotals, r: AiCallRecord): void {
     totals.estimatedCostUsd += r.estimatedCostUsd;
 }
 
-export function summarizeRun(input: { gate: AiGate; startedAt: Date; finishedAt: Date; trackers: TrackerCostLine[]; unavailable?: string }): RunCostSummary {
+export function summarizeRun(input: { gate: AiGate; startedAt: Date; finishedAt: Date; trackers: TrackerCostLine[]; unavailable?: string; calls?: AiCallRecord[] }): RunCostSummary {
     const { gate } = input;
     const date = utcDate(input.finishedAt);
-    const dates = [...new Set([utcDate(input.startedAt), date])];
-    const calls = dates.flatMap(d => [...gate.ledger.calls(d)]).filter(r => r.runId === gate.runId);
+    // The calls this process made through the gate, whichever UTC day each was counted against.
+    const calls = input.calls ?? gate.callsMade();
     const run = emptyTotals();
     for (const r of calls) add(run, r);
     const today = gate.ledger.totals(date);

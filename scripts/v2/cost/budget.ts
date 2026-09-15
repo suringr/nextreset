@@ -5,8 +5,10 @@
  *            AI_PER_TOPIC_CALL_LIMIT (5 per topic per UTC day): safety ceilings,
  *            not targets
  *   check    before a document is sent at all, its worst case (every call it may
- *            need, each at its output cap) must fit what is left of today's
- *            budget; each single call is checked again right before it is made
+ *            need, each at its output cap and with every retry the provider may
+ *            make) must fit what is left of today's budget; each single call is
+ *            checked again right before it is made, against the UTC day it is
+ *            made in
  *   record   every call made, successful or not, lands in the usage ledger with
  *            its tokens and an estimated cost
  *
@@ -15,7 +17,7 @@
  * a later run retries. They never guess or publish weaker information instead.
  */
 import { AiError, AiJsonRequest, AiJsonResponse, AiProvider, AiUsage } from "../ai/provider";
-import { AiUsageLedger, utcDate } from "./ledger";
+import { AiCallRecord, AiUsageLedger, utcDate } from "./ledger";
 import { estimateCost, priceFor } from "./pricing";
 
 export interface AiBudgetLimits {
@@ -62,7 +64,7 @@ export class AiBudgetExceededError extends Error {
 export interface PlannedCall {
     /** Characters of system instruction plus prompt. */
     promptChars: number;
-    /** The call's output token cap: the most output it can bill. */
+    /** The call's output token cap: the most output one attempt can bill. */
     maxOutputTokens: number;
 }
 
@@ -82,6 +84,8 @@ export interface AiGate {
     check(game: string, topic: string, now: Date, calls: PlannedCall[]): BudgetCheck;
     /** The budgeted provider for one topic, or undefined when no AI provider is configured. */
     providerFor(game: string, topic: string, now: Date): Promise<AiProvider | undefined>;
+    /** Calls recorded through this gate so far (this process), optionally for one topic. */
+    callsMade(game?: string, topic?: string): AiCallRecord[];
 }
 
 export interface AiGateOptions {
@@ -92,6 +96,11 @@ export interface AiGateOptions {
     loadProvider: () => Promise<AiProvider | undefined>;
     /** When set, every check fails with this explanation: usage cannot be tracked, or the limits are invalid. */
     unavailable?: string;
+    /**
+     * The current time, read at every check and call, so a run that crosses UTC midnight counts later calls
+     * against the new day. Without it the tracker's run time is used (tests and simulated runs).
+     */
+    clock?: () => Date;
     env?: NodeJS.ProcessEnv;
 }
 
@@ -101,6 +110,9 @@ class BudgetGate implements AiGate {
     readonly runId: string;
     private provider?: Promise<AiProvider | undefined>;
     private model?: string;
+    /** Requests one call may send (first attempt plus retries), from the loaded provider. */
+    private attempts = 1;
+    private readonly made: AiCallRecord[] = [];
 
     constructor(private readonly options: AiGateOptions) {
         this.limits = options.limits;
@@ -108,9 +120,23 @@ class BudgetGate implements AiGate {
         this.runId = options.runId;
     }
 
+    /** When a check or call happens: the clock when configured, else the tracker's run time. */
+    at(now: Date): Date {
+        return this.options.clock ? this.options.clock() : now;
+    }
+
+    record(entry: AiCallRecord): void {
+        this.ledger.record(entry);
+        this.made.push(entry);
+    }
+
+    callsMade(game?: string, topic?: string): AiCallRecord[] {
+        return this.made.filter(r => (game === undefined || r.game === game) && (topic === undefined || r.topic === topic));
+    }
+
     check(game: string, topic: string, now: Date, calls: PlannedCall[]): BudgetCheck {
         if (this.options.unavailable) return { ok: false, reason: "budget-unavailable", detail: this.options.unavailable };
-        const date = utcDate(now);
+        const date = utcDate(this.at(now));
         const unreadable = this.ledger.unreadableReason(date);
         if (unreadable) return { ok: false, reason: "ledger-unreadable", detail: `today's usage ledger cannot be read, so no call is made until it is fixed (${unreadable})` };
 
@@ -124,12 +150,15 @@ class BudgetGate implements AiGate {
             return { ok: false, reason: "topic-calls", detail: `${game}/${topic} used ${topicCalls} of ${this.limits.perTopicCalls} calls today (UTC ${date}); this work needs up to ${planned} more` };
         }
         const price = priceFor(this.model ?? "unknown", this.options.env);
-        const projected = calls.reduce((sum, c) => sum + estimateCost(price, { inputTokens: Math.ceil(c.promptChars / PROJECTION_CHARS_PER_TOKEN), outputTokens: c.maxOutputTokens }).totalUsd, 0);
+        // Every attempt the provider may send for a call can be billed (retried answers that came back unusable).
+        const perAttempt = calls.reduce((sum, c) => sum + estimateCost(price, { inputTokens: Math.ceil(c.promptChars / PROJECTION_CHARS_PER_TOKEN), outputTokens: c.maxOutputTokens }).totalUsd, 0);
+        const projected = perAttempt * this.attempts;
         if (day.estimatedCostUsd + projected > this.limits.dailyCostUsd) {
+            const retries = this.attempts > 1 ? ` (each call may take up to ${this.attempts} attempts)` : "";
             return {
                 ok: false,
                 reason: "daily-cost",
-                detail: `an estimated $${day.estimatedCostUsd.toFixed(4)} of $${this.limits.dailyCostUsd.toFixed(2)} spent today (UTC ${date}); this work could cost up to $${projected.toFixed(4)}`
+                detail: `an estimated $${day.estimatedCostUsd.toFixed(4)} of $${this.limits.dailyCostUsd.toFixed(2)} spent today (UTC ${date}); this work could cost up to $${projected.toFixed(4)}${retries}`
             };
         }
         return { ok: true, projectedCostUsd: projected };
@@ -140,6 +169,7 @@ class BudgetGate implements AiGate {
         const inner = await this.provider;
         if (!inner) return undefined;
         this.model = inner.model;
+        this.attempts = Math.max(1, Math.floor(inner.maxAttempts ?? 1));
         return new BudgetedAiProvider(inner, this, game, topic, now, this.options.env);
     }
 }
@@ -163,6 +193,7 @@ class BudgetedAiProvider implements AiProvider {
 
     get name(): string { return this.inner.name; }
     get model(): string { return this.inner.model; }
+    get maxAttempts(): number | undefined { return this.inner.maxAttempts; }
 
     async generateJson(request: AiJsonRequest): Promise<AiJsonResponse> {
         const verdict = this.gate.check(this.game, this.topic, this.now, [{
@@ -175,8 +206,8 @@ class BudgetedAiProvider implements AiProvider {
         const record = (success: boolean, usage: AiUsage | undefined, retries: number, error?: unknown) => {
             const tokens = usage ?? { inputTokens: 0, outputTokens: 0 };
             const cost = estimateCost(price, tokens);
-            this.gate.ledger.record({
-                at: this.now.toISOString(),
+            this.gate.record({
+                at: this.gate.at(this.now).toISOString(),
                 runId: this.gate.runId,
                 provider: this.inner.name,
                 model: this.inner.model,

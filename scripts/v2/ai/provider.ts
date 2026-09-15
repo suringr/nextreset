@@ -38,6 +38,8 @@ export interface AiJsonResponse {
 export interface AiProvider {
     readonly name: string;
     readonly model: string;
+    /** Requests one call may send at most (first attempt plus retries); budget projections reserve all of them. Default 1. */
+    readonly maxAttempts?: number;
     generateJson(request: AiJsonRequest): Promise<AiJsonResponse>;
 }
 

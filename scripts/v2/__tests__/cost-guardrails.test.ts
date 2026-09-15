@@ -69,7 +69,7 @@ function lolTransport(rendered = ORIGINAL): RoutedTransport {
     });
 }
 
-/** Mock model with realistic token counts for the League of Legends schedule (from the live slice). */
+/** Mock model that bills every call what classify and extract used together on the live League of Legends schedule (a conservative stand-in). */
 function scheduleAi(extract: unknown = SCHEDULE_ITEMS, onRequest?: (req: AiJsonRequest) => void): MockAiProvider {
     return new MockAiProvider("gemini-3.5-flash", (req: AiJsonRequest) => {
         onRequest?.(req);
@@ -168,7 +168,7 @@ test("a changed, relevant page goes to the model and every call is recorded with
         ["mock", "gemini-3.5-flash", "lol", "next-patch", "extract", false, true, 0, 2276, 2930]
     ]);
     const expected = estimateCost(priceFor("gemini-3.5-flash", {}), { inputTokens: 2276, outputTokens: 2930 });
-    assert.ok(Math.abs(expected.totalUsd - 0.029784) < 1e-9, "about three cents per call for the schedule page");
+    assert.ok(Math.abs(expected.totalUsd - 0.029784) < 1e-9, "classify and extract together cost about three cents on the live schedule");
     for (const c of calls) {
         assert.deepEqual([c.estimatedInputCostUsd, c.estimatedOutputCostUsd, c.estimatedCostUsd], [expected.inputUsd, expected.outputUsd, expected.totalUsd]);
         assert.match(c.priceSource, /pricing page/);
@@ -213,7 +213,8 @@ test("an exhausted daily budget defers the work: no call, last known-good kept, 
     assert.equal(ai.requests.length, 0, "no model call");
     assert.equal(ledger.calls(TODAY).length, 3, "nothing new recorded");
     assert.equal(run.result.status, "stale");
-    assert.match((run.result as any).reason, /^deferred_due_to_budget: AI budget exhausted \(daily-cost\)/);
+    assert.equal((run.result as any).reason, "deferred_due_to_budget: an updated official page is waiting to be verified", "visitors see no budget figures");
+    assert.match(run.deferred?.detail ?? "", /^AI budget exhausted \(daily-cost\)/);
     assert.equal((run.result as any).nextEventUtc, "2026-09-23T00:00:00.000Z", "last known-good stays published");
     assert.equal((run.result as any).notes, "Patch 26.19");
     assert.equal(run.deferred?.reason, "deferred_due_to_budget");
@@ -252,7 +253,8 @@ test("an exhausted per-topic limit defers the same way, while other topics keep 
     const run = await runTracker(GAME, TOPIC, lolAdapter(lolTransport(CHANGED)), store, new Date("2026-09-15T12:00:00Z"), { ai: gate });
     assert.equal(ai.requests.length, 0);
     assert.equal(run.result.status, "stale");
-    assert.match((run.result as any).reason, /^deferred_due_to_budget: AI budget exhausted \(topic-calls\): lol\/next-patch used 5 of 5 calls today/);
+    assert.match((run.result as any).reason, /^deferred_due_to_budget: /);
+    assert.match(run.deferred?.detail ?? "", /^AI budget exhausted \(topic-calls\): lol\/next-patch used 5 of 5 calls today/);
     assert.equal((run.result as any).nextEventUtc, "2026-09-23T00:00:00.000Z");
     assert.equal(scheduleState(store).textHash, hashBefore);
     assert.deepEqual(store.load("lol").events, before.events);
@@ -274,7 +276,8 @@ test("a budget refusal in the middle of a document (its repair) defers the whole
     const run = await runTracker(GAME, TOPIC, lolAdapter(lolTransport(CHANGED)), store, new Date("2026-09-15T12:00:00Z"), { ai: gateFor(ai, { ledger, limits }) });
     assert.deepEqual(ai.requests.map(r => r.label), ["classify", "extract"], "the repair was never sent");
     assert.equal(run.result.status, "stale");
-    assert.match((run.result as any).reason, /deferred_due_to_budget: .*topic-calls/);
+    assert.match((run.result as any).reason, /^deferred_due_to_budget: /);
+    assert.match(run.deferred?.detail ?? "", /topic-calls/);
     assert.deepEqual(run.work, { unchanged: 0, deterministic: 0, sentToAi: 1, deferred: 1 });
     const k = store.load("lol");
     assert.equal(scheduleState(store).textHash, hashBefore);
@@ -424,7 +427,7 @@ test("the run summary reports calls, tokens, estimated cost and remaining budget
     ledger.record(spent({ runId: "gha-1-1", operation: "extract", inputTokens: 2276, outputTokens: 2930, estimatedInputCostUsd: 0.0034, estimatedOutputCostUsd: 0.0264, estimatedCostUsd: 0.0298 }));
     ledger.record(spent({ runId: "earlier", estimatedCostUsd: 0.03 }));
     const summary = summarizeRun({
-        gate, startedAt: NOW, finishedAt: NOW, trackers: [
+        gate, startedAt: NOW, finishedAt: NOW, calls: ledger.calls(TODAY).filter(r => r.runId === "gha-1-1"), trackers: [
             { game: "lol", type: "next-patch", engine: "v2", status: "fresh", work: { unchanged: 0, deterministic: 0, sentToAi: 1, deferred: 0 }, discovery: "skipped: next event already known" },
             { game: "roblox", type: "status", engine: "v2", status: "fresh", work: { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 } },
             { game: "gta", type: "weekly-reset", engine: "v2", status: "fresh", work: { unchanged: 0, deterministic: 1, sentToAi: 0, deferred: 0 } },
@@ -475,6 +478,47 @@ test("the Gemini provider counts the tokens of unusable answers it retried, so t
     assert.ok(failure.estimatedCostUsd > 0, "billed attempts of a failed call still cost");
     assert.match(failure.error ?? "", /empty response/);
     assert.ok(!JSON.stringify(ledger.calls(TODAY)).includes("AIzaSecretKey123"));
+});
+
+test("the cost projection reserves every attempt a provider may send for one call", async () => {
+    const ok: GeminiResponseLike = { text: "{\"ok\":true}", candidates: [{ finishReason: "STOP" }] };
+    const retrying = new GeminiProvider({ apiKey: "AIzaSecretKey123", model: "gemini-3.5-flash", client: { models: { async generateContent() { return ok; } } }, retryDelayMs: 0, maxRetries: 2 });
+    assert.equal(retrying.maxAttempts, 3);
+    const plan = documentCallPlan(1000);
+
+    const once = gateFor(scheduleAi(), { limits: { dailyCostUsd: 0.5 } });
+    await once.providerFor("lol", "next-patch", NOW);
+    const single = once.check("lol", "next-patch", NOW, plan);
+    assert.equal(single.ok, true, "one attempt per call fits");
+
+    const thrice = gateFor(retrying, { limits: { dailyCostUsd: 0.5 } });
+    const budgeted = await thrice.providerFor("lol", "next-patch", NOW);
+    assert.equal(budgeted!.maxAttempts, 3);
+    const verdict = thrice.check("lol", "next-patch", NOW, plan);
+    assert.equal(!verdict.ok && verdict.reason, "daily-cost");
+    assert.match(!verdict.ok ? verdict.detail : "", /each call may take up to 3 attempts/);
+    const one = once.check("lol", "next-patch", NOW, plan.slice(0, 1));
+    const three = thrice.check("lol", "next-patch", NOW, plan.slice(0, 1));
+    assert.ok(one.ok && three.ok && Math.abs(three.projectedCostUsd - 3 * one.projectedCostUsd) < 1e-12, "three attempts reserve three times the cost");
+});
+
+test("the budget day is read when each call is made, so a run crossing UTC midnight counts later calls against the new day", async () => {
+    const ledger = AiUsageLedger.inMemory();
+    ledger.record(spent({ estimatedCostUsd: 1.99 }));
+    const clock = { now: new Date("2026-09-16T00:01:00Z") };
+    const gate = createAiGate({ ledger, limits: { ...DEFAULT_AI_BUDGET_LIMITS }, runId: "midnight", loadProvider: async () => scheduleAi(), env: {}, clock: () => clock.now });
+    const trackerStarted = new Date("2026-09-15T23:59:00Z");
+    assert.equal(gate.check("lol", "next-patch", trackerStarted, documentCallPlan(1000)).ok, true, "the new day has its own budget");
+
+    const provider = await gate.providerFor("lol", "next-patch", trackerStarted);
+    await provider!.generateJson({ label: "classify", system: "s", prompt: "p", schema: {} });
+    assert.deepEqual(ledger.calls("2026-09-16").map(c => c.at), ["2026-09-16T00:01:00.000Z"]);
+    assert.equal(ledger.calls(TODAY).length, 1, "the previous day keeps only its own call");
+    assert.equal(gate.callsMade("lol", "next-patch").length, 1);
+    assert.equal(gate.callsMade("gta", "weekly-reset").length, 0);
+
+    clock.now = new Date("2026-09-15T23:59:30Z");
+    assert.equal(gate.check("lol", "next-patch", trackerStarted, documentCallPlan(1000)).ok, false, "before midnight the nearly spent day applies");
 });
 
 test("topic state is validated, and knowledge files written before it existed still load", () => {

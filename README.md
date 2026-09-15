@@ -121,8 +121,9 @@ targets, per UTC day:
 | `AI_PRICE_INPUT_PER_M`, `AI_PRICE_OUTPUT_PER_M` | price table | override the list prices used for estimates |
 
 - **Before a changed document is sent**, its worst case (classify, extract and one repair, each at its
-  output cap) must fit what is left of today's budget; each call is checked again right before it is made.
-  Repairs count against every limit.
+  output cap and with every retry the provider may make) must fit what is left of today's budget. Each call
+  is checked again right before it is made, against the UTC day it is made in. Repairs count against every
+  limit.
 - **When a limit is reached**, no call is made and nothing weaker is published: the work is marked
   `deferred_due_to_budget`, stored knowledge stays published (served as stale), the document is not
   marked as seen, and a later run retries it.
