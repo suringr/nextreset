@@ -344,10 +344,17 @@ function inferredYearSupported(year: number, prepared: PreparedDocument, now: Da
     return prepared.years.has(year) || year === thisYear || year === thisYear + 1;
 }
 
-/** True when the quote carries an ISO timestamp with the same offset the value embeds ("...Z", "+08:00", "-0500"). */
-function quoteCarriesOffset(quote: string, offsetMinutes: number): boolean {
-    for (const m of quote.matchAll(/\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?\s*(z|[+-]\d{2}:?\d{2})\b/gi)) {
-        const token = m[1].toUpperCase();
+/**
+ * True when the quote states the claimed clock time with the same offset the
+ * value embeds attached to it ("15:00+01:00", "18:00:00.000Z"). The offset must
+ * belong to that clock: in "15:00+01:00 / 18:00+02:00" the value 18:00+01:00 is not evidenced.
+ */
+function quoteCarriesOffset(quote: string, value: ParsedDateValue): boolean {
+    const offsetMinutes = value.offsetMinutes ?? 0;
+    const wanted = (value.hour ?? 0) * 60 + (value.minute ?? 0);
+    for (const m of quote.matchAll(/(?<![0-9.])(\d{1,2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?\s*(z|[+-]\d{2}:?\d{2})\b/gi)) {
+        if (+m[1] * 60 + +m[2] !== wanted || (+(m[3] ?? 0)) !== (value.second ?? 0)) continue;
+        const token = m[4].toUpperCase();
         if (token === "Z" && offsetMinutes === 0) return true;
         const o = /^([+-])(\d{2}):?(\d{2})$/.exec(token);
         if (o && (o[1] === "-" ? -1 : 1) * (+o[2] * 60 + +o[3]) === offsetMinutes) return true;
@@ -419,6 +426,7 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
         }
 
         const facts: GroundedFact[] = [];
+        const conflicted = new Set<DateField>();
         for (const f of item.fields) {
             fieldsSeen++;
             const reject = (reason: string) => rejected.push({ identity: item.identity, field: f.field, value: f.value, quote: f.quote, reason });
@@ -440,7 +448,7 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
             // entries ("PC ... September 23 ...; Console ... TBD") cannot lend one entry's date, time or
             // zone to another.
             const entries = dateEntries(f.quote, parsed);
-            const own = entries.filter(e => entryNamesItem(e.entry, item.identity));
+            const own = entries.filter(e => entryNamesItem(e.naming, item.identity));
             if (entries.length > 0 && own.length === 0) { reject("the date in the quote belongs to another entry, not this item"); continue; }
 
             // A clock time, and the zone or offset it is expressed in, must be evidenced by that
@@ -457,7 +465,7 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
                 } else if (parsed.offsetMinutes !== undefined) {
                     const evidence = evidencedZone(documentText, f.quote, segment, f.timezone, parsed);
                     const statedOffset = evidence.zone ? zoneOffsetAt(evidence.zone, parsed) : undefined;
-                    if (!quoteCarriesOffset(segment, parsed.offsetMinutes) && statedOffset !== parsed.offsetMinutes) {
+                    if (!quoteCarriesOffset(segment, parsed) && statedOffset !== parsed.offsetMinutes) {
                         normalized = dayFallback("embedded UTC offset is not evidenced by the quote or a stated timezone; time dropped");
                     }
                 } else {
@@ -467,12 +475,14 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
             }
 
             // One value per item and field: a repeated identical fact is dropped quietly; a
-            // conflicting one makes the field ambiguous and takes the earlier fact down with it.
+            // conflicting one makes the field ambiguous for good and takes the earlier fact down with it.
+            if (conflicted.has(f.field)) { reject("conflicting values for the same field"); continue; }
             const earlier = facts.find(x => x.field === f.field);
             if (earlier) {
                 if (earlier.at === normalized.at && earlier.precision === normalized.precision) { fieldsSeen--; continue; }
                 facts.splice(facts.indexOf(earlier), 1);
                 accepted--;
+                conflicted.add(f.field);
                 rejected.push({ identity: item.identity, field: earlier.field, value: earlier.value, quote: earlier.quote, reason: "conflicting values for the same field" });
                 reject("conflicting values for the same field");
                 continue;

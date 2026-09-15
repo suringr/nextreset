@@ -399,7 +399,16 @@ export interface DateEntry {
     segment: string;
     /** The whole entry: the clause around the date, cut at neighbouring dates ("pc maintenance september 23 at 15:00 pt"). */
     entry: string;
+    /**
+     * The part of the entry that can name the item: the text before the date, plus the text
+     * after it unless another date follows in the clause (then a following label belongs to
+     * that next entry: "PC ... September 23 at 15:00 PT, Console ... September 24 ..."); in that
+     * case only what precedes the first separator after the date is kept ("at 15:00 pt").
+     */
+    naming: string;
 }
+
+const LABEL_SEPARATOR = /[,;|•/]| - | – /;
 
 /** Like dateSegments, but also returns each entry's full text so a caller can tell which entry names its item. */
 export function dateEntries(quote: string, value: ParsedDateValue): DateEntry[] {
@@ -411,19 +420,30 @@ export function dateEntries(quote: string, value: ParsedDateValue): DateEntry[] 
         let from = clause.from;
         let to = clause.to;
         let earlierDateInClause = false;
+        let laterDateInClause = false;
         for (const span of spans) {
             if (span.end <= mention.start && span.end > from) {
                 from = span.end;
                 earlierDateInClause = true;
             }
-            if (span.start >= mention.end && span.start < to) to = span.start;
+            if (span.start >= mention.end && span.start < to) {
+                to = span.start;
+                laterDateInClause = true;
+            }
         }
         const entry = q.slice(from, to).trim();
         // Clock times before the date belong to this entry ("starts at 15:00 PT on September 23 and ends
         // at 18:00 PT") unless an earlier date in the same clause claims them ("... September 23 15:00 PT
         // Patch 26.20 October 7 18:00 PT"): then only what follows the date is this entry's.
         const segment = earlierDateInClause ? q.slice(mention.start, to).trim() : entry;
-        if (!entries.some(e => e.segment === segment && e.entry === entry)) entries.push({ segment, entry });
+        const before = q.slice(from, mention.start);
+        const after = q.slice(mention.end, to);
+        // With a later date in the clause, text after this date is trusted only up to the first
+        // separator; without any separator it is not trusted at all (it may be the next label).
+        const cut = after.search(LABEL_SEPARATOR);
+        const trustedAfter = laterDateInClause ? (cut >= 0 ? after.slice(0, cut) : "") : after;
+        const naming = `${before} ${q.slice(mention.start, mention.end)} ${trustedAfter}`.replace(/\s+/g, " ").trim();
+        if (!entries.some(e => e.segment === segment && e.entry === entry)) entries.push({ segment, entry, naming });
     }
     return entries;
 }

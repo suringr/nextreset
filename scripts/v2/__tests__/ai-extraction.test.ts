@@ -445,3 +445,34 @@ test("one value per item and field: identical repeats collapse, conflicts reject
     assert.equal(repeat.items[0].facts.length, 1);
     assert.deepEqual([repeat.stats.fields, repeat.stats.accepted, repeat.stats.rejected], [1, 1, 0], "an identical repeat is not a second field");
 });
+
+test("a label that belongs to the next dated entry cannot claim the previous entry's date and time", () => {
+    const now = new Date("2026-09-14T21:30:00Z");
+    const text = "Maintenance for 26.19: PC maintenance September 23 at 15:00 PT, Console maintenance September 24 at 18:00 ET. Posted 2026.";
+    const quote = "PC maintenance September 23 at 15:00 PT, Console maintenance September 24 at 18:00 ET";
+    const run = (identity: string, value: string, timezone: string) => groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: identity, identity, status: "scheduled", fields: [{ field: "at", value, timezone, quote }] }] }), text, { now });
+    const stolen = run("Console maintenance September 23", "2026-09-23T15:00", "PT");
+    assert.equal(stolen.items[0].facts.length, 0);
+    assert.match(stolen.rejected[0].reason, /belongs to another entry/);
+    assert.deepEqual(run("PC maintenance September 23", "2026-09-23T15:00", "PT").items[0].facts.map(f => [f.precision, f.at]), [["exact", "2026-09-23T22:00:00.000Z"]]);
+    assert.deepEqual(run("Console maintenance September 24", "2026-09-24T18:00", "ET").items[0].facts.map(f => [f.precision, f.at]), [["exact", "2026-09-24T22:00:00.000Z"]]);
+});
+
+test("an embedded offset must be attached to the claimed clock, and a conflicted field stays rejected", () => {
+    const now = new Date("2026-09-14T21:30:00Z");
+    const text = "Patch 26.19 releases September 23 at 15:00+01:00 / 18:00+02:00. Posted 2026.";
+    const quote = "Patch 26.19 releases September 23 at 15:00+01:00 / 18:00+02:00";
+    const run = (value: string) => groundExtraction(parseRawItems({ items: [{ kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields: [{ field: "at", value, timezone: "", quote }] }] }), text, { now }).items[0].facts[0];
+    assert.equal(run("2026-09-23T18:00+01:00").precision, "day", "+01:00 belongs to 15:00");
+    assert.equal(run("2026-09-23T15:00+01:00").at, "2026-09-23T14:00:00.000Z");
+    assert.equal(run("2026-09-23T18:00+02:00").at, "2026-09-23T16:00:00.000Z");
+
+    const three = groundExtraction(parseRawItems({ items: [{ kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields: [
+        { field: "at", value: "2026-09-22", timezone: "", quote: "Patch 26.19 was posted September 22, 2026" },
+        { field: "at", value: "2026-09-23", timezone: "", quote: "Patch 26.19 releases September 23, 2026" },
+        { field: "at", value: "2026-09-24", timezone: "", quote: "Patch 26.19 lands September 24, 2026" }
+    ] }] }), "Patch 26.19 was posted September 22, 2026. Patch 26.19 releases September 23, 2026. Patch 26.19 lands September 24, 2026. Posted 2026.", { now });
+    assert.equal(three.items[0].facts.length, 0, "a third value does not sneak in after the conflict");
+    assert.deepEqual([three.stats.fields, three.stats.accepted, three.stats.rejected], [3, 0, 3]);
+    assert.ok(three.rejected.every(r => r.reason === "conflicting values for the same field"));
+});
