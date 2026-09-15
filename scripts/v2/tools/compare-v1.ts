@@ -36,8 +36,8 @@ async function main(): Promise<void> {
     const differences: Array<{ key: string; v1: unknown; v2: unknown }> = [];
     for (const k of new Set([...keysV1, ...keysV2])) {
         if (VOLATILE.has(k)) continue;
-        const a = (v1 as Record<string, unknown>)[k];
-        const b = (v2 as Record<string, unknown>)[k];
+        const a = (v1 as unknown as Record<string, unknown>)[k];
+        const b = (v2 as unknown as Record<string, unknown>)[k];
         if (JSON.stringify(a) !== JSON.stringify(b)) differences.push({ key: k, v1: a, v2: b });
     }
     const out = {
