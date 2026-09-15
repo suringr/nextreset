@@ -1,7 +1,8 @@
 /**
  * Static game configuration for the trackers on the V2 pipeline.
  *
- * Only GTA Online (weekly reset) and Roblox (status) are configured in this PR.
+ * Games migrated so far: League of Legends (next patch, evidence-based), Counter-Strike 2 (last update,
+ * Steam news API), GTA Online (weekly reset rule) and Roblox (status feed).
  * Ids, types, titles, source URLs and confidence labels match the V1 providers
  * so the published `/data/<game>.<type>.json` files keep their contract.
  */
@@ -9,6 +10,7 @@ import { Confidence } from "../types";
 import { Adapter } from "./adapter";
 import { createAiDiscoveryAdapter } from "./adapters/ai-discovery";
 import { gtaWeeklyResetAdapter } from "./adapters/gta";
+import { CS2_NEWS_URL, CS2_UPDATES_PAGE, createCs2UpdatesAdapter } from "./adapters/cs2";
 import { createRobloxStatusAdapter } from "./adapters/roblox";
 import { Game, Topic } from "./domain";
 
@@ -47,6 +49,29 @@ export const GAMES: Game[] = [
             sitemapHosts: ["support.riotgames.com"],
             seeds: ["https://www.leagueoflegends.com/en-us/news/tags/patch-notes/"]
         }
+    },
+    {
+        id: "cs2",
+        name: "Counter-Strike 2",
+        slug: "cs2",
+        sources: [
+            // Steam Web API news for app 730, filtered by Steam to Valve's patch-note announcements (see adapters/cs2.ts).
+            { id: "cs2-steam-patchnotes", url: CS2_NEWS_URL, kind: "json" }
+        ],
+        topics: [
+            {
+                game: "cs2",
+                type: "last-update",
+                kind: "occurrence",
+                sourceId: "cs2-steam-patchnotes",
+                view: {
+                    title: "Counter-Strike 2 Last Update",
+                    sourceUrl: CS2_UPDATES_PAGE,
+                    confidence: Confidence.High,
+                    notes: "{label}"
+                }
+            }
+        ]
     },
     {
         id: "gta",
@@ -103,6 +128,7 @@ export const LOL_NEXT_PATCH_SPEC = {
 
 const ADAPTERS: Record<string, Adapter> = {
     "lol/next-patch": createAiDiscoveryAdapter({ description: LOL_NEXT_PATCH_SPEC.description, docTypes: [...LOL_NEXT_PATCH_SPEC.docTypes], itemKinds: [...LOL_NEXT_PATCH_SPEC.itemKinds] }),
+    "cs2/last-update": createCs2UpdatesAdapter(),
     "gta/weekly-reset": gtaWeeklyResetAdapter,
     "roblox/status": createRobloxStatusAdapter()
 };
