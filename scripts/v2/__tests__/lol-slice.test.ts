@@ -28,7 +28,8 @@ const SPEC = { description: LOL_NEXT_PATCH_SPEC.description, docTypes: [...LOL_N
 const SCHEDULE_ITEMS = {
     items: [
         { kind: "version", label: "26.18", identity: "26.18", status: "released", fields: [{ field: "at", value: "2026-09-10", timezone: "", quote: "26.18 September 10, 2026 (Thursday)" }] },
-        { kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields: [{ field: "at", value: "2026-09-23", timezone: "", quote: "26.19 September 23, 2026" }] },
+        // A model label that repeats the kind word must not publish "Patch Patch 26.19".
+        { kind: "version", label: "Patch 26.19", identity: "26.19", status: "scheduled", fields: [{ field: "at", value: "2026-09-23", timezone: "", quote: "26.19 September 23, 2026" }] },
         { kind: "version", label: "26.20", identity: "26.20", status: "scheduled", fields: [{ field: "at", value: "2026-10-07", timezone: "", quote: "26.20 October 7, 2026" }] },
         // A hallucinated patch: not on the page, must be rejected by grounding.
         { kind: "version", label: "26.30", identity: "26.30", status: "scheduled", fields: [{ field: "at", value: "2026-12-30", timezone: "", quote: "26.30 December 30, 2026" }] }

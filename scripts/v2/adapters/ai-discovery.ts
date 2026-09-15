@@ -23,6 +23,7 @@ import { AiProvider, AiUsage, AiUsageTracker, TrackedAiProvider, createAiProvide
 import { discoveredSourceId, knownSourcesFor, LearnInput } from "../discovery/learning";
 import { DiscoveryResult, createSearchProviders, discoverSources, shouldDiscover } from "../discovery/discovery";
 import { readSearchConfig, SearchProvider } from "../discovery/search-provider";
+import { versionOf } from "../discovery/queries";
 import { canonicalUrl, isOfficialUrl } from "../discovery/urls";
 import { Claim, DiscoveryVia, Document, EventStatus, Game, SourceState, Topic } from "../domain";
 import { FetchedDocument, smartFetch } from "../fetch/smart-fetch";
@@ -132,7 +133,8 @@ export function eventFromItem(item: GroundedItem, topic: Topic, spec: AiTopicSpe
 
     const event: EventInput = {
         identity: item.identity,
-        label: item.label || item.identity,
+        // A version is published as its number ("Patch {label}" -> "Patch 26.19"), taken from the grounded identity.
+        label: topic.kind === "version" ? (versionOf(item.identity) ?? item.identity) : (item.label || item.identity),
         status,
         precision: anchor.precision,
         ...(anchor.timezone ? { timezone: anchor.timezone } : {})
