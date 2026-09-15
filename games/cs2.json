@@ -1,0 +1,826 @@
+{
+  "schemaVersion": 1,
+  "game": "cs2",
+  "updatedAt": "2026-09-15T21:38:48.666Z",
+  "events": [
+    {
+      "key": "cs2/last-update/1831432155569878",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-04-30T22:46:49.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1832065502813482",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-05-07T22:09:37.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1832700592790456",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-05-14T22:23:58.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1832700592799760",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-05-18T23:36:08.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1833334318567523",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-05-20T23:06:14.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1833334318570409",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-05-22T00:40:34.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1833968530889736",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-05-29T00:17:23.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1835236783558731",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-06-10T21:22:05.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1836506165564135",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-07-01T02:57:57.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1836506165581827",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-07-08T22:51:31.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1836506165584645",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-07-09T21:46:16.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1838407329252903",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-07-15T00:42:00.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1838407329267700",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-07-20T23:13:36.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1839676055881227",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-07-29T00:38:24.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1839676055895877",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-08-03T21:18:54.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1840944183775194",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-08-12T22:50:47.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1841579228663932",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-08-19T23:36:33.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1841579228676851",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-08-24T23:39:20.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1843481262690556",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-09-09T22:51:08.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T21:38:48.666Z",
+      "lastVerified": "2026-09-15T21:38:48.666Z",
+      "publishState": "published"
+    }
+  ],
+  "changes": [
+    {
+      "entityKey": "cs2/last-update/1843481262690556",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-09-09T22:51:08.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1841579228676851",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-08-24T23:39:20.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1841579228663932",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-08-19T23:36:33.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1840944183775194",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-08-12T22:50:47.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1839676055895877",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-08-03T21:18:54.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1839676055881227",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-07-29T00:38:24.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1838407329267700",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-07-20T23:13:36.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1838407329252903",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-07-15T00:42:00.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1836506165584645",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-07-09T21:46:16.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1836506165581827",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-07-08T22:51:31.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1836506165564135",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-07-01T02:57:57.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1835236783558731",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-06-10T21:22:05.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1833968530889736",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-05-29T00:17:23.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1833334318570409",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-05-22T00:40:34.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1833334318567523",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-05-20T23:06:14.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1832700592799760",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-05-18T23:36:08.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1832700592790456",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-05-14T22:23:58.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1832065502813482",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-05-07T22:09:37.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1831432155569878",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-04-30T22:46:49.000Z",
+      "at": "2026-09-15T21:38:48.666Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    }
+  ],
+  "overrides": [],
+  "documents": [
+    {
+      "id": "fd7be6290d5cd472c8aaba86aee1f98b2e7f34e0c0f5f3a20537601f9e903720",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1843481262690556",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "e8040a01928a0c8b8f7da6c8db84def2c80a89aa067c51e9c67ff3f776e7732a",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1841579228676851",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "b4bd4fa826c2c61105b6d5ac545e57449f033e9f88bb96f7b95a259364afabb8",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1841579228663932",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "fe3faa9b94277c393b3363767f88ecf443ebb5a14ae3c7c9d318d4153a2ee37f",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1840944183775194",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "5f5d2ef877801f61d6cd92a2bc439370b101523043adcb4375f1b9c4347203d0",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1839676055895877",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "28d93734abc77a69cb14fc2336017de20da0cddced787ad1d32f6e3e24ad80ba",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1839676055881227",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "382175a95ba1bf2742ce5e6af98a7f197b1280d1bcfa7ed32faee1f9c499c304",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1838407329267700",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "5234d0e684fe00dab1dbde26982a8fab44ebd63a82f6ba4becca5997dd9b8548",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1838407329252903",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "9158d884f0d95468adea3cf54387a49104a91ad61ec2d7876ed78631c858d533",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1836506165584645",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "b7c51ee3748e6d8bb2133fc3e60b6a1202d2c4cffcca385267d7fdf0a15e4f5e",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1836506165581827",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "d810086b0a5a63e9d41d401b3ba5175e491c603062fde1795d03f3a426196048",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1836506165564135",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "b8a74d71f4024838e9467ffd1930bbbbb7c5e1cdccd042fbb3446de1b928fd7e",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1835236783558731",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "a02f95343f4cefc65712364d231cb3ee43aeff5ab66e5079a51b62de244b711e",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1833968530889736",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "0d12cc413d9ec2dd87fc54e3856116119a81e953854d019a5944f9d9613c3174",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1833334318570409",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "bc67d924b3b5f2157393210e5196202ca44e2997b70fa01a21ff1c5a159a8ce8",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1833334318567523",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "aeda1f43de0bea828ed2e6c8490db00c82e8e5236bfab32ab33a44e7c69dbdc8",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1832700592799760",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "efa031fe77e4bb9d3b04d005194d6e4283030fb92727d521eca5aa7153a920ca",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1832700592790456",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "443cfd1ebbeadee9c9dccc001efc29b415c7411be00862e3c477844d5e59275d",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1832065502813482",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "8a09e7f272bf746e827622f39060a45015b3d90bbe7a4ee34e082c7113ad7296",
+      "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1831432155569878",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-15T21:38:48.666Z",
+      "title": "Counter-Strike 2 Update",
+      "fetchMode": "http",
+      "confidence": "high"
+    }
+  ],
+  "claims": [
+    {
+      "id": "bbbc6ff5334c3d9d8dd3cd0c",
+      "documentId": "fd7be6290d5cd472c8aaba86aee1f98b2e7f34e0c0f5f3a20537601f9e903720",
+      "eventKey": "cs2/last-update/1843481262690556",
+      "field": "at",
+      "value": "2026-09-09T22:51:08.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1843481262690556\",\"title\":\"Counter-Strike 2 Update\",\"date\":1788994268}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "d02f36a5061d1850aed8c282",
+      "documentId": "e8040a01928a0c8b8f7da6c8db84def2c80a89aa067c51e9c67ff3f776e7732a",
+      "eventKey": "cs2/last-update/1841579228676851",
+      "field": "at",
+      "value": "2026-08-24T23:39:20.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1841579228676851\",\"title\":\"Counter-Strike 2 Update\",\"date\":1787614760}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "ba00e9b91ec79c431da626bb",
+      "documentId": "b4bd4fa826c2c61105b6d5ac545e57449f033e9f88bb96f7b95a259364afabb8",
+      "eventKey": "cs2/last-update/1841579228663932",
+      "field": "at",
+      "value": "2026-08-19T23:36:33.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1841579228663932\",\"title\":\"Counter-Strike 2 Update\",\"date\":1787182593}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "589514505629d722d431e9cc",
+      "documentId": "fe3faa9b94277c393b3363767f88ecf443ebb5a14ae3c7c9d318d4153a2ee37f",
+      "eventKey": "cs2/last-update/1840944183775194",
+      "field": "at",
+      "value": "2026-08-12T22:50:47.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1840944183775194\",\"title\":\"Counter-Strike 2 Update\",\"date\":1786575047}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "06793611044b1f7a49d36f64",
+      "documentId": "5f5d2ef877801f61d6cd92a2bc439370b101523043adcb4375f1b9c4347203d0",
+      "eventKey": "cs2/last-update/1839676055895877",
+      "field": "at",
+      "value": "2026-08-03T21:18:54.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1839676055895877\",\"title\":\"Counter-Strike 2 Update\",\"date\":1785791934}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "8424ac0b6d0400f2d23c0e27",
+      "documentId": "28d93734abc77a69cb14fc2336017de20da0cddced787ad1d32f6e3e24ad80ba",
+      "eventKey": "cs2/last-update/1839676055881227",
+      "field": "at",
+      "value": "2026-07-29T00:38:24.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1839676055881227\",\"title\":\"Counter-Strike 2 Update\",\"date\":1785285504}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "1dd6aceaf58eaf4b52262036",
+      "documentId": "382175a95ba1bf2742ce5e6af98a7f197b1280d1bcfa7ed32faee1f9c499c304",
+      "eventKey": "cs2/last-update/1838407329267700",
+      "field": "at",
+      "value": "2026-07-20T23:13:36.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1838407329267700\",\"title\":\"Counter-Strike 2 Update\",\"date\":1784589216}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "0582a26cc73d5cccdac4f92a",
+      "documentId": "5234d0e684fe00dab1dbde26982a8fab44ebd63a82f6ba4becca5997dd9b8548",
+      "eventKey": "cs2/last-update/1838407329252903",
+      "field": "at",
+      "value": "2026-07-15T00:42:00.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1838407329252903\",\"title\":\"Counter-Strike 2 Update\",\"date\":1784076120}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "cf21a42fdb1e0145e7353d71",
+      "documentId": "9158d884f0d95468adea3cf54387a49104a91ad61ec2d7876ed78631c858d533",
+      "eventKey": "cs2/last-update/1836506165584645",
+      "field": "at",
+      "value": "2026-07-09T21:46:16.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1836506165584645\",\"title\":\"Counter-Strike 2 Update\",\"date\":1783633576}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "69ceb0bfdebaf6b3ad7b7628",
+      "documentId": "b7c51ee3748e6d8bb2133fc3e60b6a1202d2c4cffcca385267d7fdf0a15e4f5e",
+      "eventKey": "cs2/last-update/1836506165581827",
+      "field": "at",
+      "value": "2026-07-08T22:51:31.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1836506165581827\",\"title\":\"Counter-Strike 2 Update\",\"date\":1783551091}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "358f624462eb0a82b0ad93b3",
+      "documentId": "d810086b0a5a63e9d41d401b3ba5175e491c603062fde1795d03f3a426196048",
+      "eventKey": "cs2/last-update/1836506165564135",
+      "field": "at",
+      "value": "2026-07-01T02:57:57.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1836506165564135\",\"title\":\"Counter-Strike 2 Update\",\"date\":1782874677}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "16880a64e4704185ee0db5bc",
+      "documentId": "b8a74d71f4024838e9467ffd1930bbbbb7c5e1cdccd042fbb3446de1b928fd7e",
+      "eventKey": "cs2/last-update/1835236783558731",
+      "field": "at",
+      "value": "2026-06-10T21:22:05.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1835236783558731\",\"title\":\"Counter-Strike 2 Update\",\"date\":1781126525}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "39ad1fbb7d223a8b23c97429",
+      "documentId": "a02f95343f4cefc65712364d231cb3ee43aeff5ab66e5079a51b62de244b711e",
+      "eventKey": "cs2/last-update/1833968530889736",
+      "field": "at",
+      "value": "2026-05-29T00:17:23.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1833968530889736\",\"title\":\"Counter-Strike 2 Update\",\"date\":1780013843}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "923127334f90e4c093e5671e",
+      "documentId": "0d12cc413d9ec2dd87fc54e3856116119a81e953854d019a5944f9d9613c3174",
+      "eventKey": "cs2/last-update/1833334318570409",
+      "field": "at",
+      "value": "2026-05-22T00:40:34.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1833334318570409\",\"title\":\"Counter-Strike 2 Update\",\"date\":1779410434}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "24889c41997ba4e52aefc638",
+      "documentId": "bc67d924b3b5f2157393210e5196202ca44e2997b70fa01a21ff1c5a159a8ce8",
+      "eventKey": "cs2/last-update/1833334318567523",
+      "field": "at",
+      "value": "2026-05-20T23:06:14.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1833334318567523\",\"title\":\"Counter-Strike 2 Update\",\"date\":1779318374}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "6a886ab780ee1f36085b783c",
+      "documentId": "aeda1f43de0bea828ed2e6c8490db00c82e8e5236bfab32ab33a44e7c69dbdc8",
+      "eventKey": "cs2/last-update/1832700592799760",
+      "field": "at",
+      "value": "2026-05-18T23:36:08.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1832700592799760\",\"title\":\"Counter-Strike 2 Update\",\"date\":1779147368}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "4227cbd96f9110d18ff678fb",
+      "documentId": "efa031fe77e4bb9d3b04d005194d6e4283030fb92727d521eca5aa7153a920ca",
+      "eventKey": "cs2/last-update/1832700592790456",
+      "field": "at",
+      "value": "2026-05-14T22:23:58.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1832700592790456\",\"title\":\"Counter-Strike 2 Update\",\"date\":1778797438}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "13617f8d790bce2f6d6236f9",
+      "documentId": "443cfd1ebbeadee9c9dccc001efc29b415c7411be00862e3c477844d5e59275d",
+      "eventKey": "cs2/last-update/1832065502813482",
+      "field": "at",
+      "value": "2026-05-07T22:09:37.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1832065502813482\",\"title\":\"Counter-Strike 2 Update\",\"date\":1778191777}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    },
+    {
+      "id": "b75003fbe63c29b2dd0c181e",
+      "documentId": "8a09e7f272bf746e827622f39060a45015b3d90bbe7a4ee34e082c7113ad7296",
+      "eventKey": "cs2/last-update/1831432155569878",
+      "field": "at",
+      "value": "2026-04-30T22:46:49.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1831432155569878\",\"title\":\"Counter-Strike 2 Update\",\"date\":1777589209}",
+      "extractedAt": "2026-09-15T21:38:48.666Z"
+    }
+  ],
+  "sources": [
+    {
+      "id": "cs2-steam-patchnotes",
+      "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=730&count=20&maxlength=240&feeds=steam_community_announcements&tags=patchnotes",
+      "textHash": "92cfc87ae83fc890732851304b0ef4fb107041c2ccee5c134cd68bc674a0adf5",
+      "lastFetchedAt": "2026-09-15T21:38:48.666Z",
+      "lastUsableAt": "2026-09-15T21:38:48.666Z",
+      "lastVerdict": "usable",
+      "lastMode": "http",
+      "consecutiveFailures": 0
+    }
+  ],
+  "discovered": [],
+  "topicStates": []
+}
