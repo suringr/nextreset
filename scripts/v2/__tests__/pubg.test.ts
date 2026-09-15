@@ -147,6 +147,21 @@ test("a response without any patch notes post keeps the last patch published as 
     assert.deepEqual([state.lastVerdict, state.textHash, state.consecutiveFailures], ["no-update-posts", goodHash, 2]);
 });
 
+test("a re-post after the original left the feed keeps the stored first publication and adds no evidence", async () => {
+    const { store } = tempStore();
+    const firstPublished = new Date(1791525600 * 1000).toISOString();
+    await runTracker(game, topic, createPubgPatchAdapter(fakeTransport({ http: [{ body: feedWith([item({ gid: "7", date: 1791525600 })]) }] })), store, new Date("2026-10-09T12:00:00Z"));
+
+    const repostOnly = feedWith([item({ gid: "8", date: 1791612000, contents: "Re-posted with a corrected image." })]);
+    const run = await runTracker(game, topic, createPubgPatchAdapter(fakeTransport({ http: [{ body: repostOnly }] })), store, new Date("2026-10-10T12:00:00Z"));
+    assert.equal(run.result.status, "fresh");
+    assert.equal((run.result as any).nextEventUtc, firstPublished, "the first publication stands");
+    assert.deepEqual([run.created, run.changes.length], [0, 0]);
+    const k = store.load("pubg");
+    assert.equal(k.events.find(e => e.key === "pubg/last-patch/44.1")!.at, firstPublished);
+    assert.deepEqual([k.documents.length, k.claims.length], [1, 1], "the re-post adds no evidence");
+});
+
 test("the production registry runs PUBG on the Steam news adapter", () => {
     assert.equal(game.sources[0].url, PUBG_NEWS_URL);
     assert.equal(topic.view.sourceUrl, PUBG_PATCH_NOTES_PAGE);

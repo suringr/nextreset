@@ -155,11 +155,19 @@ export function createSteamNewsAdapter(spec: SteamNewsSpec, transport?: Transpor
         }
         if (posts.length === 0) return reject("no-update-posts", spec.noPostReason);
 
+        // A post whose identity is already stored with an earlier instant is a re-post: the stored first publication
+        // stands (the original may have rolled out of the feed), and the re-post adds no evidence.
+        const instantOf = (post: SteamPost): string => {
+            const storedAt = knowledge.events.find(e => e.key === eventKey(game.id, topic.type, post.identity))?.at;
+            return storedAt !== undefined && Date.parse(storedAt) < Date.parse(post.at) ? storedAt : post.at;
+        };
+
         // Evidence only for post instants the knowledge file has not recorded yet.
         const documentId = response.textHash;
         const claims: Claim[] = [];
         for (const post of posts) {
             const key = eventKey(game.id, topic.type, post.identity);
+            if (instantOf(post) !== post.at) continue;
             if (knowledge.claims.some(c => c.eventKey === key && c.field === "at" && c.value === post.at)) continue;
             claims.push({
                 id: sha(`${documentId}|${key}|at|${post.at}`).slice(0, 24),
@@ -183,7 +191,7 @@ export function createSteamNewsAdapter(spec: SteamNewsSpec, transport?: Transpor
             confidence: Confidence.High
         }];
 
-        const events: EventInput[] = posts.map(p => ({ identity: p.identity, label: p.title, status: "observed", at: p.at, precision: "exact", timezone: "UTC" }));
+        const events: EventInput[] = posts.map(p => ({ identity: p.identity, label: p.title, status: "observed", at: instantOf(p), precision: "exact", timezone: "UTC" }));
         return {
             events,
             documents,
