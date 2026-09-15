@@ -55,7 +55,7 @@ function lolTransport(overrides: Parameters<typeof routedTransport>[0] = {}, ren
 }
 
 function lolAi(): MockAiProvider {
-    return new MockAiProvider("gemini-mock", (req: AiJsonRequest) => {
+    return new MockAiProvider("gemini-3.5-flash", (req: AiJsonRequest) => {
         const schedule = /Document title: Patch Schedule - League of Legends/.test(req.prompt);
         if (req.label === "classify") {
             return schedule
@@ -316,7 +316,7 @@ test("a page listing only past patches does not answer, and an unchanged page ne
     const topic = findTopic(game, "next-patch");
 
     // Verified but historical: nothing is published, and no past patch is presented as the next one.
-    const pastOnly = new MockAiProvider("gemini-mock", (req: AiJsonRequest) => req.label === "classify"
+    const pastOnly = new MockAiProvider("gemini-3.5-flash", (req: AiJsonRequest) => req.label === "classify"
         ? { relevant: true, docType: "patch-schedule", summary: "Schedule." }
         : { items: [SCHEDULE_ITEMS.items[0]] });
     const empty = tempStore();

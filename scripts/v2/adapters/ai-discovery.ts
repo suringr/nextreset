@@ -117,16 +117,21 @@ const DAY_MS = 86_400_000;
 const CLASSIFY_MAX_OUTPUT_TOKENS = 1024;
 const EXTRACT_MAX_OUTPUT_TOKENS = 16384;
 const RELEVANCE_MAX_OUTPUT_TOKENS = 2048;
-/** Room for system instructions, the topic block and a repair's corrections list, on top of the document. */
+/** Room for system instructions and the topic block, on top of the document. */
 const PROMPT_ALLOWANCE_CHARS = 12_000;
+/**
+ * Room for a repair's corrections list. It quotes facts the first answer returned, so it is bounded by that
+ * answer's output cap, counted at a generous 6 characters per token.
+ */
+const REPAIR_CORRECTIONS_CHARS = EXTRACT_MAX_OUTPUT_TOKENS * 6;
 
-/** The worst case for one document: classify, extract, and at most one repair, each at its output cap. */
+/** The worst case for one document: classify, extract, and at most one repair with its corrections, each at its output cap. */
 export function documentCallPlan(textChars: number, titleChars = 0): PlannedCall[] {
     const promptChars = Math.min(textChars, MAX_DOCUMENT_CHARS) + titleChars + PROMPT_ALLOWANCE_CHARS;
     return [
         { promptChars, maxOutputTokens: CLASSIFY_MAX_OUTPUT_TOKENS },
         { promptChars, maxOutputTokens: EXTRACT_MAX_OUTPUT_TOKENS },
-        { promptChars, maxOutputTokens: EXTRACT_MAX_OUTPUT_TOKENS }
+        { promptChars: promptChars + REPAIR_CORRECTIONS_CHARS, maxOutputTokens: EXTRACT_MAX_OUTPUT_TOKENS }
     ];
 }
 

@@ -85,6 +85,7 @@ function gateFor(provider: AiProvider | undefined, options: { ledger?: AiUsageLe
         ledger: options.ledger ?? AiUsageLedger.inMemory(),
         limits: { ...DEFAULT_AI_BUDGET_LIMITS, ...options.limits },
         runId: options.runId ?? "test-run",
+        model: provider?.model,
         loadProvider: async () => provider,
         env: {},
         ...(options.unavailable ? { unavailable: options.unavailable } : {})
@@ -167,7 +168,7 @@ test("a changed, relevant page goes to the model and every call is recorded with
         ["mock", "gemini-3.5-flash", "lol", "next-patch", "classify", false, true, 0, 2276, 2930],
         ["mock", "gemini-3.5-flash", "lol", "next-patch", "extract", false, true, 0, 2276, 2930]
     ]);
-    const expected = estimateCost(priceFor("gemini-3.5-flash", {}), { inputTokens: 2276, outputTokens: 2930 });
+    const expected = estimateCost(priceFor("gemini-3.5-flash", {})!, { inputTokens: 2276, outputTokens: 2930 });
     assert.ok(Math.abs(expected.totalUsd - 0.029784) < 1e-9, "classify and extract together cost about three cents on the live schedule");
     for (const c of calls) {
         assert.deepEqual([c.estimatedInputCostUsd, c.estimatedOutputCostUsd, c.estimatedCostUsd], [expected.inputUsd, expected.outputUsd, expected.totalUsd]);
@@ -290,6 +291,7 @@ test("the per-document plan covers what classification, extraction and repair re
     const ai = scheduleAi(PARAPHRASED_ITEMS);
     await runTracker(GAME, TOPIC, lolAdapter(lolTransport()), tempStore().store, NOW, { ai: gateFor(ai) });
     const plan = documentCallPlan(0);
+    assert.ok(plan[2].promptChars > plan[1].promptChars, "the repair reserves room for its corrections list");
     assert.deepEqual(ai.requests.map(r => r.label), ["classify", "extract", "extract-repair"]);
     ai.requests.forEach((req, i) => {
         const doc = req.prompt.match(/--- DOCUMENT ---\n([\s\S]*?)\n--- END ---/)?.[1] ?? "";
@@ -386,13 +388,15 @@ test("limits come from the environment with safe defaults, prices are central es
     assert.throws(() => readAiBudgetLimits({ AI_PER_TOPIC_CALL_LIMIT: "2.5" }), /integer/);
     assert.throws(() => readAiBudgetLimits({ AI_DAILY_COST_LIMIT_USD: "-1" }), /non-negative/);
 
-    const flash = priceFor("gemini-3.5-flash", {});
+    const flash = priceFor("gemini-3.5-flash", {})!;
     assert.deepEqual([flash.inputPerMillionUsd, flash.outputPerMillionUsd], [1.5, 9]);
     const cost = estimateCost(flash, { inputTokens: 1_000_000, outputTokens: 100_000, thoughtTokens: 100_000 });
     assert.ok(Math.abs(cost.inputUsd - 1.5) < 1e-9 && Math.abs(cost.outputUsd - 1.8) < 1e-9, "thinking tokens are billed as output");
-    const unknown = priceFor("some-future-model", {});
-    assert.ok(unknown.inputPerMillionUsd >= 1.5 && unknown.outputPerMillionUsd >= 9 && /conservative/.test(unknown.source));
-    assert.equal(priceFor("gemini-3.5-flash", { AI_PRICE_INPUT_PER_M: "0.75", AI_PRICE_OUTPUT_PER_M: "3.75" }).outputPerMillionUsd, 3.75);
+    assert.equal(priceFor("some-future-model", {}), undefined, "an unknown model has no assumed price");
+    assert.equal(priceFor("some-future-model", { AI_PRICE_INPUT_PER_M: "3", AI_PRICE_OUTPUT_PER_M: "15" })?.outputPerMillionUsd, 15);
+    const unpriced = gateFor(new MockAiProvider("some-future-model", () => ({}))).check("lol", "next-patch", NOW, documentCallPlan(1000));
+    assert.equal(!unpriced.ok && unpriced.reason, "unpriced-model", "calls to a model whose cost cannot be bounded are refused");
+    assert.equal(priceFor("gemini-3.5-flash", { AI_PRICE_INPUT_PER_M: "0.75", AI_PRICE_OUTPUT_PER_M: "3.75" })?.outputPerMillionUsd, 3.75);
     assert.throws(() => priceFor("gemini-3.5-flash", { AI_PRICE_INPUT_PER_M: "1" }), /both/);
 
     const ledger = AiUsageLedger.inMemory();
@@ -506,7 +510,7 @@ test("the budget day is read when each call is made, so a run crossing UTC midni
     const ledger = AiUsageLedger.inMemory();
     ledger.record(spent({ estimatedCostUsd: 1.99 }));
     const clock = { now: new Date("2026-09-16T00:01:00Z") };
-    const gate = createAiGate({ ledger, limits: { ...DEFAULT_AI_BUDGET_LIMITS }, runId: "midnight", loadProvider: async () => scheduleAi(), env: {}, clock: () => clock.now });
+    const gate = createAiGate({ ledger, limits: { ...DEFAULT_AI_BUDGET_LIMITS }, runId: "midnight", model: "gemini-3.5-flash", loadProvider: async () => scheduleAi(), env: {}, clock: () => clock.now });
     const trackerStarted = new Date("2026-09-15T23:59:00Z");
     assert.equal(gate.check("lol", "next-patch", trackerStarted, documentCallPlan(1000)).ok, true, "the new day has its own budget");
 

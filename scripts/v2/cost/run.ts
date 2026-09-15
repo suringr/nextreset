@@ -10,7 +10,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { WorkStats } from "../adapter";
-import { createAiProvider, readAiConfig } from "../ai/provider";
+import { DEFAULT_AI_MODEL, createAiProvider, readAiConfig } from "../ai/provider";
 import { AiBudgetLimits, AiGate, DEFAULT_AI_BUDGET_LIMITS, createAiGate, currentRunId, readAiBudgetLimits } from "./budget";
 import { AiCallRecord, AiUsageLedger, LedgerTotals, emptyTotals, utcDate } from "./ledger";
 import { formatUsd } from "./pricing";
@@ -41,6 +41,7 @@ export function createRunAiGate(options: RunAiGateOptions): { gate: AiGate; unav
         ledger: AiUsageLedger.inDirectory(usageLedgerDir(options.knowledgeRoot)),
         limits,
         runId: currentRunId(env, options.now),
+        model: (env.AI_MODEL || DEFAULT_AI_MODEL).trim(),
         unavailable,
         env,
         // Budget days follow the wall clock, so a run that crosses UTC midnight counts later calls against the new day.

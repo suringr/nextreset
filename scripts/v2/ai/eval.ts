@@ -342,7 +342,7 @@ async function main(): Promise<void> {
     const price = priceFor(provider.model);
     const report = await runGoldEval({
         provider, cases, mode: live ? "live" : "mock",
-        pricePerMInput: price.inputPerMillionUsd, pricePerMOutput: price.outputPerMillionUsd
+        pricePerMInput: price?.inputPerMillionUsd, pricePerMOutput: price?.outputPerMillionUsd
     });
 
     fs.mkdirSync(outDir, { recursive: true });

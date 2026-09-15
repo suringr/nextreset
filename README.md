@@ -118,7 +118,7 @@ targets, per UTC day:
 | `AI_DAILY_COST_LIMIT_USD` | `2.00` | estimated spend across all topics |
 | `AI_DAILY_CALL_LIMIT` | `100` | model calls across all topics |
 | `AI_PER_TOPIC_CALL_LIMIT` | `5` | model calls per topic |
-| `AI_PRICE_INPUT_PER_M`, `AI_PRICE_OUTPUT_PER_M` | price table | override the list prices used for estimates |
+| `AI_PRICE_INPUT_PER_M`, `AI_PRICE_OUTPUT_PER_M` | price table | override the list prices used for estimates; a model with no known price makes no calls |
 
 - **Before a changed document is sent**, its worst case (classify, extract and one repair, each at its
   output cap and with every retry the provider may make) must fit what is left of today's budget. Each call

@@ -54,6 +54,7 @@ async function main(): Promise<void> {
     const gate = createAiGate({
         ledger: AiUsageLedger.inDirectory(usageLedgerDir(knowledgeDir)),
         limits: readAiBudgetLimits(),
+        model: ai?.model,
         runId: `${currentRunId(process.env, now)}-${path.basename(outFile, ".json")}`,
         // A simulated --now keeps budget days on the simulated time; a real run follows the wall clock.
         ...(arg("--now") ? {} : { clock: () => new Date() }),

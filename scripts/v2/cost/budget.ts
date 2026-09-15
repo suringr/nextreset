@@ -50,7 +50,7 @@ export function readAiBudgetLimits(env: NodeJS.ProcessEnv = process.env): AiBudg
     };
 }
 
-export type AiBudgetReason = "daily-cost" | "daily-calls" | "topic-calls" | "ledger-unreadable" | "budget-unavailable";
+export type AiBudgetReason = "daily-cost" | "daily-calls" | "topic-calls" | "ledger-unreadable" | "budget-unavailable" | "unpriced-model";
 
 /** Thrown instead of making a call the budget does not allow. Not a model failure: the work is deferred. */
 export class AiBudgetExceededError extends Error {
@@ -94,6 +94,8 @@ export interface AiGateOptions {
     runId: string;
     /** Loads the configured provider (once); resolves undefined when none is configured. */
     loadProvider: () => Promise<AiProvider | undefined>;
+    /** The configured model id, so costs can be projected before the provider is loaded. */
+    model?: string;
     /** When set, every check fails with this explanation: usage cannot be tracked, or the limits are invalid. */
     unavailable?: string;
     /**
@@ -149,7 +151,11 @@ class BudgetGate implements AiGate {
         if (topicCalls + planned > this.limits.perTopicCalls) {
             return { ok: false, reason: "topic-calls", detail: `${game}/${topic} used ${topicCalls} of ${this.limits.perTopicCalls} calls today (UTC ${date}); this work needs up to ${planned} more` };
         }
-        const price = priceFor(this.model ?? "unknown", this.options.env);
+        const model = this.model ?? this.options.model;
+        const price = model ? priceFor(model, this.options.env) : undefined;
+        if (!price) {
+            return { ok: false, reason: "unpriced-model", detail: `no price is known for model ${model ?? "(not configured)"}, so its cost cannot be bounded; add it to scripts/v2/cost/pricing.ts or set AI_PRICE_INPUT_PER_M and AI_PRICE_OUTPUT_PER_M` };
+        }
         // Every attempt the provider may send for a call can be billed (retried answers that came back unusable).
         const perAttempt = calls.reduce((sum, c) => sum + estimateCost(price, { inputTokens: Math.ceil(c.promptChars / PROJECTION_CHARS_PER_TOKEN), outputTokens: c.maxOutputTokens }).totalUsd, 0);
         const projected = perAttempt * this.attempts;
@@ -203,6 +209,7 @@ class BudgetedAiProvider implements AiProvider {
         if (!verdict.ok) throw new AiBudgetExceededError(verdict.reason, verdict.detail);
 
         const price = priceFor(this.inner.model, this.env);
+        if (!price) throw new AiBudgetExceededError("unpriced-model", `no price is known for model ${this.inner.model}`);
         const record = (success: boolean, usage: AiUsage | undefined, retries: number, error?: unknown) => {
             const tokens = usage ?? { inputTokens: 0, outputTokens: 0 };
             const cost = estimateCost(price, tokens);

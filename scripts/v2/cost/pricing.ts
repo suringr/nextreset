@@ -28,15 +28,6 @@ export function knownModelPrice(model: string): ModelPrice | undefined {
     return MODEL_PRICES[model];
 }
 
-/** For a model with no entry: the highest known prices, so budget checks err on the side of stopping. */
-function conservativePrice(model: string): ModelPrice {
-    const prices = Object.values(MODEL_PRICES);
-    return {
-        inputPerMillionUsd: Math.max(...prices.map(p => p.inputPerMillionUsd)),
-        outputPerMillionUsd: Math.max(...prices.map(p => p.outputPerMillionUsd)),
-        source: `no price entry for ${model}; highest known prices used as a conservative estimate`
-    };
-}
 
 function readPrice(env: NodeJS.ProcessEnv, name: string): number | undefined {
     const raw = env[name]?.trim();
@@ -46,8 +37,11 @@ function readPrice(env: NodeJS.ProcessEnv, name: string): number | undefined {
     return value;
 }
 
-/** The price used to estimate a model's cost: the environment override when set, else the table, else the conservative fallback. */
-export function priceFor(model: string, env: NodeJS.ProcessEnv = process.env): ModelPrice {
+/**
+ * The price used to estimate a model's cost: the environment override when set, else the table. Undefined for a
+ * model with neither: its cost cannot be bounded, so budget checks refuse its calls (fail closed).
+ */
+export function priceFor(model: string, env: NodeJS.ProcessEnv = process.env): ModelPrice | undefined {
     const input = readPrice(env, "AI_PRICE_INPUT_PER_M");
     const output = readPrice(env, "AI_PRICE_OUTPUT_PER_M");
     if ((input === undefined) !== (output === undefined)) {
@@ -56,7 +50,7 @@ export function priceFor(model: string, env: NodeJS.ProcessEnv = process.env): M
     if (input !== undefined && output !== undefined) {
         return { inputPerMillionUsd: input, outputPerMillionUsd: output, source: "AI_PRICE_INPUT_PER_M / AI_PRICE_OUTPUT_PER_M override" };
     }
-    return MODEL_PRICES[model] ?? conservativePrice(model);
+    return MODEL_PRICES[model];
 }
 
 export interface TokenUsage {
