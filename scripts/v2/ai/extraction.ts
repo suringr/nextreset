@@ -17,7 +17,7 @@
  * and never decides what gets published.
  */
 import { normalizeIdentity } from "../identity";
-import { DatedStatement, NormalizedDate, ParsedDateValue, ResolvedZone, clockTimesIn, dateEntries, datesWithYearIn, entryBindsItem, datePreamble, normalizeDateFact, zoneAfterClock, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneDeclaredIn, zoneOffsetAt, zonesIn } from "./dates";
+import { DatedStatement, NormalizedDate, declaredZoneFor, ParsedDateValue, ResolvedZone, clockTimesIn, dateEntries, datesWithYearIn, entryBindsItem, datePreamble, normalizeDateFact, zoneAfterClock, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneDeclaredIn, zoneOffsetAt, zonesIn } from "./dates";
 import { AiProvider, AiUsage } from "./provider";
 
 export interface AiDocument {
@@ -480,8 +480,16 @@ function evidencedZone(documentText: string, quote: string, segment: string, tim
         return { zone: stated };
     }
     if (zonesIn(quote).length > 0) return { problem: "the timezone in the quote belongs to another entry; time dropped" };
-    if (!claimed || !zoneDeclaredIn(documentText, claimed)) return { problem: `timezone "${timezoneRaw}" is not declared for times in the document; time dropped` };
-    return { zone: claimed };
+    const declared = declaredZoneFor(documentText, quote, value);
+    if (!declared.zone) {
+        return { problem: declared.ambiguous
+            ? "the document declares different timezones for different sections and none precedes this passage; time dropped"
+            : `timezone "${timezoneRaw}" is not declared for times in the document; time dropped` };
+    }
+    if (!claimed || (declared.zone.zone !== claimed.zone && zoneOffsetAt(declared.zone, value) !== zoneOffsetAt(claimed, value))) {
+        return { problem: `the document declares ${declared.zone.zone} for this passage, not "${timezoneRaw}"; time dropped` };
+    }
+    return { zone: declared.zone };
 }
 
 export function groundExtraction(raw: { items: RawItem[]; dropped: number }, documentText: string, options: { now?: Date } = {}): GroundedExtraction {
@@ -547,8 +555,20 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
             if (!parsed) { reject(`value is not an ISO date: ${JSON.stringify(f.value)}`); continue; }
             const mention = quoteMentionsDate(quote, parsed);
             if (!mention.day || !mention.month) { reject("quote does not mention the claimed day and month"); continue; }
-            if (mention.year === false) { reject("quote states a different year"); continue; }
-            if (mention.year === null) {
+
+            // The date must sit in an entry of the passage that belongs to this item: a passage listing several
+            // entries cannot lend one entry's date, year, time or zone to another (see entryBindsItem).
+            const entries = dateEntries(quote, parsed);
+            const own = entries.filter(e => entryBindsItem(e, discriminators, competitors));
+            if (entries.length > 0 && own.length === 0) { reject(ENTRY_MISMATCH); continue; }
+
+            // The year is judged on the occurrences bound to this item, not on any date elsewhere in the passage.
+            const statedYear: boolean | null = own.length > 0
+                ? (own.some(e => e.year === true) ? true : own.some(e => e.year === null) ? null : false)
+                : mention.year;
+            const bound = own.length > 0 ? own.filter(e => e.year === statedYear) : own;
+            if (statedYear === false) { reject("quote states a different year"); continue; }
+            if (statedYear === null) {
                 const expected = inferredYear(parsed, prepared, now, quote);
                 if (expected !== parsed.year) { reject(`inferred year ${parsed.year} is not supported by the document (its chronology gives ${expected ?? "no single year"})`); continue; }
             }
@@ -556,21 +576,15 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
             let normalized = normalizeDateFact(f.value, f.timezone);
             if (!normalized) { reject("date could not be normalized"); continue; }
 
-            // The date must sit in an entry of the passage that belongs to this item: a passage listing several
-            // entries cannot lend one entry's date, time or zone to another (see entryBindsItem).
-            const entries = dateEntries(quote, parsed);
-            const own = entries.filter(e => entryBindsItem(e, discriminators, competitors));
-            if (entries.length > 0 && own.length === 0) { reject(ENTRY_MISMATCH); continue; }
-
             // A clock time, and the zone or offset it is expressed in, must be evidenced by that
             // entry too. Otherwise keep the day and drop the time.
             if (normalized.precision === "exact") {
                 const dayFallback = (note: string) => ({ ...normalizeDateFact(f.value.slice(0, 10), undefined)!, note });
                 // Several same-date entries that the identity cannot tell apart never lend a time.
-                const timed = own.length > 1 && !hasDiscriminators(item.identity) ? [] : own.filter(e => quoteMentionsTime(e.segment, parsed));
+                const timed = bound.length > 1 && !hasDiscriminators(item.identity) ? [] : bound.filter(e => quoteMentionsTime(e.segment, parsed));
                 const segment = entries.length === 0 ? quote : timed.length === 1 ? timed[0].segment : undefined;
                 if (segment === undefined) {
-                    normalized = dayFallback(own.length > 1
+                    normalized = dayFallback(bound.length > 1
                         ? "several entries in the quote share this date and none is clearly this item; time dropped"
                         : "quote does not state the claimed clock time next to the date; time dropped");
                 } else if (parsed.offsetMinutes !== undefined) {
@@ -599,7 +613,7 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
                 continue;
             }
 
-            facts.push({ ...normalized, field: f.field, value: f.value, timezoneRaw: f.timezone, quote, yearInferred: mention.year === null });
+            facts.push({ ...normalized, field: f.field, value: f.value, timezoneRaw: f.timezone, quote, yearInferred: statedYear === null });
             accepted++;
         }
 
