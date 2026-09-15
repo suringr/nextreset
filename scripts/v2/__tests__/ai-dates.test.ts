@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { clockTimesIn, dateSegment, dateSegments, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneAfterClock, zoneDeclaredIn, zonedToUtc, zonedToUtcDetailed, zonesIn } from "../ai/dates";
+import { clockTimesIn, dateEntries, dateSegment, dateSegments, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneAfterClock, zoneDeclaredIn, zonedToUtc, zonedToUtcDetailed, zonesIn } from "../ai/dates";
 
 test("parseDateValue accepts ISO dates and local date-times, rejects everything else", () => {
     assert.deepEqual(parseDateValue("2026-09-23"), { year: 2026, month: 9, day: 23, hasTime: false });
@@ -236,4 +236,16 @@ test("zoneAfterClock pairs each clock with the zone that follows it", () => {
     assert.equal(zoneAfterClock("September 23 at 3 PM PT and 6 PM", parseDateValue("2026-09-23T18:00")!), undefined, "no zone after the second clock");
     assert.equal(zoneAfterClock("September 23 at 3 PM PT and 6 PM", parseDateValue("2026-09-23T15:00")!)?.zone, "America/Los_Angeles");
     assert.equal(zoneAfterClock("September 23, 2026", parseDateValue("2026-09-23")!), undefined, "date-only values have no clock");
+});
+
+test("an entry's naming text excludes the next entry's label when another date follows in the clause", () => {
+    const sept23 = parseDateValue("2026-09-23T15:00")!;
+    const sept24 = parseDateValue("2026-09-24T18:00")!;
+    const list = "PC maintenance September 23 at 15:00 PT, Console maintenance September 24 at 18:00 ET";
+    assert.deepEqual(dateEntries(list, sept23).map(e => [e.entry, e.naming]), [["pc maintenance september 23 at 15:00 pt, console maintenance", "pc maintenance at 15:00 pt"]]);
+    assert.deepEqual(dateEntries(list, sept24).map(e => e.naming), ["at 15:00 pt, console maintenance september 24 at 18:00 et"], "the last entry keeps its whole text");
+    // Label after the date, nothing following: the whole entry names it.
+    assert.deepEqual(dateEntries("Update: 20 August 2026 26.45 Hotfix", parseDateValue("2026-08-20")!).map(e => e.naming), ["update: 20 august 2026 26.45 hotfix"]);
+    // Chained without separators: only the text before the next label counts.
+    assert.deepEqual(dateEntries("Patch 26.19 September 23 15:00 PT Patch 26.20 October 7 18:00 PT", sept23).map(e => e.naming), ["patch 26.19"]);
 });
