@@ -1,0 +1,69 @@
+{
+  "lol-schedule:classify": { "relevant": true, "docType": "patch-schedule", "summary": "Riot's planned 2026 League of Legends patch schedule.", "reason": "Lists every patch number with its scheduled date." },
+  "lol-schedule:extract": { "items": [
+    { "kind": "version", "label": "Patch 26.18", "identity": "26.18", "status": "released", "fields": [ { "field": "at", "value": "2026-09-10", "timezone": "Pacific Time", "quote": "26.18 September 10, 2026 (Thursday)" } ] },
+    { "kind": "version", "label": "Patch 26.19", "identity": "26.19", "status": "scheduled", "fields": [ { "field": "at", "value": "2026-09-23", "timezone": "Pacific Time", "quote": "26.19 September 23, 2026" } ] },
+    { "kind": "version", "label": "Patch 26.20", "identity": "26.20", "status": "scheduled", "fields": [ { "field": "at", "value": "2026-10-07", "timezone": "Pacific Time", "quote": "26.20 October 7, 2026" } ] },
+    { "kind": "version", "label": "Patch 26.21", "identity": "26.21", "status": "scheduled", "fields": [ { "field": "at", "value": "2026-10-21", "timezone": "Pacific Time", "quote": "26.21 October 21, 2026" } ] },
+    { "kind": "version", "label": "Patch 26.25", "identity": "26.25", "status": "scheduled", "fields": [ { "field": "at", "value": "2026-12-23", "timezone": "Pacific Time", "quote": "26.25 December 23, 2026" } ] }
+  ] },
+
+  "lol-notes-listing:classify": { "relevant": true, "docType": "patch-notes", "summary": "Listing of published League of Legends patch notes.", "reason": "Each entry names a patch and its publication timestamp." },
+  "lol-notes-listing:extract": { "items": [
+    { "kind": "version", "label": "League of Legends Patch 26.18 Notes", "identity": "26.18", "status": "released", "fields": [ { "field": "at", "value": "2026-09-09T18:00", "timezone": "UTC", "quote": "2026-09-09T18:00:00.000Z League of Legends Patch 26.18 Notes" } ] },
+    { "kind": "version", "label": "League of Legends Patch 26.17 Notes", "identity": "26.17", "status": "released", "fields": [ { "field": "at", "value": "2026-08-25T18:00", "timezone": "UTC", "quote": "2026-08-25T18:00:00.000Z League of Legends Patch 26.17 Notes" } ] }
+  ] },
+
+  "valorant-updates:classify": { "relevant": true, "docType": "patch-notes", "summary": "VALORANT game updates listing with patch notes and trailers.", "reason": "Patch notes entries carry publication timestamps." },
+  "valorant-updates:extract": { "items": [
+    { "kind": "version", "label": "VALORANT Patch Notes 13.05", "identity": "13.05", "status": "released", "fields": [ { "field": "at", "value": "2026-09-01T13:00", "timezone": "UTC", "quote": "2026-09-01T13:00:00.000Z VALORANT Patch Notes 13.05" } ] },
+    { "kind": "version", "label": "VALORANT Patch Notes 13.04", "identity": "13.04", "status": "released", "fields": [
+      { "field": "at", "value": "2026-08-18T13:00", "timezone": "UTC", "quote": "2026-08-18T13:00:00.000Z VALORANT Patch Notes 13.04" },
+      { "field": "at", "value": "2026-08-19T13:00", "timezone": "UTC", "quote": "2026-08-18T13:00:00.000Z VALORANT Patch Notes 13.04" }
+    ] }
+  ] },
+
+  "pubg-listing:classify": { "relevant": true, "docType": "patch-notes", "summary": "PUBG patch notes listing.", "reason": "Each update is listed with its patch notes date." },
+  "pubg-listing:extract": { "items": [
+    { "kind": "version", "label": "Patch Notes - Update 43.1", "identity": "Update 43.1", "status": "released", "fields": [ { "field": "at", "value": "2026-09-09", "timezone": "", "quote": "Patch Notes - Update 43.1 Introducing Update 43.1: Discover all the latest features and improvements! PATCH NOTES 2026.09.09" } ] },
+    { "kind": "version", "label": "Patch Notes - Update 42.3", "identity": "Update 42.3", "status": "released", "fields": [ { "field": "at", "value": "2026-08-11", "timezone": "", "quote": "Patch Notes - Update 42.3 Introducing Update 42.3: Discover all the latest features and improvements! PATCH NOTES 2026.08.11" } ] }
+  ] },
+
+  "pubg-article:classify": { "relevant": true, "docType": "patch-notes", "summary": "Patch notes for PUBG Update 40.2 including the live maintenance schedule.", "reason": "States the update number, its date and maintenance windows." },
+  "pubg-article:extract": { "items": [
+    { "kind": "version", "label": "Patch Notes - Update 40.2", "identity": "Update 40.2", "status": "released", "fields": [ { "field": "at", "value": "2026-03-10", "timezone": "", "quote": "Patch Notes - Update 40.2 PATCH NOTES 2026.03.10" } ] },
+    { "kind": "occurrence", "label": "Live Maintenance (PC)", "identity": "Live Maintenance PC", "status": "ended", "fields": [ { "field": "startAt", "value": "2026-03-11T00:00", "timezone": "UTC", "quote": "Live Maintenance Schedule (UTC) ※ The times shown below are subject to change. PC: March 11, 00:00 - 08:30" } ] },
+    { "kind": "occurrence", "label": "Live Maintenance (Console)", "identity": "Live Maintenance Console", "status": "ended", "fields": [ { "field": "startAt", "value": "2026-03-19T01:00", "timezone": "UTC", "quote": "Console: March 19, 01:00 - 09:00" } ] }
+  ] },
+
+  "cs2-updates:classify": { "relevant": true, "docType": "patch-notes", "summary": "Counter-Strike 2 update notes, newest first.", "reason": "Every update is dated." },
+  "cs2-updates:extract": { "items": [
+    { "kind": "version", "label": "Counter-Strike 2 Update (September 10, 2026)", "identity": "2026-09-10", "status": "released", "fields": [ { "field": "at", "value": "2026-09-10", "timezone": "", "quote": "September 10, 2026 Counter-Strike 2 Update" } ] },
+    { "kind": "version", "label": "Counter-Strike 2 Update (August 25, 2026)", "identity": "2026-08-25", "status": "released", "fields": [ { "field": "at", "value": "2026-08-25", "timezone": "", "quote": "August 25, 2026 Counter-Strike 2 Update" } ] }
+  ] },
+
+  "warzone-notes:classify": { "relevant": true, "docType": "patch-notes", "summary": "Call of Duty patch notes hub with Warzone season entries.", "reason": "Warzone patch notes entries are dated." },
+  "warzone-notes:extract": { "items": [
+    { "kind": "version", "label": "Call of Duty: Warzone Season 05 Patch Notes", "identity": "Season 05", "status": "released", "fields": [ { "field": "at", "value": "2026-08-12", "timezone": "", "quote": "Call of Duty: Warzone Season 05 Patch Notes August 12, 2026" } ] },
+    { "kind": "version", "label": "Call of Duty: Warzone Season 04 Reloaded Patch Notes", "identity": "Season 04 Reloaded", "status": "released", "fields": [ { "field": "at", "value": "2026-07-15", "timezone": "", "quote": "Call of Duty: Warzone Season 04 Reloaded Patch Notes July 15, 2026" } ] }
+  ] },
+
+  "genshin-article:classify": { "relevant": true, "docType": "release", "summary": "Overview of Version 7.1 launch benefits.", "reason": "States the launch date of Version 7.1." },
+  "genshin-article:extract": { "items": [
+    { "kind": "period", "label": "Version 7.1 \"A Rekviem for the Underworld\"", "identity": "Version 7.1", "status": "scheduled", "fields": [ { "field": "startAt", "value": "2026-09-23", "timezone": "", "quote": "Genshin Impact Version 7.1 \"A Rekviem for the Underworld\" launches on September 23!" } ] }
+  ] },
+
+  "eafc-news:classify": { "relevant": false, "docType": "news", "summary": "EA SPORTS FC 26 news listing (Ultimate Team promotions).", "reason": "No title update notes are listed." },
+  "eafc-news:extract": { "items": [] },
+
+  "minecraft-article:classify": { "relevant": true, "docType": "patch-notes", "summary": "Bedrock Edition 26.44/45 hotfix changelog.", "reason": "States the hotfix versions and their dates." },
+  "minecraft-article:extract": { "items": [
+    { "kind": "version", "label": "Minecraft: Bedrock Edition 26.45 Hotfix", "identity": "26.45", "status": "released", "fields": [ { "field": "at", "value": "2026-08-20", "timezone": "", "quote": "Update: 20 August 2026 26.45 Hotfix" } ] },
+    { "kind": "version", "label": "Minecraft: Bedrock Edition 26.44 Hotfix", "identity": "26.44", "status": "released", "fields": [ { "field": "at", "value": "2026-08-14", "timezone": "", "quote": "Posted: 14 August 2026" } ] }
+  ] },
+
+  "synthetic-no-date:classify": { "relevant": true, "docType": "patch-notes", "summary": "Patch 99.9 notes without a date.", "reason": "Mentions a patch but states no release date." },
+  "synthetic-no-date:extract": { "items": [
+    { "kind": "version", "label": "Patch 99.9", "identity": "99.9", "status": "announced", "fields": [ { "field": "at", "value": "2026-10-01", "timezone": "", "quote": "Patch 99.9 releases on October 1, 2026" } ] }
+  ] }
+}

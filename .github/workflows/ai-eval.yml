@@ -1,0 +1,46 @@
+name: AI extraction gold evaluation
+
+# On-demand only. Runs the gold cases in scripts/v2/__tests__/gold against the
+# live model and uploads the report. The API key comes from the GEMINI_API_KEY
+# repository secret and is never printed; the report contains no prompts.
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Model id to evaluate
+        required: false
+        default: gemini-3.5-flash
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    name: Gold evaluation (live)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Run gold evaluation against the live model
+        env:
+          AI_PROVIDER: gemini
+          AI_MODEL: ${{ inputs.model }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: node build/v2/ai/eval.js --live
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-eval-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/ai-eval/
+          if-no-files-found: ignore
+          retention-days: 30
