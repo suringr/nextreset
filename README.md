@@ -69,7 +69,7 @@ npm run build && npm test
 
 ## 🧠 Knowledge store (V2 pilot)
 
-GTA Online, Roblox, League of Legends, Counter-Strike 2, Minecraft (Java Edition), PUBG and VALORANT run on the V2 pipeline in `scripts/v2/`: an adapter produces events, they are
+GTA Online, Roblox, League of Legends, Counter-Strike 2, Minecraft (Java Edition), PUBG, VALORANT and Warzone run on the V2 pipeline in `scripts/v2/`: an adapter produces events, they are
 stored in a per-game JSON knowledge file (`knowledge/games/<game>.json`, schema in `scripts/v2/domain.ts`),
 and the V1-compatible `/data/<game>.<type>.json` is derived from that knowledge. Every other tracker
 still runs its V1 provider; `REGISTRY` in `scripts/refresh-all.ts` shows which engine each one uses.
