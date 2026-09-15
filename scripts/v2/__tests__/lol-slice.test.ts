@@ -152,6 +152,13 @@ test("an unchanged page costs no model call and records no change; a later run k
     assert.equal(store.load("lol").events.find(e => e.key === "lol/next-patch/26.19")?.lastVerified, "2026-09-15T12:00:00.000Z");
 
     // Once 26.19 has shipped, the next scheduled patch is published and 26.19 is marked ended.
+    // On the patch day itself (the schedule gives dates only), 26.19 stays the next patch until the day ends.
+    const patchDay = await runTracker(game, topic, lolAdapter(lolTransport(), lolAi()), store, new Date("2026-09-23T12:00:00Z"));
+    assert.equal(patchDay.result.status, "fresh");
+    assert.equal((patchDay.result as any).nextEventUtc, "2026-09-23T00:00:00.000Z");
+    assert.equal((patchDay.result as any).notes, "Patch 26.19");
+    assert.equal(store.load("lol").events.find(e => e.key === "lol/next-patch/26.19")?.status, "scheduled");
+
     const later = await runTracker(game, topic, lolAdapter(lolTransport(), lolAi()), store, new Date("2026-09-24T06:00:00Z"));
     assert.equal((later.result as any).nextEventUtc, "2026-10-07T00:00:00.000Z");
     assert.equal((later.result as any).notes, "Patch 26.20");
@@ -267,6 +274,13 @@ test("a non-official page is never evidence; it may only lead to the official pa
     const k1 = store.load("lol");
     assert.deepEqual(k1.discovered.map(d => [d.url, d.via, d.tier]), [[FINAL, "secondary-link", "official"]]);
     assert.ok(k1.documents.every(d => d.url === FINAL));
+    assert.equal(k1.documents[0].confidence, "medium", "the computed confidence is stored with the evidence");
+
+    // Re-verifying the same, unchanged evidence later does not upgrade it to the topic's static "high".
+    const again = await runTracker(game, topic, lolAdapter(lolTransport({ [reddit]: { body: body(`<a href="${FINAL}/">Riot's patch schedule</a>`) } }), lolAi(), () => web([redditHit])), store, new Date("2026-09-15T08:00:00Z"));
+    assert.equal((again.report as any).attempts[0].outcome, "unchanged");
+    assert.equal(again.result.status, "fresh");
+    assert.equal((again.result as any).confidence, "medium");
 });
 
 test("grounded items become events with deterministic statuses, and confidence explains itself", () => {
@@ -293,6 +307,30 @@ test("grounded items become events with deterministic statuses, and confidence e
     assert.equal(confidenceFor({ via: "config", document: doc, extraction: extraction(true, false) as any, events: [scheduled.event] }).level, "medium");
     assert.equal(confidenceFor({ via: "sitemap", document: doc, extraction: extraction(false, true) as any, events: [scheduled.event] }).level, "medium");
     assert.equal(confidenceFor({ via: "web", document: doc, extraction: extraction(false, false) as any, events: [scheduled.event] }).level, "medium");
+});
+
+test("a page listing only past patches does not answer, and an unchanged page never hides a failed search", async () => {
+    const game = lolGame();
+    const topic = findTopic(game, "next-patch");
+
+    // Verified but historical: nothing is published, and no past patch is presented as the next one.
+    const pastOnly = new MockAiProvider("gemini-mock", (req: AiJsonRequest) => req.label === "classify"
+        ? { relevant: true, docType: "patch-schedule", summary: "Schedule." }
+        : { items: [SCHEDULE_ITEMS.items[0]] });
+    const empty = tempStore();
+    const historical = await runTracker(game, topic, lolAdapter(lolTransport(), pastOnly), empty.store, NOW);
+    assert.equal(historical.result.status, "unavailable");
+    const outcomes = (historical.report as any).attempts.map((a: any) => a.outcome);
+    assert.ok(outcomes.includes("no-answer") && !outcomes.includes("events"), JSON.stringify(outcomes));
+    assert.equal(empty.store.load("lol").events.length, 0);
+
+    // After the last known patch has passed, an unchanged page plus a search that finds nothing is stale, not fresh.
+    const { store } = tempStore();
+    await runTracker(game, topic, lolAdapter(lolTransport(), lolAi()), store, NOW);
+    const nothing = { official: [new MockSearchProvider("sitemap", "official", {})] };
+    const afterSchedule = await runTracker(game, topic, lolAdapter(lolTransport(), lolAi(), () => nothing), store, new Date("2026-10-08T06:00:00Z"));
+    assert.equal(afterSchedule.result.status, "stale");
+    assert.match((afterSchedule.result as any).reason, /no upcoming event/);
 });
 
 test("the production registry wires League of Legends to the evidence-based adapter", () => {

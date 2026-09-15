@@ -19,7 +19,7 @@ import { AiProvider, AiUsage } from "../ai/provider";
 import { DiscoveryVia, Game, GameKnowledge, Topic } from "../domain";
 import { smartFetch } from "../fetch/smart-fetch";
 import { Transport } from "../fetch/transport";
-import { eventsForTopic } from "../knowledge";
+import { eventsForTopic, upcomingUntil } from "../knowledge";
 import { selectCurrentEvent } from "../views";
 import { Candidate, RejectedCandidate, ScoringContext, candidateFrom, normalizeCandidates, publishableCandidates, rankCandidates, scoreCandidate } from "./candidates";
 import { DuckDuckGoSearch } from "./duckduckgo";
@@ -88,7 +88,7 @@ export function shouldDiscover(input: { topic: Topic; knowledge: GameKnowledge; 
     const answeredWhen = topic.discovery?.answeredWhen ?? (topic.kind === "version" || topic.kind === "occurrence" ? "future-scheduled" : "usable-source");
     if (answeredWhen === "usable-source") return { discover: false, reason: "a known source was usable" };
     const current = selectCurrentEvent(eventsForTopic(knowledge, topic.type), now);
-    if (current && current.status === "scheduled" && current.at && Date.parse(current.at) > now.getTime()) {
+    if (current && current.status === "scheduled" && (upcomingUntil(current) ?? 0) > now.getTime()) {
         return { discover: false, reason: `next event already known: ${current.label} at ${current.at}` };
     }
     return { discover: true, reason: "known sources do not answer the open question (no future scheduled event)" };

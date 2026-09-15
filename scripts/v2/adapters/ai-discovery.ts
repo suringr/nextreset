@@ -29,6 +29,7 @@ import { Claim, DiscoveryVia, Document, EventStatus, Game, SourceState, Topic } 
 import { FetchedDocument, smartFetch } from "../fetch/smart-fetch";
 import { Transport, defaultTransport } from "../fetch/transport";
 import { eventKey } from "../identity";
+import { upcomingUntil } from "../knowledge";
 
 export interface AiTopicSpec {
     /** What matters, in the model's terms ("the release date of each League of Legends patch"). */
@@ -56,7 +57,7 @@ export interface AttemptReport {
     url: string;
     finalUrl?: string;
     via: DiscoveryVia;
-    outcome: "events" | "unchanged" | "unusable" | "not-official" | "no-ai" | "not-relevant" | "no-facts";
+    outcome: "events" | "unchanged" | "unusable" | "not-official" | "no-ai" | "not-relevant" | "no-facts" | "no-answer";
     reason?: string;
     fetch?: { mode: "http" | "browser"; status: number; verdict?: string; attempts: number };
     classification?: { relevant: boolean; docType: string; summary: string };
@@ -125,7 +126,8 @@ export function eventFromItem(item: GroundedItem, topic: Topic, spec: AiTopicSpe
         return { skipped: `identity cannot be normalized: ${error instanceof Error ? error.message : String(error)}` };
     }
 
-    const future = Date.parse(anchor.at) > now.getTime();
+    // A day-precision date stays upcoming through its whole day, as V1 kept today's patch until midnight.
+    const future = (upcomingUntil({ at: anchor.at, precision: anchor.precision }) ?? 0) > now.getTime();
     let status: EventStatus;
     if (item.status === "ended") status = "ended";
     else if (future) status = "scheduled";
@@ -196,6 +198,12 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
         const tried = new Set<string>();
         const failures: string[] = [];
 
+        // Whether a page's verified events answer the topic's question (for a next-patch topic: an upcoming patch).
+        const answeredWhen = topic.discovery?.answeredWhen ?? (topic.kind === "version" || topic.kind === "occurrence" ? "future-scheduled" : "usable-source");
+        const answersTopic = (events: EventInput[]) => answeredWhen === "usable-source"
+            ? events.length > 0
+            : events.some(e => e.status === "scheduled" && (upcomingUntil(e) ?? 0) > now.getTime());
+
         const attempt = async (url: string, via: DiscoveryVia, stateId: string): Promise<AttemptResult> => {
             const started = Date.now();
             const entry: AttemptReport = { url, via, outcome: "unusable", elapsedMs: 0 };
@@ -263,6 +271,13 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
             if (events.length === 0) {
                 entry.outcome = "no-facts";
                 entry.reason = "no grounded, verifiable facts";
+                return finish({ ok: false, reason: `${document.finalUrl}: ${entry.reason}` });
+            }
+            if (!answersTopic(events)) {
+                // Verified but historical: a page listing only past patches must not win and publish a past patch as fresh.
+                entry.outcome = "no-answer";
+                entry.events = events.length;
+                entry.reason = "its verified facts list no upcoming event";
                 return finish({ ok: false, reason: `${document.finalUrl}: ${entry.reason}` });
             }
             entry.outcome = "events";
@@ -334,6 +349,8 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
                 learnedSuccesses.push({ url: finalUrl, tier: "official", via: winner.via, title: winner.document.title || undefined });
             }
             const confidence = confidenceFor(winner);
+            // Recorded with the evidence so a later run that only re-verifies unchanged content keeps it.
+            winner.docRecord.confidence = confidence.level;
             report.winner = { url: winner.document.finalUrl, via: winner.via, tier: "official" };
             report.confidence = confidence;
             return {
@@ -347,7 +364,10 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
                 report: report as unknown as Record<string, unknown>
             };
         }
-        if (unchangedFetch) {
+        // An unchanged page is a success only while stored knowledge still answers the question; otherwise the
+        // failed search for an answer surfaces, and the pipeline serves stored knowledge as stale.
+        const storedAnswers = !shouldDiscover({ topic, knowledge, now, knownSources: Math.max(known.length, 1), usableKnownSources: 1 }).discover;
+        if (unchangedFetch && storedAnswers) {
             return { events: [], unchanged: true, fetch: unchangedFetch, sourceStates, learned: { successes: [], failures }, report: report as unknown as Record<string, unknown> };
         }
         let reason: string;
@@ -359,6 +379,7 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
         } else {
             reason = report.decision?.reason ?? "no known source and nothing discovered";
         }
+        if (unchangedFetch) reason = `stored knowledge has no upcoming event and no source answered (${reason})`;
         return { events: [], failure: reason, sourceStates, learned: { successes: [], failures }, report: report as unknown as Record<string, unknown> };
     };
 }

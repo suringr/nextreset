@@ -30,6 +30,7 @@ const DECISIONS: readonly ChangeDecision[] = ["applied", "held", "rejected", "ov
 const CLAIM_FIELDS = ["at", "startAt", "endAt", "label", "status"] as const;
 const CLAIM_METHODS = ["deterministic", "ai"] as const;
 const FETCH_MODES = ["http", "browser"] as const;
+const CONFIDENCES = ["high", "medium", "low", "none"] as const;
 const DISCOVERY_VIAS = ["config", "learned", "sitemap", "seed", "secondary-link", "web"] as const;
 
 type Rec = Record<string, unknown>;
@@ -146,6 +147,7 @@ function validateDocument(value: unknown, path: string): void {
     requireIso(doc, "fetchedAt", path);
     requireString(doc, "title", path, true);
     requireOneOf(doc, "fetchMode", path, FETCH_MODES, true);
+    requireOneOf(doc, "confidence", path, CONFIDENCES, true);
 }
 
 function validateSourceState(value: unknown, path: string): void {

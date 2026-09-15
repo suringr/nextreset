@@ -8,7 +8,7 @@
  */
 import { Confidence, FailureType, FreshResult, ProviderResult, StaleResult, UnavailableResult } from "../types";
 import { Event, GameKnowledge, Topic } from "./domain";
-import { eventsForTopic } from "./knowledge";
+import { eventsForTopic, upcomingUntil } from "./knowledge";
 
 export type RunOutcome =
     | { ok: true; httpStatus?: number; fetchMode?: "http" | "browser" }
@@ -34,6 +34,16 @@ export function sourceUrlFor(event: Event, knowledge: GameKnowledge, topic: Topi
     return topic.view.sourceUrl;
 }
 
+/** The confidence recorded with the event's most recent evidence document, if any. */
+export function evidenceConfidenceFor(event: Event, knowledge: GameKnowledge): Confidence | undefined {
+    const claims = knowledge.claims.filter(c => c.eventKey === event.key).sort((a, b) => b.extractedAt.localeCompare(a.extractedAt));
+    for (const claim of claims) {
+        const doc = knowledge.documents.find(d => d.id === claim.documentId);
+        if (doc?.confidence) return doc.confidence;
+    }
+    return undefined;
+}
+
 /**
  * The event a topic currently publishes: the earliest scheduled event still in
  * the future, otherwise the latest of everything else by `at`. Only *scheduled*
@@ -45,7 +55,8 @@ export function sourceUrlFor(event: Event, knowledge: GameKnowledge, topic: Topi
 export function selectCurrentEvent(events: Event[], now: Date): Event | undefined {
     const candidates = events.filter(e => e.publishState === "published" && typeof e.at === "string");
     const byAt = (a: Event, b: Event) => Date.parse(a.at!) - Date.parse(b.at!);
-    const isUpcoming = (e: Event) => e.status === "scheduled" && Date.parse(e.at!) > now.getTime();
+    // A day-precision event stays upcoming through its whole day (see upcomingUntil).
+    const isUpcoming = (e: Event) => e.status === "scheduled" && (upcomingUntil(e) ?? 0) > now.getTime();
 
     const upcoming = candidates.filter(isUpcoming).sort(byAt);
     if (upcoming.length > 0) return upcoming[0];
@@ -84,7 +95,8 @@ export function deriveProviderResult(topic: Topic, knowledge: GameKnowledge, ctx
 
     const notes = renderNotes(topic.view.notes, event.label);
     const sourceUrl = sourceUrlFor(event, knowledge, topic);
-    const confidence = ctx.confidence ?? topic.view.confidence;
+    // A run that re-verified unchanged evidence keeps the confidence computed when that evidence was extracted.
+    const confidence = ctx.confidence ?? evidenceConfidenceFor(event, knowledge) ?? topic.view.confidence;
 
     if (ctx.outcome.ok) {
         const fresh: FreshResult = {
