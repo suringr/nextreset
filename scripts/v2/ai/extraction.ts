@@ -246,13 +246,27 @@ function isDateToken(token: string): boolean {
     return MONTH_WORDS.has(token) || /^\d{1,2}$/.test(token) || /^(19|20)\d{2}$/.test(token);
 }
 
+/**
+ * Tokens for the punctuation-tolerant quote match. A sign that belongs to a UTC offset
+ * ("UTC-8", "15:00+01:00") becomes its own word, so dropping punctuation can never turn
+ * UTC-8 into UTC+8.
+ */
+function signedTokensOf(text: string): string[] {
+    const marked = normalizeForSearch(text)
+        .replace(/\b(utc|gmt)\s*\+\s*(?=\d)/g, "$1 plus ")
+        .replace(/\b(utc|gmt)\s*-\s*(?=\d)/g, "$1 minus ")
+        .replace(/(\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?)\s*\+\s*(?=\d{2}:?\d{2}\b)/g, "$1 plus ")
+        .replace(/(\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?)-(?=\d{2}:?\d{2}\b)/g, "$1 minus ");
+    return tokensOf(marked);
+}
+
 interface PreparedDocument { normalized: string; tokenText: string; tokens: Set<string>; years: Set<number> }
 
 function prepare(documentText: string): PreparedDocument {
     const years = new Set<number>();
     for (const m of documentText.matchAll(/\b(19|20)\d{2}\b/g)) years.add(+m[0]);
     const tokens = tokensOf(documentText);
-    return { normalized: normalizeForSearch(documentText), tokenText: ` ${tokens.join(" ")} `, tokens: new Set(tokens), years };
+    return { normalized: normalizeForSearch(documentText), tokenText: ` ${signedTokensOf(documentText).join(" ")} `, tokens: new Set(tokens), years };
 }
 
 /**
@@ -265,7 +279,7 @@ export function quoteOccursIn(quote: string, documentText: string, prepared?: Pr
     if (q.length < QUOTE_MIN_LENGTH) return false;
     const doc = prepared ?? prepare(documentText);
     if (doc.normalized.includes(q)) return true;
-    const qt = tokensOf(quote).join(" ");
+    const qt = signedTokensOf(quote).join(" ");
     return qt.length >= QUOTE_MIN_LENGTH && doc.tokenText.includes(` ${qt} `);
 }
 
@@ -449,7 +463,7 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
             // zone to another.
             const entries = dateEntries(f.quote, parsed);
             const own = entries.filter(e => entryNamesItem(e.naming, item.identity));
-            if (entries.length > 0 && own.length === 0) { reject("the date in the quote belongs to another entry, not this item"); continue; }
+            if (entries.length > 0 && own.length === 0) { reject(ENTRY_MISMATCH); continue; }
 
             // A clock time, and the zone or offset it is expressed in, must be evidenced by that
             // entry too. Otherwise keep the day and drop the time.
@@ -526,6 +540,9 @@ export interface ExtractionResult {
 }
 
 const UNVERIFIABLE_QUOTE = "quote not found in document";
+const ENTRY_MISMATCH = "the date in the quote belongs to another entry, not this item";
+/** Rejections a second, corrected answer can plausibly fix: the quote, not the fact, was the problem. */
+const REPAIRABLE = new Set([UNVERIFIABLE_QUOTE, ENTRY_MISMATCH]);
 /** Long changelogs can make the model enumerate many items; leave ample room so valid JSON is never cut off. */
 const EXTRACT_MAX_OUTPUT_TOKENS = 16384;
 
@@ -544,7 +561,7 @@ export function mergeRepair(first: GroundedExtraction, repair: GroundedExtractio
     const items = first.items.map(i => ({ ...i, facts: [...i.facts] }));
     const rejected = [...first.rejected];
     const fromRepair = new Set<GroundedFact>();
-    for (const gap of first.rejected.filter(r => r.reason === UNVERIFIABLE_QUOTE)) {
+    for (const gap of first.rejected.filter(r => REPAIRABLE.has(r.reason))) {
         const item = items.find(i => i.identity === gap.identity);
         if (!item || item.facts.some(f => f.field === gap.field)) continue;
         const fact = repair.items.find(i => i.identityKey === item.identityKey)?.facts.find(f => f.field === gap.field);
@@ -588,10 +605,10 @@ export async function extractFacts(provider: AiProvider, topic: ExtractionTopic,
     let repaired = false;
     let repairError: string | undefined;
 
-    const unverifiable = grounded.rejected.filter(r => r.reason === UNVERIFIABLE_QUOTE);
+    const unverifiable = grounded.rejected.filter(r => REPAIRABLE.has(r.reason));
     if ((options.repair ?? true) && unverifiable.length > 0) {
-        const list = unverifiable.map(r => `- item ${JSON.stringify(r.identity)}, field ${r.field}: ${JSON.stringify(r.quote)}`).join("\n");
-        const repairPrompt = `${prompt}\n\n--- CORRECTIONS NEEDED ---\nThese quotes from your previous answer do not occur verbatim in the document (paraphrased, reordered, or stitched from separate passages):\n${list}\nAnswer again with the complete result. Every quote must be one contiguous passage copied exactly from the document. Leave out any date you cannot quote exactly.`;
+        const list = unverifiable.map(r => `- item ${JSON.stringify(r.identity)}, field ${r.field} (${r.reason === ENTRY_MISMATCH ? "its date belongs to a different entry in that passage" : "not copied verbatim"}): ${JSON.stringify(r.quote)}`).join("\n");
+        const repairPrompt = `${prompt}\n\n--- CORRECTIONS NEEDED ---\nThese quotes from your previous answer could not be verified (paraphrased, reordered, stitched from separate passages, or taken from another entry's date):\n${list}\nAnswer again with the complete result. Every quote must be one contiguous passage copied exactly from the document and taken from the item's own entry: its own name or version together with its own date. Leave out any date you cannot quote that way.`;
         attempts = 2;
         try {
             const second = await provider.generateJson({ label: "extract-repair", system: EXTRACT_SYSTEM, prompt: repairPrompt, schema: EXTRACT_SCHEMA, maxOutputTokens: EXTRACT_MAX_OUTPUT_TOKENS });
