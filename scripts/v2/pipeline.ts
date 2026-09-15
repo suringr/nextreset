@@ -12,6 +12,7 @@
  */
 import { ProviderResult } from "../types";
 import { Adapter } from "./adapter";
+import { recordSourceFailure, recordSourceSuccess } from "./discovery/learning";
 import { Change, Game, GameKnowledge, Topic } from "./domain";
 import { adapterFor, findGame, findTopic } from "./games";
 import { endPastScheduled, eventsForTopic, getSourceState, putSourceState, touchEvents, upsertEvent } from "./knowledge";
@@ -29,6 +30,8 @@ export interface TrackerRunResult {
     created: number;
     /** Set when the knowledge file could not be written; the result is still served from memory. */
     saveError?: string;
+    /** Adapter diagnostics for this run (see AdapterOutcome.report). */
+    report?: Record<string, unknown>;
 }
 
 function errorMessage(error: unknown): string {
@@ -65,7 +68,7 @@ export async function runTracker(game: Game, topic: Topic, adapter: Adapter, sto
 
     let outcome;
     try {
-        outcome = await adapter({ now, game, topic, getSourceState: (id) => getSourceState(knowledge, id) });
+        outcome = await adapter({ now, game, topic, knowledge, getSourceState: (id) => getSourceState(knowledge, id) });
     } catch (error) {
         const reason = errorMessage(error);
         const result = deriveProviderResult(topic, knowledge, { now, outcome: { ok: false, reason } });
@@ -75,11 +78,14 @@ export async function runTracker(game: Game, topic: Topic, adapter: Adapter, sto
     // Fetch bookkeeping is persisted even when the source failed, so streaks are visible.
     for (const state of outcome.sourceStates ?? []) putSourceState(knowledge, state);
 
+    // Learning bookkeeping (failures of learned pages) is persisted even on a failed run.
+    for (const url of outcome.learned?.failures ?? []) recordSourceFailure(knowledge, topic.type, url, now);
+
     if (outcome.failure) {
         knowledge.updatedAt = now.toISOString();
         const saveError = trySave(store, knowledge);
         const result = deriveProviderResult(topic, knowledge, { now, outcome: { ok: false, reason: outcome.failure } });
-        return { result, knowledge, changes: [], created: 0, saveError };
+        return { result, knowledge, changes: [], created: 0, saveError, report: outcome.report };
     }
 
     const changes: Change[] = [];
@@ -95,14 +101,24 @@ export async function runTracker(game: Game, topic: Topic, adapter: Adapter, sto
     }
     changes.push(...endPastScheduled(knowledge, topic, now, "scheduled instant has passed"));
 
+    // Evidence: documents and claims are appended once (ids are content-derived), never rewritten.
+    for (const doc of outcome.documents ?? []) {
+        if (!knowledge.documents.some(d => d.id === doc.id)) knowledge.documents.push(doc);
+    }
+    for (const claim of outcome.claims ?? []) {
+        if (!knowledge.claims.some(c => c.id === claim.id)) knowledge.claims.push(claim);
+    }
+    for (const learned of outcome.learned?.successes ?? []) recordSourceSuccess(knowledge, topic.type, learned, now);
+
     knowledge.updatedAt = now.toISOString();
     const saveError = trySave(store, knowledge);
 
     const result = deriveProviderResult(topic, knowledge, {
         now,
-        outcome: { ok: true, httpStatus: outcome.fetch?.httpStatus, fetchMode: outcome.fetch?.mode }
+        outcome: { ok: true, httpStatus: outcome.fetch?.httpStatus, fetchMode: outcome.fetch?.mode },
+        confidence: outcome.confidence
     });
-    return { result, knowledge, changes, created, saveError };
+    return { result, knowledge, changes, created, saveError, report: outcome.report };
 }
 
 /** Entry point used by the orchestrator: resolves configuration by ids. */

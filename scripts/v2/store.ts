@@ -214,7 +214,8 @@ function canonicalDocument(d: Document): Document {
         sourceId: d.sourceId,
         fetchedAt: d.fetchedAt,
         title: d.title,
-        fetchMode: d.fetchMode
+        fetchMode: d.fetchMode,
+        confidence: d.confidence
     });
 }
 

@@ -1,0 +1,87 @@
+name: Vertical slice evaluation
+
+# Runs one V2 topic end to end against the live network and the live model,
+# twice: with its configured page, and with that page removed so discovery has
+# to find it. Uploads the views, adapter reports and knowledge as an artifact.
+# Never writes the production knowledge branch (a throwaway store under build/).
+on:
+  workflow_dispatch:
+    inputs:
+      game:
+        description: Game id
+        required: false
+        default: lol
+      type:
+        description: Topic type
+        required: false
+        default: next-patch
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "scripts/v2/adapters/ai-discovery.ts"
+      - "scripts/v2/discovery/**"
+      - "scripts/v2/tools/run-slice.ts"
+      - "scripts/v2/games.ts"
+      - ".github/workflows/slice-eval.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: slice-eval-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  slice:
+    name: Slice (live)
+    # Forked pull requests cannot read the secret; skip instead of failing them.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+
+      - run: npm ci
+      - run: npx playwright install chromium
+      - run: npm run build
+
+      - name: Run with the configured page (first run, then an unchanged second run)
+        env:
+          AI_PROVIDER: gemini
+          AI_MODEL: gemini-3.5-flash
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SEARCH_PROVIDER: duckduckgo
+        run: |
+          node build/v2/tools/run-slice.js ${{ inputs.game || 'lol' }} ${{ inputs.type || 'next-patch' }} --knowledge build/slice/with-config --out build/slice/with-config-run1.json
+          node build/v2/tools/run-slice.js ${{ inputs.game || 'lol' }} ${{ inputs.type || 'next-patch' }} --knowledge build/slice/with-config --out build/slice/with-config-run2.json
+
+      - name: Run without the configured page (discovery must find it)
+        env:
+          AI_PROVIDER: gemini
+          AI_MODEL: gemini-3.5-flash
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SEARCH_PROVIDER: duckduckgo
+        run: node build/v2/tools/run-slice.js ${{ inputs.game || 'lol' }} ${{ inputs.type || 'next-patch' }} --knowledge build/slice/discovery --no-config-url --out build/slice/discovery-run1.json
+
+      - name: Compare with the V1 provider output
+        continue-on-error: true
+        run: node build/v2/tools/compare-v1.js ${{ inputs.game || 'lol' }} ${{ inputs.type || 'next-patch' }} build/slice/with-config-run1.json > build/slice/v1-comparison.json && cat build/slice/v1-comparison.json
+
+      - name: Upload slice results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slice-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/slice/*.json
+          if-no-files-found: ignore
+          retention-days: 30

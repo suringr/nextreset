@@ -38,6 +38,8 @@ export interface RenderRequest {
     timeoutMs?: number;
     /** Extra settle time after load for client-side rendering. */
     settleMs?: number;
+    /** Keep re-validating after the settle time until this much time has passed since load (default 12000). */
+    maxWaitMs?: number;
     /** Used for debug capture file names. */
     label?: string;
     /** Runs inside the browser session; an unusable verdict triggers a debug capture. */
@@ -103,11 +105,23 @@ export async function renderWithBrowser(req: RenderRequest): Promise<RenderRespo
     const started = Date.now();
     return withBrowserPage(async (page) => {
         const response = await page.goto(req.url, { waitUntil: "domcontentloaded", timeout: req.timeoutMs ?? 30000 });
-        await sleep(req.settleMs ?? 2500);
-        const html = await page.content();
         const status = response?.status() ?? 0;
-        const finalUrl = page.url();
-        const verdict = req.validate(html, status, finalUrl);
+        const settleMs = req.settleMs ?? 2500;
+        const maxWaitMs = Math.max(settleMs, req.maxWaitMs ?? 12000);
+        await sleep(settleMs);
+        let waited = settleMs;
+        let html = await page.content();
+        let finalUrl = page.url();
+        let verdict = req.validate(html, status, finalUrl);
+        // Client-rendered pages (the Riot support site takes ~8s) fill in after load: keep checking, bounded.
+        while (!verdict.usable && verdict.renderMayHelp && waited < maxWaitMs) {
+            const step = Math.min(1500, maxWaitMs - waited);
+            await sleep(step);
+            waited += step;
+            html = await page.content();
+            finalUrl = page.url();
+            verdict = req.validate(html, status, finalUrl);
+        }
 
         let capture: RenderResponse["capture"];
         if (!verdict.usable) {

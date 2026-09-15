@@ -37,7 +37,7 @@ interface RegistryEntry {
 
 const REGISTRY: RegistryEntry[] = [
     { id: "fortnite", type: "next-season", name: "Fortnite", engine: "v1", run: fortnite.run },
-    { id: "lol", type: "next-patch", name: "League of Legends", engine: "v1", run: lol.run },
+    { id: "lol", type: "next-patch", name: "League of Legends", engine: "v2", run: lol.run },
     { id: "valorant", type: "last-patch", name: "VALORANT", engine: "v1", run: valorant.run },
     { id: "cs2", type: "last-update", name: "Counter-Strike 2", engine: "v1", run: cs2.run },
     { id: "minecraft", type: "last-release", name: "Minecraft", engine: "v1", run: minecraft.run },
@@ -77,6 +77,25 @@ function staleFromLkg(entry: RegistryEntry, reason: string): StaleResult | null 
  * as a last resort, so an empty or unavailable knowledge branch never makes a
  * tracker less resilient than it was on V1.
  */
+/** One-line summaries of what an evidence-based adapter did (sources, discovery, AI usage); never secrets. */
+function logAdapterReport(entry: RegistryEntry, report: Record<string, unknown> | undefined): void {
+    if (!report) return;
+    const attempts = report.attempts as Array<{ url: string; via: string; outcome: string; reason?: string }> | undefined;
+    for (const a of attempts ?? []) console.log(`  [${entry.id}] ${a.via} ${a.url} -> ${a.outcome}${a.reason ? ` (${a.reason})` : ""}`);
+    const decision = report.decision as { discover: boolean; reason: string } | undefined;
+    if (decision) console.log(`  [${entry.id}] discovery ${decision.discover ? "ran" : "skipped"}: ${decision.reason}`);
+    const discovery = report.discovery as { queries: Array<{ provider: string; query: string; results: number; error?: string }>; searchedWeb: boolean; unavailable: string[] } | undefined;
+    if (discovery) {
+        for (const q of discovery.queries) console.log(`  [${entry.id}] search [${q.provider}] "${q.query}" -> ${q.results}${q.error ? ` (${q.error})` : ""}`);
+        if (discovery.unavailable.length > 0) console.log(`  [${entry.id}] search unavailable: ${discovery.unavailable.join(", ")}`);
+    }
+    const winner = report.winner as { url: string; via: string } | undefined;
+    const confidence = report.confidence as { level: string; reasons: string[] } | undefined;
+    if (winner) console.log(`  [${entry.id}] answered by ${winner.url} (via ${winner.via})${confidence ? `, confidence ${confidence.level}` : ""}`);
+    const ai = report.ai as { model?: string; calls: number; inputTokens: number; outputTokens: number } | undefined;
+    if (ai && ai.calls > 0) console.log(`  [${entry.id}] AI ${ai.model ?? ""}: ${ai.calls} call(s), ${ai.inputTokens} in / ${ai.outputTokens} out tokens`);
+}
+
 async function runV2(entry: RegistryEntry, store: JsonKnowledgeStore, startTime: number): Promise<ProviderResult> {
     let result: ProviderResult;
     let detail = "";
@@ -84,6 +103,7 @@ async function runV2(entry: RegistryEntry, store: JsonKnowledgeStore, startTime:
         const run = await runV2Tracker(entry.id, entry.type, store, new Date());
         result = run.result;
         detail = `${run.created} new event(s), ${run.changes.length} change(s)`;
+        logAdapterReport(entry, run.report);
         if (run.saveError && process.env.GITHUB_ACTIONS === "true") {
             console.log(`::warning title=Knowledge not saved::${entry.name} (${entry.id}.${entry.type}): ${run.saveError.replace(/[\r\n]+/g, " ")}`);
         }

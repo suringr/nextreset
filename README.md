@@ -126,6 +126,32 @@ find the right page instead of relying on a preconfigured URL. Code lives in
 - **Learning.** A page that produced accepted knowledge is stored in the game's
   knowledge file (`discovered`) and consulted before searching on later runs.
 
+### Evidence-based trackers (V2)
+
+League of Legends (`lol/next-patch`) is the first tracker on the full V2 path,
+implemented by the generic adapter in `scripts/v2/adapters/ai-discovery.ts`:
+
+1. **Known sources first.** The configured page (the V1 URL, which now redirects)
+   and any page learned by earlier runs are fetched through the smart fetch
+   layer; an unchanged page costs no model call.
+2. **Discovery only when needed.** If no known page answers the open question
+   (for example no future patch is scheduled any more), the discovery module
+   searches the official channels, then the web, and tries the best official
+   candidates.
+3. **Understand and extract.** Gemini classifies the document and extracts the
+   patch versions and dates; every fact must be quoted verbatim and passes the
+   deterministic grounding checks. Non-official pages are never extracted from.
+4. **Verify and publish.** Grounded facts become events (deterministic identity
+   `lol/next-patch/26.19`), with the claims and the document persisted as
+   evidence and the winning page learned as a source. The V1-compatible view
+   publishes the discovered URL as `source_url` and a computed confidence.
+
+Without `GEMINI_API_KEY` the tracker fails cleanly and serves stored knowledge.
+`npm run slice:lol` runs the slice end to end against the live network into a
+throwaway store and prints the report; `--no-config-url` removes the configured
+page so discovery has to find it. The "Vertical slice evaluation" workflow does
+both in CI and uploads the results.
+
 ## 🎮 How It Works
 
 ### Provider Pattern

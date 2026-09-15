@@ -4,7 +4,7 @@
  * change records live here so they can be unit-tested without files.
  */
 import { EventInput } from "./adapter";
-import { Change, Event, GameKnowledge, SourceState, Topic } from "./domain";
+import { Change, DatePrecision, Event, GameKnowledge, SourceState, Topic } from "./domain";
 import { eventKey } from "./identity";
 
 const COMPARED_FIELDS = ["label", "status", "at", "startAt", "endAt", "precision", "timezone"] as const;
@@ -102,13 +102,25 @@ export function touchEvents(events: Event[], now: Date): void {
     for (const event of events) event.lastVerified = nowIso;
 }
 
-/** Scheduled events whose instant has passed become "ended". Returns the Change records appended. */
+const DAY_MS = 86_400_000;
+
+/**
+ * Until when a scheduled event counts as upcoming: its instant, or the end of its UTC day when only
+ * the day is known (a patch "on September 23" stays the next patch for all of September 23, as V1
+ * kept today's patch). Undefined without an instant.
+ */
+export function upcomingUntil(event: { at?: string; precision: DatePrecision }): number | undefined {
+    if (!event.at) return undefined;
+    return Date.parse(event.at) + (event.precision === "day" ? DAY_MS : 0);
+}
+
+/** Scheduled events that are no longer upcoming (see upcomingUntil) become "ended". Returns the Change records appended. */
 export function endPastScheduled(knowledge: GameKnowledge, topic: Topic, now: Date, reason: string): Change[] {
     const nowIso = now.toISOString();
     const changes: Change[] = [];
     for (const event of eventsForTopic(knowledge, topic.type)) {
         if (event.status !== "scheduled" || !event.at) continue;
-        if (Date.parse(event.at) > now.getTime()) continue;
+        if ((upcomingUntil(event) ?? 0) > now.getTime()) continue;
         changes.push({ entityKey: event.key, field: "status", oldValue: "scheduled", newValue: "ended", at: nowIso, reason, decision: "applied" });
         event.status = "ended";
         event.lastVerified = nowIso;

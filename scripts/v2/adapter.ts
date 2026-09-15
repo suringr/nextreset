@@ -5,7 +5,9 @@
  * without keys; identity is assigned by the pipeline through identity.ts.
  * Failure is signalled by throwing; the pipeline then serves stored knowledge.
  */
-import { DatePrecision, EventStatus, Game, SourceState, Topic } from "./domain";
+import { Confidence } from "../types";
+import { LearnInput } from "./discovery/learning";
+import { Claim, DatePrecision, Document, EventStatus, Game, GameKnowledge, SourceState, Topic } from "./domain";
 
 export interface EventInput {
     /** Raw identity; normalized into the key by the pipeline. */
@@ -25,6 +27,8 @@ export interface AdapterContext {
     topic: Topic;
     /** Fetch state persisted for a source by a previous run, if any. */
     getSourceState: (sourceId: string) => SourceState | undefined;
+    /** Stored knowledge, for adapters that consult events or learned sources. Read-only: the pipeline applies changes. */
+    knowledge: GameKnowledge;
 }
 
 export interface AdapterOutcome {
@@ -48,6 +52,15 @@ export interface AdapterOutcome {
     failure?: string;
     /** Updated fetch bookkeeping to persist. */
     sourceStates?: SourceState[];
+    /** Evidence to persist with the events: the fetched document(s) and the claims behind each fact. */
+    documents?: Document[];
+    claims?: Claim[];
+    /** Discovery learning to apply: pages that produced accepted knowledge, and known pages that failed this run. */
+    learned?: { successes: LearnInput[]; failures: string[] };
+    /** Confidence computed for this run's answer; overrides the topic's static label in the view. */
+    confidence?: Confidence;
+    /** Diagnostics for logs and reports (discovery queries, candidates, AI usage). Never persisted. */
+    report?: Record<string, unknown>;
 }
 
 export type Adapter = (ctx: AdapterContext) => Promise<AdapterOutcome>;

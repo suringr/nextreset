@@ -127,6 +127,8 @@ export interface Document {
     fetchedAt: string;
     title?: string;
     fetchMode?: "http" | "browser";
+    /** Confidence computed when facts were extracted from this document (evidence-based topics). */
+    confidence?: Confidence;
 }
 
 /** One extracted assertion about one event field, tied to the document it came from. */
