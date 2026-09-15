@@ -167,6 +167,8 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
         return {
             // Day precision: the page states no time or time zone.
             events: [{ identity: update.identity, label: update.title, status: "observed", at: update.at, precision: "day" }],
+            // The current card is authoritative: a date corrected backward retires the later update it no longer names.
+            currentIdentity: update.identity,
             documents,
             claims,
             confidence: Confidence.High,

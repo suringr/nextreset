@@ -102,6 +102,20 @@ test("an in-place article update becomes a new event; a broken page keeps the la
     assert.deepEqual([store.load("warzone").sources[0].lastVerdict, store.load("warzone").sources[0].textHash], ["parse-error", goodHash]);
 });
 
+test("a card date corrected backward retires the later update instead of keeping it published", async () => {
+    const { store } = tempStore();
+    const later = PAGE.replace("data-date=\"August 28, 2026\"", "data-date=\"August 30, 2026\"");
+    await runTracker(game, topic, createWarzonePatchAdapter(fakeTransport({ http: [{ body: later }] })), store, NOW);
+
+    const corrected = await runTracker(game, topic, createWarzonePatchAdapter(fakeTransport({ http: [{ body: PAGE }] })), store, new Date("2026-09-16T06:00:00Z"));
+    assert.equal(corrected.result.status, "fresh");
+    assert.equal((corrected.result as any).nextEventUtc, LATEST.at, "the card's corrected day is published");
+    const k = store.load("warzone");
+    assert.equal(k.events.find(e => e.key === `warzone/last-patch/${SLUG}-2026-08-30`)!.publishState, "held");
+    assert.equal(k.events.find(e => e.key === `warzone/last-patch/${LATEST.identity}`)!.publishState, "published");
+    assert.ok(corrected.changes.some(c => c.field === "publishState" && c.newValue === "held"));
+});
+
 test("the production registry runs Warzone on the patch notes page adapter", () => {
     assert.equal(game.sources[0].url, WARZONE_PATCH_NOTES_URL);
     assert.equal(topic.discovery, undefined, "a deterministic page source needs no discovery");
