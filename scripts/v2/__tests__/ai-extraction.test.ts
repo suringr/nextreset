@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { MAX_DOCUMENT_CHARS, classifyDocument, extractFacts, groundExtraction, identityOccursIn, mergeRepair, parseClassification, parseRawItems, quoteNamesIdentity, quoteOccursIn } from "../ai/extraction";
+import { MAX_DOCUMENT_CHARS, classifyDocument, extractFacts, groundExtraction, identityOccursIn, mergeRepair, parseClassification, parseRawItems, quoteNamesIdentity, quoteOccursIn, resolveQuote } from "../ai/extraction";
 import { MockAiProvider, scriptedResponder } from "../ai/mock";
 import { AiJsonRequest } from "../ai/provider";
 
@@ -87,30 +87,25 @@ test("inverted or misordered start/end windows are rejected as a pair", () => {
 
 test("inferred years and embedded offsets must be supported by evidence", () => {
     const text = "Date Posted Sep 12, 2026. Genshin Impact Version 7.1 launches on September 23! Patch 26.19 releases September 23, 2026 at 3 PM PT. Listing 2026-09-09T18:00:00.000Z League of Legends Patch 26.18 Notes.";
-    const raw = parseRawItems({ items: [
-        { kind: "version", label: "Version 7.1 ok", identity: "Version 7.1", status: "scheduled", fields: [{ field: "startAt", value: "2026-09-23", timezone: "", quote: "Version 7.1 launches on September 23!" }] },
-        { kind: "version", label: "Version 7.1 wrong year", identity: "Version 7.1", status: "scheduled", fields: [{ field: "startAt", value: "2099-09-23", timezone: "", quote: "Version 7.1 launches on September 23!" }] },
-        { kind: "version", label: "26.19 fake offset", identity: "26.19", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T15:00+14:00", timezone: "PT", quote: "Patch 26.19 releases September 23, 2026 at 3 PM PT" }] },
-        { kind: "version", label: "26.19 stated zone offset", identity: "26.19", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T15:00-07:00", timezone: "PT", quote: "Patch 26.19 releases September 23, 2026 at 3 PM PT" }] },
-        { kind: "version", label: "26.18 ISO Z", identity: "26.18", status: "released", fields: [{ field: "at", value: "2026-09-09T18:00Z", timezone: "", quote: "2026-09-09T18:00:00.000Z League of Legends Patch 26.18 Notes" }] }
-    ] });
-    const grounded = groundExtraction(raw, text, { now: new Date("2026-09-14T21:30:00Z") });
-    const byLabel = Object.fromEntries(grounded.items.map(i => [i.label, i]));
-    assert.equal(byLabel["Version 7.1 ok"].facts[0].yearInferred, true);
-    assert.equal(byLabel["Version 7.1 wrong year"].facts.length, 0);
-    assert.ok(grounded.rejected.some(r => /inferred year 2099/.test(r.reason)));
-    assert.deepEqual([byLabel["26.19 fake offset"].facts[0].at, byLabel["26.19 fake offset"].facts[0].precision], ["2026-09-23T00:00:00.000Z", "day"]);
-    assert.match(byLabel["26.19 fake offset"].facts[0].note ?? "", /embedded UTC offset/);
-    assert.deepEqual([byLabel["26.19 stated zone offset"].facts[0].at, byLabel["26.19 stated zone offset"].facts[0].precision], ["2026-09-23T22:00:00.000Z", "exact"]);
-    assert.deepEqual([byLabel["26.18 ISO Z"].facts[0].at, byLabel["26.18 ISO Z"].facts[0].precision], ["2026-09-09T18:00:00.000Z", "exact"]);
+    const now = new Date("2026-09-14T21:30:00Z");
+    const probe = (identity: string, field: "at" | "startAt", value: string, timezone: string, quote: string) =>
+        groundExtraction(parseRawItems({ items: [{ kind: "version", label: identity, identity, status: "scheduled", fields: [{ field, value, timezone, quote }] }] }), text, { now });
+
+    assert.equal(probe("Version 7.1", "startAt", "2026-09-23", "", "Version 7.1 launches on September 23!").items[0].facts[0].yearInferred, true);
+    const wrongYear = probe("Version 7.1", "startAt", "2099-09-23", "", "Version 7.1 launches on September 23!");
+    assert.equal(wrongYear.items[0].facts.length, 0);
+    assert.ok(wrongYear.rejected.some(r => /inferred year 2099/.test(r.reason)));
+    const fake = probe("26.19", "at", "2026-09-23T15:00+14:00", "PT", "Patch 26.19 releases September 23, 2026 at 3 PM PT").items[0].facts[0];
+    assert.deepEqual([fake.at, fake.precision], ["2026-09-23T00:00:00.000Z", "day"]);
+    assert.match(fake.note ?? "", /embedded UTC offset/);
+    const stated = probe("26.19", "at", "2026-09-23T15:00-07:00", "PT", "Patch 26.19 releases September 23, 2026 at 3 PM PT").items[0].facts[0];
+    assert.deepEqual([stated.at, stated.precision], ["2026-09-23T22:00:00.000Z", "exact"]);
+    const iso = probe("26.18", "at", "2026-09-09T18:00Z", "", "2026-09-09T18:00:00.000Z League of Legends Patch 26.18 Notes").items[0].facts[0];
+    assert.deepEqual([iso.at, iso.precision], ["2026-09-09T18:00:00.000Z", "exact"]);
 
     // Next year is plausible for an announced date; two years out is not.
-    const nextYear = groundExtraction(parseRawItems({ items: [
-        { kind: "version", label: "next", identity: "Version 7.1", status: "scheduled", fields: [{ field: "startAt", value: "2027-09-23", timezone: "", quote: "Version 7.1 launches on September 23!" }] },
-        { kind: "version", label: "far", identity: "Version 7.1", status: "scheduled", fields: [{ field: "startAt", value: "2028-09-23", timezone: "", quote: "Version 7.1 launches on September 23!" }] }
-    ] }), text, { now: new Date("2026-09-14T21:30:00Z") });
-    assert.equal(nextYear.items[0].facts.length, 1);
-    assert.equal(nextYear.items[1].facts.length, 0);
+    assert.equal(probe("Version 7.1", "startAt", "2027-09-23", "", "Version 7.1 launches on September 23!").items[0].facts.length, 1);
+    assert.equal(probe("Version 7.1", "startAt", "2028-09-23", "", "Version 7.1 launches on September 23!").items[0].facts.length, 0);
 });
 
 test("groundExtraction accepts supported facts and rejects unsupported ones with reasons", () => {
@@ -161,20 +156,19 @@ test("groundExtraction accepts supported facts and rejects unsupported ones with
 
 test("exact instants need the time and the zone to be stated; otherwise the day is kept", () => {
     const text = "Live Maintenance Schedule (UTC). PC: March 11, 00:00 - 08:30. Patch 26.19 releases September 23, 2026 at 3 PM PT. Patch 26.20 releases October 7 at 15:00.";
-    const raw = parseRawItems({ items: [
-        { kind: "occurrence", label: "PC maintenance", identity: "PC maintenance March 11", status: "ended", fields: [{ field: "startAt", value: "2026-03-11T00:00", timezone: "UTC", quote: "PC: March 11, 00:00 - 08:30" }] },
-        { kind: "version", label: "Patch 26.19", identity: "26.19", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T15:00", timezone: "PT", quote: "Patch 26.19 releases September 23, 2026 at 3 PM PT" }] },
-        { kind: "version", label: "Patch 26.19 wrong zone", identity: "26.19", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T15:00", timezone: "KST", quote: "Patch 26.19 releases September 23, 2026 at 3 PM PT" }] },
-        { kind: "version", label: "Patch 26.20", identity: "26.20", status: "scheduled", fields: [{ field: "at", value: "2026-10-07T15:00", timezone: "", quote: "Patch 26.20 releases October 7 at 15:00" }] }
-    ] });
-    const grounded = groundExtraction(raw, text);
-    const facts = grounded.items.map(i => i.facts[0]);
-    assert.deepEqual([facts[0].at, facts[0].precision, facts[0].timezone, facts[0].yearInferred], ["2026-03-11T00:00:00.000Z", "exact", "UTC", true]);
-    assert.deepEqual([facts[1].at, facts[1].precision, facts[1].timezone], ["2026-09-23T22:00:00.000Z", "exact", "America/Los_Angeles"]);
-    assert.deepEqual([facts[2].at, facts[2].precision], ["2026-09-23T00:00:00.000Z", "day"]);
-    assert.match(facts[2].note ?? "", /not "KST"/);
-    assert.deepEqual([facts[3].at, facts[3].precision], ["2026-10-07T00:00:00.000Z", "day"]);
-    assert.match(facts[3].note ?? "", /without a timezone/);
+    // One grounding per probe: two probes for one identity would be one item with conflicting values.
+    const probe = (kind: "occurrence" | "version", identity: string, field: "at" | "startAt", value: string, timezone: string, quote: string) =>
+        groundExtraction(parseRawItems({ items: [{ kind, label: identity, identity, status: "scheduled", fields: [{ field, value, timezone, quote }] }] }), text).items[0].facts[0];
+    const maintenance = probe("occurrence", "PC maintenance March 11", "startAt", "2026-03-11T00:00", "UTC", "PC: March 11, 00:00 - 08:30");
+    assert.deepEqual([maintenance.at, maintenance.precision, maintenance.timezone, maintenance.yearInferred], ["2026-03-11T00:00:00.000Z", "exact", "UTC", true]);
+    const patch = probe("version", "26.19", "at", "2026-09-23T15:00", "PT", "Patch 26.19 releases September 23, 2026 at 3 PM PT");
+    assert.deepEqual([patch.at, patch.precision, patch.timezone], ["2026-09-23T22:00:00.000Z", "exact", "America/Los_Angeles"]);
+    const wrongZone = probe("version", "26.19", "at", "2026-09-23T15:00", "KST", "Patch 26.19 releases September 23, 2026 at 3 PM PT");
+    assert.deepEqual([wrongZone.at, wrongZone.precision], ["2026-09-23T00:00:00.000Z", "day"]);
+    assert.match(wrongZone.note ?? "", /not "KST"/);
+    const noZone = probe("version", "26.20", "at", "2026-10-07T15:00", "", "Patch 26.20 releases October 7 at 15:00");
+    assert.deepEqual([noZone.at, noZone.precision], ["2026-10-07T00:00:00.000Z", "day"]);
+    assert.match(noZone.note ?? "", /without a timezone/);
 });
 
 test("classifyDocument and extractFacts send the topic, the date and the document, and ground the answer", async () => {
@@ -262,18 +256,12 @@ test("same-day entries bind time and zone to the entry that names the item; othe
     const now = new Date("2026-09-14T21:30:00Z");
     const text = "Maintenance for patch 26.19. PC maintenance September 23 at 15:00 PT; Console maintenance September 23 at 18:00 ET. Posted 2026.";
     const quote = "PC maintenance September 23 at 15:00 PT; Console maintenance September 23 at 18:00 ET";
-    const items = (fields: Array<{ identity: string; value: string; timezone: string }>) => parseRawItems({ items: fields.map(f => ({ kind: "occurrence", label: f.identity, identity: f.identity, status: "scheduled", fields: [{ field: "at", value: f.value, timezone: f.timezone, quote }] })) });
-    const grounded = groundExtraction(items([
-        { identity: "Console maintenance September 23", value: "2026-09-23T15:00", timezone: "PT" },  // PC's time on the console item
-        { identity: "Console maintenance September 23", value: "2026-09-23T18:00", timezone: "ET" },  // console's own entry
-        { identity: "PC maintenance September 23", value: "2026-09-23T15:00", timezone: "PT" }
-    ]), text, { now });
-    assert.deepEqual(grounded.items.map(i => i.facts.map(f => [f.precision, f.at])), [
-        [["day", "2026-09-23T00:00:00.000Z"]],
-        [["exact", "2026-09-23T22:00:00.000Z"]],
-        [["exact", "2026-09-23T22:00:00.000Z"]]
-    ]);
-    assert.match(grounded.items[0].facts[0].note ?? "", /next to the date/);
+    const one = (identity: string, value: string, timezone: string) => groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: identity, identity, status: "scheduled", fields: [{ field: "at", value, timezone, quote }] }] }), text, { now }).items[0].facts;
+    const borrowed = one("Console maintenance September 23", "2026-09-23T15:00", "PT"); // PC's time on the console item
+    assert.deepEqual(borrowed.map(f => [f.precision, f.at]), [["day", "2026-09-23T00:00:00.000Z"]]);
+    assert.match(borrowed[0].note ?? "", /next to the date/);
+    assert.deepEqual(one("Console maintenance September 23", "2026-09-23T18:00", "ET").map(f => [f.precision, f.at]), [["exact", "2026-09-23T22:00:00.000Z"]]);
+    assert.deepEqual(one("PC maintenance September 23", "2026-09-23T15:00", "PT").map(f => [f.precision, f.at]), [["exact", "2026-09-23T22:00:00.000Z"]]);
 
     // An item that neither entry clearly names cannot borrow a time.
     const vague = groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: "Maintenance", identity: "Maintenance September 23", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T15:00", timezone: "PT", quote }] }] }), text, { now });
@@ -512,4 +500,52 @@ test("a quote whose date belongs to another entry triggers the repair call like 
     assert.match(provider.requests[1].prompt, /belongs to a different entry/);
     assert.equal(result.repaired, true);
     assert.deepEqual(result.grounded.items[0].facts.map(f => f.at), ["2026-09-24T00:00:00.000Z"]);
+});
+
+test("grounding reads the document's own passage, merges duplicate identities, grounds labels, and pairs zones to the second", () => {
+    const now = new Date("2026-09-14T21:30:00Z");
+
+    // A quote that drops a semicolon resolves to the document's passage, where the zone belongs to another clause.
+    const doc = "Patch 26.19 releases September 23 at 15:00; Support hours are PT. Posted 2026.";
+    const altered = groundExtraction(parseRawItems({ items: [{ kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T15:00", timezone: "PT", quote: "Patch 26.19 releases September 23 at 15:00 Support hours are PT" }] }] }), doc, { now });
+    assert.equal(altered.items[0].facts[0].precision, "day");
+    assert.equal(altered.items[0].facts[0].quote, "Patch 26.19 releases September 23 at 15:00; Support hours are PT", "the evidence stored is the document's text");
+    assert.equal(resolveQuote("PATCH 26.19   releases september 23 at 15:00", doc), "Patch 26.19 releases September 23 at 15:00");
+    assert.equal(resolveQuote("Patch 26.19 releases September 24 at 15:00", doc), undefined);
+
+    // Two raw items for one identity are one item: conflicting values cancel, identical ones collapse.
+    const text = "Patch 26.19 was posted September 22, 2026. Patch 26.19 releases September 23, 2026. Posted 2026.";
+    const dup = (a: string, qa: string, b: string, qb: string) => groundExtraction(parseRawItems({ items: [
+        { kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields: [{ field: "at", value: a, timezone: "", quote: qa }] },
+        { kind: "version", label: "Patch 26.19", identity: "26.19", status: "scheduled", fields: [{ field: "at", value: b, timezone: "", quote: qb }] }
+    ] }), text, { now });
+    const conflict = dup("2026-09-22", "Patch 26.19 was posted September 22, 2026", "2026-09-23", "Patch 26.19 releases September 23, 2026");
+    assert.equal(conflict.items.length, 1, "one item per identity");
+    assert.equal(conflict.items[0].facts.length, 0);
+    assert.deepEqual([conflict.stats.fields, conflict.stats.accepted, conflict.stats.rejected], [2, 0, 2]);
+    const same = dup("2026-09-23", "Patch 26.19 releases September 23, 2026", "2026-09-23", "Patch 26.19 releases September 23, 2026");
+    assert.deepEqual([same.items.length, same.items[0].facts.length, same.stats.fields, same.stats.accepted], [1, 1, 1, 1]);
+
+    // A label naming something the identity does not is replaced by the identity.
+    const labelled = groundExtraction(parseRawItems({ items: [
+        { kind: "version", label: "Patch 26.19", identity: "26.19", status: "scheduled", fields: [] },
+        { kind: "occurrence", label: "Console maintenance", identity: "PC maintenance", status: "scheduled", fields: [] }
+    ] }), "Patch 26.19 notes. PC maintenance and Console maintenance. Posted 2026.", { now });
+    assert.deepEqual(labelled.items.map(i => i.label), ["Patch 26.19", "PC maintenance"]);
+
+    // The next row's version cannot claim this row's date when both rows are in the passage.
+    const table = "26.18 September 10, 2026 (Thursday) 26.19 September 23, 2026";
+    const misread = groundExtraction(parseRawItems({ items: [
+        { kind: "version", label: "26.18", identity: "26.18", status: "released", fields: [{ field: "at", value: "2026-09-10", timezone: "", quote: "26.18 September 10, 2026 (Thursday)" }] },
+        { kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields: [{ field: "at", value: "2026-09-10", timezone: "", quote: "26.18 September 10, 2026 (Thursday) 26.19" }] }
+    ] }), `${table}. Posted 2026.`, { now });
+    assert.equal(misread.items[0].facts.length, 1);
+    assert.equal(misread.items[1].facts.length, 0);
+    assert.match(misread.rejected[0].reason, /belongs to another entry/);
+
+    // A clock is paired with its zone down to the second.
+    const row = "Patch 26.19 releases September 23 at 15:00:00 PT / 15:00:30 ET";
+    const secs = groundExtraction(parseRawItems({ items: [{ kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T15:00:30", timezone: "PT", quote: row }] }] }), `${row}. Posted 2026.`, { now }).items[0].facts[0];
+    assert.equal(secs.precision, "day");
+    assert.match(secs.note ?? "", /stated in America\/New_York/);
 });
