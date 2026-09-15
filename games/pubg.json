@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "game": "pubg",
+  "updatedAt": "2026-09-15T22:18:26.934Z",
+  "events": [
+    {
+      "key": "pubg/last-patch/42.1",
+      "game": "pubg",
+      "topic": "last-patch",
+      "kind": "version",
+      "label": "Patch Notes - Update 42.1",
+      "status": "observed",
+      "at": "2026-06-16T06:00:51.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T22:18:26.934Z",
+      "lastVerified": "2026-09-15T22:18:26.934Z",
+      "publishState": "published"
+    },
+    {
+      "key": "pubg/last-patch/42.2",
+      "game": "pubg",
+      "topic": "last-patch",
+      "kind": "version",
+      "label": "Patch Notes - Update 42.2",
+      "status": "observed",
+      "at": "2026-07-14T06:00:33.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T22:18:26.934Z",
+      "lastVerified": "2026-09-15T22:18:26.934Z",
+      "publishState": "published"
+    },
+    {
+      "key": "pubg/last-patch/42.3",
+      "game": "pubg",
+      "topic": "last-patch",
+      "kind": "version",
+      "label": "Patch Notes - Update 42.3",
+      "status": "observed",
+      "at": "2026-08-11T06:00:47.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T22:18:26.934Z",
+      "lastVerified": "2026-09-15T22:18:26.934Z",
+      "publishState": "published"
+    },
+    {
+      "key": "pubg/last-patch/43.1",
+      "game": "pubg",
+      "topic": "last-patch",
+      "kind": "version",
+      "label": "Patch Notes - Update 43.1",
+      "status": "observed",
+      "at": "2026-09-09T06:00:17.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T22:18:26.934Z",
+      "lastVerified": "2026-09-15T22:18:26.934Z",
+      "publishState": "published"
+    }
+  ],
+  "changes": [
+    {
+      "entityKey": "pubg/last-patch/43.1",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Patch Notes - Update 43.1 @ 2026-09-09T06:00:17.000Z",
+      "at": "2026-09-15T22:18:26.934Z",
+      "reason": "observed by pubg-steam-announcements",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "pubg/last-patch/42.3",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Patch Notes - Update 42.3 @ 2026-08-11T06:00:47.000Z",
+      "at": "2026-09-15T22:18:26.934Z",
+      "reason": "observed by pubg-steam-announcements",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "pubg/last-patch/42.2",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Patch Notes - Update 42.2 @ 2026-07-14T06:00:33.000Z",
+      "at": "2026-09-15T22:18:26.934Z",
+      "reason": "observed by pubg-steam-announcements",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "pubg/last-patch/42.1",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Patch Notes - Update 42.1 @ 2026-06-16T06:00:51.000Z",
+      "at": "2026-09-15T22:18:26.934Z",
+      "reason": "observed by pubg-steam-announcements",
+      "decision": "applied"
+    }
+  ],
+  "overrides": [],
+  "documents": [
+    {
+      "id": "e12ecb20e214a64194d148bf3cfbdd5ff37f529b1dfbec19786be4784c95dd2b",
+      "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=578080&count=100&maxlength=240&feeds=steam_community_announcements",
+      "sourceId": "pubg-steam-announcements",
+      "fetchedAt": "2026-09-15T22:18:26.934Z",
+      "title": "Steam news API response",
+      "fetchMode": "http",
+      "confidence": "high"
+    }
+  ],
+  "claims": [
+    {
+      "id": "0ff577510e48bfb476d68d67",
+      "documentId": "e12ecb20e214a64194d148bf3cfbdd5ff37f529b1dfbec19786be4784c95dd2b",
+      "eventKey": "pubg/last-patch/43.1",
+      "field": "at",
+      "value": "2026-09-09T06:00:17.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1843481262688119\",\"title\":\"Patch Notes - Update 43.1\",\"url\":\"https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1843481262688119\",\"is_external_url\":true,\"author\":\"[****] UZI\",\"contents\":\"Read the full announcement here!\",\"feedlabel\":\"Community Announcements\",\"date\":1788933617,\"feedname\":\"steam_community_announcements\",\"feed_type\":1,\"appid\":578080}",
+      "linkUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1843481262688119",
+      "extractedAt": "2026-09-15T22:18:26.934Z"
+    },
+    {
+      "id": "e94f55ee8da2f2af0462e157",
+      "documentId": "e12ecb20e214a64194d148bf3cfbdd5ff37f529b1dfbec19786be4784c95dd2b",
+      "eventKey": "pubg/last-patch/42.3",
+      "field": "at",
+      "value": "2026-08-11T06:00:47.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1840310314353234\",\"title\":\"Patch Notes - Update 42.3\",\"url\":\"https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1840310314353234\",\"is_external_url\":true,\"author\":\"[****] UZI\",\"contents\":\"Read the full announcement here!\",\"feedlabel\":\"Community Announcements\",\"date\":1786428047,\"feedname\":\"steam_community_announcements\",\"feed_type\":1,\"appid\":578080,\"tags\":[\"mod_reviewed\",\"ModAct_1870293249_1786428254_0\",\"ModAct_1415716708_1786434079_4\",\"mod_require_rereview\"]}",
+      "linkUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1840310314353234",
+      "extractedAt": "2026-09-15T22:18:26.934Z"
+    },
+    {
+      "id": "6eb14dddcc875a9b6922138f",
+      "documentId": "e12ecb20e214a64194d148bf3cfbdd5ff37f529b1dfbec19786be4784c95dd2b",
+      "eventKey": "pubg/last-patch/42.2",
+      "field": "at",
+      "value": "2026-07-14T06:00:33.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1837955055365236\",\"title\":\"Patch Notes - Update 42.2\",\"url\":\"https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1837955055365236\",\"is_external_url\":true,\"author\":\"[****] UZI\",\"contents\":\"Read the full announcement here!\",\"feedlabel\":\"Community Announcements\",\"date\":1784008833,\"feedname\":\"steam_community_announcements\",\"feed_type\":1,\"appid\":578080}",
+      "linkUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1837955055365236",
+      "extractedAt": "2026-09-15T22:18:26.934Z"
+    },
+    {
+      "id": "d53503574c8cb3b8c58d4bbf",
+      "documentId": "e12ecb20e214a64194d148bf3cfbdd5ff37f529b1dfbec19786be4784c95dd2b",
+      "eventKey": "pubg/last-patch/42.1",
+      "field": "at",
+      "value": "2026-06-16T06:00:51.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1835236783573104\",\"title\":\"Patch Notes - Update 42.1\",\"url\":\"https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1835236783573104\",\"is_external_url\":true,\"author\":\"[****] UZI\",\"contents\":\"Read the full announcement here!\",\"feedlabel\":\"Community Announcements\",\"date\":1781589651,\"feedname\":\"steam_community_announcements\",\"feed_type\":1,\"appid\":578080}",
+      "linkUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1835236783573104",
+      "extractedAt": "2026-09-15T22:18:26.934Z"
+    }
+  ],
+  "sources": [
+    {
+      "id": "pubg-steam-announcements",
+      "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=578080&count=100&maxlength=240&feeds=steam_community_announcements",
+      "textHash": "e12ecb20e214a64194d148bf3cfbdd5ff37f529b1dfbec19786be4784c95dd2b",
+      "lastFetchedAt": "2026-09-15T22:18:26.934Z",
+      "lastUsableAt": "2026-09-15T22:18:26.934Z",
+      "lastVerdict": "usable",
+      "lastMode": "http",
+      "consecutiveFailures": 0
+    }
+  ],
+  "discovered": [],
+  "topicStates": []
+}
