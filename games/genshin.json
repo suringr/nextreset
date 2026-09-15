@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "game": "genshin",
+  "updatedAt": "2026-09-15T23:03:18.671Z",
+  "events": [
+    {
+      "key": "genshin/next-banner/event-wishes-2026-09-22-14-59-59",
+      "game": "genshin",
+      "topic": "next-banner",
+      "kind": "occurrence",
+      "label": "The Lone Light Knocks at Night / Astral Actuation / Epitome Invocation: ends 2026-09-22 14:59 server time (Asia 06:59 UTC, Europe 13:59 UTC, America 19:59 UTC)",
+      "status": "scheduled",
+      "at": "2026-09-22T06:59:59.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-15T23:03:18.671Z",
+      "lastVerified": "2026-09-15T23:03:18.671Z",
+      "publishState": "published"
+    }
+  ],
+  "changes": [
+    {
+      "entityKey": "genshin/next-banner/event-wishes-2026-09-22-14-59-59",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "The Lone Light Knocks at Night / Astral Actuation / Epitome Invocation: ends 2026-09-22 14:59 server time (Asia 06:59 UTC, Europe 13:59 UTC, America 19:59 UTC) @ 2026-09-22T06:59:59.000Z",
+      "at": "2026-09-15T23:03:18.671Z",
+      "reason": "observed by genshin-announcements-os_asia",
+      "decision": "applied"
+    }
+  ],
+  "overrides": [],
+  "documents": [
+    {
+      "id": "989b8aaa16e09e0e24afe25c546a0f64ae3b6bbbf886e57f693283d9f1397411",
+      "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_asia",
+      "sourceId": "genshin-announcements-os_asia",
+      "fetchedAt": "2026-09-15T23:03:18.671Z",
+      "title": "Genshin Impact announcements (Asia server)",
+      "fetchMode": "http",
+      "confidence": "high"
+    }
+  ],
+  "claims": [
+    {
+      "id": "3ae6d29779a90bc7c34e9a45",
+      "documentId": "989b8aaa16e09e0e24afe25c546a0f64ae3b6bbbf886e57f693283d9f1397411",
+      "eventKey": "genshin/next-banner/event-wishes-2026-09-22-14-59-59",
+      "field": "at",
+      "value": "2026-09-22T06:59:59.000Z",
+      "method": "deterministic",
+      "quote": "{\"ann_id\":21805,\"title\":\"Event Wish \\\"The Lone Light Knocks at Night\\\" - Boosted Drop Rate for \\\"Shadowy Lights, Stranger Wights\\\" Flins (Electro)!\",\"subtitle\":\"Event Wish \\\"The Lone Light Knocks at Night\\\"\",\"banner\":\"https://sdk.hoyoverse.com/upload/ann/2026/08/18/c8020ea30bb4b123ddf732556676af01_6926918958511625014_transformed.jpg\",\"content\":\"\",\"type_label\":\"Event\",\"tag_label\":\"2\",\"tag_icon\":\"https://sdk.hoyoverse.com/upload/announcement/2020/03/05/2cf7327b5fb2c050872ead29e338e368_7400353291716098710.png\",\"login_alert\":1,\"lang\":\"en-us\",\"start_time\":\"2026-08-27 16:00:00\",\"end_time\":\"2026-09-22 14:59:59\",\"type\":1,\"remind\":1,\"alert\":0,\"tag_start_time\":\"2000-01-02 08:04:05\",\"tag_end_time\":\"2030-01-02 15:04:05\",\"remind_ver\":1,\"has_content\":true,\"extra_remind\":0,\"tag_icon_hover\":\"\",\"logout_remind\":0,\"logout_remind_ver\":1,\"country\":\"\",\"need_remind_text\":0,\"remind_text\":\"\",\"weak_remind\":1,\"remind_consumption_type\":0}",
+      "extractedAt": "2026-09-15T23:03:18.671Z"
+    }
+  ],
+  "sources": [
+    {
+      "id": "genshin-announcements-os_asia",
+      "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_asia",
+      "textHash": "989b8aaa16e09e0e24afe25c546a0f64ae3b6bbbf886e57f693283d9f1397411",
+      "lastFetchedAt": "2026-09-15T23:03:18.671Z",
+      "lastUsableAt": "2026-09-15T23:03:18.671Z",
+      "lastVerdict": "usable",
+      "lastMode": "http",
+      "consecutiveFailures": 0
+    },
+    {
+      "id": "genshin-announcements-os_euro",
+      "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_euro",
+      "textHash": "9dd5ca42a432f4af0689cc86864ccbf2978aa51de87200be950b7ab415a71b9b",
+      "lastFetchedAt": "2026-09-15T23:03:18.671Z",
+      "lastUsableAt": "2026-09-15T23:03:18.671Z",
+      "lastVerdict": "usable",
+      "lastMode": "http",
+      "consecutiveFailures": 0
+    },
+    {
+      "id": "genshin-announcements-os_usa",
+      "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_usa",
+      "textHash": "661ef90429106bcb9c4c22ffe373b99b1b38821beaee526694ccc03e0584989d",
+      "lastFetchedAt": "2026-09-15T23:03:18.671Z",
+      "lastUsableAt": "2026-09-15T23:03:18.671Z",
+      "lastVerdict": "usable",
+      "lastMode": "http",
+      "consecutiveFailures": 0
+    }
+  ],
+  "discovered": [],
+  "topicStates": []
+}

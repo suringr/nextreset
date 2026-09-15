@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "lol",
-  "updatedAt": "2026-09-15T22:41:20.421Z",
+  "updatedAt": "2026-09-15T23:03:01.303Z",
   "events": [
     {
       "key": "lol/next-patch/26.01",
@@ -817,10 +817,40 @@
       "id": "lol-patch-schedule",
       "url": "https://support-leagueoflegends.riotgames.com/hc/en-us/articles/360018987893-League-of-Legends-Patch-Schedule",
       "textHash": "cde5dd2617f8c947f97614c97935c07ca9b86d48d316349533056aa04e4a3332",
-      "lastFetchedAt": "2026-09-15T22:41:20.421Z",
+      "lastFetchedAt": "2026-09-15T23:03:01.303Z",
       "lastUsableAt": "2026-09-15T22:41:20.421Z",
+      "lastVerdict": "http-error",
+      "lastMode": "http",
+      "consecutiveFailures": 1
+    },
+    {
+      "id": "next-patch:488812e5be3919e8",
+      "url": "https://support.riotgames.com/en-us/league-of-legends/gameplay/patch-schedule-league-of-legends",
+      "lastFetchedAt": "2026-09-15T23:03:01.303Z",
+      "lastVerdict": "http-error",
+      "lastMode": "http",
+      "consecutiveFailures": 1
+    },
+    {
+      "id": "next-patch:4b28a3827343bdc8",
+      "url": "https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-11-notes",
+      "etag": "W/\"16yem3lbnkz6a27-df\"",
+      "textHash": "8d2e5bc960b0118c81c6a1469ff4c5b6e1ba1de3f9c7e6e013c74bef46cf6f30",
+      "lastFetchedAt": "2026-09-15T23:03:01.303Z",
+      "lastUsableAt": "2026-09-15T23:03:01.303Z",
       "lastVerdict": "usable",
-      "lastMode": "browser",
+      "lastMode": "http",
+      "consecutiveFailures": 0
+    },
+    {
+      "id": "next-patch:55cf1b978d3bc730",
+      "url": "https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-10-notes",
+      "etag": "W/\"7e6vqzhn735vlv-df\"",
+      "textHash": "963c795196fbf43d95a141cca54fa18a2d19aedc8370ffe3a51746f1e5813fa1",
+      "lastFetchedAt": "2026-09-15T23:03:01.303Z",
+      "lastUsableAt": "2026-09-15T23:03:01.303Z",
+      "lastVerdict": "usable",
+      "lastMode": "http",
       "consecutiveFailures": 0
     }
   ],
@@ -834,9 +864,19 @@
       "title": "Patch Schedule - League of Legends - League of Legends Support",
       "discoveredAt": "2026-09-15T20:04:34.116Z",
       "lastSuccessAt": "2026-09-15T20:04:34.116Z",
+      "lastFailureAt": "2026-09-15T23:03:01.303Z",
       "successes": 1,
-      "failures": 0
+      "failures": 1
     }
   ],
-  "topicStates": []
+  "topicStates": [
+    {
+      "topic": "next-patch",
+      "deferred": {
+        "reason": "deferred_due_to_budget",
+        "detail": "AI budget exhausted (topic-calls): lol/next-patch used 5 of 5 calls today (UTC 2026-09-15); this work needs up to 3 more",
+        "at": "2026-09-15T23:03:01.303Z"
+      }
+    }
+  ]
 }
