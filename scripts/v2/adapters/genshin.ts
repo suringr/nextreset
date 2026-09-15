@@ -198,7 +198,8 @@ export function createGenshinWishAdapter(transport?: Transport): Adapter {
         if (events.length === 0) return reject("no \"Event Wish\" announcement in the Genshin announcement list");
 
         const docs: Document[] = claims.length === 0 ? [] : [{ id: asiaDoc.textHash, url: asiaDoc.finalUrl, sourceId: genshinSourceId("os_asia"), fetchedAt: asiaDoc.fetchedAt, title: "Genshin Impact announcements (Asia server)", fetchMode: asiaDoc.mode, confidence: Confidence.High }];
-        return { events, documents: docs, claims, confidence: Confidence.High, sourceStates, fetch, work: { unchanged, deterministic: GENSHIN_REGIONS.length - unchanged, sentToAi: 0, deferred: 0 } };
+        // The lists are complete: a phase that is corrected, postponed or withdrawn stops being published.
+        return { events, listsAllScheduled: true, documents: docs, claims, confidence: Confidence.High, sourceStates, fetch, work: { unchanged, deterministic: GENSHIN_REGIONS.length - unchanged, sentToAi: 0, deferred: 0 } };
     };
 }
 

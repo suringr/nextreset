@@ -92,6 +92,12 @@ export interface AdapterOutcome {
      * published again if it was held.
      */
     currentIdentity?: string;
+    /**
+     * The events returned include every scheduled event the source currently lists for the topic. Stored scheduled
+     * events of the topic that are still upcoming but no longer listed are held (a corrected, postponed or withdrawn
+     * date), and a held event that is listed again is published again.
+     */
+    listsAllScheduled?: boolean;
     /** Diagnostics for logs and reports (discovery queries, candidates, AI usage). Never persisted. */
     report?: Record<string, unknown>;
 }

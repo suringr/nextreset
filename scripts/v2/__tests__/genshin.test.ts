@@ -107,6 +107,27 @@ test("once the earliest regional end has passed the phase is ended", async () =>
     assert.equal((after.result as any).nextEventUtc, "2026-09-22T06:59:59.000Z", "until the next phase is announced, the ended phase stays the latest known");
 });
 
+test("a phase whose end is corrected is replaced rather than kept alongside the old end, and returns if listed again", async () => {
+    const { store } = tempStore();
+    await runTracker(game, topic, createGenshinWishAdapter(transportFor()), store, NOW);
+    const corrected = (body: string) => body.split("2026-09-22 14:59:59").join("2026-09-23 14:59:59");
+    const later = "genshin/next-banner/event-wishes-2026-09-23-14-59-59";
+
+    const run = await runTracker(game, topic, createGenshinWishAdapter(transportFor({ asia: corrected(ASIA), euro: corrected(EURO), usa: corrected(USA) })), store, new Date("2026-09-16T06:00:00Z"));
+    assert.equal(run.result.status, "fresh");
+    assert.equal((run.result as any).nextEventUtc, "2026-09-23T06:59:59.000Z", "the corrected end is published");
+    let k = store.load("genshin");
+    assert.equal(k.events.find(e => e.key === KEY)!.publishState, "held", "the old end is no longer published");
+    assert.equal(k.events.find(e => e.key === later)!.publishState, "published");
+    assert.ok(run.changes.some(c => c.entityKey === KEY && c.field === "publishState" && c.newValue === "held"));
+
+    const restored = await runTracker(game, topic, createGenshinWishAdapter(transportFor()), store, new Date("2026-09-16T12:00:00Z"));
+    assert.equal((restored.result as any).nextEventUtc, "2026-09-22T06:59:59.000Z", "listed again, the original end is published again");
+    k = store.load("genshin");
+    assert.equal(k.events.find(e => e.key === KEY)!.publishState, "published");
+    assert.equal(k.events.find(e => e.key === later)!.publishState, "held");
+});
+
 test("the production registry runs Genshin on the regional announcement adapter", () => {
     assert.deepEqual(game.sources.map(s => s.id).sort(), GENSHIN_REGIONS.map(r => `genshin-announcements-${r.region}`).sort());
     assert.equal(topic.view.linkEvidence, false);

@@ -107,6 +107,27 @@ export function applyCurrentPointer(knowledge: GameKnowledge, topic: Topic, iden
     return changes;
 }
 
+/**
+ * Applies a source's complete list of scheduled events (see AdapterOutcome.listsAllScheduled): stored scheduled events of
+ * the topic that are still upcoming but were not listed are held, and listed events that were held are published again.
+ * Returns the Change records appended.
+ */
+export function reconcileScheduled(knowledge: GameKnowledge, topic: Topic, listedKeys: Set<string>, now: Date, reason: string): Change[] {
+    const nowIso = now.toISOString();
+    const changes: Change[] = [];
+    for (const event of eventsForTopic(knowledge, topic.type)) {
+        const listed = listedKeys.has(event.key);
+        let next: PublishState | undefined;
+        if (listed && event.publishState === "held") next = "published";
+        else if (!listed && event.publishState === "published" && event.status === "scheduled" && (upcomingUntil(event) ?? 0) > now.getTime()) next = "held";
+        if (!next) continue;
+        changes.push({ entityKey: event.key, field: "publishState", oldValue: event.publishState, newValue: next, at: nowIso, reason, decision: next === "held" ? "held" : "applied" });
+        event.publishState = next;
+    }
+    knowledge.changes.push(...changes);
+    return changes;
+}
+
 export function getSourceState(knowledge: GameKnowledge, sourceId: string): SourceState | undefined {
     return (knowledge.sources ?? []).find(s => s.id === sourceId);
 }

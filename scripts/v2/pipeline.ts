@@ -16,7 +16,8 @@ import { AiGate } from "./cost/budget";
 import { recordSourceFailure, recordSourceSuccess } from "./discovery/learning";
 import { Change, Game, GameKnowledge, Topic } from "./domain";
 import { adapterFor, findGame, findTopic } from "./games";
-import { applyCurrentPointer, endPastScheduled, eventsForTopic, getSourceState, putSourceState, recordTopicRun, touchEvents, upsertEvent } from "./knowledge";
+import { eventKey } from "./identity";
+import { applyCurrentPointer, endPastScheduled, eventsForTopic, getSourceState, putSourceState, reconcileScheduled, recordTopicRun, touchEvents, upsertEvent } from "./knowledge";
 import { KnowledgeStore } from "./store";
 import { KnowledgeValidationError } from "./validate";
 import { deriveProviderResult, selectCurrentEvent, unavailableResult } from "./views";
@@ -115,6 +116,11 @@ export async function runTracker(game: Game, topic: Topic, adapter: Adapter, sto
     // A source that names its current event retires later-dated events it no longer vouches for (a withdrawn release).
     if (outcome.currentIdentity) {
         changes.push(...applyCurrentPointer(knowledge, topic, outcome.currentIdentity, now, `${topic.sourceId} names ${outcome.currentIdentity} as current`));
+    }
+    // A source that lists all its scheduled events retires upcoming ones it no longer lists (a corrected or withdrawn date).
+    if (outcome.listsAllScheduled) {
+        const listed = new Set(outcome.events.map(e => eventKey(topic.game, topic.type, e.identity)));
+        changes.push(...reconcileScheduled(knowledge, topic, listed, now, `reconciled with the scheduled events ${topic.sourceId} currently lists`));
     }
     changes.push(...endPastScheduled(knowledge, topic, now, "scheduled instant has passed"));
 
