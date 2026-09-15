@@ -298,7 +298,12 @@ export function quoteNamesIdentity(quote: string, identity: string): boolean {
  * time must precede the end time in it ("00:00 - 08:30" cannot ground start=08:30).
  */
 function rangeIsConsistent(start: GroundedFact, end: GroundedFact): boolean {
-    if (Date.parse(start.at) > Date.parse(end.at)) return false;
+    if (start.precision === "exact" && end.precision === "exact") {
+        if (Date.parse(start.at) > Date.parse(end.at)) return false;
+    } else if (start.value.slice(0, 10) > end.value.slice(0, 10)) {
+        // A day-precision bound is a calendar day, not an instant: compare the stated days.
+        return false;
+    }
     if (start.precision === "exact" && end.precision === "exact" && normalizeForSearch(start.quote) === normalizeForSearch(end.quote)) {
         const times = clockTimesIn(start.quote);
         const s = parseDateValue(start.value), e = parseDateValue(end.value);
@@ -460,17 +465,51 @@ function addUsage(a: AiUsage, b: AiUsage): AiUsage {
 }
 
 /**
+ * Fills the first answer's unverifiable gaps from the repaired answer: a fact
+ * is taken from the repair only for an item and field the first answer could
+ * not evidence. Facts the first answer already grounded are never replaced, and
+ * items the repair invents are ignored.
+ */
+export function mergeRepair(first: GroundedExtraction, repair: GroundedExtraction): { merged: GroundedExtraction; filled: number } {
+    const items = first.items.map(i => ({ ...i, facts: [...i.facts] }));
+    const rejected = [...first.rejected];
+    const fromRepair = new Set<GroundedFact>();
+    for (const gap of first.rejected.filter(r => r.reason === UNVERIFIABLE_QUOTE)) {
+        const item = items.find(i => i.identity === gap.identity);
+        if (!item || item.facts.some(f => f.field === gap.field)) continue;
+        const fact = repair.items.find(i => i.identityKey === item.identityKey)?.facts.find(f => f.field === gap.field);
+        if (!fact) continue;
+        item.facts.push(fact);
+        fromRepair.add(fact);
+        rejected.splice(rejected.indexOf(gap), 1);
+    }
+    // A filled bound must still form a consistent window with what was already accepted.
+    for (const item of items) {
+        const start = item.facts.find(f => f.field === "startAt");
+        const end = item.facts.find(f => f.field === "endAt");
+        if (!start || !end || rangeIsConsistent(start, end)) continue;
+        for (const f of [start, end].filter(f => fromRepair.has(f))) {
+            item.facts.splice(item.facts.indexOf(f), 1);
+            fromRepair.delete(f);
+            rejected.push({ identity: item.identity, field: f.field, value: f.value, quote: f.quote, reason: "start/end are inverted or read out of order" });
+        }
+    }
+    const filled = fromRepair.size;
+    return { merged: { items, rejected, stats: { ...first.stats, accepted: first.stats.accepted + filled, rejected: rejected.length } }, filled };
+}
+
+/**
  * Extracts and grounds. When the model's quotes are not verbatim (paraphrased,
  * reordered or stitched from separate passages), one repair call names the
  * offending quotes and asks again; the repaired answer is grounded exactly like
- * the first and replaces it only when it evidences more. Never more than two calls.
+ * the first and only fills the gaps it left (see mergeRepair). Never more than two calls.
  */
 export async function extractFacts(provider: AiProvider, topic: ExtractionTopic, doc: AiDocument, options: { now?: Date; repair?: boolean } = {}): Promise<ExtractionResult> {
     const now = options.now ?? new Date();
     const { text, truncated } = documentBlock(doc);
     const prompt = `${topicBlock(topic, now)}\n\nDocument title: ${doc.title ?? ""}\n${truncated ? "(document truncated)\n" : ""}\n--- DOCUMENT ---\n${text}\n--- END ---`;
     const response = await provider.generateJson({ label: "extract", system: EXTRACT_SYSTEM, prompt, schema: EXTRACT_SCHEMA, maxOutputTokens: 8192 });
-    let raw = parseRawItems(response.data);
+    const raw = parseRawItems(response.data);
     // Ground against the text the model actually saw.
     let grounded = groundExtraction(raw, text, { now });
     let usage = response.usage;
@@ -484,13 +523,10 @@ export async function extractFacts(provider: AiProvider, topic: ExtractionTopic,
         const second = await provider.generateJson({ label: "extract-repair", system: EXTRACT_SYSTEM, prompt: repairPrompt, schema: EXTRACT_SCHEMA, maxOutputTokens: 8192 });
         attempts = 2;
         usage = addUsage(usage, second.usage);
-        const rawRepair = parseRawItems(second.data);
-        const groundedRepair = groundExtraction(rawRepair, text, { now });
-        const better = groundedRepair.stats.accepted > grounded.stats.accepted
-            || (groundedRepair.stats.accepted === grounded.stats.accepted && groundedRepair.rejected.length < grounded.rejected.length);
-        if (better) {
-            raw = rawRepair;
-            grounded = groundedRepair;
+        const groundedRepair = groundExtraction(parseRawItems(second.data), text, { now });
+        const { merged, filled } = mergeRepair(grounded, groundedRepair);
+        if (filled > 0) {
+            grounded = merged;
             repaired = true;
         }
     }
