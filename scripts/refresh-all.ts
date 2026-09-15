@@ -1,7 +1,10 @@
+import * as fs from "fs";
 import { FailureType, ProviderResult, StaleResult, UnavailableResult, Provider } from "./types";
 import { writeLiveJson, writeLkgJson, readLkgData, ensureDataDirs } from "./lib/data-output";
 import { JsonKnowledgeStore } from "./v2/store";
 import { runV2Tracker } from "./v2/pipeline";
+import { AiGate } from "./v2/cost/budget";
+import { TrackerCostLine, createRunAiGate, renderRunSummary, summarizeRun } from "./v2/cost/run";
 
 // Import all providers
 import * as fortnite from "./providers/fortnite";
@@ -92,18 +95,31 @@ function logAdapterReport(entry: RegistryEntry, report: Record<string, unknown> 
     const winner = report.winner as { url: string; via: string } | undefined;
     const confidence = report.confidence as { level: string; reasons: string[] } | undefined;
     if (winner) console.log(`  [${entry.id}] answered by ${winner.url} (via ${winner.via})${confidence ? `, confidence ${confidence.level}` : ""}`);
-    const ai = report.ai as { model?: string; calls: number; inputTokens: number; outputTokens: number } | undefined;
-    if (ai && ai.calls > 0) console.log(`  [${entry.id}] AI ${ai.model ?? ""}: ${ai.calls} call(s), ${ai.inputTokens} in / ${ai.outputTokens} out tokens`);
+    const ai = report.ai as { model?: string; calls: number; inputTokens: number; outputTokens: number; estimatedCostUsd?: number } | undefined;
+    if (ai && ai.calls > 0) console.log(`  [${entry.id}] AI ${ai.model ?? ""}: ${ai.calls} call(s), ${ai.inputTokens} in / ${ai.outputTokens} out tokens${ai.estimatedCostUsd !== undefined ? `, est. $${ai.estimatedCostUsd.toFixed(4)}` : ""}`);
 }
 
-async function runV2(entry: RegistryEntry, store: JsonKnowledgeStore, startTime: number): Promise<ProviderResult> {
+const escapeAnnotation = (s: string) => s.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+
+async function runV2(entry: RegistryEntry, store: JsonKnowledgeStore, startTime: number, gate: AiGate): Promise<{ result: ProviderResult; line: TrackerCostLine }> {
     let result: ProviderResult;
     let detail = "";
+    const line: TrackerCostLine = { game: entry.id, type: entry.type, engine: "v2", status: "unavailable" };
     try {
-        const run = await runV2Tracker(entry.id, entry.type, store, new Date());
+        const run = await runV2Tracker(entry.id, entry.type, store, new Date(), { ai: gate });
         result = run.result;
         detail = `${run.created} new event(s), ${run.changes.length} change(s)`;
         logAdapterReport(entry, run.report);
+        line.work = run.work;
+        const decision = (run.report as { decision?: { discover: boolean; reason: string } } | undefined)?.decision;
+        if (decision) line.discovery = `${decision.discover ? "ran" : "skipped"}: ${decision.reason}`;
+        if (run.deferred) {
+            line.deferred = run.deferred.detail;
+            console.warn(`  [${entry.id}] deferred_due_to_budget: ${run.deferred.detail}`);
+            if (process.env.GITHUB_ACTIONS === "true") {
+                console.log(`::warning title=AI work deferred::${escapeAnnotation(`${entry.name} (${entry.id}.${entry.type}): ${run.deferred.detail}. Stored knowledge is served; a later run retries.`)}`);
+            }
+        }
         if (run.saveError && process.env.GITHUB_ACTIONS === "true") {
             console.log(`::warning title=Knowledge not saved::${entry.name} (${entry.id}.${entry.type}): ${run.saveError.replace(/[\r\n]+/g, " ")}`);
         }
@@ -142,7 +158,8 @@ async function runV2(entry: RegistryEntry, store: JsonKnowledgeStore, startTime:
     }
 
     writeLiveJson(result);
-    return result;
+    line.status = result.status;
+    return { result, line };
 }
 
 async function main() {
@@ -162,13 +179,22 @@ async function main() {
     const store = new JsonKnowledgeStore();
     console.log(`Knowledge store: ${store.rootDir}`);
 
+    // One AI budget for the whole run; its usage ledger lives in the knowledge store so limits hold across the day's runs.
+    const runStartedAt = new Date();
+    const { gate, unavailable } = createRunAiGate({ knowledgeRoot: store.rootDir, now: runStartedAt });
+    console.log(`AI budget (estimates, per UTC day): $${gate.limits.dailyCostUsd.toFixed(2)}, ${gate.limits.dailyCalls} calls, ${gate.limits.perTopicCalls} calls per topic; ledger ${gate.ledger.location}`);
+    if (unavailable) console.warn(`⚠ No AI calls this run: ${unavailable}`);
+    const costLines: TrackerCostLine[] = [];
+
     // Run providers sequentially
     for (const entry of REGISTRY) {
         const startTime = Date.now();
         console.log(`\n[${new Date().toISOString()}] Running ${entry.name} [${entry.engine}]...`);
 
         if (entry.engine === "v2") {
-            results.push(await runV2(entry, store, startTime));
+            const { result, line } = await runV2(entry, store, startTime, gate);
+            results.push(result);
+            costLines.push(line);
             continue;
         }
 
@@ -250,6 +276,7 @@ async function main() {
         }
 
         results.push(result);
+        costLines.push({ game: entry.id, type: entry.type, engine: "v1", status: result.status });
     }
 
     // Summary & Exit Logic
@@ -277,7 +304,6 @@ async function main() {
     // GitHub Actions visibility: annotate every non-fresh provider in the run UI.
     // Reporting only; the exit policy below is unchanged.
     if (process.env.GITHUB_ACTIONS === "true") {
-        const escapeAnnotation = (s: string) => s.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
         for (const r of results) {
             const id = `${r.game}.${r.type}`;
             if (r.status === "stale") {
@@ -286,6 +312,20 @@ async function main() {
                 console.log(`::warning title=Provider unavailable::${escapeAnnotation(`${r.title} (${id}) has no data. ${r.explanation}`)}`);
             }
         }
+    }
+
+    // AI usage and cost report (counts, tokens and estimates only; never prompts, documents or keys).
+    // Reporting only: it never changes the exit policy below.
+    try {
+        const summary = summarizeRun({ gate, startedAt: runStartedAt, finishedAt: new Date(), trackers: costLines, unavailable });
+        const markdown = renderRunSummary(summary);
+        console.log("\n" + markdown);
+        if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, markdown + "\n");
+        if (process.env.GITHUB_ACTIONS === "true" && (summary.remaining.costUsd <= 0 || summary.remaining.calls <= 0)) {
+            console.log(`::warning title=AI daily budget reached::${escapeAnnotation(`Estimated AI usage today: $${summary.today.estimatedCostUsd.toFixed(4)} of $${summary.limits.dailyCostUsd.toFixed(2)}, ${summary.today.calls} of ${summary.limits.dailyCalls} calls. AI work is deferred until the next UTC day.`)}`);
+        }
+    } catch (error) {
+        console.error(`AI cost summary could not be written: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     // Exit Code Logic

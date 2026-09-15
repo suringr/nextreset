@@ -16,6 +16,7 @@ import { normalizeIdentity } from "../identity";
 import { AiDocument, DocType, ExtractionTopic, GroundedItem, classifyDocument, extractFacts, tokensOf } from "./extraction";
 import { MockAiProvider, scriptedResponder } from "./mock";
 import { AiProvider, AiUsageTracker, TrackedAiProvider, createAiProvider, readAiConfig } from "./provider";
+import { priceFor } from "../cost/pricing";
 
 export interface GoldExpectation {
     /** Any of these may satisfy the expectation, matched against the normalized identity or label. */
@@ -337,10 +338,11 @@ async function main(): Promise<void> {
         provider = mockGoldProvider(loadMockScript(), cases);
     }
 
-    const price = (name: string) => process.env[name] ? Number(process.env[name]) : undefined;
+    // An estimate from the central price table (AI_PRICE_INPUT_PER_M / AI_PRICE_OUTPUT_PER_M override it); not billing data.
+    const price = priceFor(provider.model);
     const report = await runGoldEval({
         provider, cases, mode: live ? "live" : "mock",
-        pricePerMInput: price("AI_PRICE_INPUT_PER_M"), pricePerMOutput: price("AI_PRICE_OUTPUT_PER_M")
+        pricePerMInput: price.inputPerMillionUsd, pricePerMOutput: price.outputPerMillionUsd
     });
 
     fs.mkdirSync(outDir, { recursive: true });

@@ -4,7 +4,7 @@
  * change records live here so they can be unit-tested without files.
  */
 import { EventInput } from "./adapter";
-import { Change, DatePrecision, Event, GameKnowledge, SourceState, Topic } from "./domain";
+import { Change, DatePrecision, Event, GameKnowledge, SourceState, Topic, TopicState } from "./domain";
 import { eventKey } from "./identity";
 
 const COMPARED_FIELDS = ["label", "status", "at", "startAt", "endAt", "precision", "timezone"] as const;
@@ -97,6 +97,27 @@ export function putSourceState(knowledge: GameKnowledge, state: SourceState): vo
 }
 
 /** Marks the events of a topic as verified now without recording a change. */
+/**
+ * Records what a run did for a topic beyond its events: when discovery searched, and whether AI work
+ * was deferred by the budget (cleared by the next run that is not deferred). A topic with nothing to
+ * record keeps no entry, so trackers that never discover or use AI leave their knowledge untouched.
+ */
+export function recordTopicRun(knowledge: GameKnowledge, topicType: string, run: { discoveryRanAt?: string; deferred?: { reason: "deferred_due_to_budget"; detail: string } }, now: Date): void {
+    if (!knowledge.topicStates) knowledge.topicStates = [];
+    const states = knowledge.topicStates;
+    const index = states.findIndex(s => s.topic === topicType);
+    const next: TopicState = { ...(index >= 0 ? states[index] : { topic: topicType }) };
+    if (run.discoveryRanAt) next.lastDiscoveryAt = run.discoveryRanAt;
+    if (run.deferred) next.deferred = { reason: run.deferred.reason, detail: run.deferred.detail, at: now.toISOString() };
+    else delete next.deferred;
+    if (next.lastDiscoveryAt === undefined && next.deferred === undefined) {
+        if (index >= 0) states.splice(index, 1);
+        return;
+    }
+    if (index >= 0) states[index] = next;
+    else states.push(next);
+}
+
 export function touchEvents(events: Event[], now: Date): void {
     const nowIso = now.toISOString();
     for (const event of events) event.lastVerified = nowIso;

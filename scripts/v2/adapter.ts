@@ -6,6 +6,7 @@
  * Failure is signalled by throwing; the pipeline then serves stored knowledge.
  */
 import { Confidence } from "../types";
+import type { AiGate } from "./cost/budget";
 import { LearnInput } from "./discovery/learning";
 import { Claim, DatePrecision, Document, EventStatus, Game, GameKnowledge, SourceState, Topic } from "./domain";
 
@@ -29,6 +30,23 @@ export interface AdapterContext {
     getSourceState: (sourceId: string) => SourceState | undefined;
     /** Stored knowledge, for adapters that consult events or learned sources. Read-only: the pipeline applies changes. */
     knowledge: GameKnowledge;
+    /**
+     * The run's AI budget gate. Adapters that need a model take their provider from it, so every call is
+     * checked against the daily limits and recorded. Absent in standalone use (tests, tools).
+     */
+    ai?: AiGate;
+}
+
+/** What a run did with its documents, for cost reporting. */
+export interface WorkStats {
+    /** Documents found unchanged (HTTP 304 or the same text hash): no parsing, no model call. */
+    unchanged: number;
+    /** Documents or rules resolved by deterministic code (structured parse, recurring rule). */
+    deterministic: number;
+    /** Changed documents sent to the AI model. */
+    sentToAi: number;
+    /** Changed documents whose AI work the budget deferred. */
+    deferred: number;
 }
 
 export interface AdapterOutcome {
@@ -59,6 +77,15 @@ export interface AdapterOutcome {
     learned?: { successes: LearnInput[]; failures: string[] };
     /** Confidence computed for this run's answer; overrides the topic's static label in the view. */
     confidence?: Confidence;
+    /**
+     * AI work the budget did not allow. Always paired with `failure`: stored knowledge is served, the
+     * deferred document is not marked as seen, and a later run retries.
+     */
+    deferred?: { reason: "deferred_due_to_budget"; detail: string };
+    /** When this run's discovery searched (see discovery/cadence.ts); persisted as the topic's last discovery. */
+    discoveryRanAt?: string;
+    /** Documents skipped, parsed, sent to AI or deferred this run. */
+    work?: WorkStats;
     /** Diagnostics for logs and reports (discovery queries, candidates, AI usage). Never persisted. */
     report?: Record<string, unknown>;
 }

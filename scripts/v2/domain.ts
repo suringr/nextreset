@@ -48,6 +48,11 @@ export interface TopicDiscovery {
      * "usable-source" (default for period/recurring): at least one known source was usable this run.
      */
     answeredWhen?: "future-scheduled" | "usable-source";
+    /**
+     * Minimum hours between discovery searches for this topic (default 24; see
+     * discovery/cadence.ts). Known sources are still re-checked on every run.
+     */
+    minIntervalHours?: number;
 }
 
 export interface Topic {
@@ -213,6 +218,17 @@ export interface DiscoveredSource {
     failures: number;
 }
 
+/**
+ * What runs did for a topic beyond its events: when discovery last searched
+ * (the discovery cadence), and AI work the budget deferred on the most recent run.
+ */
+export interface TopicState {
+    topic: string;
+    lastDiscoveryAt?: string;
+    /** Set by a run whose AI work was deferred by the budget; cleared by the next run that is not deferred. */
+    deferred?: { reason: "deferred_due_to_budget"; detail: string; at: string };
+}
+
 export const KNOWLEDGE_SCHEMA_VERSION = 1;
 
 /** Everything stored for one game: `knowledge/games/<game>.json`. */
@@ -229,6 +245,8 @@ export interface GameKnowledge {
     sources: SourceState[];
     /** Official pages learned by discovery. Files written before this field existed load as []. */
     discovered: DiscoveredSource[];
+    /** Per-topic run state. Files written before this field existed load as []. */
+    topicStates: TopicState[];
 }
 
 export function emptyKnowledge(gameId: string, now: Date = new Date()): GameKnowledge {
@@ -242,6 +260,7 @@ export function emptyKnowledge(gameId: string, now: Date = new Date()): GameKnow
         documents: [],
         claims: [],
         sources: [],
-        discovered: []
+        discovered: [],
+        topicStates: []
     };
 }

@@ -14,7 +14,10 @@
  */
 import * as fs from "fs";
 import * as path from "path";
-import { readAiConfig } from "../ai/provider";
+import { createAiProvider, readAiConfig } from "../ai/provider";
+import { createAiGate, currentRunId, readAiBudgetLimits } from "../cost/budget";
+import { AiUsageLedger, utcDate } from "../cost/ledger";
+import { usageLedgerDir } from "../cost/run";
 import { readSearchConfig } from "../discovery/search-provider";
 import { adapterFor, findGame, findTopic } from "../games";
 import { runTracker } from "../pipeline";
@@ -47,8 +50,17 @@ async function main(): Promise<void> {
     console.log(`  configured page: ${dropConfigured ? "(removed for this run)" : game.sources.find(s => s.id === topic.sourceId)?.url ?? "(none)"}`);
     console.log(`  AI: ${ai ? `${ai.provider} ${ai.model}` : "not configured (GEMINI_API_KEY missing)"}; web search: ${search.provider}`);
 
+    // The production budget rules apply, with a ledger next to the throwaway knowledge (one run id per slice run).
+    const gate = createAiGate({
+        ledger: AiUsageLedger.inDirectory(usageLedgerDir(knowledgeDir)),
+        limits: readAiBudgetLimits(),
+        runId: `${currentRunId(process.env, now)}-${path.basename(outFile, ".json")}`,
+        loadProvider: async () => (ai ? createAiProvider(ai) : undefined)
+    });
+
     const started = Date.now();
-    const run = await runTracker(game, topic, adapterFor(topic), store, now);
+    const run = await runTracker(game, topic, adapterFor(topic), store, now, { ai: gate });
+    const aiCalls = gate.ledger.calls(utcDate(now)).filter(r => r.runId === gate.runId);
     const elapsedMs = Date.now() - started;
     const knowledge = run.knowledge;
     const summary = {
@@ -60,6 +72,10 @@ async function main(): Promise<void> {
         changesThisRun: run.changes,
         created: run.created,
         saveError: run.saveError,
+        work: run.work,
+        deferred: run.deferred,
+        aiCalls,
+        aiBudget: { limits: gate.limits, today: gate.ledger.totals(utcDate(now)) },
         knowledge: knowledge ? {
             file: store.describe(gameId),
             events: knowledge.events,
@@ -90,6 +106,8 @@ async function main(): Promise<void> {
         if (report.confidence) console.log("Confidence:", report.confidence.level, "\n  - " + report.confidence.reasons.join("\n  - "));
         console.log("AI usage:", JSON.stringify(report.ai));
     }
+    console.log("Work:", JSON.stringify(run.work ?? {}), run.deferred ? `deferred_due_to_budget: ${run.deferred.detail}` : "");
+    for (const c of aiCalls) console.log(`  AI call ${c.operation} ${c.model}: ${c.inputTokens} in / ${c.outputTokens + c.thoughtTokens} out, est. $${c.estimatedCostUsd.toFixed(4)}${c.success ? "" : ` (failed: ${c.error ?? "unknown"})`}`);
     if (knowledge) {
         console.log(`\nKnowledge: ${knowledge.events.length} event(s), ${knowledge.claims.length} claim(s), ${knowledge.documents.length} document(s), ${knowledge.discovered.length} learned source(s), ${knowledge.changes.length} change(s)`);
         for (const e of knowledge.events) console.log(`  event ${e.key} ${e.status} ${e.at ?? e.startAt} (${e.precision})`);

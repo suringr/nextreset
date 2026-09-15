@@ -6,7 +6,7 @@
  * retried a bounded number of times. The API key is only ever passed to the
  * SDK client; any error text is redacted before it can reach a log.
  */
-import { AiError, AiJsonRequest, AiJsonResponse, AiProvider, redactSecret } from "./provider";
+import { AiError, AiJsonRequest, AiJsonResponse, AiProvider, AiUsage, redactSecret } from "./provider";
 
 /** The subset of the SDK surface we use, so tests can inject a fake client. */
 export interface GeminiClientLike {
@@ -50,6 +50,15 @@ export interface GeminiOptions {
 const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504]);
 
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
+function usageOf(response: GeminiResponseLike): AiUsage {
+    const u = response.usageMetadata ?? {};
+    return { inputTokens: u.promptTokenCount ?? 0, outputTokens: u.candidatesTokenCount ?? 0, thoughtTokens: u.thoughtsTokenCount ?? 0 };
+}
+
+function addUsage(a: AiUsage, b: AiUsage): AiUsage {
+    return { inputTokens: a.inputTokens + b.inputTokens, outputTokens: a.outputTokens + b.outputTokens, thoughtTokens: (a.thoughtTokens ?? 0) + (b.thoughtTokens ?? 0) };
+}
 
 export class GeminiProvider implements AiProvider {
     readonly name = "gemini";
@@ -97,28 +106,45 @@ export class GeminiProvider implements AiProvider {
     async generateJson(request: AiJsonRequest): Promise<AiJsonResponse> {
         const client = await this.getClient();
         let lastError: AiError | undefined;
+        // Answers that came back but could not be used (empty, not JSON, cut off) are billed, so their
+        // tokens are carried into the call's usage (or the final error) and cost accounting sees every retry.
+        let billed: AiUsage | undefined;
+        let retries = 0;
+        const withAccounting = (error: AiError): AiError => {
+            if (billed) error.usage = billed;
+            error.retries = retries;
+            return error;
+        };
 
         for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+            let response: GeminiResponseLike | undefined;
             try {
-                const response = await client.models.generateContent({
+                response = await client.models.generateContent({
                     model: this.model,
                     contents: request.prompt,
                     config: this.buildConfig(request)
                 });
-                return this.parseResponse(response);
+                const parsed = this.parseResponse(response);
+                return {
+                    ...parsed,
+                    usage: billed ? addUsage(billed, parsed.usage) : parsed.usage,
+                    ...(retries > 0 ? { retries } : {})
+                };
             } catch (error) {
                 lastError = this.toAiError(error);
+                if (response) billed = addUsage(billed ?? { inputTokens: 0, outputTokens: 0, thoughtTokens: 0 }, usageOf(response));
                 // A model that does not accept a thinking budget: drop the setting and retry at once.
                 if (lastError.status === 400 && this.thinkingBudget !== undefined && /thinking/i.test(lastError.message)) {
                     this.thinkingBudget = undefined;
                     attempt--;
                     continue;
                 }
-                if (!lastError.retryable || attempt === this.maxRetries) throw lastError;
+                if (!lastError.retryable || attempt === this.maxRetries) throw withAccounting(lastError);
+                retries++;
                 if (this.retryDelayMs > 0) await sleep(this.retryDelayMs * Math.pow(2, attempt));
             }
         }
-        throw lastError ?? new AiError("Gemini call failed", false);
+        throw withAccounting(lastError ?? new AiError("Gemini call failed", false));
     }
 
     private parseResponse(response: GeminiResponseLike): AiJsonResponse {

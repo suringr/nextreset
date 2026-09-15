@@ -11,11 +11,12 @@
  * Failures never delete or rewrite stored knowledge.
  */
 import { ProviderResult } from "../types";
-import { Adapter } from "./adapter";
+import { Adapter, AdapterOutcome, WorkStats } from "./adapter";
+import { AiGate } from "./cost/budget";
 import { recordSourceFailure, recordSourceSuccess } from "./discovery/learning";
 import { Change, Game, GameKnowledge, Topic } from "./domain";
 import { adapterFor, findGame, findTopic } from "./games";
-import { endPastScheduled, eventsForTopic, getSourceState, putSourceState, touchEvents, upsertEvent } from "./knowledge";
+import { endPastScheduled, eventsForTopic, getSourceState, putSourceState, recordTopicRun, touchEvents, upsertEvent } from "./knowledge";
 import { KnowledgeStore } from "./store";
 import { KnowledgeValidationError } from "./validate";
 import { deriveProviderResult, selectCurrentEvent, unavailableResult } from "./views";
@@ -32,6 +33,15 @@ export interface TrackerRunResult {
     saveError?: string;
     /** Adapter diagnostics for this run (see AdapterOutcome.report). */
     report?: Record<string, unknown>;
+    /** Documents this run skipped, parsed, sent to AI or deferred (see AdapterOutcome.work). */
+    work?: WorkStats;
+    /** Set when AI work was deferred by the budget; stored knowledge was served instead. */
+    deferred?: AdapterOutcome["deferred"];
+}
+
+export interface RunOptions {
+    /** The run's AI budget gate, passed to adapters in their context. */
+    ai?: AiGate;
 }
 
 function errorMessage(error: unknown): string {
@@ -57,7 +67,7 @@ function trySave(store: KnowledgeStore, knowledge: GameKnowledge): string | unde
     }
 }
 
-export async function runTracker(game: Game, topic: Topic, adapter: Adapter, store: KnowledgeStore, now: Date): Promise<TrackerRunResult> {
+export async function runTracker(game: Game, topic: Topic, adapter: Adapter, store: KnowledgeStore, now: Date, options: RunOptions = {}): Promise<TrackerRunResult> {
     let knowledge: GameKnowledge;
     try {
         knowledge = store.load(game.id);
@@ -68,7 +78,7 @@ export async function runTracker(game: Game, topic: Topic, adapter: Adapter, sto
 
     let outcome;
     try {
-        outcome = await adapter({ now, game, topic, knowledge, getSourceState: (id) => getSourceState(knowledge, id) });
+        outcome = await adapter({ now, game, topic, knowledge, getSourceState: (id) => getSourceState(knowledge, id), ai: options.ai });
     } catch (error) {
         const reason = errorMessage(error);
         const result = deriveProviderResult(topic, knowledge, { now, outcome: { ok: false, reason } });
@@ -81,11 +91,14 @@ export async function runTracker(game: Game, topic: Topic, adapter: Adapter, sto
     // Learning bookkeeping (failures of learned pages) is persisted even on a failed run.
     for (const url of outcome.learned?.failures ?? []) recordSourceFailure(knowledge, topic.type, url, now);
 
+    // Discovery cadence and budget deferral are persisted whatever the outcome.
+    recordTopicRun(knowledge, topic.type, { discoveryRanAt: outcome.discoveryRanAt, deferred: outcome.deferred }, now);
+
     if (outcome.failure) {
         knowledge.updatedAt = now.toISOString();
         const saveError = trySave(store, knowledge);
         const result = deriveProviderResult(topic, knowledge, { now, outcome: { ok: false, reason: outcome.failure } });
-        return { result, knowledge, changes: [], created: 0, saveError, report: outcome.report };
+        return { result, knowledge, changes: [], created: 0, saveError, report: outcome.report, work: outcome.work, deferred: outcome.deferred };
     }
 
     const changes: Change[] = [];
@@ -118,12 +131,12 @@ export async function runTracker(game: Game, topic: Topic, adapter: Adapter, sto
         outcome: { ok: true, httpStatus: outcome.fetch?.httpStatus, fetchMode: outcome.fetch?.mode },
         confidence: outcome.confidence
     });
-    return { result, knowledge, changes, created, saveError, report: outcome.report };
+    return { result, knowledge, changes, created, saveError, report: outcome.report, work: outcome.work };
 }
 
 /** Entry point used by the orchestrator: resolves configuration by ids. */
-export async function runV2Tracker(gameId: string, type: string, store: KnowledgeStore, now: Date = new Date()): Promise<TrackerRunResult> {
+export async function runV2Tracker(gameId: string, type: string, store: KnowledgeStore, now: Date = new Date(), options: RunOptions = {}): Promise<TrackerRunResult> {
     const game = findGame(gameId);
     const topic = findTopic(game, type);
-    return runTracker(game, topic, adapterFor(topic), store, now);
+    return runTracker(game, topic, adapterFor(topic), store, now, options);
 }

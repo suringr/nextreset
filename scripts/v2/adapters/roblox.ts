@@ -85,7 +85,7 @@ export function createRobloxStatusAdapter(transport?: Transport): Adapter {
         const fetch = { httpStatus: fetched.document?.status ?? 304, mode: fetched.document?.mode ?? "http" as const };
 
         if (fetched.outcome === "unchanged") {
-            return { events: [], unchanged: true, sourceStates, fetch };
+            return { events: [], unchanged: true, sourceStates, fetch, work: { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 } };
         }
 
         // Syntactically valid JSON with the wrong shape is a source failure too: record it
@@ -117,7 +117,9 @@ export function createRobloxStatusAdapter(transport?: Transport): Adapter {
                 timezone: "UTC"
             }],
             sourceStates,
-            fetch
+            fetch,
+            // Structured JSON parsed by code: never sent to a model.
+            work: { unchanged: 0, deterministic: 1, sentToAi: 0, deferred: 0 }
         };
     };
 }

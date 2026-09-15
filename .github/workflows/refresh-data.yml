@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: [ main ]
   schedule:
+    # Every 6 hours: V1 trackers need it, and re-checking known V2 sources is cheap (an unchanged
+    # document makes no model call). V2 discovery runs at most once a day per topic (scripts/v2/discovery/cadence.ts).
     - cron: "0 */6 * * *"
   workflow_dispatch:
 
@@ -87,6 +89,11 @@ jobs:
           AI_MODEL: gemini-3.5-flash
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SEARCH_PROVIDER: duckduckgo
+          # Daily AI safety ceilings (estimated USD and calls per UTC day; usage is tracked in
+          # knowledge/usage/ai). Ceilings, not targets: when one is reached AI work is deferred.
+          AI_DAILY_COST_LIMIT_USD: "2.00"
+          AI_DAILY_CALL_LIMIT: "100"
+          AI_PER_TOPIC_CALL_LIMIT: "5"
         run: npm run build:site
 
       # Commit and push knowledge changes (fast-forward only, never force) and detach the

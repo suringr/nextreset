@@ -4,6 +4,10 @@ name: Vertical slice evaluation
 # twice: with its configured page, and with that page removed so discovery has
 # to find it. Uploads the views, adapter reports and knowledge as an artifact.
 # Never writes the production knowledge branch (a throwaway store under build/).
+# It costs a few live model calls, so it runs once when a pull request that
+# changes the evidence-based adapter, discovery, the AI budget or the model
+# provider is opened, not on every push and not for game configuration changes.
+# Dispatch it by hand after later fixes or a League of Legends config change.
 on:
   workflow_dispatch:
     inputs:
@@ -17,12 +21,14 @@ on:
         default: next-patch
   pull_request:
     branches: [ main ]
+    types: [ opened, reopened, ready_for_review ]
     paths:
       - "scripts/v2/adapters/ai-discovery.ts"
       - "scripts/v2/discovery/**"
+      - "scripts/v2/cost/**"
+      - "scripts/v2/ai/gemini.ts"
+      - "scripts/v2/ai/provider.ts"
       - "scripts/v2/tools/run-slice.ts"
-      - "scripts/v2/games.ts"
-      - ".github/workflows/slice-eval.yml"
 
 permissions:
   contents: read

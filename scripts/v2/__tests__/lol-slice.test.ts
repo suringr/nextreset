@@ -199,9 +199,11 @@ test("when the configured page is removed later, the learned page answers withou
     assert.equal(run.result.status, "fresh");
     const report = run.report as any;
     assert.deepEqual(report.knownSources, [{ url: FINAL, via: "learned" }]);
-    assert.equal(report.decision, undefined, "no discovery needed");
+    assert.equal(report.attempts[0].outcome, "unchanged", "the learned page serves the content already extracted, so it is not read again");
+    assert.equal(report.ai.calls, 0);
+    assert.equal(report.decision.discover, false, "no discovery needed");
     assert.equal(noSearch.official[0].queries.length, 0);
-    assert.equal(store.load("lol").discovered[0].successes, 2);
+    assert.equal(store.load("lol").discovered[0].successes, 1, "re-verifying unchanged content is not a new learning success");
 });
 
 test("a dead configured page is recovered by discovery, and its failure is recorded", async () => {
