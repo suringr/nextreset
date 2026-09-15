@@ -165,12 +165,18 @@ export async function discoverSources(options: DiscoveryOptions): Promise<Discov
     }
     let { ranked, rejected } = rankAll();
 
-    // 2. Web search, only when the official channels found nothing convincing.
+    // 2. Web search, only when the official channels found nothing convincing. Per template:
+    //    the site-restricted variants first, then the open query, so a small budget still
+    //    reaches an open query for the most important template.
+    const webOrder: SearchQuery[] = [];
+    queries.open.forEach(open => {
+        webOrder.push(...queries.official.filter(q => q.text === open.text), open);
+    });
     let searchedWeb = false;
     if (!convincing(ranked) && options.webProvider) {
         searchedWeb = true;
         let used = 0;
-        for (const query of [...queries.official, ...queries.open]) {
+        for (const query of webOrder) {
             if (used >= limits.maxWebQueries || dead.has(options.webProvider.name)) break;
             await run(options.webProvider, query, "web");
             used++;
