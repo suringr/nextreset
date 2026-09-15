@@ -41,7 +41,7 @@ interface RegistryEntry {
 const REGISTRY: RegistryEntry[] = [
     { id: "fortnite", type: "next-season", name: "Fortnite", engine: "v1", run: fortnite.run },
     { id: "lol", type: "next-patch", name: "League of Legends", engine: "v2", run: lol.run },
-    { id: "valorant", type: "last-patch", name: "VALORANT", engine: "v1", run: valorant.run },
+    { id: "valorant", type: "last-patch", name: "VALORANT", engine: "v2", run: valorant.run },
     { id: "cs2", type: "last-update", name: "Counter-Strike 2", engine: "v2", run: cs2.run },
     { id: "minecraft", type: "last-release", name: "Minecraft", engine: "v2", run: minecraft.run },
     { id: "roblox", type: "status", name: "Roblox", engine: "v2", run: roblox.run },

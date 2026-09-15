@@ -2,8 +2,8 @@
  * Static game configuration for the trackers on the V2 pipeline.
  *
  * Games migrated so far: League of Legends (next patch, evidence-based), Counter-Strike 2 (last update,
- * Steam news API), PUBG (last patch, Steam news API), Minecraft (last Java Edition release, Mojang manifest),
- * GTA Online (weekly reset rule) and Roblox (status feed).
+ * Steam news API), PUBG (last patch, Steam news API), VALORANT (last patch, playvalorant.com page data),
+ * Minecraft (last Java Edition release, Mojang manifest), GTA Online (weekly reset rule) and Roblox (status feed).
  * Ids, types, titles, source URLs and confidence labels match the V1 providers
  * so the published `/data/<game>.<type>.json` files keep their contract.
  */
@@ -14,6 +14,7 @@ import { gtaWeeklyResetAdapter } from "./adapters/gta";
 import { CS2_NEWS_URL, CS2_UPDATES_PAGE, createCs2UpdatesAdapter } from "./adapters/cs2";
 import { MINECRAFT_CHANGELOGS_PAGE, MINECRAFT_MANIFEST_URL, createMinecraftJavaAdapter } from "./adapters/minecraft-java";
 import { PUBG_NEWS_URL, PUBG_PATCH_NOTES_PAGE, createPubgPatchAdapter } from "./adapters/pubg";
+import { VALORANT_PATCH_NOTES_URL, createValorantPatchAdapter } from "./adapters/valorant";
 import { createRobloxStatusAdapter } from "./adapters/roblox";
 import { Game, Topic } from "./domain";
 
@@ -125,6 +126,29 @@ export const GAMES: Game[] = [
         ]
     },
     {
+        id: "valorant",
+        name: "VALORANT",
+        slug: "valorant",
+        sources: [
+            // The official patch notes tag page; its Next.js page data lists the patch notes cards (see adapters/valorant.ts).
+            { id: "valorant-patch-notes-page", url: VALORANT_PATCH_NOTES_URL, kind: "html" }
+        ],
+        topics: [
+            {
+                game: "valorant",
+                type: "last-patch",
+                kind: "version",
+                sourceId: "valorant-patch-notes-page",
+                view: {
+                    title: "VALORANT Last Patch",
+                    sourceUrl: VALORANT_PATCH_NOTES_URL,
+                    confidence: Confidence.High,
+                    notes: "{label}"
+                }
+            }
+        ]
+    },
+    {
         id: "gta",
         name: "GTA Online",
         slug: "gta",
@@ -182,6 +206,7 @@ const ADAPTERS: Record<string, Adapter> = {
     "cs2/last-update": createCs2UpdatesAdapter(),
     "minecraft/last-release": createMinecraftJavaAdapter(),
     "pubg/last-patch": createPubgPatchAdapter(),
+    "valorant/last-patch": createValorantPatchAdapter(),
     "gta/weekly-reset": gtaWeeklyResetAdapter,
     "roblox/status": createRobloxStatusAdapter()
 };
