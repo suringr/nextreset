@@ -17,7 +17,7 @@
  * and never decides what gets published.
  */
 import { normalizeIdentity } from "../identity";
-import { NormalizedDate, ParsedDateValue, ResolvedZone, clockTimesIn, datePreamble, dateSegment, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, timezoneMentioned, zoneOffsetAt, zonesIn } from "./dates";
+import { NormalizedDate, ParsedDateValue, ResolvedZone, clockTimesIn, dateEntries, datePreamble, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneDeclaredIn, zoneOffsetAt, zonesIn } from "./dates";
 import { AiProvider, AiUsage } from "./provider";
 
 export interface AiDocument {
@@ -109,7 +109,7 @@ Output JSON matching the schema and nothing else.`;
 const EXTRACT_SYSTEM = `You extract time-sensitive facts about a video game from a single document.
 Rules:
 - Use only information stated in the document. Never guess or invent a date. If the document states no date for an item, return the item with an empty fields array.
-- For every date field, copy the exact fragment of the document that states it into "quote", verbatim, character for character. The quote must include the item's name or version and the date text, and the time when you report one. Do not paraphrase, shorten words, or fix punctuation.
+- For every date field, copy the exact fragment of the document that states it into "quote", verbatim, character for character. The quote must be one contiguous passage as it appears in the document: never join separate passages, reorder text, or insert line breaks between fragments. It must include the item's name or version and the date text, and the time when you report one. Do not paraphrase, shorten words, or fix punctuation.
 - "value" is ISO 8601: YYYY-MM-DD when only a date is stated; YYYY-MM-DDTHH:MM when a time is stated (local to the stated timezone). Never append an offset or Z. If the document states a day and month but no year, take the year from the document's own posting/update dates.
 - "timezone" is the timezone phrase exactly as the document states it (e.g. "PT", "Pacific Time", "UTC", "UTC+8", "server time"); an empty string if none is stated.
 - "identity" uses words that appear in the document: a version number (26.19, Update 43.1), a season/version name (Season 05, Version 7.1), or for an occurrence the occurrence itself plus its date (Live maintenance PC March 11), never the version it belongs to. For updates without a number, use the update name plus its date.
@@ -345,7 +345,7 @@ function evidencedZone(documentText: string, quote: string, segment: string, tim
         return { zone: stated };
     }
     if (zonesIn(quote).length > 0) return { problem: "the timezone in the quote belongs to another entry; time dropped" };
-    if (!timezoneMentioned(documentText, quote, timezoneRaw)) return { problem: `timezone "${timezoneRaw}" not stated in the document; time dropped` };
+    if (!claimed || !zoneDeclaredIn(documentText, claimed)) return { problem: `timezone "${timezoneRaw}" is not declared for times in the document; time dropped` };
     return { zone: claimed };
 }
 
@@ -398,8 +398,13 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
             // cannot lend one entry's time to another). Otherwise keep the day and drop the time.
             if (normalized.precision === "exact") {
                 const dayFallback = (note: string) => ({ ...normalizeDateFact(f.value.slice(0, 10), undefined)!, note });
-                const segment = dateSegment(f.quote, parsed) ?? f.quote;
-                if (!quoteMentionsTime(segment, parsed)) {
+                // When the quote lists several entries on this date, only the one naming the item is evidence.
+                const entries = dateEntries(f.quote, parsed);
+                const own = entries.length > 1 ? entries.filter(e => quoteNamesIdentity(e.entry, item.identity)) : entries;
+                const segment = own.length === 1 ? own[0].segment : entries.length === 0 ? f.quote : undefined;
+                if (segment === undefined) {
+                    normalized = dayFallback("several entries in the quote share this date and none is clearly this item; time dropped");
+                } else if (!quoteMentionsTime(segment, parsed)) {
                     normalized = dayFallback("quote does not state the claimed clock time next to the date; time dropped");
                 } else if (parsed.offsetMinutes !== undefined) {
                     const evidence = evidencedZone(documentText, f.quote, segment, f.timezone, parsed);
@@ -438,17 +443,56 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
 export interface ExtractionResult {
     raw: { items: RawItem[]; dropped: number };
     grounded: GroundedExtraction;
+    /** Usage of all calls made (one, or two when a repair was attempted). */
     usage: AiUsage;
     truncated: boolean;
+    /** Model calls made: 1, or 2 when quotes had to be repaired. */
+    attempts: number;
+    /** True when the repaired answer replaced the first one. */
+    repaired: boolean;
 }
 
-export async function extractFacts(provider: AiProvider, topic: ExtractionTopic, doc: AiDocument, options: { now?: Date } = {}): Promise<ExtractionResult> {
+const UNVERIFIABLE_QUOTE = "quote not found in document";
+
+function addUsage(a: AiUsage, b: AiUsage): AiUsage {
+    const thought = (a.thoughtTokens ?? 0) + (b.thoughtTokens ?? 0);
+    return { inputTokens: a.inputTokens + b.inputTokens, outputTokens: a.outputTokens + b.outputTokens, ...(thought > 0 ? { thoughtTokens: thought } : {}) };
+}
+
+/**
+ * Extracts and grounds. When the model's quotes are not verbatim (paraphrased,
+ * reordered or stitched from separate passages), one repair call names the
+ * offending quotes and asks again; the repaired answer is grounded exactly like
+ * the first and replaces it only when it evidences more. Never more than two calls.
+ */
+export async function extractFacts(provider: AiProvider, topic: ExtractionTopic, doc: AiDocument, options: { now?: Date; repair?: boolean } = {}): Promise<ExtractionResult> {
     const now = options.now ?? new Date();
     const { text, truncated } = documentBlock(doc);
     const prompt = `${topicBlock(topic, now)}\n\nDocument title: ${doc.title ?? ""}\n${truncated ? "(document truncated)\n" : ""}\n--- DOCUMENT ---\n${text}\n--- END ---`;
     const response = await provider.generateJson({ label: "extract", system: EXTRACT_SYSTEM, prompt, schema: EXTRACT_SCHEMA, maxOutputTokens: 8192 });
-    const raw = parseRawItems(response.data);
+    let raw = parseRawItems(response.data);
     // Ground against the text the model actually saw.
-    const grounded = groundExtraction(raw, text, { now });
-    return { raw, grounded, usage: response.usage, truncated };
+    let grounded = groundExtraction(raw, text, { now });
+    let usage = response.usage;
+    let attempts = 1;
+    let repaired = false;
+
+    const unverifiable = grounded.rejected.filter(r => r.reason === UNVERIFIABLE_QUOTE);
+    if ((options.repair ?? true) && unverifiable.length > 0) {
+        const list = unverifiable.map(r => `- item ${JSON.stringify(r.identity)}, field ${r.field}: ${JSON.stringify(r.quote)}`).join("\n");
+        const repairPrompt = `${prompt}\n\n--- CORRECTIONS NEEDED ---\nThese quotes from your previous answer do not occur verbatim in the document (paraphrased, reordered, or stitched from separate passages):\n${list}\nAnswer again with the complete result. Every quote must be one contiguous passage copied exactly from the document. Leave out any date you cannot quote exactly.`;
+        const second = await provider.generateJson({ label: "extract-repair", system: EXTRACT_SYSTEM, prompt: repairPrompt, schema: EXTRACT_SCHEMA, maxOutputTokens: 8192 });
+        attempts = 2;
+        usage = addUsage(usage, second.usage);
+        const rawRepair = parseRawItems(second.data);
+        const groundedRepair = groundExtraction(rawRepair, text, { now });
+        const better = groundedRepair.stats.accepted > grounded.stats.accepted
+            || (groundedRepair.stats.accepted === grounded.stats.accepted && groundedRepair.rejected.length < grounded.rejected.length);
+        if (better) {
+            raw = rawRepair;
+            grounded = groundedRepair;
+            repaired = true;
+        }
+    }
+    return { raw, grounded, usage, truncated, attempts, repaired };
 }

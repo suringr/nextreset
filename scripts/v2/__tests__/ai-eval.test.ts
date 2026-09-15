@@ -25,7 +25,9 @@ test("every gold case passes with the scripted responses, and hallucinated field
     assert.deepEqual(failed, []);
     assert.equal(report.summary.cases, cases.length);
     assert.equal(report.summary.failed, 0);
-    assert.equal(report.summary.calls, cases.length * 2);
+    // Two calls per case, plus one repair for the case whose scripted quote is not verbatim.
+    assert.equal(report.summary.repairs, 1);
+    assert.equal(report.summary.calls, cases.length * 2 + report.summary.repairs);
     assert.equal(report.summary.failures, 0);
 
     // The scripts deliberately contain unsupported claims; grounding must have thrown them out.

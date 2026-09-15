@@ -56,6 +56,8 @@ export interface CaseReport {
     items: Array<{ identity: string; kind: string; status: string; facts: Array<{ field: string; value: string; at: string; precision: string; timezone?: string; yearInferred: boolean }> }>;
     rejected: Array<{ identity: string; field: string; value: string; quote: string; reason: string }>;
     grounding: { fields: number; accepted: number; rejected: number };
+    /** True when a repair call replaced the first extraction (quotes were not verbatim). */
+    repaired?: boolean;
     error?: string;
 }
 
@@ -75,6 +77,8 @@ export interface EvalReport {
         fieldsAccepted: number;
         fieldsRejected: number;
         calls: number;
+        /** Cases where a second, repair call was made because quotes were not verbatim. */
+        repairs: number;
         failures: number;
         inputTokens: number;
         outputTokens: number;
@@ -115,23 +119,39 @@ export function validateGoldCases(cases: GoldCase[]): void {
     }
 }
 
-function evaluateCase(gold: GoldCase, classification: CaseReport["classification"], items: GroundedItem[]): string[] {
+export interface CaseEvaluation {
+    failures: string[];
+    /** Expectations checked and met, counted per expectation (a classification block is one). */
+    total: number;
+    met: number;
+}
+
+function evaluateCase(gold: GoldCase, classification: CaseReport["classification"], items: GroundedItem[]): CaseEvaluation {
     const failures: string[] = [];
+    let total = 0;
+    let met = 0;
+    const expectation = (check: () => void) => {
+        total++;
+        const before = failures.length;
+        check();
+        if (failures.length === before) met++;
+    };
 
-    if (gold.classification) {
-        if (gold.classification.relevant !== undefined && classification && classification.relevant !== gold.classification.relevant) {
-            failures.push(`classification.relevant expected ${gold.classification.relevant}, got ${classification.relevant}`);
+    if (gold.classification) expectation(() => {
+        const c = gold.classification!;
+        if (c.relevant !== undefined && classification && classification.relevant !== c.relevant) {
+            failures.push(`classification.relevant expected ${c.relevant}, got ${classification.relevant}`);
         }
-        if (gold.classification.docTypeAnyOf && classification && !gold.classification.docTypeAnyOf.includes(classification.docType as DocType)) {
-            failures.push(`classification.docType expected one of ${gold.classification.docTypeAnyOf.join("|")}, got ${classification.docType}`);
+        if (c.docTypeAnyOf && classification && !c.docTypeAnyOf.includes(classification.docType as DocType)) {
+            failures.push(`classification.docType expected one of ${c.docTypeAnyOf.join("|")}, got ${classification.docType}`);
         }
-    }
+    });
 
-    for (const exp of gold.expect) {
+    for (const exp of gold.expect) expectation(() => {
         const candidates = items.filter(i => matchesIdentity(i, exp.identityAnyOf));
         if (candidates.length === 0) {
             failures.push(`no item with identity ${exp.identityAnyOf.join("|")}`);
-            continue;
+            return;
         }
         if (exp.date) {
             const hit = candidates.find(i => i.facts.some(f =>
@@ -144,7 +164,7 @@ function evaluateCase(gold: GoldCase, classification: CaseReport["classification
             if (!hit) {
                 const seen = candidates.flatMap(i => i.facts.map(f => `${f.field}=${f.value} → ${f.at} (${f.precision})`)).join(", ") || "no accepted facts";
                 failures.push(`item ${exp.identityAnyOf[0]}: expected ${exp.field ?? "any field"} on ${exp.date}${exp.at ? ` = ${exp.at}` : ""}${exp.precision ? ` (${exp.precision})` : ""}; accepted: ${seen}`);
-                continue;
+                return;
             }
             if (exp.status && !exp.status.includes(hit.status)) {
                 failures.push(`item ${exp.identityAnyOf[0]}: expected status ${exp.status.join("|")}, got ${hit.status}`);
@@ -152,18 +172,18 @@ function evaluateCase(gold: GoldCase, classification: CaseReport["classification
         } else if (exp.status && !candidates.some(i => exp.status!.includes(i.status))) {
             failures.push(`item ${exp.identityAnyOf[0]}: expected status ${exp.status.join("|")}, got ${candidates.map(i => i.status).join(",")}`);
         }
-    }
+    });
 
-    if (gold.noDates) {
+    if (gold.noDates) expectation(() => {
         const dated = items.filter(i => i.facts.length > 0);
         if (dated.length > 0) failures.push(`expected no accepted dates, got ${dated.map(i => `${i.identity}: ${i.facts.map(f => f.value).join(",")}`).join("; ")}`);
-    }
-    if (gold.noItemsMatching) {
-        const needle = gold.noItemsMatching.toLowerCase();
+    });
+    if (gold.noItemsMatching) expectation(() => {
+        const needle = gold.noItemsMatching!.toLowerCase();
         const bad = items.filter(i => i.identity.toLowerCase().includes(needle) || i.label.toLowerCase().includes(needle));
         if (bad.length > 0) failures.push(`items matching "${gold.noItemsMatching}" must not appear: ${bad.map(i => i.identity).join(", ")}`);
-    }
-    return failures;
+    });
+    return { failures, total, met };
 }
 
 export interface RunGoldEvalOptions {
@@ -185,6 +205,7 @@ export async function runGoldEval(options: RunGoldEvalOptions): Promise<EvalRepo
     const reports: CaseReport[] = [];
     let expectations = 0;
     let expectationsMet = 0;
+    let repairs = 0;
 
     for (const gold of cases) {
         const topic: ExtractionTopic = { game: gold.game, gameName: gold.gameName, type: gold.topicType, description: gold.topicDescription };
@@ -201,15 +222,18 @@ export async function runGoldEval(options: RunGoldEvalOptions): Promise<EvalRepo
             }));
             report.rejected = extraction.grounded.rejected.map(r => ({ identity: r.identity, field: r.field, value: r.value, quote: r.quote.length > 160 ? `${r.quote.slice(0, 160)}…` : r.quote, reason: r.reason }));
             report.grounding = { fields: extraction.grounded.stats.fields, accepted: extraction.grounded.stats.accepted, rejected: extraction.grounded.stats.rejected };
-            report.failures = evaluateCase(gold, report.classification, extraction.grounded.items);
+            report.repaired = extraction.repaired;
+            if (extraction.attempts > 1) repairs++;
+            const evaluation = evaluateCase(gold, report.classification, extraction.grounded.items);
+            report.failures = evaluation.failures;
+            expectations += evaluation.total;
+            expectationsMet += evaluation.met;
         } catch (error) {
             report.error = error instanceof Error ? error.message : String(error);
             report.failures.push(`error: ${report.error}`);
+            // A case that errored before evaluation met none of its expectations.
+            expectations += gold.expect.length + (gold.classification ? 1 : 0) + (gold.noDates ? 1 : 0) + (gold.noItemsMatching ? 1 : 0);
         }
-        const expCount = gold.expect.length + (gold.classification ? 1 : 0) + (gold.noDates ? 1 : 0) + (gold.noItemsMatching ? 1 : 0);
-        expectations += expCount;
-        // A case that errored before evaluation met none of its expectations.
-        expectationsMet += report.error ? 0 : Math.max(0, expCount - report.failures.length);
         report.passed = report.failures.length === 0;
         reports.push(report);
     }
@@ -235,6 +259,7 @@ export async function runGoldEval(options: RunGoldEvalOptions): Promise<EvalRepo
             fieldsAccepted: reports.reduce((n, r) => n + r.grounding.accepted, 0),
             fieldsRejected: reports.reduce((n, r) => n + r.grounding.rejected, 0),
             calls: usage.calls,
+            repairs,
             failures: usage.failures,
             inputTokens: usage.inputTokens,
             outputTokens: usage.outputTokens,
@@ -249,11 +274,11 @@ export function renderMarkdown(report: EvalReport): string {
     const lines: string[] = [];
     lines.push(`# AI extraction gold evaluation (${report.mode})`, "");
     lines.push(`Provider: ${report.provider} · Model: ${report.model} · Ran: ${report.ranAt}`, "");
-    lines.push(`| cases | passed | failed | expectations met | fields seen | accepted | rejected | calls | failures | input tokens | output tokens | thought tokens | est. cost |`);
-    lines.push(`|---|---|---|---|---|---|---|---|---|---|---|---|---|`);
-    lines.push(`| ${s.cases} | ${s.passed} | ${s.failed} | ${s.expectationsMet}/${s.expectations} | ${s.fieldsSeen} | ${s.fieldsAccepted} | ${s.fieldsRejected} | ${s.calls} | ${s.failures} | ${s.inputTokens} | ${s.outputTokens} | ${s.thoughtTokens} | ${s.estimatedCostUsd !== undefined ? `$${s.estimatedCostUsd.toFixed(4)}` : "n/a"} |`, "");
+    lines.push(`| cases | passed | failed | expectations met | fields seen | accepted | rejected | calls | repairs | failures | input tokens | output tokens | thought tokens | est. cost |`);
+    lines.push(`|---|---|---|---|---|---|---|---|---|---|---|---|---|---|`);
+    lines.push(`| ${s.cases} | ${s.passed} | ${s.failed} | ${s.expectationsMet}/${s.expectations} | ${s.fieldsSeen} | ${s.fieldsAccepted} | ${s.fieldsRejected} | ${s.calls} | ${s.repairs} | ${s.failures} | ${s.inputTokens} | ${s.outputTokens} | ${s.thoughtTokens} | ${s.estimatedCostUsd !== undefined ? `$${s.estimatedCostUsd.toFixed(4)}` : "n/a"} |`, "");
     for (const c of report.cases) {
-        lines.push(`## ${c.passed ? "✅" : "❌"} ${c.id}`);
+        lines.push(`## ${c.passed ? "✅" : "❌"} ${c.id}${c.repaired ? " (repaired)" : ""}`);
         if (c.classification) lines.push(`- classification: relevant=${c.classification.relevant}, docType=${c.classification.docType} — ${c.classification.summary}`);
         for (const i of c.items) {
             const facts = i.facts.map(f => `${f.field}=${f.value}${f.timezone ? ` ${f.timezone}` : ""} → ${f.at} (${f.precision}${f.yearInferred ? ", year inferred" : ""})`).join("; ");
@@ -283,7 +308,8 @@ export function mockGoldProvider(script: Record<string, unknown>, cases: GoldCas
             request.prompt.includes(`Game: ${c.gameName} (${c.game})\nTopic: ${c.topicType}\n`) &&
             request.prompt.includes(`Document title: ${c.title ?? ""}\n`));
         if (!match) throw new Error(`mock gold provider: no case matches the prompt (label ${request.label})`);
-        return respond({ ...request, label: `${match.id}:${request.label}` });
+        const label = request.label === "extract-repair" && !(`${match.id}:extract-repair` in script) ? "extract" : request.label;
+        return respond({ ...request, label: `${match.id}:${label}` });
     });
 }
 

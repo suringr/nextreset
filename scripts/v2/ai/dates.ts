@@ -262,21 +262,27 @@ function dateForms(monthWord: string, monthNum: string, dayNum: string, year: st
     ];
 }
 
-/** The best coherent mention of the value's month and day in a collapsed quote. */
-function findDateMention(q: string, value: ParsedDateValue): DateMention | undefined {
+/** Every coherent mention of the value's month and day in a collapsed quote, in order of position. */
+function findDateMentions(q: string, value: ParsedDateValue): DateMention[] {
     const mm = String(value.month).padStart(2, "0");
     const dd = String(value.day).padStart(2, "0");
     const forms = dateForms(monthWordPattern(value.month), `(?:${value.month}|${mm})`, `(?:${value.day}|${dd})`, "((?:19|20)\\d{2})");
-    let best: DateMention | undefined;
+    const mentions: DateMention[] = [];
     for (const form of forms) {
         for (const match of q.matchAll(form)) {
-            const stated = match[1] === undefined ? null : +match[1] === value.year;
-            const mention = { start: match.index ?? 0, end: (match.index ?? 0) + match[0].length, year: stated };
-            if (stated === true) return mention;
-            if (!best || (best.year === false && stated === null)) best = mention;
+            const start = match.index ?? 0;
+            const end = start + match[0].length;
+            if (mentions.some(m => m.start < end && start < m.end)) continue;
+            mentions.push({ start, end, year: match[1] === undefined ? null : +match[1] === value.year });
         }
     }
-    return best;
+    return mentions.sort((a, b) => a.start - b.start);
+}
+
+/** The best mention: one whose attached year matches, else one without a year, else any. */
+function findDateMention(q: string, value: ParsedDateValue): DateMention | undefined {
+    const mentions = findDateMentions(q, value);
+    return mentions.find(m => m.year === true) ?? mentions.find(m => m.year === null) ?? mentions[0];
 }
 
 /** Spans of every date expression in a collapsed text, whatever date it names, in order of position. */
@@ -320,18 +326,45 @@ export function datePreamble(quote: string): string {
  * are only evidence for the value when they occur in this segment.
  */
 export function dateSegment(quote: string, value: ParsedDateValue): string | undefined {
+    return dateSegments(quote, value)[0];
+}
+
+/**
+ * One segment per occurrence of the value's date in the quote, in order. A quote
+ * that lists several entries on the same day ("PC ... September 23 at 15:00 PT;
+ * Console ... September 23 at 18:00 ET") yields one segment per entry, and the
+ * caller must pick the one that names its item.
+ */
+export function dateSegments(quote: string, value: ParsedDateValue): string[] {
+    return dateEntries(quote, value).map(e => e.segment);
+}
+
+export interface DateEntry {
+    /** The part of the entry whose clock times and zones belong to the date (see dateSegment). */
+    segment: string;
+    /** The whole entry: the clause around the date, cut at neighbouring dates ("pc maintenance september 23 at 15:00 pt"). */
+    entry: string;
+}
+
+/** Like dateSegments, but also returns each entry's full text so a caller can tell which entry names its item. */
+export function dateEntries(quote: string, value: ParsedDateValue): DateEntry[] {
     const q = collapse(quote);
-    const mention = findDateMention(q, value);
-    if (!mention) return undefined;
-    const clause = clauseBounds(q, mention.start);
-    let from = clause.from;
-    let to = clause.to;
-    for (const span of dateExpressionSpans(q)) {
-        if (span.end <= mention.start && span.end > from) from = span.end;
-        if (span.start >= mention.end && span.start < to) to = span.start;
+    const spans = dateExpressionSpans(q);
+    const entries: DateEntry[] = [];
+    for (const mention of findDateMentions(q, value)) {
+        const clause = clauseBounds(q, mention.start);
+        let from = clause.from;
+        let to = clause.to;
+        for (const span of spans) {
+            if (span.end <= mention.start && span.end > from) from = span.end;
+            if (span.start >= mention.end && span.start < to) to = span.start;
+        }
+        const entry = q.slice(from, to);
+        const after = q.slice(mention.start, to);
+        const segment = clockTimesIn(after).length > 0 ? after : entry;
+        if (!entries.some(e => e.segment === segment && e.entry === entry)) entries.push({ segment, entry });
     }
-    const after = q.slice(mention.start, to);
-    return clockTimesIn(after).length > 0 ? after : q.slice(from, to);
+    return entries;
 }
 
 /** Timezone phrases stated in a text, resolved (deduplicated by zone). */
@@ -342,6 +375,8 @@ export function zonesIn(text: string): ResolvedZone[] {
         const zone = resolveTimezone(raw);
         if (zone && !found.some(z => z.zone === zone.zone)) found.push(zone);
     };
+    // An ISO timestamp ending in Z states UTC.
+    if (/\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?z\b/i.test(q)) push("utc");
     for (const m of q.matchAll(/\b(?:utc|gmt)\s*[+-]\s*\d{1,2}(?::?\d{2})?\b/gi)) push(m[0]);
     for (const m of q.matchAll(/\b(?:[a-z]+ )?(?:[a-z]+ )?(?:standard |daylight |summer )?time\b/gi)) {
         const words = m[0].toLowerCase().split(" ");
@@ -368,36 +403,38 @@ export function quoteMentionsTime(quote: string, value: ParsedDateValue): boolea
     if (hour === 0 && minute === 0 && /\bmidnight\b/.test(q)) return true;
     if (hour === 12 && minute === 0 && /\bnoon\b/.test(q)) return true;
 
-    const times = q.matchAll(/(?:^|[^0-9.])(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?(?=[^0-9]|$)/g);
+    const second = value.second ?? 0;
+    const times = q.matchAll(/(?:^|[^0-9.])(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?(?:\.\d+)?\s*(a\.?m\.?|p\.?m\.?)?(?=[^0-9]|$)/g);
     for (const m of times) {
         let h = +m[1];
         const mins = m[2] !== undefined ? +m[2] : undefined;
-        const meridiem = m[3]?.replace(/\./g, "");
+        const secs = m[3] !== undefined ? +m[3] : undefined;
+        const meridiem = m[4]?.replace(/\./g, "");
         if (meridiem === "pm" && h < 12) h += 12;
         if (meridiem === "am" && h === 12) h = 0;
         if (mins === undefined && !meridiem) continue; // a bare number is not a time
-        if (h === hour && (mins ?? 0) === minute) return true;
+        // Seconds count too: a value with :59 needs a quote that states :59.
+        if (h === hour && (mins ?? 0) === minute && (secs ?? 0) === second) return true;
     }
     return false;
 }
 
-function escapeRegExp(text: string): string {
-    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+/** Words of a clause that declares what timezone times are given in (as opposed to, say, support hours). */
+const TIME_DECLARATION_WORDS = /\b(times?|time ?zones?|schedules?|scheduled|maintenance|patch(?:es)?|releases?|released|updates?|updated|launch(?:es)?|deploy(?:s|ed|ment)?|downtime|servers?|dates?)\b/;
 
 /**
- * True when the document states the timezone phrase as a standalone phrase
- * ("PT" must not match "sePTember"), or the quote carries an ISO "Z" for UTC.
+ * True when the document declares the zone for its times: a clause that both
+ * names the zone and talks about times, schedules, patches, releases,
+ * maintenance or servers ("Live Maintenance Schedule (UTC)", "Patches release on
+ * a Wednesday (PT)", "All times are Pacific Time"). A zone stated in another
+ * context ("Support hours are PT") does not apply to a dated event.
  */
-export function timezoneMentioned(documentText: string, quote: string, timezoneRaw: string | undefined): boolean {
-    if (!timezoneRaw || timezoneRaw.trim().length === 0) return false;
-    const phrase = timezoneRaw.trim().replace(/[()]/g, "").replace(/\s+/g, " ").toLowerCase();
-    if (phrase.length === 0) return false;
-    const doc = documentText.replace(/\s+/g, " ").toLowerCase();
-    const bounded = new RegExp(`(?:^|[^a-z0-9])${escapeRegExp(phrase).replace(/ /g, "\\s+")}(?:[^a-z0-9]|$)`);
-    if (bounded.test(doc)) return true;
-    const resolved = resolveTimezone(timezoneRaw);
-    if (resolved?.zone === "UTC" && /\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?z\b/i.test(quote)) return true;
+export function zoneDeclaredIn(documentText: string, zone: ResolvedZone): boolean {
+    const doc = documentText.replace(/\s+/g, " ");
+    for (const clause of doc.split(/[.;|•]\s+/)) {
+        if (!TIME_DECLARATION_WORDS.test(clause.toLowerCase())) continue;
+        if (zonesIn(clause).some(z => z.zone === zone.zone)) return true;
+    }
     return false;
 }
 

@@ -35,7 +35,7 @@ nextreset/
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+ (the Gemini SDK requires it)
 - npm
 
 ### Installation
