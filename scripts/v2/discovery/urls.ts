@@ -127,6 +127,14 @@ export function officialDomainOf(url: string, officialDomains: string[]): string
     return officialDomains.map(normalizeDomain).find(domain => domain.length > 0 && (host === domain || host.endsWith(`.${domain}`)));
 }
 
+function safeDecode(text: string): string {
+    try {
+        return decodeURIComponent(text);
+    } catch {
+        return text;
+    }
+}
+
 /** Words of a URL path and query, lower-cased ("/en-us/patch-schedule-league-of-legends" -> [en, us, patch, schedule, ...]). */
 export function slugTokens(url: string): string[] {
     let u: URL;
@@ -135,7 +143,8 @@ export function slugTokens(url: string): string[] {
     } catch {
         return [];
     }
-    return `${decodeURIComponent(u.pathname)} ${decodeURIComponent(u.search)}`
+    // Result and sitemap URLs are external input: a malformed escape is tokenized as written, never fatal.
+    return `${safeDecode(u.pathname)} ${safeDecode(u.search)}`
         .toLowerCase()
         .split(/[^a-z0-9]+/)
         .filter(t => t.length > 0);

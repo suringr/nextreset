@@ -16,6 +16,9 @@ import { SearchProvider, SearchQuery, SearchResult } from "./search-provider";
 import { matchedTerms, significantTerms } from "./terms";
 import { canonicalUrl, hostOf, localeOf, normalizeDomain, slugTokens } from "./urls";
 
+/** Upper bound on sitemaps read from one robots.txt, so a host cannot fan a run out indefinitely. */
+const MAX_DECLARED_SITEMAPS = 10;
+
 export interface SitemapEntry {
     url: string;
     lastmod?: string;
@@ -124,18 +127,23 @@ export class SitemapSearch implements SearchProvider {
         return parsed;
     }
 
-    private async discoverSitemapUrls(host: string): Promise<string[]> {
+    /**
+     * Sitemaps to read for a host. Sitemaps declared in robots.txt are independent and all of them
+     * are read (up to MAX_DECLARED_SITEMAPS); the conventional locations are alternatives, so the
+     * first non-empty one is enough.
+     */
+    private async discoverSitemapUrls(host: string): Promise<{ urls: string[]; declared: boolean }> {
         const base = `https://${host}/`;
         try {
             const robots = await this.transport.get({ url: `${base}robots.txt`, timeoutMs: this.timeoutMs });
             if (robots.status === 200 && robots.body) {
                 const declared = sitemapUrlsFromRobots(robots.body, base);
-                if (declared.length > 0) return declared;
+                if (declared.length > 0) return { urls: declared.slice(0, MAX_DECLARED_SITEMAPS), declared: true };
             }
         } catch {
             // robots.txt is optional; fall through to the conventional locations.
         }
-        return [`${base}sitemap.xml`, `${base}sitemap_index.xml`];
+        return { urls: [`${base}sitemap.xml`, `${base}sitemap_index.xml`], declared: false };
     }
 
     private childMatchesLocale(url: string): boolean {
@@ -159,7 +167,8 @@ export class SitemapSearch implements SearchProvider {
 
     private async loadEntries(host: string): Promise<SitemapEntry[]> {
         const entries: SitemapEntry[] = [];
-        for (const sitemapUrl of await this.discoverSitemapUrls(host)) {
+        const { urls, declared } = await this.discoverSitemapUrls(host);
+        for (const sitemapUrl of urls) {
             const parsed = await this.fetchXml(host, sitemapUrl);
             if (!parsed) continue;
             if (parsed.kind === "urlset") {
@@ -171,7 +180,7 @@ export class SitemapSearch implements SearchProvider {
                     if (childParsed?.kind === "urlset") entries.push(...childParsed.urls);
                 }
             }
-            if (entries.length > 0) break;
+            if (!declared && entries.length > 0) break;
         }
         return entries;
     }

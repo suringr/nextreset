@@ -53,3 +53,10 @@ test("slug tokens and non-content URLs", () => {
     assert.equal(contentUrlProblem("https://x.com/search?q=patch"), "account or search page");
     assert.equal(contentUrlProblem("https://x.com/news/patch-26-19"), undefined);
 });
+
+test("a malformed percent escape in an external URL is tokenized as written, not fatal", () => {
+    const url = "https://support.riotgames.com/en-us/patch-%E0%A4%A-schedule%ZZ?q=%";
+    assert.doesNotThrow(() => slugTokens(url));
+    const tokens = slugTokens(url);
+    assert.ok(tokens.includes("patch") && tokens.includes("schedule"));
+});
