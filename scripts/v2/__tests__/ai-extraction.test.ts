@@ -49,6 +49,39 @@ test("identities must occur in the document and quotes must name their item", ()
     assert.equal(quoteNamesIdentity("26.19 September 23, 2026", "26.19"), true);
     assert.equal(quoteNamesIdentity("Posted: 14 August 2026", "26.44"), false);
     assert.equal(quoteNamesIdentity("26.19 September 23, 2026", "99.99"), false);
+    // The shared date is not an association: the discriminating word must be in the quote.
+    assert.equal(quoteNamesIdentity("Console maintenance is March 11, 2026", "PC maintenance March 11"), false);
+    assert.equal(quoteNamesIdentity("PC maintenance is March 11, 2026", "PC maintenance March 11"), true);
+    assert.equal(quoteNamesIdentity("Call of Duty: Warzone Season 04 Reloaded Patch Notes July 15, 2026", "Season 04 Reloaded"), true);
+    assert.equal(quoteNamesIdentity("Call of Duty: Warzone Season 04 Patch Notes June 16, 2026", "Season 04 Reloaded"), false);
+});
+
+test("inferred years and embedded offsets must be supported by evidence", () => {
+    const text = "Date Posted Sep 12, 2026. Genshin Impact Version 7.1 launches on September 23! Patch 26.19 releases September 23, 2026 at 3 PM PT. Listing 2026-09-09T18:00:00.000Z League of Legends Patch 26.18 Notes.";
+    const raw = parseRawItems({ items: [
+        { kind: "version", label: "Version 7.1 ok", identity: "Version 7.1", status: "scheduled", fields: [{ field: "startAt", value: "2026-09-23", timezone: "", quote: "Version 7.1 launches on September 23!" }] },
+        { kind: "version", label: "Version 7.1 wrong year", identity: "Version 7.1", status: "scheduled", fields: [{ field: "startAt", value: "2099-09-23", timezone: "", quote: "Version 7.1 launches on September 23!" }] },
+        { kind: "version", label: "26.19 fake offset", identity: "26.19", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T15:00+14:00", timezone: "PT", quote: "Patch 26.19 releases September 23, 2026 at 3 PM PT" }] },
+        { kind: "version", label: "26.19 stated zone offset", identity: "26.19", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T15:00-07:00", timezone: "PT", quote: "Patch 26.19 releases September 23, 2026 at 3 PM PT" }] },
+        { kind: "version", label: "26.18 ISO Z", identity: "26.18", status: "released", fields: [{ field: "at", value: "2026-09-09T18:00Z", timezone: "", quote: "2026-09-09T18:00:00.000Z League of Legends Patch 26.18 Notes" }] }
+    ] });
+    const grounded = groundExtraction(raw, text, { now: new Date("2026-09-14T21:30:00Z") });
+    const byLabel = Object.fromEntries(grounded.items.map(i => [i.label, i]));
+    assert.equal(byLabel["Version 7.1 ok"].facts[0].yearInferred, true);
+    assert.equal(byLabel["Version 7.1 wrong year"].facts.length, 0);
+    assert.ok(grounded.rejected.some(r => /inferred year 2099/.test(r.reason)));
+    assert.deepEqual([byLabel["26.19 fake offset"].facts[0].at, byLabel["26.19 fake offset"].facts[0].precision], ["2026-09-23T00:00:00.000Z", "day"]);
+    assert.match(byLabel["26.19 fake offset"].facts[0].note ?? "", /embedded UTC offset/);
+    assert.deepEqual([byLabel["26.19 stated zone offset"].facts[0].at, byLabel["26.19 stated zone offset"].facts[0].precision], ["2026-09-23T22:00:00.000Z", "exact"]);
+    assert.deepEqual([byLabel["26.18 ISO Z"].facts[0].at, byLabel["26.18 ISO Z"].facts[0].precision], ["2026-09-09T18:00:00.000Z", "exact"]);
+
+    // Next year is plausible for an announced date; two years out is not.
+    const nextYear = groundExtraction(parseRawItems({ items: [
+        { kind: "version", label: "next", identity: "Version 7.1", status: "scheduled", fields: [{ field: "startAt", value: "2027-09-23", timezone: "", quote: "Version 7.1 launches on September 23!" }] },
+        { kind: "version", label: "far", identity: "Version 7.1", status: "scheduled", fields: [{ field: "startAt", value: "2028-09-23", timezone: "", quote: "Version 7.1 launches on September 23!" }] }
+    ] }), text, { now: new Date("2026-09-14T21:30:00Z") });
+    assert.equal(nextYear.items[0].facts.length, 1);
+    assert.equal(nextYear.items[1].facts.length, 0);
 });
 
 test("groundExtraction accepts supported facts and rejects unsupported ones with reasons", () => {

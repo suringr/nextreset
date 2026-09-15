@@ -27,7 +27,7 @@
     "url": "https://www.leagueoflegends.com/en-us/news/tags/patch-notes/",
     "title": "Patch Notes",
     "now": "2026-09-14T21:30:00Z",
-    "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "news"] },
+    "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "patch-schedule", "news"] },
     "expect": [
       { "identityAnyOf": ["26.18"], "date": "2026-09-09", "at": "2026-09-09T18:00:00.000Z", "precision": "exact", "status": ["released"] },
       { "identityAnyOf": ["26.17"], "date": "2026-08-25", "at": "2026-08-25T18:00:00.000Z", "precision": "exact" }
@@ -43,7 +43,7 @@
     "url": "https://playvalorant.com/en-us/news/game-updates/",
     "title": "Game Updates",
     "now": "2026-09-14T21:30:00Z",
-    "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "news"] },
+    "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "patch-schedule", "news"] },
     "expect": [
       { "identityAnyOf": ["13.05"], "date": "2026-09-01", "at": "2026-09-01T13:00:00.000Z", "precision": "exact", "status": ["released"] },
       { "identityAnyOf": ["13.04"], "date": "2026-08-18", "at": "2026-08-18T13:00:00.000Z", "precision": "exact" }
@@ -59,7 +59,7 @@
     "url": "https://pubg.com/en/news?category=patch_notes",
     "title": "NEWS - PUBG: BATTLEGROUNDS",
     "now": "2026-09-14T21:30:00Z",
-    "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "news"] },
+    "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "patch-schedule", "news"] },
     "expect": [
       { "identityAnyOf": ["43.1", "update 43.1"], "date": "2026-09-09", "precision": "day" },
       { "identityAnyOf": ["42.3", "update 42.3"], "date": "2026-08-11", "precision": "day" }
@@ -107,7 +107,7 @@
     "url": "https://www.callofduty.com/patchnotes",
     "title": "Call of Duty® Patch Notes",
     "now": "2026-09-14T21:30:00Z",
-    "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "news"] },
+    "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "patch-schedule", "news"] },
     "expect": [
       { "identityAnyOf": ["season 05", "season 5", "05"], "date": "2026-08-12", "precision": "day" },
       { "identityAnyOf": ["season 04 reloaded", "season 4 reloaded", "04 reloaded"], "date": "2026-07-15", "precision": "day" }

@@ -6,16 +6,18 @@
  *                        each field carrying the verbatim quote that states it
  *   groundExtraction  -> deterministic checks: the item's identity occurs in the
  *                        document; the quote occurs in the document and names the
- *                        item; the quote states the claimed day/month(/year); a
- *                        claimed clock time and timezone are stated too, or the
- *                        fact is downgraded to day precision. Anything else is
- *                        rejected with a reason.
+ *                        item's discriminating words; the quote states the claimed
+ *                        day and month; a stated year must match and an inferred
+ *                        year must be supported by the document or by today; a
+ *                        claimed clock time, timezone or offset must be evidenced
+ *                        or the fact is downgraded to day precision. Anything else
+ *                        is rejected with a reason.
  *
  * The model never sees a URL it could echo as evidence, never assigns confidence,
  * and never decides what gets published.
  */
 import { normalizeIdentity } from "../identity";
-import { NormalizedDate, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, timezoneMentioned } from "./dates";
+import { NormalizedDate, ParsedDateValue, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, timezoneMentioned, zonedToUtc } from "./dates";
 import { AiProvider, AiUsage } from "./provider";
 
 export interface AiDocument {
@@ -48,7 +50,7 @@ export const CLASSIFY_SCHEMA: Record<string, unknown> = {
     type: "object",
     properties: {
         relevant: { type: "boolean", description: "True only if the document states facts useful for the topic." },
-        docType: { type: "string", enum: DOC_TYPES },
+        docType: { type: "string", enum: DOC_TYPES, description: "patch-notes = published notes for one or more released updates (including a list of them); patch-schedule = a plan of upcoming patch dates; season = season/act/split information; banner = gacha banner information; maintenance = downtime notice; release = launch/version announcement; news = other news; unrelated = none of these" },
         summary: { type: "string", description: "One sentence: what the document is." },
         reason: { type: "string", description: "One sentence: why it is or is not relevant to the topic." }
     },
@@ -80,7 +82,7 @@ export const EXTRACT_SCHEMA: Record<string, unknown> = {
                             type: "object",
                             properties: {
                                 field: { type: "string", enum: DATE_FIELDS, description: "at = the instant of a version release or one-off event; startAt/endAt = bounds of a period or maintenance window" },
-                                value: { type: "string", description: "ISO 8601: YYYY-MM-DD when only a date is stated, YYYY-MM-DDTHH:MM when a time is stated (local to the stated timezone)." },
+                                value: { type: "string", description: "ISO 8601: YYYY-MM-DD when only a date is stated, YYYY-MM-DDTHH:MM when a time is stated (local to the stated timezone). Never append an offset or Z; put the timezone in the timezone field." },
                                 timezone: { type: "string", description: "The timezone exactly as the document states it (e.g. PT, UTC, UTC+8, server time), or an empty string when none is stated." },
                                 quote: { type: "string", description: "The exact fragment of the document that states this date, copied verbatim, including the item name (or version) and the date text (and the time, if you report one)." }
                             },
@@ -98,14 +100,17 @@ export const EXTRACT_SCHEMA: Record<string, unknown> = {
 export const MAX_DOCUMENT_CHARS = 24000;
 
 const CLASSIFY_SYSTEM = `You classify a single web document for a video game tracking site.
-Answer only from the document text. Decide whether the document states facts that are useful for the given topic (dates, versions, seasons, banners, maintenance windows) and what kind of document it is.
+Answer only from the document text. Decide whether the document states facts that are useful for the given topic (dates, versions, seasons, banners, maintenance windows) and what kind of document it is:
+- patch-notes: published notes for one or more released updates, including an index or listing of them
+- patch-schedule: a plan of upcoming patch dates
+- season: season, act or split information; banner: gacha banner information; maintenance: a downtime notice; release: a launch or version announcement; news: other news; unrelated: none of these
 Output JSON matching the schema and nothing else.`;
 
 const EXTRACT_SYSTEM = `You extract time-sensitive facts about a video game from a single document.
 Rules:
 - Use only information stated in the document. Never guess or invent a date. If the document states no date for an item, return the item with an empty fields array.
-- For every date field, copy the exact fragment of the document that states it into "quote", verbatim. The quote must include the item's name or version and the date text, and the time when you report one. Do not paraphrase.
-- "value" is ISO 8601: YYYY-MM-DD when only a date is stated; YYYY-MM-DDTHH:MM when a time is stated (local to the stated timezone). If the document states a day and month but no year, take the year from the document's own posting/update dates.
+- For every date field, copy the exact fragment of the document that states it into "quote", verbatim, character for character. The quote must include the item's name or version and the date text, and the time when you report one. Do not paraphrase, shorten words, or fix punctuation.
+- "value" is ISO 8601: YYYY-MM-DD when only a date is stated; YYYY-MM-DDTHH:MM when a time is stated (local to the stated timezone). Never append an offset or Z. If the document states a day and month but no year, take the year from the document's own posting/update dates.
 - "timezone" is the timezone phrase exactly as the document states it (e.g. "PT", "Pacific Time", "UTC", "UTC+8", "server time"); an empty string if none is stated.
 - "identity" uses words that appear in the document: a version number (26.19, Update 43.1), a season/version name (Season 05, Version 7.1), or for an occurrence the occurrence itself plus its date (Live maintenance PC March 11), never the version it belongs to. For updates without a number, use the update name plus its date.
 - For patch notes or update pages, the date the notes are dated or published is the version's "at" unless a different release date is stated.
@@ -176,7 +181,7 @@ export interface GroundedFact extends NormalizedDate {
     value: string;
     timezoneRaw: string;
     quote: string;
-    /** The quote states day and month but no year; the year came from the model's inference. */
+    /** The quote states day and month but no year; the year was inferred and checked against the document. */
     yearInferred: boolean;
 }
 
@@ -205,7 +210,11 @@ export interface GroundedExtraction {
 }
 
 const QUOTE_MIN_LENGTH = 6;
-const STOPWORDS = new Set(["the", "and", "for", "of", "to", "in", "on", "at", "a", "an", "patch", "update", "notes", "version", "season", "live"]);
+/** Generic words that never identify an item on their own. */
+const STOPWORDS = new Set(["the", "and", "for", "of", "to", "in", "on", "at", "a", "an", "is", "it"]);
+/** Words that describe the kind of item; they cannot be the discriminator between two items of that kind. */
+const KIND_WORDS = new Set(["patch", "update", "updates", "notes", "version", "season", "live", "maintenance", "hotfix", "release", "downtime", "servers", "server", "schedule", "changelog"]);
+const MONTH_WORDS = new Set(["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december", "jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep", "sept", "oct", "nov", "dec"]);
 
 function normalizeForSearch(text: string): string {
     return text
@@ -222,16 +231,23 @@ function alnumOnly(text: string): string {
     return text.toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
-/** Tokens that carry meaning for matching an identity: digits/versions, or words of 3+ letters that are not generic. */
+/** Tokens that carry meaning for matching an identity: anything with a digit, or a word of 2+ letters that is not a stopword. */
 function significantTokens(identity: string): string[] {
     return identity.toLowerCase().split(/[^a-z0-9.]+/).map(t => t.replace(/^\.+|\.+$/g, "")).filter(t =>
-        t.length > 0 && (/\d/.test(t) || (t.length >= 3 && !STOPWORDS.has(t))));
+        t.length > 0 && (/\d/.test(t) || (t.length >= 2 && !STOPWORDS.has(t))));
 }
 
-interface PreparedDocument { normalized: string; alnum: string }
+/** A token that is part of a date (month name, day number, year) cannot discriminate between items. */
+function isDateToken(token: string): boolean {
+    return MONTH_WORDS.has(token) || /^\d{1,2}$/.test(token) || /^(19|20)\d{2}$/.test(token);
+}
+
+interface PreparedDocument { normalized: string; alnum: string; years: Set<number> }
 
 function prepare(documentText: string): PreparedDocument {
-    return { normalized: normalizeForSearch(documentText), alnum: alnumOnly(documentText) };
+    const years = new Set<number>();
+    for (const m of documentText.matchAll(/\b(19|20)\d{2}\b/g)) years.add(+m[0]);
+    return { normalized: normalizeForSearch(documentText), alnum: alnumOnly(documentText), years };
 }
 
 /** True when the quote occurs verbatim in the document (whitespace/quote-mark tolerant, then punctuation tolerant). */
@@ -256,15 +272,48 @@ export function identityOccursIn(identity: string, documentText: string, prepare
     return tokens.length > 0 && tokens.every(t => doc.alnum.includes(alnumOnly(t)));
 }
 
-/** True when the quote names the item it is evidence for: the whole identity, or at least one significant token of it. */
+/**
+ * True when the quote names the item it is evidence for. Every discriminating
+ * token of the identity (not a date part, not a generic kind word) must occur in
+ * the quote; an identity made only of date parts and kind words must occur in full.
+ */
 export function quoteNamesIdentity(quote: string, identity: string): boolean {
     const q = alnumOnly(quote);
     const whole = alnumOnly(identity);
     if (whole.length >= 2 && q.includes(whole)) return true;
-    return significantTokens(identity).some(t => q.includes(alnumOnly(t)));
+    const tokens = significantTokens(identity);
+    const discriminators = tokens.filter(t => !isDateToken(t) && !KIND_WORDS.has(t));
+    const required = discriminators.length > 0 ? discriminators : tokens;
+    return required.length > 0 && required.every(t => q.includes(alnumOnly(t)));
 }
 
-export function groundExtraction(raw: { items: RawItem[]; dropped: number }, documentText: string): GroundedExtraction {
+/** An inferred year is credible only if the document states it, or it is this year or next. */
+function inferredYearSupported(year: number, prepared: PreparedDocument, now: Date): boolean {
+    const thisYear = now.getUTCFullYear();
+    return prepared.years.has(year) || year === thisYear || year === thisYear + 1;
+}
+
+/** True when the quote carries an ISO timestamp with the same offset the value embeds ("...Z", "+08:00", "-0500"). */
+function quoteCarriesOffset(quote: string, offsetMinutes: number): boolean {
+    for (const m of quote.matchAll(/\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?\s*(z|[+-]\d{2}:?\d{2})\b/gi)) {
+        const token = m[1].toUpperCase();
+        if (token === "Z" && offsetMinutes === 0) return true;
+        const o = /^([+-])(\d{2}):?(\d{2})$/.exec(token);
+        if (o && (o[1] === "-" ? -1 : 1) * (+o[2] * 60 + +o[3]) === offsetMinutes) return true;
+    }
+    return false;
+}
+
+/** The offset (minutes east of UTC) a stated zone has at the value's wall-clock time. */
+function statedZoneOffset(timezoneRaw: string, value: ParsedDateValue): number | undefined {
+    const zone = resolveTimezone(timezoneRaw);
+    if (!zone) return undefined;
+    const wall = Date.UTC(value.year, value.month - 1, value.day, value.hour ?? 0, value.minute ?? 0, value.second ?? 0);
+    return Math.round((wall - zonedToUtc({ ...value, offsetMinutes: undefined }, zone.zone).getTime()) / 60000);
+}
+
+export function groundExtraction(raw: { items: RawItem[]; dropped: number }, documentText: string, options: { now?: Date } = {}): GroundedExtraction {
+    const now = options.now ?? new Date();
     const prepared = prepare(documentText);
     const items: GroundedItem[] = [];
     const rejected: RejectedField[] = [];
@@ -278,6 +327,7 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
             identityKey = normalizeIdentity(item.identity);
         } catch {
             itemsRejected++;
+            fieldsSeen += item.fields.length;
             rejected.push({ identity: item.identity, field: "at", value: "", quote: "", reason: "identity cannot be normalized" });
             continue;
         }
@@ -301,16 +351,24 @@ export function groundExtraction(raw: { items: RawItem[]; dropped: number }, doc
             const mention = quoteMentionsDate(f.quote, parsed);
             if (!mention.day || !mention.month) { reject("quote does not mention the claimed day and month"); continue; }
             if (mention.year === false) { reject("quote states a different year"); continue; }
+            if (mention.year === null && !inferredYearSupported(parsed.year, prepared, now)) { reject(`inferred year ${parsed.year} is not supported by the document`); continue; }
 
             let normalized = normalizeDateFact(f.value, f.timezone);
             if (!normalized) { reject("date could not be normalized"); continue; }
 
-            // A clock time and its zone must be stated too; otherwise keep the day and drop the time.
+            // A clock time, and the zone or offset it is expressed in, must be evidenced too;
+            // otherwise keep the day and drop the time rather than publish a wrong instant.
             if (normalized.precision === "exact") {
+                const dayFallback = (note: string) => ({ ...normalizeDateFact(f.value.slice(0, 10), undefined)!, note });
                 if (!quoteMentionsTime(f.quote, parsed)) {
-                    normalized = { ...normalizeDateFact(f.value.slice(0, 10), undefined)!, note: "quote does not state the claimed clock time; time dropped" };
-                } else if (parsed.offsetMinutes === undefined && !timezoneMentioned(documentText, f.quote, f.timezone)) {
-                    normalized = { ...normalizeDateFact(f.value.slice(0, 10), undefined)!, note: `timezone "${f.timezone}" not stated in the document; time dropped` };
+                    normalized = dayFallback("quote does not state the claimed clock time; time dropped");
+                } else if (parsed.offsetMinutes !== undefined) {
+                    const statedOffset = timezoneMentioned(documentText, f.quote, f.timezone) ? statedZoneOffset(f.timezone, parsed) : undefined;
+                    if (!quoteCarriesOffset(f.quote, parsed.offsetMinutes) && statedOffset !== parsed.offsetMinutes) {
+                        normalized = dayFallback("embedded UTC offset is not evidenced by the quote or a stated timezone; time dropped");
+                    }
+                } else if (!timezoneMentioned(documentText, f.quote, f.timezone)) {
+                    normalized = dayFallback(`timezone "${f.timezone}" not stated in the document; time dropped`);
                 }
             }
 
@@ -337,6 +395,6 @@ export async function extractFacts(provider: AiProvider, topic: ExtractionTopic,
     const response = await provider.generateJson({ label: "extract", system: EXTRACT_SYSTEM, prompt, schema: EXTRACT_SCHEMA, maxOutputTokens: 8192 });
     const raw = parseRawItems(response.data);
     // Ground against the text the model actually saw.
-    const grounded = groundExtraction(raw, text);
+    const grounded = groundExtraction(raw, text, { now });
     return { raw, grounded, usage: response.usage, truncated };
 }

@@ -54,7 +54,7 @@ export interface CaseReport {
     failures: string[];
     classification?: { relevant: boolean; docType: string; summary: string };
     items: Array<{ identity: string; kind: string; status: string; facts: Array<{ field: string; value: string; at: string; precision: string; timezone?: string; yearInferred: boolean }> }>;
-    rejected: Array<{ identity: string; field: string; value: string; reason: string }>;
+    rejected: Array<{ identity: string; field: string; value: string; quote: string; reason: string }>;
     grounding: { fields: number; accepted: number; rejected: number };
     error?: string;
 }
@@ -191,7 +191,7 @@ export async function runGoldEval(options: RunGoldEvalOptions): Promise<EvalRepo
                 identity: i.identity, kind: i.kind, status: i.status,
                 facts: i.facts.map(f => ({ field: f.field, value: f.value, at: f.at, precision: f.precision, timezone: f.timezone, yearInferred: f.yearInferred }))
             }));
-            report.rejected = extraction.grounded.rejected.map(r => ({ identity: r.identity, field: r.field, value: r.value, reason: r.reason }));
+            report.rejected = extraction.grounded.rejected.map(r => ({ identity: r.identity, field: r.field, value: r.value, quote: r.quote.length > 160 ? `${r.quote.slice(0, 160)}…` : r.quote, reason: r.reason }));
             report.grounding = { fields: extraction.grounded.stats.fields, accepted: extraction.grounded.stats.accepted, rejected: extraction.grounded.stats.rejected };
             report.failures = evaluateCase(gold, report.classification, extraction.grounded.items);
         } catch (error) {
@@ -250,7 +250,7 @@ export function renderMarkdown(report: EvalReport): string {
             const facts = i.facts.map(f => `${f.field}=${f.value}${f.timezone ? ` ${f.timezone}` : ""} → ${f.at} (${f.precision}${f.yearInferred ? ", year inferred" : ""})`).join("; ");
             lines.push(`- ${i.kind} **${i.identity}** [${i.status}] ${facts || "(no dated facts)"}`);
         }
-        for (const r of c.rejected) lines.push(`- rejected: ${r.identity} ${r.field}=${r.value}: ${r.reason}`);
+        for (const r of c.rejected) lines.push(`- rejected: ${r.identity} ${r.field}=${r.value}: ${r.reason}${r.quote ? ` — quote: "${r.quote}"` : ""}`);
         for (const f of c.failures) lines.push(`- **FAIL**: ${f}`);
         lines.push("");
     }
