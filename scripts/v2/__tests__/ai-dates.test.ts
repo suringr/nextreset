@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { clockTimesIn, dateEntries, dateSegment, entryBindsItem, dateSegments, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneAfterClock, zoneDeclaredIn, zonedToUtc, zonedToUtcDetailed, zonesIn } from "../ai/dates";
+import { clockTimesIn, dateEntries, dateSegment, datesWithYearIn, entryBindsItem, dateSegments, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneAfterClock, zoneDeclaredIn, zonedToUtc, zonedToUtcDetailed, zonesIn } from "../ai/dates";
 
 test("parseDateValue accepts ISO dates and local date-times, rejects everything else", () => {
     assert.deepEqual(parseDateValue("2026-09-23"), { year: 2026, month: 9, day: 23, hasTime: false });
@@ -286,4 +286,22 @@ test("zoneAfterClock pairs clocks down to the second", () => {
     const row = "Patch 26.19 releases September 23 at 15:00:00 PT / 15:00:30 ET";
     assert.equal(zoneAfterClock(row, parseDateValue("2026-09-23T15:00:30")!)?.zone, "America/New_York");
     assert.equal(zoneAfterClock(row, parseDateValue("2026-09-23T15:00")!)?.zone, "America/Los_Angeles");
+});
+
+test("a conjunction after a labelled date starts a new entry", () => {
+    const sept23 = parseDateValue("2026-09-23T15:00")!;
+    const binds = (quote: string, names: string[], value = sept23) => dateEntries(quote, value).some(e => entryBindsItem(e, names));
+    const joined = "PC maintenance September 23 at 15:00 PT and Console maintenance September 24 at 18:00 ET";
+    assert.equal(binds(joined, ["console"]), false, "Console cannot take PC's date across 'and'");
+    assert.equal(binds(joined, ["pc"]), true);
+    assert.equal(binds(joined, ["console"], parseDateValue("2026-09-24T18:00")!), true);
+    assert.equal(binds("PC maintenance is September 23, 2026 at 15:00 PT and Console maintenance date is TBD", ["console"]), false);
+    assert.equal(binds("Maintenance September 23 for PC and Console", ["console"]), true, "a date with no label of its own is shared");
+    assert.equal(binds("PC and Console maintenance September 23", ["pc"]), true);
+});
+
+test("datesWithYearIn finds dated statements in order, skipping ambiguous and impossible ones", () => {
+    const found = datesWithYearIn("Posted Sept. 12, 2026. Patch notes 2026.03.10; update 20 August 2026; 9/10/2026 is ambiguous; Feb 30, 2026 is not a date");
+    assert.deepEqual(found.map(d => new Date(d.time).toISOString().slice(0, 10)), ["2026-09-12", "2026-03-10", "2026-08-20"]);
+    assert.ok(found[0].index < found[1].index && found[1].index < found[2].index);
 });

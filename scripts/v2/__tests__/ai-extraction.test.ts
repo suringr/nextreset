@@ -103,8 +103,8 @@ test("inferred years and embedded offsets must be supported by evidence", () => 
     const iso = probe("26.18", "at", "2026-09-09T18:00Z", "", "2026-09-09T18:00:00.000Z League of Legends Patch 26.18 Notes").items[0].facts[0];
     assert.deepEqual([iso.at, iso.precision], ["2026-09-09T18:00:00.000Z", "exact"]);
 
-    // Next year is plausible for an announced date; two years out is not.
-    assert.equal(probe("Version 7.1", "startAt", "2027-09-23", "", "Version 7.1 launches on September 23!").items[0].facts.length, 1);
+    // The document's own dates (September 2026) fix the year: neither next year nor the one after is supported.
+    assert.equal(probe("Version 7.1", "startAt", "2027-09-23", "", "Version 7.1 launches on September 23!").items[0].facts.length, 0);
     assert.equal(probe("Version 7.1", "startAt", "2028-09-23", "", "Version 7.1 launches on September 23!").items[0].facts.length, 0);
 });
 
@@ -155,7 +155,7 @@ test("groundExtraction accepts supported facts and rejects unsupported ones with
 });
 
 test("exact instants need the time and the zone to be stated; otherwise the day is kept", () => {
-    const text = "Live Maintenance Schedule (UTC). PC: March 11, 00:00 - 08:30. Patch 26.19 releases September 23, 2026 at 3 PM PT. Patch 26.20 releases October 7 at 15:00.";
+    const text = "Live Maintenance Schedule (UTC). Posted 2026.03.10: PC: March 11, 00:00 - 08:30. Patch 26.19 releases September 23, 2026 at 3 PM PT. Patch 26.20 releases October 7 at 15:00.";
     // One grounding per probe: two probes for one identity would be one item with conflicting values.
     const probe = (kind: "occurrence" | "version", identity: string, field: "at" | "startAt", value: string, timezone: string, quote: string) =>
         groundExtraction(parseRawItems({ items: [{ kind, label: identity, identity, status: "scheduled", fields: [{ field, value, timezone, quote }] }] }), text).items[0].facts[0];
@@ -548,4 +548,37 @@ test("grounding reads the document's own passage, merges duplicate identities, g
     const secs = groundExtraction(parseRawItems({ items: [{ kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T15:00:30", timezone: "PT", quote: row }] }] }), `${row}. Posted 2026.`, { now }).items[0].facts[0];
     assert.equal(secs.precision, "day");
     assert.match(secs.note ?? "", /stated in America\/New_York/);
+});
+
+test("a yearless date takes the one year the document's chronology gives it", () => {
+    const now = new Date("2026-12-28T12:00:00Z");
+    const ground = (text: string, value: string) => groundExtraction(parseRawItems({ items: [{ kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields: [{ field: "at", value, timezone: "", quote: "Patch 26.19 releases January 3" }] }] }), text, { now });
+    const lateInYear = "Posted December 20, 2026. Patch 26.19 releases January 3.";
+    assert.equal(ground(lateInYear, "2027-01-03").items[0].facts[0].at, "2027-01-03T00:00:00.000Z");
+    const wrong = ground(lateInYear, "2026-01-03");
+    assert.equal(wrong.items[0].facts.length, 0);
+    assert.match(wrong.rejected[0].reason, /inferred year 2026 is not supported by the document \(its chronology gives 2027\)/);
+    const earlyInYear = "Posted January 5, 2026. Patch 26.19 releases January 3.";
+    assert.equal(ground(earlyInYear, "2026-01-03").items[0].facts.length, 1);
+    assert.equal(ground(earlyInYear, "2027-01-03").items[0].facts.length, 0);
+    // Without any dated statement, today is the reference.
+    assert.equal(ground("Patch 26.19 releases January 3.", "2027-01-03").items[0].facts.length, 1);
+    assert.equal(ground("Patch 26.19 releases January 3.", "2026-01-03").items[0].facts.length, 0);
+});
+
+test("a repair fills a gap left under a differently spelled duplicate of the same identity", () => {
+    const now = new Date("2026-09-14T21:30:00Z");
+    const text = "Maintenance for 26.19. PC: September 23, 15:00 - 18:00 UTC. All times UTC. Posted 2026.";
+    const first = groundExtraction(parseRawItems({ items: [
+        { kind: "occurrence", label: "PC", identity: "PC maintenance September 23", status: "scheduled", fields: [{ field: "startAt", value: "2026-09-23T15:00", timezone: "UTC", quote: "PC: September 23, 15:00 - 18:00 UTC" }] },
+        { kind: "occurrence", label: "PC", identity: "pc maintenance september 23", status: "scheduled", fields: [{ field: "endAt", value: "2026-09-23T18:00", timezone: "UTC", quote: "PC ends September 23 at 18:00 UTC" }] }
+    ] }), text, { now });
+    assert.equal(first.items.length, 1);
+    assert.deepEqual(first.items[0].facts.map(f => f.field), ["startAt"]);
+    const repair = groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: "PC", identity: "pc maintenance september 23", status: "scheduled", fields: [
+        { field: "endAt", value: "2026-09-23T18:00", timezone: "UTC", quote: "PC: September 23, 15:00 - 18:00 UTC" }
+    ] }] }), text, { now });
+    const { merged, filled } = mergeRepair(first, repair);
+    assert.equal(filled, 1);
+    assert.deepEqual(merged.items[0].facts.map(f => [f.field, f.at]), [["startAt", "2026-09-23T15:00:00.000Z"], ["endAt", "2026-09-23T18:00:00.000Z"]]);
 });
