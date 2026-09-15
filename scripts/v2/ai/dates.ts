@@ -399,22 +399,19 @@ export interface DateEntry {
     segment: string;
     /** The whole entry: the clause around the date, cut at neighbouring dates ("pc maintenance september 23 at 15:00 pt"). */
     entry: string;
-    /**
-     * The part of the entry that can name the item. Labels stay on their own side of a
-     * separator: before the date, text back to the nearest separator whose date-side piece
-     * carries a label ("PC ... TBD, Console maintenance September 23" names Console only);
-     * after the date, only label-free text (time, zone, weekday) when the label came before
-     * the date ("PC maintenance is September 23 at 15:00 PT, Console ... TBD" names PC only),
-     * otherwise the following label up to the first separator after it.
-     */
-    naming: string;
+    /** The collapsed quote the positions below refer to. */
+    text: string;
+    mentionStart: number;
+    mentionEnd: number;
+    clauseFrom: number;
+    clauseTo: number;
 }
 
 /** Separators between list entries; a slash between digits ("26.44/45", "9/23") is not one. */
 const LABEL_SEPARATOR = /[,;|•]|(?<!\d)\/|\/(?!\d)| - | – /;
 const LABEL_SEPARATOR_G = new RegExp(LABEL_SEPARATOR.source, "g");
 
-/** Words that describe, connect or date entries but never identify one. */
+/** Words that describe, connect, categorise or date entries but never identify one. */
 const NAMING_FILLER = new Set([
     "the", "and", "for", "of", "to", "in", "on", "at", "a", "an", "is", "it", "or", "by", "with", "from", "until", "till",
     "be", "will", "are", "was", "were", "this", "its",
@@ -422,43 +419,117 @@ const NAMING_FILLER = new Set([
     "releases", "released", "downtime", "servers", "server", "schedule", "scheduled", "changelog",
     "date", "dates", "time", "times", "start", "starts", "starting", "begin", "begins", "end", "ends", "ending", "planned",
     "expected", "estimated", "posted", "published", "updated", "launch", "launches", "now", "new", "next", "tbd", "tba", "day",
+    "game", "games", "news", "article", "articles", "announcement", "announcements", "blog", "post", "posts", "official", "category", "tag", "tags",
     ...MONTHS, "jan", "feb", "mar", "apr", "jun", "jul", "aug", "sep", "sept", "oct", "nov", "dec",
     "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "mon", "tue", "tues", "wed", "thu", "thur", "thurs", "fri", "sat", "sun"
 ]);
 
 function isLabelToken(token: string): boolean {
     if (/^\d+\.\d+$/.test(token)) return true; // a version such as 26.19
-    if (/^\d/.test(token) || /^t\d/.test(token) || token.length < 2 || !/[a-z]/.test(token)) return false; // clocks, ISO "t13", "000z", ordinals
+    if (/^\d/.test(token) || /^t\d/.test(token) || token.length < 2 || !/[a-z]/.test(token)) return false; // clocks, ISO "t13", "000z"
     return !NAMING_FILLER.has(token) && !(token in IANA_ALIASES) && !(token in FIXED_ALIASES);
 }
 
-/** Index of the first word that could identify an entry, or -1. */
-function labelTokenIndex(text: string): number {
+interface TokenAt { token: string; start: number; end: number }
+
+/** Word tokens with their positions, tokenised like the grounding (periods kept inside, stripped at the edges). */
+function tokensAt(text: string, offset = 0): TokenAt[] {
+    const out: TokenAt[] = [];
     for (const m of text.matchAll(/[a-z0-9.]+/g)) {
+        const lead = m[0].length - m[0].replace(/^\.+/, "").length;
         const token = m[0].replace(/^\.+|\.+$/g, "");
-        if (token && isLabelToken(token)) return (m.index ?? 0) + m[0].indexOf(token);
+        if (!token) continue;
+        const startAt = offset + (m.index ?? 0) + lead;
+        out.push({ token, start: startAt, end: startAt + token.length });
     }
-    return -1;
+    return out;
 }
 
-function namingBefore(before: string): string {
-    const separators = [...before.matchAll(LABEL_SEPARATOR_G)];
-    for (let i = separators.length - 1; i >= 0; i--) {
-        const piece = before.slice((separators[i].index ?? 0) + separators[i][0].length);
-        if (labelTokenIndex(piece) >= 0) return piece;
-    }
-    return before;
+function hasForeignLabel(text: string, own: string[]): boolean {
+    return tokensAt(text).some(t => isLabelToken(t.token) && !own.includes(t.token));
 }
 
-function namingAfter(after: string, labelBefore: boolean): string {
-    const firstLabel = labelTokenIndex(after);
-    if (labelBefore) {
-        const stops = [firstLabel, after.search(LABEL_SEPARATOR)].filter(i => i >= 0);
-        return stops.length > 0 ? after.slice(0, Math.min(...stops)) : after;
+type Side = "before" | "after";
+
+/**
+ * The stretch of the clause on one side of the entry's date, stopping at another date
+ * expression and, when asked, at the nearest entry separator.
+ */
+function sideRange(entry: DateEntry, side: Side, stopAtSeparator: boolean): [number, number] {
+    const q = entry.text;
+    const others = dateExpressionSpans(q).filter(s => s.end <= entry.mentionStart || s.start >= entry.mentionEnd);
+    if (side === "before") {
+        let from = entry.clauseFrom;
+        for (const s of others) if (s.end <= entry.mentionStart && s.end > from) from = s.end;
+        if (stopAtSeparator) {
+            const base = from;
+            for (const m of q.slice(base, entry.mentionStart).matchAll(LABEL_SEPARATOR_G)) from = base + (m.index ?? 0) + m[0].length;
+        }
+        return [from, entry.mentionStart];
     }
-    if (firstLabel < 0) return after;
-    const separator = after.slice(firstLabel).search(LABEL_SEPARATOR);
-    return separator >= 0 ? after.slice(0, firstLabel + separator) : after;
+    let to = entry.clauseTo;
+    for (const s of others) if (s.start >= entry.mentionEnd && s.start < to) to = s.start;
+    if (stopAtSeparator) {
+        const cut = q.slice(entry.mentionEnd, to).search(LABEL_SEPARATOR);
+        if (cut >= 0) to = entry.mentionEnd + cut;
+    }
+    return [entry.mentionEnd, to];
+}
+
+/** Where a set of name tokens sits relative to the date on one side: the gap between the nearest token and the date. */
+function placement(entry: DateEntry, side: Side, names: string[], stopAtSeparator: boolean): { gap: string } | undefined {
+    const [from, to] = sideRange(entry, side, stopAtSeparator);
+    const tokens = tokensAt(entry.text.slice(from, to), from);
+    const ordered = side === "before" ? tokens.reverse() : tokens;
+    const needed = new Set(names);
+    let nearest: TokenAt | undefined;
+    for (const token of ordered) {
+        if (!needed.has(token.token)) continue;
+        nearest = nearest ?? token;
+        needed.delete(token.token);
+        if (needed.size === 0) break;
+    }
+    if (!nearest || needed.size > 0) return undefined;
+    const gap = side === "before" ? entry.text.slice(nearest.end, entry.mentionStart) : entry.text.slice(entry.mentionEnd, nearest.start);
+    return { gap };
+}
+
+/**
+ * Does this date entry belong to the item named by `discriminators`? The item's name must reach the
+ * date without crossing another date. If an entry separator lies between them, the text next to the
+ * date and the date's other side must not name anything else ("PC maintenance is September 23, Console
+ * ... TBD" is PC's date). And no other reported item (`competitors`) may sit strictly closer on the
+ * opposite side without a separator in between ("26.18 September 10 (Thursday) 26.19" is 26.18's date).
+ * Names with no discriminating token cannot be told apart and always bind.
+ */
+export function entryBindsItem(entry: DateEntry, discriminators: string[], competitors: string[][] = []): boolean {
+    const own = [...new Set(discriminators)];
+    if (own.length === 0) return true;
+    for (const side of ["before", "after"] as const) {
+        const opposite: Side = side === "before" ? "after" : "before";
+        const found = placement(entry, side, own, false);
+        if (!found) continue;
+        if (LABEL_SEPARATOR.test(found.gap)) {
+            let adjacent: string;
+            if (side === "before") {
+                let cut = 0;
+                for (const m of found.gap.matchAll(LABEL_SEPARATOR_G)) cut = (m.index ?? 0) + m[0].length;
+                adjacent = found.gap.slice(cut);
+            } else {
+                adjacent = found.gap.slice(0, found.gap.search(LABEL_SEPARATOR));
+            }
+            if (hasForeignLabel(adjacent, own)) continue;
+            const [from, to] = sideRange(entry, opposite, true);
+            if (hasForeignLabel(entry.text.slice(from, to), own)) continue;
+        }
+        const closer = competitors.some(names => {
+            const theirs = placement(entry, opposite, names, true);
+            return theirs !== undefined && theirs.gap.length < found.gap.length;
+        });
+        if (closer) continue;
+        return true;
+    }
+    return false;
 }
 
 /** Like dateSegments, but also returns each entry's full text so a caller can tell which entry names its item. */
@@ -483,10 +554,9 @@ export function dateEntries(quote: string, value: ParsedDateValue): DateEntry[] 
         // at 18:00 PT") unless an earlier date in the same clause claims them ("... September 23 15:00 PT
         // Patch 26.20 October 7 18:00 PT"): then only what follows the date is this entry's.
         const segment = earlierDateInClause ? q.slice(mention.start, to).trim() : entry;
-        const before = namingBefore(q.slice(from, mention.start));
-        const after = namingAfter(q.slice(mention.end, to), labelTokenIndex(before) >= 0);
-        const naming = `${before} ${q.slice(mention.start, mention.end)} ${after}`.replace(/\s+/g, " ").trim();
-        if (!entries.some(e => e.segment === segment && e.entry === entry)) entries.push({ segment, entry, naming });
+        if (!entries.some(e => e.segment === segment && e.entry === entry)) {
+            entries.push({ segment, entry, text: q, mentionStart: mention.start, mentionEnd: mention.end, clauseFrom: clause.from, clauseTo: clause.to });
+        }
     }
     return entries;
 }
@@ -602,8 +672,8 @@ export function zonePhrasesIn(text: string): string[] {
 export function zoneAfterClock(text: string, value: ParsedDateValue): ResolvedZone | undefined {
     if (!value.hasTime) return undefined;
     const q = text.toLowerCase();
-    const wanted = (value.hour ?? 0) * 60 + (value.minute ?? 0);
-    const clocks: Array<{ start: number; end: number; minutes: number }> = [];
+    const wanted = ((value.hour ?? 0) * 60 + (value.minute ?? 0)) * 60 + (value.second ?? 0);
+    const clocks: Array<{ start: number; end: number; seconds: number }> = [];
     for (const m of q.matchAll(/(?:^|[^0-9.])(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?(?:\.\d+)?\s*(a\.?m\.?|p\.?m\.?)?(?=[^0-9]|$)/g)) {
         let h = +m[1];
         const mins = m[2] !== undefined ? +m[2] : undefined;
@@ -612,9 +682,10 @@ export function zoneAfterClock(text: string, value: ParsedDateValue): ResolvedZo
         if (meridiem === "pm" && h < 12) h += 12;
         if (meridiem === "am" && h === 12) h = 0;
         const lead = /^[0-9]/.test(m[0]) ? 0 : 1;
-        clocks.push({ start: (m.index ?? 0) + lead, end: (m.index ?? 0) + m[0].length, minutes: h * 60 + (mins ?? 0) });
+        const secs = m[3] !== undefined ? +m[3] : 0;
+        clocks.push({ start: (m.index ?? 0) + lead, end: (m.index ?? 0) + m[0].length, seconds: (h * 60 + (mins ?? 0)) * 60 + secs });
     }
-    const index = clocks.findIndex(c => c.minutes === wanted);
+    const index = clocks.findIndex(c => c.seconds === wanted);
     if (index === -1) return undefined;
     const until = index + 1 < clocks.length ? clocks[index + 1].start : q.length;
     return zonesIn(q.slice(clocks[index].end, until))[0];

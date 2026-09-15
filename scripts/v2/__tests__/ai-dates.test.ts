@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { clockTimesIn, dateEntries, dateSegment, dateSegments, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneAfterClock, zoneDeclaredIn, zonedToUtc, zonedToUtcDetailed, zonesIn } from "../ai/dates";
+import { clockTimesIn, dateEntries, dateSegment, entryBindsItem, dateSegments, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneAfterClock, zoneDeclaredIn, zonedToUtc, zonedToUtcDetailed, zonesIn } from "../ai/dates";
 
 test("parseDateValue accepts ISO dates and local date-times, rejects everything else", () => {
     assert.deepEqual(parseDateValue("2026-09-23"), { year: 2026, month: 9, day: 23, hasTime: false });
@@ -238,26 +238,52 @@ test("zoneAfterClock pairs each clock with the zone that follows it", () => {
     assert.equal(zoneAfterClock("September 23, 2026", parseDateValue("2026-09-23")!), undefined, "date-only values have no clock");
 });
 
-test("an entry's naming text excludes the next entry's label when another date follows in the clause", () => {
+test("a date binds to an item only through that item's own entry", () => {
     const sept23 = parseDateValue("2026-09-23T15:00")!;
-    const sept24 = parseDateValue("2026-09-24T18:00")!;
+    const binds = (quote: string, names: string[], competitors: string[][] = [], value = sept23) => dateEntries(quote, value).some(e => entryBindsItem(e, names, competitors));
+
+    // Neighbouring entries across a separator, in both directions and with a later date.
+    const trailing = "PC maintenance is September 23, 2026 at 15:00 PT, Console maintenance date is TBD";
+    assert.equal(binds(trailing, ["pc"]), true);
+    assert.equal(binds(trailing, ["console"]), false, "an undated entry after the date does not own it");
+    const leading = "PC maintenance TBD, Console maintenance September 23 at 15:00 PT";
+    assert.equal(binds(leading, ["pc"]), false, "an undated entry before the date does not own it");
+    assert.equal(binds(leading, ["console"]), true);
     const list = "PC maintenance September 23 at 15:00 PT, Console maintenance September 24 at 18:00 ET";
-    assert.deepEqual(dateEntries(list, sept23).map(e => [e.entry, e.naming]), [["pc maintenance september 23 at 15:00 pt, console maintenance", "pc maintenance september 23 at 15:00 pt"]]);
-    assert.deepEqual(dateEntries(list, sept24).map(e => e.naming), ["console maintenance september 24 at 18:00 et"], "the second entry is named by its own label only");
-    // Label after the date, nothing following: the whole entry names it.
-    assert.deepEqual(dateEntries("Update: 20 August 2026 26.45 Hotfix", parseDateValue("2026-08-20")!).map(e => e.naming), ["update: 20 august 2026 26.45 hotfix"]);
-    // Chained without separators: only the text before the next label counts.
-    assert.deepEqual(dateEntries("Patch 26.19 September 23 15:00 PT Patch 26.20 October 7 18:00 PT", sept23).map(e => e.naming), ["patch 26.19 september 23 15:00 pt patch"], "the next label (26.20) is not part of this entry");
+    assert.equal(binds(list, ["console"]), false);
+    assert.equal(binds(list, ["console"], [], parseDateValue("2026-09-24T18:00")!), true);
+    const afterColon = "September 23 at 15:00 PT: PC maintenance, Console maintenance TBD";
+    assert.equal(binds(afterColon, ["pc"]), true);
+    assert.equal(binds(afterColon, ["console"]), false);
+
+    // A separator between a label and its own date is fine when nothing else is named there.
+    assert.equal(binds("Patch 26.19 - September 23, 2026", ["26.19"]), true);
+    assert.equal(binds("September 23, 2026 - Patch 26.19", ["26.19"]), true);
+
+    // Real listing layouts: a category heading before the date, the item after it.
+    assert.equal(binds("Game Updates 2026-09-23T15:00:00.000Z League of Legends Patch 26.19 Notes", ["26.19"]), true);
+    const aug20 = parseDateValue("2026-08-20")!;
+    const changelog = "Minecraft: Bedrock Edition 26.44/45 Hotfix Changelog Update: 20 August 2026 26.45 Hotfix";
+    assert.equal(binds(changelog, ["26.45"], [["26.44"]], aug20), true);
+    assert.equal(binds(changelog, ["26.44"], [["26.45"]], aug20), false, "the nearer item on the other side owns the date");
+
+    // Table rows: the label next to the date wins over the next row's label.
+    const sept10 = parseDateValue("2026-09-10")!;
+    const row = "26.18 September 10, 2026 (Thursday) 26.19";
+    assert.equal(binds(row, ["26.18"], [["26.19"]], sept10), true);
+    assert.equal(binds(row, ["26.19"], [["26.18"]], sept10), false);
+    const chained = "Patch 26.19 September 23 15:00 PT Patch 26.20 October 7 18:00 PT";
+    assert.equal(binds(chained, ["26.19"], [["26.20"]]), true);
+    assert.equal(binds(chained, ["26.20"], [["26.19"]]), false);
+
+    // Items named together share a date; identities without discriminators always bind.
+    assert.equal(binds("PC and Console maintenance September 23", ["pc"], [["console"]]), true);
+    assert.equal(binds("PC and Console maintenance September 23", ["console"], [["pc"]]), true);
+    assert.equal(binds("Maintenance September 23", []), true);
 });
 
-test("entry naming keeps labels on their own side of a separator, whether or not another date follows", () => {
-    const sept23 = parseDateValue("2026-09-23T15:00")!;
-    const naming = (quote: string) => dateEntries(quote, sept23).map(e => e.naming);
-    assert.deepEqual(naming("PC maintenance is September 23, 2026 at 15:00 PT, Console maintenance date is TBD"), ["pc maintenance is september 23, 2026 at 15:00 pt"], "an undated entry after the date is not this entry");
-    assert.deepEqual(naming("PC maintenance TBD, Console maintenance September 23 at 15:00 PT"), ["console maintenance september 23 at 15:00 pt"], "an undated entry before the date is not this entry");
-    assert.deepEqual(naming("Patch 26.19 - September 23, 2026"), ["patch 26.19 - september 23, 2026"], "a label-free piece between a separator and the date is skipped");
-    assert.deepEqual(naming("September 23, 2026 - Patch 26.19"), ["september 23, 2026 - patch 26.19"], "a label after the date may follow a separator");
-    assert.deepEqual(naming("September 23 at 15:00 PT: PC maintenance, Console maintenance TBD"), ["september 23 at 15:00 pt: pc maintenance"], "a label after the date ends at the next separator");
-    assert.deepEqual(naming("2026-09-23T15:00:00.000Z VALORANT Patch Notes 13.05"), ["2026-09-23 t15:00:00.000z valorant patch notes 13.05"], "ISO clock tokens are not labels");
-    assert.deepEqual(dateEntries("Update: 20 August 2026 26.44/45 Hotfix", parseDateValue("2026-08-20")!).map(e => e.naming), ["update: 20 august 2026 26.44/45 hotfix"], "a slash between digits is not a separator");
+test("zoneAfterClock pairs clocks down to the second", () => {
+    const row = "Patch 26.19 releases September 23 at 15:00:00 PT / 15:00:30 ET";
+    assert.equal(zoneAfterClock(row, parseDateValue("2026-09-23T15:00:30")!)?.zone, "America/New_York");
+    assert.equal(zoneAfterClock(row, parseDateValue("2026-09-23T15:00")!)?.zone, "America/Los_Angeles");
 });

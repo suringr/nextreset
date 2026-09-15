@@ -13,7 +13,7 @@ test("gold identities match as complete tokens, never as substrings", () => {
     assert.equal(matchesIdentity(item("Season 105"), ["05"]), false);
     assert.equal(matchesIdentity(item("Live Maintenance PC March 11", "PC"), ["pc maintenance"]), true, "token order does not matter");
     assert.equal(matchesIdentity(item("26.44/45 Hotfix"), ["26.44/45"]), true);
-    assert.equal(matchesIdentity(item("x", "Counter-Strike 2 Update"), ["september 10, 2026", "counter-strike 2 update"]), true, "the label may satisfy an alias");
+    assert.equal(matchesIdentity(item("x", "Counter-Strike 2 Update"), ["september 10, 2026", "counter-strike 2 update"]), false, "a model-supplied label is not evidence of identity");
 });
 
 test("every gold case passes with the scripted responses, and hallucinated fields are rejected", async () => {
