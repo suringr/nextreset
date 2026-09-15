@@ -4,7 +4,8 @@
  * Games migrated so far: League of Legends (next patch, evidence-based), Counter-Strike 2 (last update,
  * Steam news API), PUBG (last patch, Steam news API), VALORANT (last patch, playvalorant.com page data),
  * Warzone (last patch day, callofduty.com patch notes), Genshin Impact (current banner end, regional announcement
- * lists), Minecraft (last Java Edition release, Mojang manifest), GTA Online (weekly reset rule) and Roblox (status feed).
+ * lists), EA SPORTS FC (last title update, Steam news per title year), Minecraft (last Java Edition release, Mojang
+ * manifest), GTA Online (weekly reset rule) and Roblox (status feed).
  * Ids, types, titles, source URLs and confidence labels match the V1 providers
  * so the published `/data/<game>.<type>.json` files keep their contract.
  */
@@ -18,6 +19,7 @@ import { PUBG_NEWS_URL, PUBG_PATCH_NOTES_PAGE, createPubgPatchAdapter } from "./
 import { VALORANT_PATCH_NOTES_URL, createValorantPatchAdapter } from "./adapters/valorant";
 import { WARZONE_PATCH_NOTES_URL, createWarzonePatchAdapter } from "./adapters/warzone";
 import { GENSHIN_NEWS_PAGE, GENSHIN_REGIONS, createGenshinWishAdapter, genshinAnnouncementsUrl, genshinSourceId } from "./adapters/genshin";
+import { EAFC_PAGE, EAFC_TITLE_YEARS, createEafcTitleUpdateAdapter, eafcNewsUrl, eafcSourceId } from "./adapters/eafc";
 import { createRobloxStatusAdapter } from "./adapters/roblox";
 import { Game, Topic } from "./domain";
 
@@ -198,6 +200,27 @@ export const GAMES: Game[] = [
         ]
     },
     {
+        id: "ea-sports-fc",
+        name: "EA SPORTS FC",
+        slug: "ea-sports-fc",
+        // One Steam news feed per title year, newest first (see adapters/eafc.ts).
+        sources: EAFC_TITLE_YEARS.map(t => ({ id: eafcSourceId(t.year), url: eafcNewsUrl(t.appId), kind: "json" as const })),
+        topics: [
+            {
+                game: "ea-sports-fc",
+                type: "last-title-update",
+                kind: "version",
+                sourceId: eafcSourceId(EAFC_TITLE_YEARS[0].year),
+                view: {
+                    title: "EA SPORTS FC Last Title Update",
+                    sourceUrl: EAFC_PAGE,
+                    confidence: Confidence.High,
+                    notes: "{label}"
+                }
+            }
+        ]
+    },
+    {
         id: "gta",
         name: "GTA Online",
         slug: "gta",
@@ -258,6 +281,7 @@ const ADAPTERS: Record<string, Adapter> = {
     "valorant/last-patch": createValorantPatchAdapter(),
     "warzone/last-patch": createWarzonePatchAdapter(),
     "genshin/next-banner": createGenshinWishAdapter(),
+    "ea-sports-fc/last-title-update": createEafcTitleUpdateAdapter(),
     "gta/weekly-reset": gtaWeeklyResetAdapter,
     "roblox/status": createRobloxStatusAdapter()
 };
