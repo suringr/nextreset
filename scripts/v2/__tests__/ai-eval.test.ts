@@ -84,3 +84,21 @@ test("a wrong or missing answer fails its case with a readable reason", async ()
     assert.ok(synthetic.rejected.some(r => /does not mention/.test(r.reason)));
     assert.equal(report.summary.failed, 1);
 });
+
+test("a case whose calls fail meets none of its expectations", async () => {
+    const cases = loadGoldCases().filter(c => c.id === "lol-schedule" || c.id === "genshin-article");
+    const inner = mockGoldProvider(loadMockScript(), cases);
+    const failing = { name: "mock", model: "mock", generateJson: async (req: { prompt: string }) => {
+        if (/^Game: League of Legends/m.test(req.prompt)) throw new Error("simulated provider outage");
+        return inner.generateJson(req as any);
+    } };
+    const report = await runGoldEval({ provider: failing as any, cases, mode: "mock" });
+    const lol = report.cases.find(c => c.id === "lol-schedule")!;
+    assert.equal(lol.passed, false);
+    assert.match(lol.error ?? "", /simulated provider outage/);
+    const count = (id: string) => { const c = cases.find(x => x.id === id)!; return c.expect.length + (c.classification ? 1 : 0) + (c.noDates ? 1 : 0) + (c.noItemsMatching ? 1 : 0); };
+    const lolExpectations = count("lol-schedule");
+    const genshinExpectations = count("genshin-article");
+    assert.equal(report.summary.expectations, lolExpectations + genshinExpectations);
+    assert.equal(report.summary.expectationsMet, genshinExpectations, "the errored case is credited with nothing");
+});

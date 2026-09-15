@@ -171,7 +171,7 @@ test("exact instants need the time and the zone to be stated; otherwise the day 
     assert.deepEqual([facts[0].at, facts[0].precision, facts[0].timezone, facts[0].yearInferred], ["2026-03-11T00:00:00.000Z", "exact", "UTC", true]);
     assert.deepEqual([facts[1].at, facts[1].precision, facts[1].timezone], ["2026-09-23T22:00:00.000Z", "exact", "America/Los_Angeles"]);
     assert.deepEqual([facts[2].at, facts[2].precision], ["2026-09-23T00:00:00.000Z", "day"]);
-    assert.match(facts[2].note ?? "", /timezone "KST" not stated/);
+    assert.match(facts[2].note ?? "", /not "KST"/);
     assert.deepEqual([facts[3].at, facts[3].precision], ["2026-10-07T00:00:00.000Z", "day"]);
     assert.match(facts[3].note ?? "", /without a timezone/);
 });
@@ -217,4 +217,42 @@ test("very long documents are truncated before the model sees them and grounded 
     assert.equal(result.grounded.items.find(i => i.identity === "26.19")!.facts.length, 1);
     assert.equal(result.grounded.items.some(i => i.identity === "26.30"), false, "an item from the cut-off tail cannot be grounded");
     assert.ok(result.grounded.rejected.some(r => r.identity === "26.30" && /identity not found/.test(r.reason)));
+});
+
+test("a quote listing several entries cannot lend one entry's time or zone to another", () => {
+    const text = "Patch 26.19 schedule. PC: patch 26.19 releases September 23 at 15:00 PT; Console: patch 26.19 releases September 24 at 18:00 ET. Posted 2026.";
+    const quote = "PC: patch 26.19 releases September 23 at 15:00 PT; Console: patch 26.19 releases September 24 at 18:00 ET";
+    const now = new Date("2026-09-14T21:30:00Z");
+    const raw = parseRawItems({ items: [{ kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields: [
+        { field: "at", value: "2026-09-23T18:00", timezone: "ET", quote },    // console's time and zone on the PC date
+        { field: "startAt", value: "2026-09-23T15:00", timezone: "ET", quote }, // PC time, console's zone
+        { field: "endAt", value: "2026-09-24T18:00", timezone: "ET", quote }    // console entry, consistent
+    ] }] });
+    const grounded = groundExtraction(raw, text, { now });
+    const facts = grounded.items[0].facts;
+    assert.deepEqual(facts.map(f => [f.field, f.precision, f.at]), [
+        ["at", "day", "2026-09-23T00:00:00.000Z"],
+        ["startAt", "day", "2026-09-23T00:00:00.000Z"],
+        ["endAt", "exact", "2026-09-24T22:00:00.000Z"]
+    ]);
+    assert.match(facts[0].note ?? "", /next to the date/);
+    assert.match(facts[1].note ?? "", /states America\/Los_Angeles next to this date/);
+
+    // The PC entry with its own time and zone is exact.
+    const pc = groundExtraction(parseRawItems({ items: [{ kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields: [
+        { field: "at", value: "2026-09-23T15:00", timezone: "PT", quote }
+    ] }] }), text, { now });
+    assert.deepEqual(pc.items[0].facts.map(f => [f.precision, f.at, f.timezone]), [["exact", "2026-09-23T22:00:00.000Z", "America/Los_Angeles"]]);
+
+    // "PDT" next to the date agrees with a claimed "PT" (same offset on that day), so the fact stays exact.
+    const pdt = groundExtraction(parseRawItems({ items: [{ kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields: [
+        { field: "at", value: "2026-09-23T15:00", timezone: "PT", quote: "Patch 26.19 releases September 23 at 15:00 PDT" }
+    ] }] }), "Patch 26.19 releases September 23 at 15:00 PDT. Posted 2026.", { now });
+    assert.equal(pdt.items[0].facts[0].precision, "exact");
+
+    // A zone stated in a header applies when the quote itself names none.
+    const header = groundExtraction(parseRawItems({ items: [{ kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields: [
+        { field: "at", value: "2026-09-23T15:00", timezone: "PT", quote: "Patch 26.19 releases September 23 at 15:00" }
+    ] }] }), "All times are in Pacific Time (PT). Patch 26.19 releases September 23 at 15:00. Posted 2026.", { now });
+    assert.equal(header.items[0].facts[0].precision, "exact");
 });
