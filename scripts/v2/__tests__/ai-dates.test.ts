@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { clockTimesIn, dateSegment, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, timezoneMentioned, zonedToUtc, zonesIn } from "../ai/dates";
+import { clockTimesIn, dateSegment, dateSegments, normalizeDateFact, parseDateValue, quoteMentionsDate, quoteMentionsTime, resolveTimezone, zoneDeclaredIn, zonedToUtc, zonesIn } from "../ai/dates";
 
 test("parseDateValue accepts ISO dates and local date-times, rejects everything else", () => {
     assert.deepEqual(parseDateValue("2026-09-23"), { year: 2026, month: 9, day: 23, hasTime: false });
@@ -131,21 +131,28 @@ test("quoteMentionsTime requires the stated clock time when a value carries one"
     assert.equal(quoteMentionsTime("servers go down at midnight", parseDateValue("2026-03-11T00:00")!), true);
     assert.equal(quoteMentionsTime("2026-09-09T18:00:00.000Z League of Legends Patch 26.18 Notes", parseDateValue("2026-09-09T18:00")!), true);
     assert.equal(quoteMentionsTime("at 12:00 AM", parseDateValue("2026-03-11T00:00")!), true);
+    // Seconds are part of the claim: ":59" needs a quote that states it.
+    assert.equal(quoteMentionsTime("September 23 at 15:00 PT", parseDateValue("2026-09-23T15:00:59")!), false);
+    assert.equal(quoteMentionsTime("September 23 at 15:00:59 PT", parseDateValue("2026-09-23T15:00:59")!), true);
+    assert.equal(quoteMentionsTime("2026-09-09T18:00:00.000Z", parseDateValue("2026-09-09T18:00:00")!), true);
 });
 
-test("timezoneMentioned looks for the stated phrase in the document, or an ISO Z in the quote", () => {
-    const doc = "Live Maintenance Schedule (UTC) ※ PC: March 11, 00:00 - 08:30. Patches release on a Wednesday (PT).";
-    assert.equal(timezoneMentioned(doc, "PC: March 11, 00:00 - 08:30", "UTC"), true);
-    assert.equal(timezoneMentioned(doc, "PC: March 11, 00:00 - 08:30", "PT"), true);
-    assert.equal(timezoneMentioned(doc, "PC: March 11, 00:00 - 08:30", "KST"), false);
-    assert.equal(timezoneMentioned("no zones here", "2026-09-09T18:00:00.000Z Patch 26.18", "UTC"), true);
-    assert.equal(timezoneMentioned("no zones here", "2026-09-09T18:00:00.000Z Patch 26.18", "PT"), false);
-    assert.equal(timezoneMentioned(doc, "x", ""), false);
+test("zoneDeclaredIn accepts a zone only where the document declares it for its times", () => {
+    const utc = resolveTimezone("UTC")!;
+    const pt = resolveTimezone("PT")!;
+    const kst = resolveTimezone("KST")!;
+    const doc = "Live Maintenance Schedule (UTC) ※ PC: March 11, 00:00 - 08:30. Patches release on a Wednesday (PT) unless otherwise indicated.";
+    assert.equal(zoneDeclaredIn(doc, utc), true);
+    assert.equal(zoneDeclaredIn(doc, pt), true);
+    assert.equal(zoneDeclaredIn(doc, kst), false);
+    assert.equal(zoneDeclaredIn("All times are Pacific Time.", pt), true);
+    assert.equal(zoneDeclaredIn("Times shown in KST. Patch 26.19 lands September 23", kst), true);
+    // A zone stated for something else does not apply to dated events.
+    assert.equal(zoneDeclaredIn("PC maintenance September 23 at 15:00. Support hours are PT.", pt), false);
+    assert.equal(zoneDeclaredIn("Contact us (PT office). Patch 26.19 lands September 23 at 15:00", pt), false);
     // Abbreviations must stand alone: "PT" is not inside "September", "ET" is not inside "Internet".
-    assert.equal(timezoneMentioned("Patch 26.19 releases September 23, 2026 at 15:00", "x", "PT"), false);
-    assert.equal(timezoneMentioned("Internet issues resolved", "x", "ET"), false);
-    assert.equal(timezoneMentioned("Patches release on a Wednesday (PT) unless noted", "x", "PT"), true);
-    assert.equal(timezoneMentioned("times are in Pacific   Time", "x", "Pacific Time"), true);
+    assert.equal(zoneDeclaredIn("Patch 26.19 releases September 23, 2026 at 15:00", pt), false);
+    assert.equal(zoneDeclaredIn("Internet time issues resolved", resolveTimezone("ET")!), false);
 });
 
 test("clockTimesIn lists times in order and ignores bare numbers", () => {
@@ -170,6 +177,10 @@ test("dateSegment isolates the part of a quote that belongs to one date", () => 
     // "Sept. 23" is not a clause boundary.
     assert.equal(dateSegment("Sept. 23 at 3 PM PT", sept23), "sept. 23 at 3 pm pt");
     assert.equal(dateSegment("no date here", sept23), undefined);
+    // Several entries on the same day yield one segment each.
+    const sameDay = "PC maintenance September 23 at 15:00 PT; Console maintenance September 23 at 18:00 ET";
+    assert.deepEqual(dateSegments(sameDay, sept23), ["september 23 at 15:00 pt", "september 23 at 18:00 et"]);
+    assert.deepEqual(dateSegments("no date here", sept23), []);
 });
 
 test("zonesIn finds stated timezone phrases", () => {
@@ -179,4 +190,5 @@ test("zonesIn finds stated timezone phrases", () => {
     assert.deepEqual(zonesIn("Live Maintenance Schedule (UTC)").map(z => z.zone), ["UTC"]);
     assert.deepEqual(zonesIn("Patch 26.19 releases September 23, 2026"), [], "no zone words, no zones");
     assert.deepEqual(zonesIn("Internet time is fun"), []);
+    assert.deepEqual(zonesIn("2026-09-09T18:00:00.000Z League of Legends Patch 26.18 Notes").map(z => z.zone), ["UTC"], "an ISO Z states UTC");
 });

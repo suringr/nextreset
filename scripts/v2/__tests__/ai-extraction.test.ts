@@ -256,3 +256,69 @@ test("a quote listing several entries cannot lend one entry's time or zone to an
     ] }] }), "All times are in Pacific Time (PT). Patch 26.19 releases September 23 at 15:00. Posted 2026.", { now });
     assert.equal(header.items[0].facts[0].precision, "exact");
 });
+
+test("same-day entries bind time and zone to the entry that names the item; other zones in the document do not apply", () => {
+    const now = new Date("2026-09-14T21:30:00Z");
+    const text = "Maintenance for patch 26.19. PC maintenance September 23 at 15:00 PT; Console maintenance September 23 at 18:00 ET. Posted 2026.";
+    const quote = "PC maintenance September 23 at 15:00 PT; Console maintenance September 23 at 18:00 ET";
+    const items = (fields: Array<{ identity: string; value: string; timezone: string }>) => parseRawItems({ items: fields.map(f => ({ kind: "occurrence", label: f.identity, identity: f.identity, status: "scheduled", fields: [{ field: "at", value: f.value, timezone: f.timezone, quote }] })) });
+    const grounded = groundExtraction(items([
+        { identity: "Console maintenance September 23", value: "2026-09-23T15:00", timezone: "PT" },  // PC's time on the console item
+        { identity: "Console maintenance September 23", value: "2026-09-23T18:00", timezone: "ET" },  // console's own entry
+        { identity: "PC maintenance September 23", value: "2026-09-23T15:00", timezone: "PT" }
+    ]), text, { now });
+    assert.deepEqual(grounded.items.map(i => i.facts.map(f => [f.precision, f.at])), [
+        [["day", "2026-09-23T00:00:00.000Z"]],
+        [["exact", "2026-09-23T22:00:00.000Z"]],
+        [["exact", "2026-09-23T22:00:00.000Z"]]
+    ]);
+    assert.match(grounded.items[0].facts[0].note ?? "", /next to the date/);
+
+    // An item that neither entry clearly names cannot borrow a time.
+    const vague = groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: "Maintenance", identity: "Maintenance September 23", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T15:00", timezone: "PT", quote }] }] }), text, { now });
+    assert.equal(vague.items[0].facts[0].precision, "day");
+    assert.match(vague.items[0].facts[0].note ?? "", /several entries in the quote share this date/);
+
+    // A zone the document states for something else ("support hours") is not evidence for a dated event.
+    const support = groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: "PC", identity: "PC maintenance September 23", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T15:00", timezone: "PT", quote: "PC maintenance September 23 at 15:00" }] }] }),
+        "PC maintenance September 23 at 15:00. Support hours are PT. Posted 2026.", { now });
+    assert.equal(support.items[0].facts[0].precision, "day");
+    assert.match(support.items[0].facts[0].note ?? "", /not declared for times/);
+    const declared = groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: "PC", identity: "PC maintenance September 23", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T15:00", timezone: "PT", quote: "PC maintenance September 23 at 15:00" }] }] }),
+        "All maintenance times are in PT. PC maintenance September 23 at 15:00. Posted 2026.", { now });
+    assert.equal(declared.items[0].facts[0].precision, "exact");
+
+    // Seconds the quote does not state are not accepted as exact.
+    const seconds = groundExtraction(parseRawItems({ items: [{ kind: "version", label: "26.19", identity: "26.19", status: "scheduled", fields: [{ field: "at", value: "2026-09-23T15:00:59", timezone: "PT", quote: "Patch 26.19 releases September 23 at 15:00 PT" }] }] }), "Patch 26.19 releases September 23 at 15:00 PT. Posted 2026.", { now });
+    assert.equal(seconds.items[0].facts[0].precision, "day");
+});
+
+test("quotes that are not verbatim trigger one repair call, and the repaired answer wins only when it evidences more", async () => {
+    const now = new Date("2026-09-14T21:30:00Z");
+    const doc = { url: "https://example.test/minecraft", title: "Minecraft: Bedrock Edition 26.44/45 Hotfix Changelog", text: "Minecraft: Bedrock Edition 26.44/45 Hotfix Changelog Update: 20 August 2026 26.45 Hotfix Please note, we have some additional fixes. Posted: 14 August 2026 A new hotfix is rolling out." };
+    const topic = { game: "minecraft", gameName: "Minecraft", type: "last-release", description: "the latest Bedrock release" };
+    const stitched = { items: [{ kind: "version", label: "26.45 Hotfix", identity: "26.45 Hotfix", status: "released", fields: [{ field: "at", value: "2026-08-20", timezone: "", quote: "26.45 Hotfix\n\nUpdate: 20 August 2026" }] }] };
+    const verbatim = { items: [{ kind: "version", label: "26.45 Hotfix", identity: "26.45 Hotfix", status: "released", fields: [{ field: "at", value: "2026-08-20", timezone: "", quote: "Update: 20 August 2026 26.45 Hotfix" }] }] };
+    const provider = new MockAiProvider("mock-model", scriptedResponder({ extract: stitched, "extract-repair": verbatim }));
+
+    const result = await extractFacts(provider, topic, doc, { now });
+    assert.equal(result.attempts, 2);
+    assert.equal(result.repaired, true);
+    assert.equal(provider.requests[1].label, "extract-repair");
+    assert.match(provider.requests[1].prompt, /CORRECTIONS NEEDED[\s\S]*26\.45 Hotfix/);
+    assert.deepEqual(result.grounded.items[0].facts.map(f => f.at), ["2026-08-20T00:00:00.000Z"]);
+    assert.equal(result.usage.inputTokens, 2000, "both calls are accounted");
+
+    // A repair that is no better is discarded, and a verbatim first answer needs no repair.
+    const stubborn = new MockAiProvider("mock-model", scriptedResponder({ extract: stitched, "extract-repair": stitched }));
+    const same = await extractFacts(stubborn, topic, doc, { now });
+    assert.equal(same.attempts, 2);
+    assert.equal(same.repaired, false);
+    assert.equal(same.grounded.items[0].facts.length, 0);
+    const fine = new MockAiProvider("mock-model", scriptedResponder({ extract: verbatim }));
+    const once = await extractFacts(fine, topic, doc, { now });
+    assert.equal(once.attempts, 1);
+    assert.equal(once.repaired, false);
+    const off = await extractFacts(new MockAiProvider("mock-model", scriptedResponder({ extract: stitched })), topic, doc, { now, repair: false });
+    assert.equal(off.attempts, 1);
+});

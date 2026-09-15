@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Automated game countdown and status tracking website",
   "main": "dist/refresh-all.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tsc",
     "test": "node build/run-tests.js",
