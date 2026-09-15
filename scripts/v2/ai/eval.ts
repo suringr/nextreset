@@ -28,6 +28,12 @@ export interface GoldExpectation {
     status?: string[];
     precision?: "exact" | "day";
     yearInferred?: boolean;
+    /**
+     * Also satisfied by a day-precision fact on the expected date. For listing
+     * pages whose exact time is hidden metadata (an ISO timestamp next to the
+     * title) the model may report the date alone; both answers are correct.
+     */
+    allowDay?: boolean;
 }
 
 export interface GoldCase {
@@ -154,11 +160,12 @@ function evaluateCase(gold: GoldCase, classification: CaseReport["classification
             return;
         }
         if (exp.date) {
+            const dayOk = (f: { precision: string }) => exp.allowDay === true && f.precision === "day";
             const hit = candidates.find(i => i.facts.some(f =>
                 (!exp.field || f.field === exp.field) &&
                 f.value.slice(0, 10) === exp.date &&
-                (!exp.at || f.at === exp.at) &&
-                (!exp.precision || f.precision === exp.precision) &&
+                (!exp.at || f.at === exp.at || dayOk(f)) &&
+                (!exp.precision || f.precision === exp.precision || dayOk(f)) &&
                 (exp.yearInferred === undefined || f.yearInferred === exp.yearInferred)
             ));
             if (!hit) {

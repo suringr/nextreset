@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { MAX_DOCUMENT_CHARS, classifyDocument, extractFacts, groundExtraction, identityOccursIn, parseClassification, parseRawItems, quoteNamesIdentity, quoteOccursIn } from "../ai/extraction";
+import { MAX_DOCUMENT_CHARS, classifyDocument, extractFacts, groundExtraction, identityOccursIn, mergeRepair, parseClassification, parseRawItems, quoteNamesIdentity, quoteOccursIn } from "../ai/extraction";
 import { MockAiProvider, scriptedResponder } from "../ai/mock";
 
 const topic = { game: "lol", gameName: "League of Legends", type: "next-patch", description: "Patch numbers and their scheduled dates." };
@@ -321,4 +321,47 @@ test("quotes that are not verbatim trigger one repair call, and the repaired ans
     assert.equal(once.repaired, false);
     const off = await extractFacts(new MockAiProvider("mock-model", scriptedResponder({ extract: stitched })), topic, doc, { now, repair: false });
     assert.equal(off.attempts, 1);
+});
+
+test("a repair only fills the gaps the first answer left; grounded facts are never replaced", () => {
+    const now = new Date("2026-09-14T21:30:00Z");
+    const text = "Maintenance for 26.19. PC: September 23, 15:00 - 18:00 UTC. All times UTC. Posted 2026.";
+    const first = groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: "PC", identity: "PC maintenance September 23", status: "scheduled", fields: [
+        { field: "startAt", value: "2026-09-23T15:00", timezone: "UTC", quote: "PC: September 23, 15:00 - 18:00 UTC" },
+        { field: "endAt", value: "2026-09-23T18:00", timezone: "UTC", quote: "PC ends September 23 at 18:00 UTC" }   // paraphrased: unverifiable
+    ] }] }), text, { now });
+    assert.deepEqual(first.items[0].facts.map(f => f.field), ["startAt"]);
+    assert.equal(first.rejected[0].reason, "quote not found in document");
+
+    // The repair answers with a day-only start (worse) and a verbatim end (the gap).
+    const repair = groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: "PC", identity: "PC maintenance September 23", status: "scheduled", fields: [
+        { field: "startAt", value: "2026-09-23", timezone: "", quote: "PC: September 23, 15:00 - 18:00 UTC" },
+        { field: "endAt", value: "2026-09-23T18:00", timezone: "UTC", quote: "PC: September 23, 15:00 - 18:00 UTC" }
+    ] }, { kind: "occurrence", label: "Console", identity: "Console maintenance September 24", status: "scheduled", fields: [] }] }), text, { now });
+    const { merged, filled } = mergeRepair(first, repair);
+    assert.equal(filled, 1);
+    assert.deepEqual(merged.items.map(i => i.identity), ["PC maintenance September 23"], "items the repair invents are ignored");
+    assert.deepEqual(merged.items[0].facts.map(f => [f.field, f.precision, f.at]), [["startAt", "exact", "2026-09-23T15:00:00.000Z"], ["endAt", "exact", "2026-09-23T18:00:00.000Z"]]);
+    assert.equal(merged.rejected.length, 0);
+    assert.equal(merged.stats.accepted, 2);
+
+    // A filled bound that contradicts the accepted one is dropped again.
+    const inverted = groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: "PC", identity: "PC maintenance September 23", status: "scheduled", fields: [
+        { field: "endAt", value: "2026-09-22", timezone: "", quote: "Maintenance for 26.19. PC: September 22" }
+    ] }] }), "Maintenance for 26.19. PC: September 22, then PC: September 23, 15:00 - 18:00 UTC. All times UTC. Posted 2026.", { now });
+    const bad = mergeRepair(first, inverted);
+    assert.equal(bad.filled, 0);
+    assert.deepEqual(bad.merged.items[0].facts.map(f => f.field), ["startAt"]);
+    assert.ok(bad.merged.rejected.some(r => /inverted/.test(r.reason)));
+});
+
+test("a window with an exact start and a day-only end is not inverted", () => {
+    const now = new Date("2026-09-14T21:30:00Z");
+    const text = "Maintenance for 26.19 starts September 23 at 15:00 PT and ends September 23. All times are in PT. Posted 2026.";
+    const grounded = groundExtraction(parseRawItems({ items: [{ kind: "occurrence", label: "Maintenance", identity: "Maintenance September 23", status: "scheduled", fields: [
+        { field: "startAt", value: "2026-09-23T15:00", timezone: "PT", quote: "Maintenance for 26.19 starts September 23 at 15:00 PT" },
+        { field: "endAt", value: "2026-09-23", timezone: "", quote: "Maintenance for 26.19 starts September 23 at 15:00 PT and ends September 23" }
+    ] }] }), text, { now });
+    assert.deepEqual(grounded.items[0].facts.map(f => [f.field, f.precision]), [["startAt", "exact"], ["endAt", "day"]]);
+    assert.equal(grounded.rejected.length, 0);
 });

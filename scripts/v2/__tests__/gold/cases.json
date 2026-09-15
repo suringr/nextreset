@@ -29,8 +29,8 @@
     "now": "2026-09-14T21:30:00Z",
     "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "patch-schedule", "news"] },
     "expect": [
-      { "identityAnyOf": ["26.18"], "date": "2026-09-09", "at": "2026-09-09T18:00:00.000Z", "precision": "exact", "status": ["released"] },
-      { "identityAnyOf": ["26.17"], "date": "2026-08-25", "at": "2026-08-25T18:00:00.000Z", "precision": "exact" }
+      { "identityAnyOf": ["26.18"], "date": "2026-09-09", "at": "2026-09-09T18:00:00.000Z", "precision": "exact", "allowDay": true, "status": ["released"] },
+      { "identityAnyOf": ["26.17"], "date": "2026-08-25", "at": "2026-08-25T18:00:00.000Z", "precision": "exact", "allowDay": true }
     ]
   },
   {
@@ -45,8 +45,8 @@
     "now": "2026-09-14T21:30:00Z",
     "classification": { "relevant": true, "docTypeAnyOf": ["patch-notes", "patch-schedule", "news"] },
     "expect": [
-      { "identityAnyOf": ["13.05"], "date": "2026-09-01", "at": "2026-09-01T13:00:00.000Z", "precision": "exact", "status": ["released"] },
-      { "identityAnyOf": ["13.04"], "date": "2026-08-18", "at": "2026-08-18T13:00:00.000Z", "precision": "exact" }
+      { "identityAnyOf": ["13.05"], "date": "2026-09-01", "at": "2026-09-01T13:00:00.000Z", "precision": "exact", "allowDay": true, "status": ["released"] },
+      { "identityAnyOf": ["13.04"], "date": "2026-08-18", "at": "2026-08-18T13:00:00.000Z", "precision": "exact", "allowDay": true }
     ]
   },
   {

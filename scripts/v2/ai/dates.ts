@@ -135,19 +135,38 @@ function tzOffsetMinutes(zone: string, at: Date): number {
  * skipped hour of a spring-forward transition) has no instant and yields undefined.
  */
 export function zonedToUtc(value: ParsedDateValue, zone: string): Date | undefined {
+    return zonedToUtcDetailed(value, zone).at;
+}
+
+export type WallTimeProblem = "nonexistent" | "ambiguous";
+
+/**
+ * As zonedToUtc, but says why there is no instant: the wall time falls in a
+ * spring-forward gap (nonexistent) or in a fall-back overlap where two instants
+ * read back as the same wall time (ambiguous). Fixed offsets never have either.
+ */
+export function zonedToUtcDetailed(value: ParsedDateValue, zone: string): { at?: Date; problem?: WallTimeProblem } {
     const wall = Date.UTC(value.year, value.month - 1, value.day, value.hour ?? 0, value.minute ?? 0, value.second ?? 0);
-    if (zone === "UTC") return new Date(wall);
+    if (zone === "UTC") return { at: new Date(wall) };
     const fixed = /^([+-])(\d{2}):(\d{2})$/.exec(zone);
     if (fixed) {
         const minutes = (fixed[1] === "-" ? -1 : 1) * (+fixed[2] * 60 + +fixed[3]);
-        return new Date(wall - minutes * 60000);
+        return { at: new Date(wall - minutes * 60000) };
     }
-    let guess = wall - tzOffsetMinutes(zone, new Date(wall)) * 60000;
-    guess = wall - tzOffsetMinutes(zone, new Date(guess)) * 60000;
-    // Round trip: the instant must read back as the requested wall time in that zone.
-    const readBack = guess + tzOffsetMinutes(zone, new Date(guess)) * 60000;
-    if (readBack !== wall) return undefined;
-    return new Date(guess);
+    // The instant lies within 15 hours of the wall time read as UTC. Any transition in that
+    // window shows up as two different offsets at its ends; each offset gives a candidate
+    // instant, kept only if it reads back as the requested wall time.
+    const HOUR = 3600000;
+    const before = tzOffsetMinutes(zone, new Date(wall - 15 * HOUR));
+    const after = tzOffsetMinutes(zone, new Date(wall + 15 * HOUR));
+    const candidates = new Set<number>();
+    for (const offset of before === after ? [before] : [before, after]) {
+        const guess = wall - offset * 60000;
+        if (tzOffsetMinutes(zone, new Date(guess)) === offset) candidates.add(guess);
+    }
+    if (candidates.size === 0) return { problem: "nonexistent" };
+    if (candidates.size > 1) return { problem: "ambiguous" };
+    return { at: new Date([...candidates][0]) };
 }
 
 /** Minutes east of UTC that a resolved zone has at a wall-clock value; undefined for a nonexistent wall time. */
@@ -193,9 +212,12 @@ export function normalizeDateFact(value: string, timezoneRaw: string | undefined
             ? `timezone "${timezoneRaw.trim()}" not understood; time dropped`
             : "time stated without a timezone; time dropped");
     }
-    const at = zonedToUtc(parsed, zone.zone);
-    if (!at) return dayOnly(parsed, `${value.slice(11, 16)} does not exist in ${zone.zone} on that day (DST transition); time dropped`, zone.zone);
-    return { at: at.toISOString(), precision: "exact", timezone: zone.zone };
+    const converted = zonedToUtcDetailed(parsed, zone.zone);
+    if (!converted.at) {
+        const why = converted.problem === "ambiguous" ? "occurs twice (DST fall-back); a fixed offset or PDT/PST-style abbreviation would disambiguate" : "does not exist (DST transition)";
+        return dayOnly(parsed, `${value.slice(11, 16)} in ${zone.zone} on that day ${why}; time dropped`, zone.zone);
+    }
+    return { at: converted.at.toISOString(), precision: "exact", timezone: zone.zone };
 }
 
 const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
@@ -419,23 +441,55 @@ export function quoteMentionsTime(quote: string, value: ParsedDateValue): boolea
     return false;
 }
 
-/** Words of a clause that declares what timezone times are given in (as opposed to, say, support hours). */
-const TIME_DECLARATION_WORDS = /\b(times?|time ?zones?|schedules?|scheduled|maintenance|patch(?:es)?|releases?|released|updates?|updated|launch(?:es)?|deploy(?:s|ed|ment)?|downtime|servers?|dates?)\b/;
+function escapeRegExp(text: string): string {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 /**
- * True when the document declares the zone for its times: a clause that both
- * names the zone and talks about times, schedules, patches, releases,
- * maintenance or servers ("Live Maintenance Schedule (UTC)", "Patches release on
- * a Wednesday (PT)", "All times are Pacific Time"). A zone stated in another
- * context ("Support hours are PT") does not apply to a dated event.
+ * True when the document declares the zone for its times with a recognisable
+ * declaration, not by mere co-occurrence:
+ *   - a time/date/schedule noun followed by the zone in parentheses ("Scheduled Date (Pacific Time)", "Live Maintenance Schedule (UTC)")
+ *   - "times/dates are|shown|listed ... in ZONE" ("All times are in PT", "Dates are listed in KST")
+ *   - "ZONE time zone" / "time zone ... ZONE"
+ *   - a patch/release/maintenance statement with the zone in parentheses ("Patches release on a Wednesday (PT)")
+ * A zone attached to some other clock time ("Support is available 9-5 PT during
+ * maintenance") or context ("Support hours are PT") does not apply to a dated event.
  */
 export function zoneDeclaredIn(documentText: string, zone: ResolvedZone): boolean {
-    const doc = documentText.replace(/\s+/g, " ");
+    const doc = documentText.replace(/\s+/g, " ").toLowerCase();
     for (const clause of doc.split(/[.;|•]\s+/)) {
-        if (!TIME_DECLARATION_WORDS.test(clause.toLowerCase())) continue;
-        if (zonesIn(clause).some(z => z.zone === zone.zone)) return true;
+        for (const phrase of zonePhrasesIn(clause)) {
+            if (resolveTimezone(phrase)?.zone !== zone.zone) continue;
+            const p = escapeRegExp(phrase.toLowerCase()).replace(/ /g, "\\s+");
+            const forms = [
+                new RegExp(`\\b(?:times?|dates?|schedules?|scheduled dates?|windows?|deadlines?)\\b[^()]{0,40}\\(\\s*${p}\\s*\\)`),
+                new RegExp(`\\b(?:times?|dates?|schedules?|windows?)\\b[^.;]{0,60}\\b(?:are|is|listed|shown|displayed|given|provided|expressed|based|stated|quoted)\\b[^.;]{0,40}(?<![0-9:\\-–]\\s*)\\b${p}\\b`),
+                new RegExp(`\\b${p}\\b\\s*(?:time ?zone)\\b|\\b(?:time ?zone)\\b[^.;]{0,20}\\b${p}\\b`),
+                new RegExp(`\\b(?:patch(?:es)?|release[sd]?|updates?|maintenance|servers?|launch(?:es)?|deploy(?:s|ed|ment)?|downtime)\\b[^.;()]{0,60}\\(\\s*${p}\\s*\\)`)
+            ];
+            if (forms.some(f => f.test(clause))) return true;
+        }
     }
     return false;
+}
+
+/** Timezone phrases in a text, as written (lower-cased), for callers that need the text rather than the zone. */
+export function zonePhrasesIn(text: string): string[] {
+    const q = text.replace(/\s+/g, " ").toLowerCase();
+    const found: string[] = [];
+    const push = (raw: string) => {
+        if (resolveTimezone(raw) && !found.includes(raw)) found.push(raw);
+    };
+    for (const m of q.matchAll(/\b(?:utc|gmt)\s*[+-]\s*\d{1,2}(?::?\d{2})?\b/g)) push(m[0]);
+    for (const m of q.matchAll(/\b(?:[a-z]+ )?(?:[a-z]+ )?(?:standard |daylight |summer )?time\b/g)) {
+        const words = m[0].split(" ");
+        for (let i = 0; i < words.length - 1; i++) push(words.slice(i).join(" "));
+    }
+    for (const m of q.matchAll(/\b[a-z]+\/[a-z_]+(?:\/[a-z_]+)?\b/g)) push(m[0]);
+    for (const m of q.matchAll(/(?<![a-z])([a-z]{2,4})(?![a-z])(?!\s*[+-]\s*\d)/g)) {
+        if (m[1] in FIXED_ALIASES || m[1] in IANA_ALIASES) push(m[1]);
+    }
+    return found;
 }
 
 /** Clock times in the order they appear in a text, as minutes since midnight (24h or 12h with am/pm). */
