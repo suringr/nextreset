@@ -30,6 +30,7 @@ const DECISIONS: readonly ChangeDecision[] = ["applied", "held", "rejected", "ov
 const CLAIM_FIELDS = ["at", "startAt", "endAt", "label", "status"] as const;
 const CLAIM_METHODS = ["deterministic", "ai"] as const;
 const FETCH_MODES = ["http", "browser"] as const;
+const DISCOVERY_VIAS = ["config", "learned", "sitemap", "seed", "secondary-link", "web"] as const;
 
 type Rec = Record<string, unknown>;
 
@@ -163,6 +164,25 @@ function validateSourceState(value: unknown, path: string): void {
     }
 }
 
+function validateDiscoveredSource(value: unknown, path: string): void {
+    const source = requireRecord(value, path);
+    requireString(source, "id", path);
+    requireString(source, "url", path);
+    requireString(source, "topic", path);
+    // The store never holds a secondary page as a learned source.
+    requireOneOf(source, "tier", path, ["official"] as const);
+    requireOneOf(source, "via", path, DISCOVERY_VIAS);
+    requireString(source, "query", path, true);
+    requireString(source, "title", path, true);
+    requireIso(source, "discoveredAt", path);
+    requireIso(source, "lastSuccessAt", path);
+    requireIso(source, "lastFailureAt", path, true);
+    for (const key of ["successes", "failures"]) {
+        const n = source[key];
+        if (typeof n !== "number" || n < 0 || !Number.isInteger(n)) fail(`${path}.${key}`, "must be a non-negative integer");
+    }
+}
+
 function validateClaim(value: unknown, path: string): void {
     const claim = requireRecord(value, path);
     requireString(claim, "id", path);
@@ -212,6 +232,17 @@ export function validateGameKnowledge(value: unknown, where = "knowledge"): Game
         const id = (s as Rec).id as string;
         if (sourceIds.has(id)) fail(`${path}.id`, `duplicate source id ${id}`);
         sourceIds.add(id);
+    });
+
+    // `discovered` arrived with web discovery; treat absence as empty.
+    if (root.discovered === undefined) root.discovered = [];
+    const discoveredIds = new Set<string>();
+    requireArray(root, "discovered", where).forEach((d, i) => {
+        const path = `${where}.discovered[${i}]`;
+        validateDiscoveredSource(d, path);
+        const id = (d as Rec).id as string;
+        if (discoveredIds.has(id)) fail(`${path}.id`, `duplicate discovered source id ${id}`);
+        discoveredIds.add(id);
     });
 
     return root as unknown as GameKnowledge;

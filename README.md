@@ -98,6 +98,34 @@ Gold evaluation over real publisher documents: `npm run ai:eval` (scripted mock 
 `npm run ai:eval:live` (needs the key). The "AI extraction gold evaluation" workflow runs the live
 evaluation on demand and uploads `build/ai-eval/report.md`.
 
+### Web discovery (V2)
+
+When a topic has no known source, or its known sources stop answering the open
+question (for example no future patch is scheduled any more), the V2 pipeline can
+find the right page instead of relying on a preconfigured URL. Code lives in
+`scripts/v2/discovery`.
+
+- **Query templates** are deterministic: the topic configures phrases such as
+  `{game} patch schedule` and `{game} patch {next}`, where `{next}` is derived
+  from the latest known version.
+- **Official channels first.** Each game declares its official domains; their
+  XML sitemaps and configured seed pages (listings, hubs) are searched without any
+  API key. Only when they find nothing convincing is the web asked.
+- **Web search** goes through a `SearchProvider` (DuckDuckGo's HTML endpoint by
+  default, no key). It is best effort: a bot challenge disables it for the run and
+  the pipeline continues with the official channels. Queries are capped and spaced
+  (`SEARCH_PROVIDER=duckduckgo|none`, `SEARCH_MAX_QUERIES`, `SEARCH_MIN_INTERVAL_MS`).
+- **Tiering.** A candidate is *official* only if its host is one of the game's
+  official domains (or a subdomain). Secondary pages (forums, news, videos) can
+  lead to an official link, but are never publishable evidence and are never
+  learned as sources.
+- **Ranking** is deterministic (official first, then query-term overlap, preferred
+  phrases, and how the page was found). Gemini is asked to judge relevance from
+  URLs, titles and snippets only when the top official candidates are too close
+  to call; its verdict nudges the order and can never change a page's tier.
+- **Learning.** A page that produced accepted knowledge is stored in the game's
+  knowledge file (`discovered`) and consulted before searching on later runs.
+
 ## 🎮 How It Works
 
 ### Provider Pattern

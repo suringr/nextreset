@@ -36,6 +36,20 @@ export interface TopicView {
     notes?: string;
 }
 
+/** How a topic finds its documents when no known source answers (see scripts/v2/discovery). */
+export interface TopicDiscovery {
+    /** Query templates with {game}, {latest} (latest known label) and {next} (the version after it). */
+    queries?: string[];
+    /** Phrases preferred in a candidate's title or URL, e.g. ["patch schedule"]. */
+    terms?: string[];
+    /**
+     * When known sources count as answering the topic's question:
+     * "future-scheduled" (default for version/occurrence): a scheduled event in the future is known;
+     * "usable-source" (default for period/recurring): at least one known source was usable this run.
+     */
+    answeredWhen?: "future-scheduled" | "usable-source";
+}
+
 export interface Topic {
     /** Game id (equals Game.id and the V1 `game` field). */
     game: string;
@@ -45,6 +59,7 @@ export interface Topic {
     /** Source this topic's adapter consults (see Game.sources). */
     sourceId: string;
     view: TopicView;
+    discovery?: TopicDiscovery;
 }
 
 export type SourceKind = "json" | "rule" | "html" | "rss";
@@ -56,6 +71,16 @@ export interface Source {
     kind: SourceKind;
 }
 
+/** Where a game's official evidence lives and how to search it without an exact URL. */
+export interface DiscoveryConfig {
+    /** Domains (subdomains included) whose pages are official evidence. Everything else is secondary. */
+    officialDomains: string[];
+    /** Hosts whose XML sitemaps are searched. */
+    sitemapHosts?: string[];
+    /** Official listing/hub pages whose links are searched. */
+    seeds?: string[];
+}
+
 export interface Game {
     /** Stable id; equals the V1 `game` field and the JSON filename segment. */
     id: string;
@@ -64,6 +89,7 @@ export interface Game {
     slug: string;
     sources: Source[];
     topics: Topic[];
+    discovery?: DiscoveryConfig;
 }
 
 export interface Event {
@@ -159,6 +185,32 @@ export interface SourceState {
     consecutiveFailures: number;
 }
 
+/** How a discovered page was found. */
+export type DiscoveryVia = "config" | "learned" | "sitemap" | "seed" | "secondary-link" | "web";
+
+/**
+ * An official page that discovery found and that produced accepted knowledge.
+ * Learned sources are consulted before searching on later runs. Only official
+ * pages are ever stored here; secondary pages can lead to one but are never
+ * learned as evidence.
+ */
+export interface DiscoveredSource {
+    /** `<topic>:<sha256(url) prefix>`. */
+    id: string;
+    url: string;
+    topic: string;
+    tier: "official";
+    via: DiscoveryVia;
+    /** Query that found it, when search did. */
+    query?: string;
+    title?: string;
+    discoveredAt: string;
+    lastSuccessAt: string;
+    lastFailureAt?: string;
+    successes: number;
+    failures: number;
+}
+
 export const KNOWLEDGE_SCHEMA_VERSION = 1;
 
 /** Everything stored for one game: `knowledge/games/<game>.json`. */
@@ -173,6 +225,8 @@ export interface GameKnowledge {
     claims: Claim[];
     /** Per-source fetch state. Files written before this field existed load as []. */
     sources: SourceState[];
+    /** Official pages learned by discovery. Files written before this field existed load as []. */
+    discovered: DiscoveredSource[];
 }
 
 export function emptyKnowledge(gameId: string, now: Date = new Date()): GameKnowledge {
@@ -185,6 +239,7 @@ export function emptyKnowledge(gameId: string, now: Date = new Date()): GameKnow
         overrides: [],
         documents: [],
         claims: [],
-        sources: []
+        sources: [],
+        discovered: []
     };
 }
