@@ -14,6 +14,33 @@ const PAGE = fs.readFileSync(path.join(__dirname, "..", "..", "..", "public", "l
 
 const PLACEHOLDERS = ["--:--:--", "Checking official sources...", `id="source">...`, `class="confidence">...`];
 
+/** A homepage in the authored shape: cards that say "Loading..." until the build fills them in. */
+const HOME = `<html><body><div class="grid" id="game-grid">
+      <a href="/lol/next-patch/" class="card" id="card-lol" data-game="lol" data-type="next-patch" data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h3 class="card-title">League of Legends</h3>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-topic">Next patch</div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
+        </div>
+      </a>
+
+      <a href="/gta/weekly-reset/" class="card" id="card-gta" data-game="gta" data-type="weekly-reset" data-state="loading" data-next-utc="">
+        <div class="card-header">
+          <h3 class="card-title">GTA Online</h3>
+          <span class="badge badge-unavailable">--</span>
+        </div>
+        <div class="card-topic">Weekly reset</div>
+        <div class="card-countdown">Loading...</div>
+        <div class="card-meta">
+          <span class="last-checked">--</span>
+        </div>
+      </a>
+</div></body></html>`;
+
 const FRESH_DAY: TrackerData = {
     provider_id: "lol", game: "lol", type: "next-patch", title: "League of Legends Next Patch",
     status: "fresh", nextEventUtc: "2026-09-23T00:00:00.000Z",
@@ -171,7 +198,8 @@ test("renderSite writes only HTML, leaves the data files byte-identical, and cov
     fs.mkdirSync(path.join(dist, "data"), { recursive: true });
     fs.writeFileSync(path.join(dist, "lol", "next-patch", "index.html"), PAGE);
     fs.writeFileSync(path.join(dist, "gta", "weekly-reset", "index.html"), PAGE.replace(`data-game="lol" data-type="next-patch"`, `data-game="gta" data-type="weekly-reset"`));
-    fs.writeFileSync(path.join(dist, "index.html"), "<html><body>home, no tracker</body></html>");
+    // The homepage has no tracker of its own; it shows every tracker's card.
+    fs.writeFileSync(path.join(dist, "index.html"), HOME);
     const dataFile = path.join(dist, "data", "lol.next-patch.json");
     const dataJson = JSON.stringify(FRESH_DAY, null, 2);
     fs.writeFileSync(dataFile, dataJson);
@@ -179,7 +207,8 @@ test("renderSite writes only HTML, leaves the data files byte-identical, and cov
     const summary = renderSite(dist, NOW);
 
     assert.equal(summary.rendered.length, 2, "both tracker pages rendered");
-    assert.equal(summary.skipped, 1, "the homepage has no tracker container");
+    assert.equal(summary.skipped, 0, "the homepage is rendered too, not skipped");
+    assert.deepEqual(summary.home, { upcoming: 1, recent: 0, unknown: 1 }, "and its cards are grouped by what the data says");
     assert.deepEqual(summary.missingData, ["gta/weekly-reset/index.html"], "the page with no data is reported");
     assert.equal(fs.readFileSync(dataFile, "utf8"), dataJson, "the published JSON contract is untouched");
 
@@ -189,6 +218,9 @@ test("renderSite writes only HTML, leaves the data files byte-identical, and cov
     const gta = fs.readFileSync(path.join(dist, "gta", "weekly-reset", "index.html"), "utf8");
     assert.ok(gta.includes("Data unavailable"), "a page without data says so rather than showing --:--:--");
     assertNoPlaceholders(gta);
+    const home = fs.readFileSync(path.join(dist, "index.html"), "utf8");
+    assert.ok(home.includes("September 23, 2026"), "the homepage carries the value, not a placeholder");
+    assert.ok(!home.includes("Loading..."), "and nothing is left loading");
 
     fs.rmSync(dist, { recursive: true, force: true });
 });

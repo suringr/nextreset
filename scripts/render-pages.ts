@@ -20,6 +20,7 @@ import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
 import { blocksFor as dataBlocksFor, loadKnowledge, renderBlocks } from "./render-data-blocks";
+import { CardGroup, renderHomeHtml } from "./render-home";
 
 /** The published tracker shape (see scripts/types.ts). Read defensively: this is file input. */
 export interface TrackerData {
@@ -345,6 +346,8 @@ export interface RenderSummary {
     missingData: string[];
     /** Pages with no tracker container (home, about, privacy). */
     skipped: number;
+    /** How the homepage's cards were grouped, when the homepage was rendered. */
+    home?: Record<CardGroup, number>;
 }
 
 function readData(dataDir: string, game: string, type: string): TrackerData | undefined {
@@ -368,7 +371,16 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
         const page = path.relative(distDir, file).replace(/\\/g, "/");
         const tracker = trackerOf(html, page);
         if (!tracker) {
-            summary.skipped++;
+            // The homepage has no tracker of its own: it shows all of them. Drift there is not survivable
+            // — publishing twelve cards that say "Loading..." is what this milestone exists to end — so a
+            // page that cannot be read throws rather than being skipped quietly.
+            if (page === "index.html") {
+                const home = renderHomeHtml(html, (game, type) => readData(dataDir, game, type), now);
+                fs.writeFileSync(file, home.html, "utf8");
+                summary.home = home.counts;
+            } else {
+                summary.skipped++;
+            }
             continue;
         }
         const data = readData(dataDir, tracker.game, tracker.type);
@@ -407,5 +419,6 @@ if (require.main === module) {
     const summary = renderSite(dist);
     for (const r of summary.rendered) console.log(`  ✓ ${r.page} — ${r.status}: ${r.value}${r.blocks ? ` (+${r.blocks} data block(s))` : ""}`);
     for (const p of summary.missingData) console.warn(`  ⚠ ${p}: no data file; published as unavailable`);
+    if (summary.home) console.log(`  ✓ index.html — ${summary.home.upcoming} upcoming, ${summary.home.recent} recently updated, ${summary.home.unknown} unanswered`);
     console.log(`✅ Rendered ${summary.rendered.length} tracker page(s); ${summary.skipped} page(s) have no tracker.`);
 }

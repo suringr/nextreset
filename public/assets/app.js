@@ -367,16 +367,12 @@ function renderCard(card, data) {
         badgeText = 'NO DATE';
         badgeClass = 'badge badge-unavailable';
     } else if (data && !isDataUnavailable(data)) {
-        const diff = getTimeDifference(data.nextEventUtc);
-        if (diff > 0) {
-            state = data.status === 'stale' ? 'stale' : 'live';
-            badgeText = state === 'stale' ? 'STALE' : 'LIVE';
-            badgeClass = state === 'stale' ? 'badge badge-stale' : 'badge badge-live';
-        } else {
-            state = 'live';
-            badgeText = 'LIVE';
-            badgeClass = 'badge badge-live';
-        }
+        // Staleness describes the value, not whether its date has passed: a last-verified value whose
+        // source cannot be reached is stale whichever side of the date we are on. Badging a past event
+        // LIVE would also contradict the badge the build rendered into this same card.
+        state = data.status === 'stale' ? 'stale' : 'live';
+        badgeText = state === 'stale' ? 'STALE' : 'LIVE';
+        badgeClass = state === 'stale' ? 'badge badge-stale' : 'badge badge-live';
     }
 
     // Update card state
@@ -394,12 +390,15 @@ function renderCard(card, data) {
         badgeEl.textContent = badgeText;
     }
 
-    // Update countdown
+    // Update countdown. The build renders a full date here; a sentence and a date need the smaller
+    // size, a countdown does not, so the class moves with the value instead of being left behind.
     if (countdownEl) {
+        let compact = false;
         if (data && !isDataUnavailable(data)) {
             const display = eventDisplay(data, Date.now());
             if (display.mode === 'unanswered') {
                 countdownEl.textContent = 'No official date announced';
+                compact = true;
             } else if (display.mode === 'date') {
                 countdownEl.textContent = formatCardDate(data.nextEventUtc);
             } else if (display.mode === 'updating') {
@@ -410,6 +409,7 @@ function renderCard(card, data) {
         } else {
             countdownEl.textContent = 'Data unavailable';
         }
+        countdownEl.className = compact ? 'card-countdown is-text' : 'card-countdown';
     }
 
     // Update last checked
@@ -469,6 +469,7 @@ function updateHomepageCountdowns() {
                 }
             }
             countdownEl.textContent = 'No official date announced';
+            countdownEl.className = 'card-countdown is-text';
             return;
         }
 
