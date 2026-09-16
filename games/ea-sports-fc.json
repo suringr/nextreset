@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "ea-sports-fc",
-  "updatedAt": "2026-09-16T10:29:32.969Z",
+  "updatedAt": "2026-09-16T15:46:34.752Z",
   "events": [
     {
       "key": "ea-sports-fc/last-title-update/fc26-1.0.2",
@@ -14,7 +14,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -28,7 +28,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -42,7 +42,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -56,7 +56,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -70,7 +70,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -84,7 +84,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -98,7 +98,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -112,7 +112,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -126,7 +126,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -140,7 +140,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -154,7 +154,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -168,7 +168,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -182,7 +182,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -196,7 +196,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -210,7 +210,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -224,7 +224,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -238,7 +238,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -252,7 +252,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-15T23:23:52.031Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     },
     {
@@ -266,7 +266,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-16T10:29:32.969Z",
+      "lastVerified": "2026-09-16T15:46:34.752Z",
       "publishState": "published"
     }
   ],
@@ -670,9 +670,9 @@
     {
       "id": "eafc-steam-fc26",
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=3405690&count=100&maxlength=240&feeds=steam_community_announcements",
-      "textHash": "bcbc5ae48ad4e8f7c810b79c27380d4098a51dd43d4c9b426b46284c017416a8",
-      "lastFetchedAt": "2026-09-16T10:29:32.969Z",
-      "lastUsableAt": "2026-09-16T10:29:32.969Z",
+      "textHash": "5953554b79b5ea100dd6da31697c4db56f40d9bb7b3023ca6f7210e06b67ac11",
+      "lastFetchedAt": "2026-09-16T15:46:34.752Z",
+      "lastUsableAt": "2026-09-16T15:46:34.752Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -680,9 +680,9 @@
     {
       "id": "eafc-steam-fc27",
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=4080220&count=100&maxlength=240&feeds=steam_community_announcements",
-      "textHash": "77be5642592c071dab66112f4d4385aefc8c38ab7daccfbe8b630ecbb74355f1",
-      "lastFetchedAt": "2026-09-16T10:29:32.969Z",
-      "lastUsableAt": "2026-09-16T10:29:32.969Z",
+      "textHash": "49dc981e3d70c15bef19d78a707db23af82df351f884f00ca95eb730907462a2",
+      "lastFetchedAt": "2026-09-16T15:46:34.752Z",
+      "lastUsableAt": "2026-09-16T15:46:34.752Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
