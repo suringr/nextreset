@@ -100,7 +100,7 @@ test("the configured page answers: fetch, render, classify, extract, ground, per
     assert.equal(fresh.confidence, "high");
     assert.equal(fresh.http_status, 200);
     assert.equal(fresh.fetch_mode, "browser");
-    assert.deepEqual(Object.keys(fresh), V1_ROBLOX_FRESH_KEYS, "same key order as the V1 League of Legends provider");
+    assert.deepEqual(Object.keys(fresh), [...V1_ROBLOX_FRESH_KEYS, "precision"], "same key order as the V1 League of Legends provider");
 
     const k = store.load("lol");
     assert.deepEqual(k.events.map(e => [e.key, e.status, e.at, e.precision]), [
@@ -236,7 +236,8 @@ test("without an AI provider the run fails cleanly and stored knowledge is serve
     const changed = { html: fixture("minecraft-article.html"), finalUrl: FINAL };
     const run = await runTracker(game, topic, lolAdapter(lolTransport({}, { [LOL_PATCH_SCHEDULE_URL]: changed, [FINAL]: changed }), undefined), store, new Date("2026-09-16T06:00:00Z"));
     assert.equal(run.result.status, "stale");
-    assert.match((run.result as any).reason, /AI provider not configured/);
+    assert.equal((run.result as any).reason_code, "awaiting-verification", "visitors are not told about API keys");
+    assert.match(run.failureDetail ?? "", /AI provider not configured/);
     assert.equal((run.result as any).nextEventUtc, "2026-09-23T00:00:00.000Z");
     assert.equal((run.report as any).attempts[0].outcome, "no-ai");
 
@@ -257,7 +258,8 @@ test("a non-official page is never evidence; it may only lead to the official pa
     const dead = tempStore();
     const none = await runTracker(game, topic, lolAdapter(lolTransport({ [reddit]: { body: body("") } }), lolAi(), () => web([redditHit, evil])), dead.store, NOW);
     assert.equal(none.result.status, "unavailable");
-    assert.ok((none.result as any).explanation.includes("no official page found by discovery (2 candidate(s), web searched)"), (none.result as any).explanation);
+    assert.equal((none.result as any).explanation, "No new information has been published");
+    assert.ok((none.failureDetail ?? "").includes("no official page found by discovery (2 candidate(s), web searched)"), none.failureDetail);
     const k0 = dead.store.load("lol");
     assert.deepEqual([k0.events, k0.documents, k0.claims, k0.discovered], [[], [], [], []]);
     const r0 = none.report as any;
@@ -332,7 +334,8 @@ test("a page listing only past patches does not answer, and an unchanged page ne
     const nothing = { official: [new MockSearchProvider("sitemap", "official", {})] };
     const afterSchedule = await runTracker(game, topic, lolAdapter(lolTransport(), lolAi(), () => nothing), store, new Date("2026-10-08T06:00:00Z"));
     assert.equal(afterSchedule.result.status, "stale");
-    assert.match((afterSchedule.result as any).reason, /no upcoming event/);
+    assert.equal((afterSchedule.result as any).reason_code, "no-new-information");
+    assert.match(afterSchedule.failureDetail ?? "", /no upcoming event/);
 });
 
 test("the production registry wires League of Legends to the evidence-based adapter", () => {

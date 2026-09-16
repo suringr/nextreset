@@ -214,7 +214,8 @@ test("an exhausted daily budget defers the work: no call, last known-good kept, 
     assert.equal(ai.requests.length, 0, "no model call");
     assert.equal(ledger.calls(TODAY).length, 3, "nothing new recorded");
     assert.equal(run.result.status, "stale");
-    assert.equal((run.result as any).reason, "deferred_due_to_budget: an updated official page is waiting to be verified", "visitors see no budget figures");
+    assert.equal((run.result as any).reason, "An updated official page is waiting to be verified", "visitors see no budget figures");
+    assert.equal((run.result as any).reason_code, "budget-deferred");
     assert.match(run.deferred?.detail ?? "", /^AI budget exhausted \(daily-cost\)/);
     assert.equal((run.result as any).nextEventUtc, "2026-09-23T00:00:00.000Z", "last known-good stays published");
     assert.equal((run.result as any).notes, "Patch 26.19");
@@ -254,7 +255,7 @@ test("an exhausted per-topic limit defers the same way, while other topics keep 
     const run = await runTracker(GAME, TOPIC, lolAdapter(lolTransport(CHANGED)), store, new Date("2026-09-15T12:00:00Z"), { ai: gate });
     assert.equal(ai.requests.length, 0);
     assert.equal(run.result.status, "stale");
-    assert.match((run.result as any).reason, /^deferred_due_to_budget: /);
+    assert.equal((run.result as any).reason_code, "budget-deferred");
     assert.match(run.deferred?.detail ?? "", /^AI budget exhausted \(topic-calls\): lol\/next-patch used 5 of 5 calls today/);
     assert.equal((run.result as any).nextEventUtc, "2026-09-23T00:00:00.000Z");
     assert.equal(scheduleState(store).textHash, hashBefore);
@@ -277,7 +278,7 @@ test("a budget refusal in the middle of a document (its repair) defers the whole
     const run = await runTracker(GAME, TOPIC, lolAdapter(lolTransport(CHANGED)), store, new Date("2026-09-15T12:00:00Z"), { ai: gateFor(ai, { ledger, limits }) });
     assert.deepEqual(ai.requests.map(r => r.label), ["classify", "extract"], "the repair was never sent");
     assert.equal(run.result.status, "stale");
-    assert.match((run.result as any).reason, /^deferred_due_to_budget: /);
+    assert.equal((run.result as any).reason_code, "budget-deferred");
     assert.match(run.deferred?.detail ?? "", /topic-calls/);
     assert.deepEqual(run.work, { unchanged: 0, deterministic: 0, sentToAi: 1, deferred: 1 });
     const k = store.load("lol");
@@ -348,7 +349,8 @@ test("discovery runs at most once a day per topic, sooner only when an event has
     const sameDay = await runTracker(GAME, TOPIC, lolAdapter(lolTransport(), { official: [search] }), store, new Date("2026-10-08T12:00:00Z"), { ai: gateFor(scheduleAi()) });
     assert.equal(search.queries.length, searched, "no second search the same day");
     assert.equal(sameDay.result.status, "stale");
-    assert.match((sameDay.result as any).reason, /discovery is not due/);
+    assert.equal((sameDay.result as any).reason_code, "no-new-information");
+    assert.match(sameDay.failureDetail ?? "", /discovery is not due/, "the detail stays internal");
     await runTracker(GAME, TOPIC, lolAdapter(lolTransport(), { official: [search] }), store, new Date("2026-10-09T06:00:00Z"), { ai: gateFor(scheduleAi()) });
     assert.ok(search.queries.length > searched, "the next day searches again");
 });

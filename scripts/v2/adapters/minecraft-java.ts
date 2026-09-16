@@ -26,6 +26,7 @@
  */
 import * as crypto from "crypto";
 import { Confidence } from "../../types";
+import { failureKindFromFetch } from "../reasons";
 import { Adapter } from "../adapter";
 import { Claim, Document, SourceState } from "../domain";
 import { FetchedDocument, smartFetch } from "../fetch/smart-fetch";
@@ -97,7 +98,7 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
         const fetched = await smartFetch(source.url, { expect: { kind: "json" }, allowRender: false, previous, transport, label: `${game.id}-${topic.type}`, now });
         const sourceStates: SourceState[] = [{ id: source.id, url: source.url, ...fetched.state }];
         if (fetched.outcome === "unusable") {
-            return { events: [], failure: fetched.error ?? fetched.verdict?.reason ?? "fetch failed", sourceStates };
+            return { events: [], failure: fetched.error ?? fetched.verdict?.reason ?? "fetch failed", failureKind: failureKindFromFetch(fetched), sourceStates };
         }
         const fetch = { httpStatus: fetched.document?.status ?? 304, mode: fetched.document?.mode ?? "http" as const };
         if (fetched.outcome === "unchanged") {
@@ -119,7 +120,7 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
                 lastVerdict: "parse-error",
                 consecutiveFailures: (previous?.consecutiveFailures ?? 0) + 1
             };
-            return { events: [], failure: error instanceof Error ? error.message : String(error), sourceStates };
+            return { events: [], failure: error instanceof Error ? error.message : String(error), failureKind: "extraction-failed", sourceStates };
         }
 
         // Evidence only when this release instant is new: a manifest that changed for snapshots adds no copies.

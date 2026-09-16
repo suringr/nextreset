@@ -72,7 +72,7 @@ test("the first run publishes the latest update with its exact time and a link t
     assert.equal(transport.gets[0].url, CS2_NEWS_URL);
     assert.equal(first.result.status, "fresh");
     const fresh = first.result as Extract<typeof first.result, { status: "fresh" }>;
-    assert.deepEqual(Object.keys(fresh), V1_ROBLOX_FRESH_KEYS);
+    assert.deepEqual(Object.keys(fresh), [...V1_ROBLOX_FRESH_KEYS, "precision"]);
     assert.deepEqual([fresh.provider_id, fresh.game, fresh.type, fresh.title], ["cs2", "cs2", "last-update", "Counter-Strike 2 Last Update"], "same data file and page as V1");
     assert.equal(fresh.nextEventUtc, LATEST.at, "the exact post time, not midnight of the day");
     assert.equal(fresh.notes, "Counter-Strike 2 Update");
@@ -136,7 +136,8 @@ test("no update post, a wrong shape or a challenge page keeps the last update pu
     for (const at of ["2026-09-16T06:00:00Z", "2026-09-16T12:00:00Z"]) {
         const run = await runTracker(game, topic, createCs2UpdatesAdapter(fakeTransport({ http: [{ body: armoryOnly }] })), store, new Date(at));
         assert.equal(run.result.status, "stale", `still stale at ${at}: the same suspicious content is not accepted as unchanged`);
-        assert.match((run.result as any).reason, /no "Counter-Strike 2 Update" post/);
+        assert.equal((run.result as any).reason_code, "no-new-information");
+        assert.match(run.failureDetail ?? "", /no "Counter-Strike 2 Update" post/);
         assert.equal((run.result as any).nextEventUtc, LATEST.at);
     }
     let state = store.load("cs2").sources[0];
@@ -144,7 +145,8 @@ test("no update post, a wrong shape or a challenge page keeps the last update pu
 
     const wrongShape = await runTracker(game, topic, createCs2UpdatesAdapter(fakeTransport({ http: [{ body: "{\"response\":{}}" }] })), store, new Date("2026-09-16T18:00:00Z"));
     assert.equal(wrongShape.result.status, "stale");
-    assert.match((wrongShape.result as any).reason, /No appnews.newsitems/);
+    assert.equal((wrongShape.result as any).reason_code, "extraction-failed");
+    assert.match(wrongShape.failureDetail ?? "", /No appnews.newsitems/);
     state = store.load("cs2").sources[0];
     assert.deepEqual([state.lastVerdict, state.textHash], ["parse-error", goodHash]);
 

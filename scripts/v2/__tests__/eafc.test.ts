@@ -84,7 +84,7 @@ test("today the last FC 26 title update is published; an unchanged run changes n
     const first = await runTracker(game, topic, createEafcTitleUpdateAdapter(transportFor()), store, NOW, { ai: gate });
     assert.equal(first.result.status, "fresh");
     const fresh = first.result as Extract<typeof first.result, { status: "fresh" }>;
-    assert.deepEqual(Object.keys(fresh), V1_ROBLOX_FRESH_KEYS);
+    assert.deepEqual(Object.keys(fresh), [...V1_ROBLOX_FRESH_KEYS, "precision"]);
     assert.deepEqual([fresh.provider_id, fresh.game, fresh.type, fresh.title], ["ea-sports-fc", "ea-sports-fc", "last-title-update", "EA SPORTS FC Last Title Update"], "same data file and page as V1");
     assert.deepEqual([fresh.nextEventUtc, fresh.notes, fresh.source_url, fresh.confidence], ["2026-07-22T14:00:01.000Z", "EA SPORTS FC 26 version 1.6.5", latestFc26().url, "high"]);
     assert.deepEqual(first.work, { unchanged: 0, deterministic: 2, sentToAi: 0, deferred: 0 });
@@ -126,7 +126,8 @@ test("a feed that has produced title updates and stops matching keeps the topic 
     const renamed = FC26.split("FC 26").join("FC 2026");
     const broken = await runTracker(game, topic, createEafcTitleUpdateAdapter(transportFor({ fc26: renamed, fc27: withFc27 })), store, new Date("2026-09-27T06:00:00Z"));
     assert.equal(broken.result.status, "stale", "the other feed's older posts must not stand in for the renamed feed");
-    assert.match((broken.result as any).reason, /^eafc-steam-fc26: /);
+    assert.equal((broken.result as any).reason_code, "no-new-information");
+    assert.match(broken.failureDetail ?? "", /^eafc-steam-fc26: /);
     assert.equal((broken.result as any).nextEventUtc, new Date(1790409600 * 1000).toISOString(), "FC 27's title update stays published");
 });
 
@@ -145,7 +146,8 @@ test("a blocked feed keeps the last title update published as stale", async () =
     await runTracker(game, topic, createEafcTitleUpdateAdapter(transportFor()), store, NOW);
     const blocked = await runTracker(game, topic, createEafcTitleUpdateAdapter(transportFor({ fc27: "<html><body>Just a moment...</body></html>", fc27Headers: { "content-type": "text/html" } })), store, new Date("2026-09-16T06:00:00Z"));
     assert.equal(blocked.result.status, "stale");
-    assert.match((blocked.result as any).reason, /^eafc-steam-fc27: /);
+    assert.equal((blocked.result as any).reason_code, "source-blocked", "a challenge page is a refusal, not a broken page");
+    assert.match(blocked.failureDetail ?? "", /^eafc-steam-fc27: /);
     assert.equal((blocked.result as any).nextEventUtc, "2026-07-22T14:00:01.000Z");
 });
 

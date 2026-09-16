@@ -24,7 +24,8 @@
  */
 import * as crypto from "crypto";
 import { Confidence } from "../../types";
-import { Adapter, EventInput } from "../adapter";
+import { failureKindFromFetch } from "../reasons";
+import { Adapter, AdapterOutcome, EventInput } from "../adapter";
 import { Claim, Document, SourceState } from "../domain";
 import { FetchedDocument, smartFetch } from "../fetch/smart-fetch";
 import { Transport } from "../fetch/transport";
@@ -153,7 +154,7 @@ export function createGenshinWishAdapter(transport?: Transport): Adapter {
                 for (let i = 0; i < sourceStates.length - 1; i++) {
                     sourceStates[i] = { ...sourceStates[i], textHash: getSourceState(sourceStates[i].id)?.textHash };
                 }
-                return { events: [], failure: `${region}: ${fetched.error ?? fetched.verdict?.reason ?? "fetch failed"}`, sourceStates };
+                return { events: [], failure: `${region}: ${fetched.error ?? fetched.verdict?.reason ?? "fetch failed"}`, failureKind: failureKindFromFetch(fetched), sourceStates };
             }
             if (fetched.outcome === "unchanged") unchanged++;
             httpStatus = fetched.document.status;
@@ -165,12 +166,12 @@ export function createGenshinWishAdapter(transport?: Transport): Adapter {
         }
 
         // Keep every region's last good hash when any region cannot be trusted, so all are examined again next run.
-        const reject = (reason: string) => {
+        const reject = (reason: string): AdapterOutcome => {
             for (let i = 0; i < sourceStates.length; i++) {
                 const stored = getSourceState(sourceStates[i].id);
                 sourceStates[i] = { ...sourceStates[i], textHash: stored?.textHash, lastUsableAt: stored?.lastUsableAt, lastVerdict: "parse-error", consecutiveFailures: (stored?.consecutiveFailures ?? 0) + 1 };
             }
-            return { events: [], failure: reason, sourceStates };
+            return { events: [], failure: reason, failureKind: "extraction-failed", sourceStates };
         };
         const regional = new Map<GenshinRegion, RegionalWishes>();
         try {

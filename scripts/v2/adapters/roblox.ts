@@ -17,6 +17,7 @@
  * knowledge file accumulates a history of overall-status changes.
  */
 import { Adapter } from "../adapter";
+import { failureKindFromFetch } from "../reasons";
 import { SourceState } from "../domain";
 import { smartFetch } from "../fetch/smart-fetch";
 import { Transport } from "../fetch/transport";
@@ -79,7 +80,7 @@ export function createRobloxStatusAdapter(transport?: Transport): Adapter {
 
         if (fetched.outcome === "unusable") {
             const reason = fetched.error ?? fetched.verdict?.reason ?? "fetch failed";
-            return { events: [], failure: reason, sourceStates };
+            return { events: [], failure: reason, failureKind: failureKindFromFetch(fetched), sourceStates };
         }
 
         const fetch = { httpStatus: fetched.document?.status ?? 304, mode: fetched.document?.mode ?? "http" as const };
@@ -105,7 +106,7 @@ export function createRobloxStatusAdapter(transport?: Transport): Adapter {
                 lastVerdict: "parse-error",
                 consecutiveFailures: (previous?.consecutiveFailures ?? 0) + 1
             };
-            return { events: [], failure: reason, sourceStates };
+            return { events: [], failure: reason, failureKind: "extraction-failed", sourceStates };
         }
         return {
             events: [{

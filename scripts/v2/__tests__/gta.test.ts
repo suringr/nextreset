@@ -66,7 +66,7 @@ test("compatibility JSON matches the V1 contract", async () => {
     const now = new Date("2026-09-14T12:00:00Z");
     const { result } = await runTracker(game, topic, gtaWeeklyResetAdapter, store, now);
 
-    assert.deepEqual(Object.keys(result), V1_GTA_FRESH_KEYS);
+    assert.deepEqual(Object.keys(result), [...V1_GTA_FRESH_KEYS, "precision"]);
     assert.equal(result.status, "fresh");
     assert.equal(result.provider_id, "gta");
     assert.equal(result.game, "gta");

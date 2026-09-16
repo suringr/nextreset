@@ -28,6 +28,7 @@
  */
 import * as crypto from "crypto";
 import { Confidence } from "../../types";
+import { failureKindFromFetch } from "../reasons";
 import { Adapter, AdapterContext, AdapterOutcome, EventInput } from "../adapter";
 import { Claim, Document, SourceState } from "../domain";
 import { FetchedDocument, smartFetch } from "../fetch/smart-fetch";
@@ -147,7 +148,7 @@ async function runFeeds(ctx: AdapterContext, feeds: SteamNewsFeed[], transport: 
         const state: SourceState = { id: source.id, url: source.url, ...fetched.state, ...(conditional ? {} : { etag: undefined, lastModified: undefined }) };
         sourceStates.push(state);
         if (fetched.outcome === "unusable") {
-            return { events: [], failure: `${feeds.length > 1 ? `${source.id}: ` : ""}${fetched.error ?? fetched.verdict?.reason ?? "fetch failed"}`, sourceStates };
+            return { events: [], failure: `${feeds.length > 1 ? `${source.id}: ` : ""}${fetched.error ?? fetched.verdict?.reason ?? "fetch failed"}`, failureKind: failureKindFromFetch(fetched), sourceStates };
         }
         if (fetched.outcome === "unchanged") unchangedCount++;
         if (fetched.document) {
@@ -176,7 +177,8 @@ async function runFeeds(ctx: AdapterContext, feeds: SteamNewsFeed[], transport: 
                 consecutiveFailures: (response?.previousFailures ?? 0) + 1
             };
         }
-        return { events: [], failure: reason, sourceStates };
+        // A feed with no update post was read perfectly well and simply holds nothing new; anything else could not be read.
+        return { events: [], failure: reason, failureKind: verdict === "no-update-posts" ? "no-new-information" : "extraction-failed", sourceStates };
     };
 
     const parsed: Array<{ document: FetchedDocument; posts: SteamPost[] }> = [];

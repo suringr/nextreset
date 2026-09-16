@@ -66,7 +66,7 @@ test("the first run publishes the current Warzone update at day precision with a
     assert.equal(transport.gets[0].url, WARZONE_PATCH_NOTES_URL);
     assert.equal(first.result.status, "fresh");
     const fresh = first.result as Extract<typeof first.result, { status: "fresh" }>;
-    assert.deepEqual(Object.keys(fresh), V1_ROBLOX_FRESH_KEYS);
+    assert.deepEqual(Object.keys(fresh), [...V1_ROBLOX_FRESH_KEYS, "precision"]);
     assert.deepEqual([fresh.provider_id, fresh.game, fresh.type, fresh.title], ["warzone", "warzone", "last-patch", "Call of Duty Warzone Last Patch"], "same data file and page as V1");
     assert.deepEqual([fresh.nextEventUtc, fresh.notes, fresh.source_url, fresh.confidence], [LATEST.at, LATEST.title, LATEST.url, "high"]);
 

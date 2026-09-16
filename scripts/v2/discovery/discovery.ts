@@ -24,6 +24,7 @@ import { selectCurrentEvent } from "../views";
 import { Candidate, RejectedCandidate, ScoringContext, candidateFrom, normalizeCandidates, publishableCandidates, rankCandidates, scoreCandidate } from "./candidates";
 import { DuckDuckGoSearch } from "./duckduckgo";
 import { extractLinks, officialLinks } from "./links";
+import { latestKnownVersion, obsoleteReason, rejectsOlderVersions } from "./obsolete";
 import { buildQueries } from "./queries";
 import { applyRelevance, classifyRelevance, needsAiRelevance } from "./relevance";
 import { SearchConfig, SearchProvider, SearchQuery, SearchUnavailableError, formatQuery } from "./search-provider";
@@ -202,7 +203,20 @@ export async function discoverSources(options: DiscoveryOptions): Promise<Discov
         }
     }
 
-    // 4. AI relevance only where the deterministic ranking is too close to call.
+    // 4. Candidates that cannot answer the open question are dropped deterministically, before any model
+    //    call: a page about a version older than the verified one has nothing to say about the next one.
+    if (rejectsOlderVersions(topic)) {
+        const latest = latestKnownVersion(knowledge, topic.type);
+        const kept: Candidate[] = [];
+        for (const candidate of ranked) {
+            const why = obsoleteReason({ url: candidate.url, title: candidate.title, latest });
+            if (why) rejected.push({ url: candidate.url, reason: why });
+            else kept.push(candidate);
+        }
+        ranked = kept;
+    }
+
+    // 5. AI relevance only where the deterministic ranking is too close to call.
     let ai: DiscoveryResult["ai"];
     if (options.ai && needsAiRelevance(ranked)) {
         const top = ranked.filter(c => c.tier === "official").slice(0, 8);

@@ -84,7 +84,7 @@ test("the first run publishes the latest patch with a link to its article; an un
     assert.equal(transport.gets[0].url, VALORANT_PATCH_NOTES_URL);
     assert.equal(first.result.status, "fresh");
     const fresh = first.result as Extract<typeof first.result, { status: "fresh" }>;
-    assert.deepEqual(Object.keys(fresh), V1_ROBLOX_FRESH_KEYS);
+    assert.deepEqual(Object.keys(fresh), [...V1_ROBLOX_FRESH_KEYS, "precision"]);
     assert.deepEqual([fresh.provider_id, fresh.game, fresh.type, fresh.title], ["valorant", "valorant", "last-patch", "VALORANT Last Patch"], "same data file and page as V1");
     assert.deepEqual([fresh.nextEventUtc, fresh.notes, fresh.source_url], [LATEST.at, LATEST.title, LATEST.url]);
     assert.deepEqual([fresh.confidence, fresh.fetch_mode, fresh.http_status], ["high", "http", 200]);

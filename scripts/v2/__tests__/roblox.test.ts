@@ -108,7 +108,7 @@ test("compatibility JSON matches the V1 contract", async () => {
     const now = new Date("2026-09-14T12:00:00Z");
     const { result } = await runTracker(game, topic, createRobloxStatusAdapter(feedTransport(fixture)), store, now);
 
-    assert.deepEqual(Object.keys(result), V1_ROBLOX_FRESH_KEYS);
+    assert.deepEqual(Object.keys(result), [...V1_ROBLOX_FRESH_KEYS, "precision"]);
     const fresh = result as any;
     assert.equal(fresh.provider_id, "roblox");
     assert.equal(fresh.type, "status");
@@ -136,7 +136,7 @@ test("fetch failure serves stored knowledge as stale and records the failure str
     assert.equal(stale.nextEventUtc, "2026-08-07T04:48:28.252Z");
     assert.equal(stale.fetched_at_utc, "2026-09-14T18:00:00.000Z");
     assert.equal(stale.last_success_at_utc, "2026-09-14T12:00:00.000Z");
-    assert.equal(stale.reason, "HTTP 503");
+    assert.equal(stale.reason, "The official source could not be reached"); assert.equal(stale.reason_code, "source-unreachable"); assert.match(run.failureDetail ?? "", /HTTP 503/);
     assert.equal(stale.notes, "Current status: Operational");
     assert.ok(Object.keys(stale).includes("reason"));
     assert.ok(!Object.keys(stale).includes("http_status"));
@@ -171,7 +171,8 @@ test("valid JSON with the wrong shape is recorded as a source failure and served
     const wrongShape = feedTransport({ result: { status: [] } }, { "etag": "\"bad-shape\"" });
     const run = await runTracker(game, topic, createRobloxStatusAdapter(wrongShape), store, new Date("2026-09-14T18:00:00Z"));
     assert.equal(run.result.status, "stale");
-    assert.match((run.result as any).reason, /status_overall/);
+    assert.equal((run.result as any).reason_code, "extraction-failed");
+    assert.match(run.failureDetail ?? "", /status_overall/);
     assert.equal(run.changes.length, 0);
 
     const after = store.load("roblox").sources[0];
@@ -194,19 +195,21 @@ test("a 200 that is not JSON is a failure, not data", async () => {
     const shell = fakeTransport({ http: [{ status: 200, body: "<html><body>Just a moment...</body></html>" }] });
     const run = await runTracker(game, topic, createRobloxStatusAdapter(shell), store, new Date("2026-09-14T18:00:00Z"));
     assert.equal(run.result.status, "stale");
-    assert.match((run.result as any).reason, /bot-challenge/);
+    assert.equal((run.result as any).reason_code, "source-blocked");
+    assert.match(run.failureDetail ?? "", /bot-challenge/);
 });
 
 test("fetch failure with no stored knowledge is unavailable", async () => {
     const { store } = tempStore();
     const failing = fakeTransport({ http: [{ status: 503, body: "" }] });
     const run = await runTracker(game, topic, createRobloxStatusAdapter(failing), store, new Date("2026-09-14T12:00:00Z"));
-    assert.deepEqual(Object.keys(run.result), V1_UNAVAILABLE_KEYS);
+    assert.deepEqual(Object.keys(run.result), [...V1_UNAVAILABLE_KEYS, "reason_code"]);
     const unavailable = run.result as any;
     assert.equal(unavailable.status, "unavailable");
     assert.equal(unavailable.nextEventUtc, null);
     assert.equal(unavailable.failure_type, "unavailable");
-    assert.match(unavailable.explanation, /empty body \(HTTP 503\)/);
+    assert.equal(unavailable.explanation, "The official source could not be reached");
+    assert.equal((unavailable as any).reason_code, "source-unreachable");
     // The failure streak is still recorded.
     assert.equal(store.load("roblox").sources[0].consecutiveFailures, 1);
 });
@@ -219,7 +222,8 @@ test("a corrupt knowledge file makes the tracker unavailable and is left untouch
 
     const run = await runTracker(game, topic, createRobloxStatusAdapter(feedTransport(fixture)), store, new Date("2026-09-14T12:00:00Z"));
     assert.equal(run.result.status, "unavailable");
-    assert.match((run.result as any).explanation, /Knowledge store error: .*not valid JSON/);
+    assert.equal((run.result as any).explanation, "The stored data for this tracker could not be read");
+    assert.match(run.failureDetail ?? "", /Knowledge store error: .*not valid JSON/);
     assert.equal(run.knowledge, null);
     assert.equal(fs.readFileSync(file, "utf8"), "{ broken");
 });

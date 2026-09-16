@@ -6,13 +6,15 @@
  * Key order mirrors what the V1 providers emitted, so the published files stay
  * byte-for-byte comparable apart from values.
  */
-import { Confidence, FailureType, FreshResult, ProviderResult, StaleResult, UnavailableResult } from "../types";
+import { Confidence, FailureReasonCode, FailureType, FreshResult, ProviderResult, StaleResult, UnavailableResult } from "../types";
 import { Event, GameKnowledge, Topic } from "./domain";
 import { eventsForTopic, upcomingUntil } from "./knowledge";
+import { publicReason } from "./reasons";
 
 export type RunOutcome =
     | { ok: true; httpStatus?: number; fetchMode?: "http" | "browser" }
-    | { ok: false; reason: string };
+    /** `reason` is the internal detail (logs and reports); `kind` is what visitors are told. */
+    | { ok: false; reason: string; kind?: FailureReasonCode };
 
 export interface ViewContext {
     now: Date;
@@ -74,7 +76,7 @@ function renderNotes(template: string | undefined, label: string): string | unde
     return template.replace(/\{label\}/g, label);
 }
 
-export function unavailableResult(topic: Topic, now: Date, explanation: string): UnavailableResult {
+export function unavailableResult(topic: Topic, now: Date, explanation: string, code?: FailureReasonCode): UnavailableResult {
     return {
         provider_id: topic.game,
         game: topic.game,
@@ -84,7 +86,8 @@ export function unavailableResult(topic: Topic, now: Date, explanation: string):
         nextEventUtc: null,
         failure_type: FailureType.Unavailable,
         explanation,
-        fetched_at_utc: now.toISOString()
+        fetched_at_utc: now.toISOString(),
+        ...(code !== undefined ? { reason_code: code } : {})
     };
 }
 
@@ -93,8 +96,9 @@ export function deriveProviderResult(topic: Topic, knowledge: GameKnowledge, ctx
     const nowIso = ctx.now.toISOString();
 
     if (!event) {
-        const explanation = ctx.outcome.ok ? "No event known for this topic yet" : ctx.outcome.reason;
-        return unavailableResult(topic, ctx.now, explanation);
+        // Nothing to publish yet. A failed run explains itself in the public vocabulary, not with its own message.
+        if (ctx.outcome.ok) return unavailableResult(topic, ctx.now, "No event known for this topic yet");
+        return unavailableResult(topic, ctx.now, publicReason(ctx.outcome.kind), ctx.outcome.kind);
     }
 
     const notes = renderNotes(topic.view.notes, event.label);
@@ -116,7 +120,9 @@ export function deriveProviderResult(topic: Topic, knowledge: GameKnowledge, ctx
             confidence,
             ...(ctx.outcome.httpStatus !== undefined ? { http_status: ctx.outcome.httpStatus } : {}),
             ...(ctx.outcome.fetchMode !== undefined ? { fetch_mode: ctx.outcome.fetchMode } : {}),
-            ...(notes !== undefined ? { notes } : {})
+            ...(notes !== undefined ? { notes } : {}),
+            // Appended after every V1 key, so existing consumers keep the shape they know.
+            precision: event.precision
         };
         return fresh;
     }
@@ -133,7 +139,10 @@ export function deriveProviderResult(topic: Topic, knowledge: GameKnowledge, ctx
         source_url: sourceUrl,
         confidence,
         ...(notes !== undefined ? { notes } : {}),
-        reason: ctx.outcome.reason
+        // Visitors are told what happened, never how it failed: the detail stays in the logs and the report.
+        reason: publicReason(ctx.outcome.kind),
+        ...(ctx.outcome.kind !== undefined ? { reason_code: ctx.outcome.kind } : {}),
+        precision: event.precision
     };
     return stale;
 }

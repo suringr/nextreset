@@ -67,7 +67,7 @@ test("the first run publishes the release at its exact time on the existing page
     assert.equal(transport.gets[0].url, MINECRAFT_MANIFEST_URL);
     assert.equal(first.result.status, "fresh");
     const fresh = first.result as Extract<typeof first.result, { status: "fresh" }>;
-    assert.deepEqual(Object.keys(fresh), V1_ROBLOX_FRESH_KEYS);
+    assert.deepEqual(Object.keys(fresh), [...V1_ROBLOX_FRESH_KEYS, "precision"]);
     assert.deepEqual([fresh.provider_id, fresh.game, fresh.type, fresh.title], ["minecraft", "minecraft", "last-release", "Minecraft Last Release"], "same data file and page as V1");
     assert.equal(fresh.nextEventUtc, "2026-09-15T11:23:02.000Z");
     assert.equal(fresh.notes, "Java Edition 26.3");
@@ -126,7 +126,8 @@ test("a manifest that cannot vouch for a release keeps the last release publishe
     for (const at of ["2026-09-16T06:00:00Z", "2026-09-16T12:00:00Z"]) {
         const run = await runTracker(game, topic, createMinecraftJavaAdapter(fakeTransport({ http: [{ body: dangling }] })), store, new Date(at));
         assert.equal(run.result.status, "stale");
-        assert.match((run.result as any).reason, /has no entry/);
+        assert.equal((run.result as any).reason_code, "extraction-failed");
+        assert.match(run.failureDetail ?? "", /has no entry/);
         assert.equal((run.result as any).nextEventUtc, "2026-09-15T11:23:02.000Z");
     }
     const state = store.load("minecraft").sources[0];

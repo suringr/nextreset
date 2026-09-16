@@ -9,6 +9,7 @@ import { Confidence } from "../types";
 import type { AiGate } from "./cost/budget";
 import { LearnInput } from "./discovery/learning";
 import { Claim, DatePrecision, Document, EventStatus, Game, GameKnowledge, SourceState, Topic } from "./domain";
+import { FailureKind } from "./reasons";
 
 export interface EventInput {
     /** Raw identity; normalized into the key by the pipeline. */
@@ -68,6 +69,11 @@ export interface AdapterOutcome {
      * but still persists `sourceStates` so failure streaks are recorded.
      */
     failure?: string;
+    /**
+     * What kind of failure it was, in the public vocabulary (reasons.ts). The published `reason` is
+     * derived from this alone; `failure` stays internal (logs, run report, step summary).
+     */
+    failureKind?: FailureKind;
     /** Updated fetch bookkeeping to persist. */
     sourceStates?: SourceState[];
     /** Evidence to persist with the events: the fetched document(s) and the claims behind each fact. */
