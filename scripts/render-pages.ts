@@ -19,6 +19,7 @@
 import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
+import { blocksFor as dataBlocksFor, loadKnowledge, renderBlocks } from "./render-data-blocks";
 
 /** The published tracker shape (see scripts/types.ts). Read defensively: this is file input. */
 export interface TrackerData {
@@ -59,6 +60,21 @@ const PUBLISHERS: ReadonlyArray<readonly [string, string]> = [
     ["epicgames.com", "Epic Games"],
     ["fortnite.com", "Epic Games"]
 ];
+
+/**
+ * Repairs values a V1 provider concatenated without spaces, such as Red Dead's
+ * "Red Dead OnlineSeptember 1, 2026Distill Your Best Swill…".
+ *
+ * Deliberately narrow: a space is inserted only before a month name that follows a letter, and after a
+ * year that runs straight into a word. Anything else is left exactly as published, so a legitimate
+ * value like "Patch 26.19" or "EA SPORTS FC 26 version 1.6.5" is untouched.
+ */
+export function tidyNotes(value: string): string {
+    const months = "January|February|March|April|May|June|July|August|September|October|November|December";
+    return value
+        .replace(new RegExp(`([a-z])(${months})\\b`, "g"), "$1 $2")
+        .replace(/(\d{4})([A-Z])/g, "$1 $2");
+}
 
 export function escapeHtml(value: string): string {
     return value
@@ -237,13 +253,14 @@ const PLACEHOLDER_VALUE = `<div class="countdown-value countdown-skeleton">--:--
 const PLACEHOLDER_SOURCE = `<span class="info-value" id="source">...</span>`;
 const PLACEHOLDER_CONFIDENCE = `<span id="confidence" class="confidence">...</span>`;
 const PLACEHOLDER_NOTES = `<div id="notes" class="notes" style="display: none;"></div>`;
+const PLACEHOLDER_DATA = `<div id="verified-data"></div>`;
 const PLACEHOLDER_UPDATED_ROW = `        <div class="info-row">
           <span class="info-label">Last Updated</span>
           <span class="info-value" id="last-updated">...</span>
         </div>`;
 
 /** Writes the verified facts into one tracker page. Pure: takes HTML and data, returns HTML. */
-export function renderTrackerHtml(html: string, data: TrackerData | undefined, page = "page", now: Date = new Date()): string {
+export function renderTrackerHtml(html: string, data: TrackerData | undefined, page = "page", now: Date = new Date(), blocksHtml = ""): string {
     const b = blocksFor(data, now);
 
     let out = replaceOnce(html, PLACEHOLDER_LABEL, `<div class="countdown-label">${escapeHtml(b.label)}</div>`, page);
@@ -283,8 +300,14 @@ export function renderTrackerHtml(html: string, data: TrackerData | undefined, p
     out = replaceOnce(out, PLACEHOLDER_UPDATED_ROW, rows.join("\n"), page);
 
     out = replaceOnce(out, PLACEHOLDER_NOTES, b.notes
-        ? `<div id="notes" class="notes">${escapeHtml(b.notes)}</div>`
+        ? `<div id="notes" class="notes">${escapeHtml(tidyNotes(b.notes))}</div>`
         : PLACEHOLDER_NOTES, page);
+
+    // The data slot stays empty unless this game's knowledge supports a block: an empty section is
+    // worse than no section.
+    out = replaceOnce(out, PLACEHOLDER_DATA, blocksHtml
+        ? `<div id="verified-data">\n${blocksHtml}\n      </div>`
+        : PLACEHOLDER_DATA, page);
 
     return out;
 }
@@ -317,7 +340,7 @@ function htmlFilesIn(dir: string): string[] {
 }
 
 export interface RenderSummary {
-    rendered: Array<{ page: string; game: string; type: string; status: string; value: string }>;
+    rendered: Array<{ page: string; game: string; type: string; status: string; value: string; blocks?: number }>;
     /** Pages with no data file: rendered as unavailable rather than left showing a placeholder. */
     missingData: string[];
     /** Pages with no tracker container (home, about, privacy). */
@@ -335,9 +358,10 @@ function readData(dataDir: string, game: string, type: string): TrackerData | un
 }
 
 /** Renders every tracker page in `distDir` in place. Throws on template drift; never touches public/. */
-export function renderSite(distDir: string, now: Date = new Date()): RenderSummary {
+export function renderSite(distDir: string, now: Date = new Date(), root: string = path.dirname(distDir)): RenderSummary {
     const summary: RenderSummary = { rendered: [], missingData: [], skipped: 0 };
     const dataDir = path.join(distDir, "data");
+    const readable = (iso: string, precision?: string) => (precision === "exact" ? formatDateTime(iso) : formatDate(iso));
 
     for (const file of htmlFilesIn(distDir)) {
         const html = fs.readFileSync(file, "utf8");
@@ -350,10 +374,16 @@ export function renderSite(distDir: string, now: Date = new Date()): RenderSumma
         const data = readData(dataDir, tracker.game, tracker.type);
         if (!data) summary.missingData.push(page);
 
-        const rendered = renderTrackerHtml(html, data, page, now);
+        // Everything else this game has verified: schedules, history, regional times. Absent knowledge
+        // (a plain clone) simply produces no blocks.
+        const knowledge = loadKnowledge(root, tracker.game);
+        const currentKey = knowledge?.events?.find(e => e.topic === tracker.type && e.at === data?.nextEventUtc)?.key;
+        const blocksHtml = renderBlocks(dataBlocksFor(knowledge, tracker.type, { format: readable, now, currentKey }));
+
+        const rendered = renderTrackerHtml(html, data, page, now, blocksHtml);
         fs.writeFileSync(file, rendered, "utf8");
         const blocks = blocksFor(data, now);
-        summary.rendered.push({ page, game: tracker.game, type: tracker.type, status: data?.status ?? "no-data", value: blocks.value });
+        summary.rendered.push({ page, game: tracker.game, type: tracker.type, status: data?.status ?? "no-data", value: blocks.value, blocks: blocksHtml ? blocksHtml.split("<h2>").length - 1 : 0 });
     }
     return summary;
 }
@@ -365,7 +395,7 @@ if (require.main === module) {
         process.exit(1);
     }
     const summary = renderSite(dist);
-    for (const r of summary.rendered) console.log(`  ✓ ${r.page} — ${r.status}: ${r.value}`);
+    for (const r of summary.rendered) console.log(`  ✓ ${r.page} — ${r.status}: ${r.value}${r.blocks ? ` (+${r.blocks} data block(s))` : ""}`);
     for (const p of summary.missingData) console.warn(`  ⚠ ${p}: no data file; published as unavailable`);
     console.log(`✅ Rendered ${summary.rendered.length} tracker page(s); ${summary.skipped} page(s) have no tracker.`);
 }
