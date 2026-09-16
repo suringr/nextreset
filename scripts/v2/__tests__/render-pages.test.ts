@@ -104,9 +104,12 @@ test("a stale value is still published, with an honest state", () => {
 });
 
 test("a raw provider message is never published, whichever engine produced it", () => {
+    // A V1 provider that is stale but backward-looking, so the unanswered rule does not apply and this
+    // isolates the one question: can a provider's own message reach a visitor? (Fortnite's passed-date
+    // behaviour is covered in honest-states.test.ts.)
     const v1: TrackerData = {
-        game: "fortnite", type: "next-season", status: "stale", nextEventUtc: "2026-06-06T00:00:00.000Z",
-        last_success_at_utc: "2026-04-05T21:30:13.065Z", source_url: "https://www.fortnite.com/", confidence: "high",
+        game: "red-dead-redemption-2", type: "last-update", status: "stale", nextEventUtc: "2026-09-01T00:00:00.000Z",
+        last_success_at_utc: "2026-04-05T21:30:13.065Z", source_url: "https://www.rockstargames.com/newswire", confidence: "high",
         reason: "Crashed: Fetch failed: undefined (Status: 403)"
     };
     const html = renderTrackerHtml(PAGE, v1);

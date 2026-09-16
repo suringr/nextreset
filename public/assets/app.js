@@ -90,11 +90,44 @@ function isDayPrecision(data) {
     return !!data && data.precision === 'day';
 }
 
+// Topics that answer "when is the next ...": the value is only an answer while it is still ahead.
+function isFutureFacing(type) {
+    return !!type && (type.indexOf('next-') === 0 || type.indexOf('reset') !== -1);
+}
+
+// A future-facing date that has passed and was not re-verified is no longer an answer. A date that
+// has only just passed while the data is fresh is a normal moment in the cycle.
+function isUnanswered(data, nowMs) {
+    if (!data || !data.nextEventUtc || !isFutureFacing(data.type)) return false;
+    const at = new Date(data.nextEventUtc).getTime();
+    if (isNaN(at) || at >= nowMs) return false;
+    return data.status === 'stale' || (nowMs - at) > 86400000;
+}
+
+// Only a sentence produced for visitors may be shown. A provider's own message (which has no
+// reason_code) is never rendered: it can be a crash string, a URL or an environment variable name.
+function publicStateNote(data) {
+    if (!data) return '';
+    if (data.status === 'stale') {
+        return data.reason_code && data.reason ? data.reason : 'Showing the last verified value; the official source could not be checked';
+    }
+    if (data.status === 'unavailable') {
+        var vetted = data.reason_code ? (data.explanation || data.reason) : '';
+        return vetted || 'No verified value is available right now';
+    }
+    return '';
+}
+
+var NO_DATE_NOTE = 'We have not found a verified official date. NextReset will show it as soon as it can be verified from an official source.';
+
 /**
  * What the tracker should show: a date when the source states only a date, a countdown (or time
  * since) when the instant is exact, and "Updating..." while an upcoming exact event is re-checked.
  */
 function eventDisplay(data, nowMs) {
+    if (isUnanswered(data, nowMs)) {
+        return { mode: 'unanswered', label: 'Status', value: 'No official date announced' };
+    }
     const diff = new Date(data.nextEventUtc).getTime() - nowMs;
     const isFuture = diff > 0;
     const isUpcoming = data.type ? (data.type.indexOf('next-') === 0 || data.type.indexOf('reset') !== -1) : false;
@@ -146,8 +179,9 @@ function updateCountdown(data) {
             confidenceEl.className = 'confidence confidence-none';
         }
 
-        if (notesEl && data.reason) {
-            notesEl.textContent = data.reason;
+        const unavailableNote = publicStateNote(data);
+        if (notesEl && unavailableNote) {
+            notesEl.textContent = unavailableNote;
             notesEl.style.display = 'block';
         }
 
@@ -193,10 +227,16 @@ function updateCountdown(data) {
         notesEl.style.display = 'block';
     }
 
-    // Show stale indicator if needed
+    // A provider's own message is never shown; only the sentence publicStateNote allows.
     if (data.status === 'stale' && notesEl) {
-        const staleNote = data.reason ? `⚠ Using cached data: ${data.reason}` : '⚠ Using cached data';
-        notesEl.textContent = staleNote;
+        notesEl.textContent = publicStateNote(data);
+        notesEl.style.display = 'block';
+    }
+
+    // A future-facing date that has passed without re-verification is not an answer any more, so the
+    // page says so rather than counting time since a date it still presents as upcoming.
+    if (isUnanswered(data, Date.now()) && notesEl) {
+        notesEl.textContent = NO_DATE_NOTE;
         notesEl.style.display = 'block';
     }
 
