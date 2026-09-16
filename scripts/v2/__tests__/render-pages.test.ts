@@ -163,6 +163,19 @@ test("renderSite writes only HTML, leaves the data files byte-identical, and cov
     fs.rmSync(dist, { recursive: true, force: true });
 });
 
+test("the tracker container is recognised however its attributes are written", () => {
+    const container = `id="countdown-container" data-game="lol" data-type="next-patch"`;
+    assert.deepEqual(trackerOf(PAGE), { game: "lol", type: "next-patch" });
+    assert.deepEqual(trackerOf(PAGE.replace(container, `data-type="next-patch" id="countdown-container" data-game="lol"`)), { game: "lol", type: "next-patch" }, "order must not matter");
+    assert.deepEqual(trackerOf(PAGE.replace(container, `id="countdown-container" class="hidden" data-game="lol" hidden data-type="next-patch"`)), { game: "lol", type: "next-patch" }, "other attributes must not matter");
+    assert.equal(trackerOf("<html><body>no tracker here</body></html>"), undefined, "a page without a container is legitimately skipped");
+});
+
+test("a tracker container that cannot be read fails the build instead of publishing placeholders", () => {
+    const broken = PAGE.replace(` data-type="next-patch"`, "");
+    assert.throws(() => trackerOf(broken, "lol/next-patch"), /no readable data-game\/data-type/);
+});
+
 test("template drift fails the build instead of publishing a half-rendered page", () => {
     const drifted = PAGE.replace(`<div class="countdown-value countdown-skeleton">--:--:--</div>`, `<div class="countdown-value">tbd</div>`);
     assert.throws(() => renderTrackerHtml(drifted, FRESH_DAY, "lol/next-patch"), /expected exactly one/);

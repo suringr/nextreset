@@ -227,10 +227,20 @@ export function renderTrackerHtml(html: string, data: TrackerData | undefined, p
     return out;
 }
 
-/** `data-game` / `data-type` on the page's hidden container say which tracker it shows. */
-export function trackerOf(html: string): { game: string; type: string } | undefined {
-    const match = /id="countdown-container"\s+data-game="([^"]+)"\s+data-type="([^"]+)"/.exec(html);
-    return match ? { game: match[1], type: match[2] } : undefined;
+/**
+ * `data-game` / `data-type` on the page's hidden container say which tracker it shows.
+ *
+ * Attribute order, spacing and any other attributes are irrelevant: an ordinary HTML edit must never
+ * turn a tracker page into one we quietly skip, because skipping it would publish its placeholders.
+ * A container that exists but cannot be read is template drift, so it fails the build.
+ */
+export function trackerOf(html: string, page = "page"): { game: string; type: string } | undefined {
+    const tag = /<[^>]*\bid="countdown-container"[^>]*>/i.exec(html);
+    if (!tag) return undefined;
+    const game = /\bdata-game="([^"]*)"/i.exec(tag[0])?.[1];
+    const type = /\bdata-type="([^"]*)"/i.exec(tag[0])?.[1];
+    if (!game || !type) throw new Error(`${page}: tracker container has no readable data-game/data-type: ${tag[0].slice(0, 120)}`);
+    return { game, type };
 }
 
 function htmlFilesIn(dir: string): string[] {
@@ -268,12 +278,12 @@ export function renderSite(distDir: string): RenderSummary {
 
     for (const file of htmlFilesIn(distDir)) {
         const html = fs.readFileSync(file, "utf8");
-        const tracker = trackerOf(html);
+        const page = path.relative(distDir, file).replace(/\\/g, "/");
+        const tracker = trackerOf(html, page);
         if (!tracker) {
             summary.skipped++;
             continue;
         }
-        const page = path.relative(distDir, file).replace(/\\/g, "/");
         const data = readData(dataDir, tracker.game, tracker.type);
         if (!data) summary.missingData.push(page);
 
