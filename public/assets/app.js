@@ -156,9 +156,11 @@ function eventDisplay(data, nowMs) {
     return { mode: 'countdown', label: isFuture ? 'Time Until Event' : 'Time Since Event', value: formatDuration(diff) };
 }
 
-// Check if data is unavailable
+// Check if data is unavailable. A timestamp that cannot be parsed counts: the build renders such a
+// payload as unavailable, and a card that formats it would show an empty value or NaN.
 function isDataUnavailable(data) {
     return !data.nextEventUtc ||
+        !isFinite(new Date(data.nextEventUtc).getTime()) ||
         data.confidence === 'none' ||
         data.status === 'unavailable' ||
         data.status === 'fallback';

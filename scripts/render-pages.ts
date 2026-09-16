@@ -143,7 +143,11 @@ export function sourceName(url: string): string {
  * by the build and replaced with "Data unavailable" a moment later by the browser.
  */
 export function hasVerifiedValue(data: TrackerData | undefined): data is TrackerData & { nextEventUtc: string } {
-    return !!data && !!data.nextEventUtc && data.confidence !== "none" && data.status !== "unavailable" && data.status !== "fallback";
+    if (!data || !data.nextEventUtc) return false;
+    // A published file is input, not a contract. A timestamp that cannot be parsed formats as an empty
+    // string, so without this the page would publish a blank value and ask to be indexed on it.
+    if (!Number.isFinite(Date.parse(data.nextEventUtc))) return false;
+    return data.confidence !== "none" && data.status !== "unavailable" && data.status !== "fallback";
 }
 
 /** The same question asked the other way round, for the places that read better in the negative. */

@@ -113,6 +113,22 @@ test("a withdrawn value takes the rest of the page with it", () => {
     fs.rmSync(dist, { recursive: true, force: true });
 });
 
+test("a timestamp nothing can parse is not a value, and not a page worth indexing", () => {
+    // dist/data/*.json is input, not a contract: readData parses JSON and trusts the shape. An
+    // unparsable date formats as an empty string, so the page would have published a blank value.
+    for (const broken of ["not a date", "2026-13-45T99:99:99Z", ""]) {
+        const data = { ...ANSWERED, nextEventUtc: broken };
+        assert.equal(indexStateFor(data, NOW).state, "noindex", broken || "(empty)");
+        assert.equal(blocksFor(data, NOW).value, "Data unavailable");
+        assert.equal(cardValue(data, NOW).value, "Data unavailable");
+        assert.equal(app.isDataUnavailable(data), true, "the browser agrees");
+
+        const html = renderTrackerHtml(PAGE, data, "lol/next-patch", NOW);
+        assert.ok(html.includes(NOINDEX_TAG));
+        assert.ok(!/<div class="countdown-value[^"]*"><\/div>/.test(html), "and no empty value is published");
+    }
+});
+
 test("a date that has only just passed is still an answer, and still indexed", () => {
     // The grace period the renderer already applies: the next value arrives with the next refresh, and
     // a tracker must not drop out of the index for the few hours in between.
