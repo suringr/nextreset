@@ -13,7 +13,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as vm from "vm";
 import { TrackerData } from "../../render-pages";
-import { GROUP_HEADINGS, cardValue, readCard, renderHomeHtml } from "../../render-home";
+import { GROUP_HEADINGS, cardBlocks, cardValue, readCard, renderHomeHtml } from "../../render-home";
 
 const ROOT = path.join(__dirname, "..", "..", "..");
 const HOME = fs.readFileSync(path.join(ROOT, "public", "index.html"), "utf8");
@@ -53,9 +53,9 @@ const PUBLISHED: Record<string, TrackerData> = {
 const read = (game: string, type: string): TrackerData | undefined => PUBLISHED[`${game}.${type}`];
 const rendered = renderHomeHtml(HOME, read, NOW);
 
-/** The card blocks of a rendered page, in the order they appear. */
+/** The card blocks of a rendered page, in order — found the way the build finds them. */
 function cardsOf(html: string): string[] {
-    return html.match(/<a\b[^>]*class="card"[^>]*>[\s\S]*?<\/a>/g) ?? [];
+    return cardBlocks(html).map(found => found.block);
 }
 
 test("every card carries its verified value, and nothing is left loading", () => {
@@ -172,6 +172,38 @@ test("a card is recognised by its class, not by how the class attribute is spell
     // An anchor that merely looks card-like is not one, and is left where it is.
     const withLink = HOME.replace(`<div class="grid" id="game-grid">`, `<div class="grid" id="game-grid"><a href="/about/" class="card-link">About</a>`);
     assert.ok(renderHomeHtml(withLink, read, NOW).html.includes(`<a href="/about/" class="card-link">About</a>`));
+});
+
+test("a card keeps everything it was authored with", () => {
+    const decorated = HOME
+        .replace(`class="card" id="card-lol"`, `class="card featured" id="card-lol" aria-label="League of Legends patch schedule"`);
+    const lol = cardsOf(renderHomeHtml(decorated, read, NOW).html).find(c => c.includes(`id="card-lol"`))!;
+    assert.ok(lol.includes(`class="card featured"`), "a modifier class survives the rebuild");
+    assert.ok(lol.includes(`aria-label="League of Legends patch schedule"`), "and so does anything else the author put there");
+    assert.ok(lol.includes(`data-state="live"`), "while the attributes the build owns are the build's");
+});
+
+test("an instant the pipeline has rejected is not left in the page for the updater to find", () => {
+    const app = loadApp();
+    // Published, but with the confidence the pipeline uses to say it no longer stands behind the value.
+    const rejected = data({ game: "lol", type: "next-patch", confidence: "none", precision: "exact", nextEventUtc: new Date(Date.now() + 40 * 86_400_000).toISOString() });
+    const built = cardValue(rejected, NOW);
+    assert.equal(built.value, "Data unavailable");
+    assert.deepEqual(built.dataset, { nextUtc: "", precision: "", status: "" }, "the rejected instant is not carried into the page");
+
+    const html = renderHomeHtml(HOME, (g, t) => (g === "lol" ? rejected : read(g, t)), NOW).html;
+    const lol = cardsOf(html).find(c => c.includes(`id="card-lol"`))!;
+    assert.ok(lol.includes(`data-next-utc=""`));
+
+    // The browser must not reintroduce it, and the updater must not count down to it.
+    const { card, els } = stubCard({ game: "lol", type: "next-patch", nextUtc: "", precision: "", status: "", unanswered: "" });
+    app.renderCard(card, rejected);
+    assert.equal(card.dataset.nextUtc, "", "hydration stores no instant either");
+    assert.equal(els[".card-countdown"].textContent, "Data unavailable");
+
+    app.document = { querySelectorAll: () => [card] };
+    app.updateHomepageCountdowns();
+    assert.equal(els[".card-countdown"].textContent, "Data unavailable", "and a minute later it still says so");
 });
 
 test("content that would be swallowed by the rewrite fails the build instead", () => {

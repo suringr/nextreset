@@ -42,6 +42,13 @@ export interface CardValue {
     /** Epoch ms of the event, for ordering within a group. */
     at?: number;
     unanswered: boolean;
+    /**
+     * What the card tells the browser about its value: the instant, its precision and its status.
+     *
+     * Empty for a value the pipeline has rejected. The 60-second updater works from these attributes,
+     * so leaving a rejected instant here would let it count down to a date the page refuses to publish.
+     */
+    dataset: { nextUtc: string; precision: string; status: string };
 }
 
 /**
@@ -62,15 +69,19 @@ function hasNoValue(data: TrackerData | undefined): boolean {
  */
 export function cardValue(data: TrackerData | undefined, now: Date): CardValue {
     const checked = data?.fetched_at_utc ? `Checked ${formatDateTime(data.fetched_at_utc)}` : undefined;
+    const empty = { nextUtc: "", precision: "", status: "" };
 
     if (hasNoValue(data)) {
-        return { group: "unknown", badgeText: "UNAVAILABLE", badgeClass: "badge badge-unavailable", value: "Data unavailable", compact: false, state: "unavailable", checked, unanswered: false };
+        // Nothing published, or a value the pipeline no longer stands behind. Its instant is not carried
+        // into the page at all: an hour later the updater would otherwise count down to it.
+        return { group: "unknown", badgeText: "UNAVAILABLE", badgeClass: "badge badge-unavailable", value: "Data unavailable", compact: false, state: "unavailable", checked, unanswered: false, dataset: empty };
     }
     const value = data as TrackerData & { nextEventUtc: string };
+    const dataset = { nextUtc: value.nextEventUtc, precision: value.precision ?? "", status: value.status ?? "" };
 
     if (isUnanswered(value, now)) {
         // The date it used to show has expired and nothing has replaced it. Never a countdown, never LIVE.
-        return { group: "unknown", badgeText: "NO DATE", badgeClass: "badge badge-unavailable", value: "No official date announced", compact: true, state: "unavailable", checked, unanswered: true };
+        return { group: "unknown", badgeText: "NO DATE", badgeClass: "badge badge-unavailable", value: "No official date announced", compact: true, state: "unavailable", checked, unanswered: true, dataset };
     }
 
     const at = Date.parse(value.nextEventUtc);
@@ -90,11 +101,12 @@ export function cardValue(data: TrackerData | undefined, now: Date): CardValue {
     // "Updating..." for that moment. A date-only value is not in that position — it was announced for a
     // day, not an instant, so it stays its own date until the day is over.
     if (!ahead && exact && isFutureFacing(value.type)) {
-        return { group, badgeText, badgeClass, value: "Updating...", compact: false, state, checked, at, unanswered: false };
+        return { group, badgeText, badgeClass, value: "Updating...", compact: false, state, checked, at, unanswered: false, dataset };
     }
 
     return {
         group,
+        dataset,
         badgeText,
         badgeClass,
         value: exact ? formatDateTime(value.nextEventUtc) : formatDate(value.nextEventUtc),
@@ -114,11 +126,17 @@ export interface AuthoredCard {
     type: string;
     title: string;
     topic: string;
+    /** Every attribute the card was written with, so re-emitting it cannot quietly drop one. */
+    attributes: Record<string, string>;
 }
+
+/** The attributes the build decides. Everything else on the card belongs to whoever authored it. */
+const BUILD_ATTRIBUTES = new Set(["data-state", "data-next-utc", "data-precision", "data-status", "data-checked-utc", "data-unanswered"]);
 
 /** Reads the fixed parts of an authored card. Anything missing is template drift, so it throws. */
 export function readCard(cardHtml: string): AuthoredCard {
     const card = cheerio.load(cardHtml)("a.card");
+    const attributes = (card.attr() ?? {}) as Record<string, string>;
     const href = card.attr("href");
     const id = card.attr("id");
     const game = card.attr("data-game");
@@ -128,7 +146,7 @@ export function readCard(cardHtml: string): AuthoredCard {
     if (!href || !id || !game || !type || !title || !topic) {
         throw new Error(`home: a card is missing href/id/data-game/data-type/title/topic (${cardHtml.slice(0, 80)})`);
     }
-    return { href, id, game, type, title, topic };
+    return { href, id, game, type, title, topic, attributes };
 }
 
 /**
@@ -154,10 +172,16 @@ export function orderCards<T extends { card: AuthoredCard; value: CardValue }>(c
 
 /** One rendered card. The dataset carries what app.js needs to keep evaluating it as time passes. */
 export function renderCardHtml(card: AuthoredCard, value: CardValue, data: TrackerData | undefined, eol: string): string {
+    // Whatever the card was written with is written back — a modifier class, an aria-label, anything a
+    // later edit adds — and only the attributes the build owns are replaced.
+    const authored = Object.entries(card.attributes)
+        .filter(([name]) => !BUILD_ATTRIBUTES.has(name))
+        .map(([name, content]) => `${name}="${escapeHtml(content)}"`)
+        .join(" ");
     const lines = [
-        `      <a href="${escapeHtml(card.href)}" class="card" id="${escapeHtml(card.id)}" data-game="${escapeHtml(card.game)}" data-type="${escapeHtml(card.type)}"`,
-        `        data-state="${escapeHtml(value.state)}" data-next-utc="${escapeHtml(data?.nextEventUtc ?? "")}" data-precision="${escapeHtml(data?.precision ?? "")}"`,
-        `        data-status="${escapeHtml(data?.status ?? "")}" data-checked-utc="${escapeHtml(data?.fetched_at_utc ?? "")}" data-unanswered="${value.unanswered ? "1" : ""}">`,
+        `      <a ${authored}`,
+        `        data-state="${escapeHtml(value.state)}" data-next-utc="${escapeHtml(value.dataset.nextUtc)}" data-precision="${escapeHtml(value.dataset.precision)}"`,
+        `        data-status="${escapeHtml(value.dataset.status)}" data-checked-utc="${escapeHtml(data?.fetched_at_utc ?? "")}" data-unanswered="${value.unanswered ? "1" : ""}">`,
         `        <div class="card-header">`,
         `          <h3 class="card-title">${escapeHtml(card.title)}</h3>`,
         `          <span class="${value.badgeClass}">${escapeHtml(value.badgeText)}</span>`,

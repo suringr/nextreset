@@ -382,14 +382,16 @@ function renderCard(card, data) {
         badgeClass = state === 'stale' ? 'badge badge-stale' : 'badge badge-live';
     }
 
-    // Update card state
+    // Update card state. A value the pipeline has rejected — no confidence, a fallback status — leaves
+    // no instant behind: the updater works from these attributes and would count down to it.
+    const usable = !!data && !isDataUnavailable(data);
     card.dataset.state = state;
-    card.dataset.nextUtc = data?.nextEventUtc || '';
+    card.dataset.nextUtc = usable ? data.nextEventUtc : '';
     card.dataset.type = data?.type || '';
-    card.dataset.precision = data?.precision || '';
+    card.dataset.precision = usable ? data.precision || '' : '';
     card.dataset.unanswered = unanswered ? '1' : '';
     // Kept so the periodic updater can re-evaluate the state as deadlines pass.
-    card.dataset.status = data?.status || '';
+    card.dataset.status = usable ? data.status || '' : '';
     // Kept so "checked 2 hours ago" keeps counting on a tab left open, instead of freezing at the
     // moment the page loaded.
     card.dataset.checkedUtc = data?.fetched_at_utc || data?.lastUpdatedUtc || '';
