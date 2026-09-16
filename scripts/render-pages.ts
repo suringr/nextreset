@@ -56,7 +56,8 @@ const PUBLISHERS: ReadonlyArray<readonly [string, string]> = [
     ["rockstargames.com", "Rockstar Games"],
     ["roblox.com", "Roblox"],
     ["ea.com", "EA"],
-    ["epicgames.com", "Epic Games"]
+    ["epicgames.com", "Epic Games"],
+    ["fortnite.com", "Epic Games"]
 ];
 
 export function escapeHtml(value: string): string {
@@ -124,6 +125,37 @@ export function stateLine(data: TrackerData | undefined): string {
     return "Verified from the official source";
 }
 
+const DAY_MS = 86_400_000;
+
+/** Topics that answer "when is the next …": their value is only an answer while it is still ahead. */
+export function isFutureFacing(type: string | undefined): boolean {
+    return !!type && (type.startsWith("next-") || type.includes("reset"));
+}
+
+/**
+ * Whether a future-facing tracker's date has stopped being an answer.
+ *
+ * Publishing a date that has already passed as though it were still upcoming is the worst thing a
+ * countdown can do, and it is what Fortnite did for three months. A date that has only just passed
+ * while the data is fresh is a normal moment in the cycle — the next value arrives with the next
+ * refresh — so only a stale or long-passed date counts as unanswered.
+ */
+export function isUnanswered(data: TrackerData, now: Date): boolean {
+    if (!data.nextEventUtc || !isFutureFacing(data.type)) return false;
+    const at = Date.parse(data.nextEventUtc);
+    if (!Number.isFinite(at)) return false;
+    // A date-only value is announced for a day, not an instant: midnight is only where it had to be
+    // stored. It stays the answer until that whole UTC day is over, exactly as the pipeline treats it
+    // (see upcomingUntil in scripts/v2/knowledge.ts). The same applies when precision is not stated,
+    // because then we have not been told it is an instant either.
+    const over = at + (data.precision === "exact" ? 0 : DAY_MS);
+    if (over >= now.getTime()) return false;
+    return data.status === "stale" || now.getTime() - over > DAY_MS;
+}
+
+/** Shown when a future-facing tracker has no date anyone has published yet. */
+export const NO_DATE_NOTE = "We have not found a verified official date. NextReset will show it as soon as it can be verified from an official source.";
+
 export interface RenderedBlocks {
     label: string;
     value: string;
@@ -140,13 +172,29 @@ export interface RenderedBlocks {
 }
 
 /** Everything the page needs, derived from the published tracker data alone. */
-export function blocksFor(data: TrackerData | undefined): RenderedBlocks {
+export function blocksFor(data: TrackerData | undefined, now: Date = new Date()): RenderedBlocks {
     const state = stateLine(data);
     if (!data || !data.nextEventUtc || data.status === "unavailable") {
         return {
             label: "Status", value: "Data unavailable", valueClass: "countdown-value unavailable", notes: state, state,
             lastVerified: data?.last_success_at_utc ? formatDateTime(data.last_success_at_utc) : undefined,
             lastChecked: data?.fetched_at_utc ? formatDateTime(data.fetched_at_utc) : undefined
+        };
+    }
+
+    if (isUnanswered(data, now)) {
+        // The page keeps its question. The honest answer is that no official date has been published.
+        // The stored confidence described the expired value, not this answer, so it is not carried over.
+        return {
+            label: "Status",
+            value: "No official date announced",
+            valueClass: "countdown-value unavailable",
+            notes: NO_DATE_NOTE,
+            source: data.source_url ? { url: data.source_url, name: sourceName(data.source_url) } : undefined,
+            confidence: undefined,
+            lastVerified: data.last_success_at_utc ? formatDateTime(data.last_success_at_utc) : undefined,
+            lastChecked: data.fetched_at_utc ? formatDateTime(data.fetched_at_utc) : undefined,
+            state: "No verified official date"
         };
     }
 
@@ -195,8 +243,8 @@ const PLACEHOLDER_UPDATED_ROW = `        <div class="info-row">
         </div>`;
 
 /** Writes the verified facts into one tracker page. Pure: takes HTML and data, returns HTML. */
-export function renderTrackerHtml(html: string, data: TrackerData | undefined, page = "page"): string {
-    const b = blocksFor(data);
+export function renderTrackerHtml(html: string, data: TrackerData | undefined, page = "page", now: Date = new Date()): string {
+    const b = blocksFor(data, now);
 
     let out = replaceOnce(html, PLACEHOLDER_LABEL, `<div class="countdown-label">${escapeHtml(b.label)}</div>`, page);
     out = replaceOnce(out, PLACEHOLDER_VALUE, `<div class="${b.valueClass}">${escapeHtml(b.value)}</div>`, page);
@@ -230,7 +278,7 @@ export function renderTrackerHtml(html: string, data: TrackerData | undefined, p
     }
     rows.push(`        <div class="info-row">
           <span class="info-label">Status</span>
-          <span class="info-value">${escapeHtml(b.state)}</span>
+          <span class="info-value" id="tracker-status">${escapeHtml(b.state)}</span>
         </div>`);
     out = replaceOnce(out, PLACEHOLDER_UPDATED_ROW, rows.join("\n"), page);
 
@@ -287,7 +335,7 @@ function readData(dataDir: string, game: string, type: string): TrackerData | un
 }
 
 /** Renders every tracker page in `distDir` in place. Throws on template drift; never touches public/. */
-export function renderSite(distDir: string): RenderSummary {
+export function renderSite(distDir: string, now: Date = new Date()): RenderSummary {
     const summary: RenderSummary = { rendered: [], missingData: [], skipped: 0 };
     const dataDir = path.join(distDir, "data");
 
@@ -302,9 +350,9 @@ export function renderSite(distDir: string): RenderSummary {
         const data = readData(dataDir, tracker.game, tracker.type);
         if (!data) summary.missingData.push(page);
 
-        const rendered = renderTrackerHtml(html, data, page);
+        const rendered = renderTrackerHtml(html, data, page, now);
         fs.writeFileSync(file, rendered, "utf8");
-        const blocks = blocksFor(data);
+        const blocks = blocksFor(data, now);
         summary.rendered.push({ page, game: tracker.game, type: tracker.type, status: data?.status ?? "no-data", value: blocks.value });
     }
     return summary;

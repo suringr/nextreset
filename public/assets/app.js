@@ -90,11 +90,48 @@ function isDayPrecision(data) {
     return !!data && data.precision === 'day';
 }
 
+// Topics that answer "when is the next ...": the value is only an answer while it is still ahead.
+function isFutureFacing(type) {
+    return !!type && (type.indexOf('next-') === 0 || type.indexOf('reset') !== -1);
+}
+
+// A future-facing date that has passed and was not re-verified is no longer an answer. A date that
+// has only just passed while the data is fresh is a normal moment in the cycle.
+function isUnanswered(data, nowMs) {
+    if (!data || !data.nextEventUtc || !isFutureFacing(data.type)) return false;
+    const at = new Date(data.nextEventUtc).getTime();
+    if (isNaN(at)) return false;
+    // A date-only value (or one with no stated precision) is announced for a day, not an instant, so
+    // it stays the answer until that whole UTC day is over. Mirrors isUnanswered in render-pages.ts.
+    const over = at + (data.precision === 'exact' ? 0 : 86400000);
+    if (over >= nowMs) return false;
+    return data.status === 'stale' || (nowMs - over) > 86400000;
+}
+
+// Only a sentence produced for visitors may be shown. A provider's own message (which has no
+// reason_code) is never rendered: it can be a crash string, a URL or an environment variable name.
+function publicStateNote(data) {
+    if (!data) return '';
+    if (data.status === 'stale') {
+        return data.reason_code && data.reason ? data.reason : 'Showing the last verified value; the official source could not be checked';
+    }
+    if (data.status === 'unavailable') {
+        var vetted = data.reason_code ? (data.explanation || data.reason) : '';
+        return vetted || 'No verified value is available right now';
+    }
+    return '';
+}
+
+var NO_DATE_NOTE = 'We have not found a verified official date. NextReset will show it as soon as it can be verified from an official source.';
+
 /**
  * What the tracker should show: a date when the source states only a date, a countdown (or time
  * since) when the instant is exact, and "Updating..." while an upcoming exact event is re-checked.
  */
 function eventDisplay(data, nowMs) {
+    if (isUnanswered(data, nowMs)) {
+        return { mode: 'unanswered', label: 'Status', value: 'No official date announced' };
+    }
     const diff = new Date(data.nextEventUtc).getTime() - nowMs;
     const isFuture = diff > 0;
     const isUpcoming = data.type ? (data.type.indexOf('next-') === 0 || data.type.indexOf('reset') !== -1) : false;
@@ -146,8 +183,9 @@ function updateCountdown(data) {
             confidenceEl.className = 'confidence confidence-none';
         }
 
-        if (notesEl && data.reason) {
-            notesEl.textContent = data.reason;
+        const unavailableNote = publicStateNote(data);
+        if (notesEl && unavailableNote) {
+            notesEl.textContent = unavailableNote;
             notesEl.style.display = 'block';
         }
 
@@ -170,10 +208,12 @@ function updateCountdown(data) {
         }
     }
 
-    // Update confidence
+    // Update confidence. An unanswered tracker reports none: the stored confidence described the
+    // expired value, not the answer now being shown.
     if (confidenceEl) {
-        confidenceEl.textContent = data.confidence;
-        confidenceEl.className = `confidence confidence-${data.confidence}`;
+        const confidence = isUnanswered(data, Date.now()) ? 'none' : data.confidence;
+        confidenceEl.textContent = confidence;
+        confidenceEl.className = `confidence confidence-${confidence}`;
     }
 
     // Update notes
@@ -193,23 +233,41 @@ function updateCountdown(data) {
         notesEl.style.display = 'block';
     }
 
-    // Show stale indicator if needed
+    // A provider's own message is never shown; only the sentence publicStateNote allows.
     if (data.status === 'stale' && notesEl) {
-        const staleNote = data.reason ? `⚠ Using cached data: ${data.reason}` : '⚠ Using cached data';
-        notesEl.textContent = staleNote;
+        notesEl.textContent = publicStateNote(data);
         notesEl.style.display = 'block';
+    }
+
+    const statusEl = document.getElementById('tracker-status');
+
+    // A deadline can pass while the page is open, so every part of the page moves together rather than
+    // leaving the countdown saying "no date announced" beside a status row still claiming verification.
+    function applyUnanswered() {
+        if (notesEl) {
+            notesEl.textContent = NO_DATE_NOTE;
+            notesEl.style.display = 'block';
+        }
+        if (statusEl) statusEl.textContent = 'No verified official date';
+        if (confidenceEl) {
+            confidenceEl.textContent = 'none';
+            confidenceEl.className = 'confidence confidence-none';
+        }
     }
 
     // Update dynamic fields
     function tick() {
+        const display = eventDisplay(data, Date.now());
+        if (display.mode === 'unanswered') applyUnanswered();
+
         if (countdownEl) {
-            const display = eventDisplay(data, Date.now());
             let valueClass = display.mode === 'countdown' && new Date(data.nextEventUtc).getTime() <= Date.now()
                 ? 'countdown-value elapsed'
                 : 'countdown-value';
+            if (display.mode === 'unanswered') valueClass = 'countdown-value unavailable';
 
             // Add stale class if using cached data
-            if (data.status === 'stale') {
+            if (data.status === 'stale' && display.mode !== 'unanswered') {
                 valueClass += ' stale';
             }
 
@@ -300,7 +358,14 @@ function renderCard(card, data) {
     let badgeText = 'UNAVAILABLE';
     let badgeClass = 'badge badge-unavailable';
 
-    if (data && !isDataUnavailable(data)) {
+    const unanswered = !!data && isUnanswered(data, Date.now());
+
+    if (unanswered) {
+        // A card must not badge an expired date as LIVE, nor count time since it.
+        state = 'unavailable';
+        badgeText = 'NO DATE';
+        badgeClass = 'badge badge-unavailable';
+    } else if (data && !isDataUnavailable(data)) {
         const diff = getTimeDifference(data.nextEventUtc);
         if (diff > 0) {
             state = data.status === 'stale' ? 'stale' : 'live';
@@ -318,6 +383,9 @@ function renderCard(card, data) {
     card.dataset.nextUtc = data?.nextEventUtc || '';
     card.dataset.type = data?.type || '';
     card.dataset.precision = data?.precision || '';
+    card.dataset.unanswered = unanswered ? '1' : '';
+    // Kept so the periodic updater can re-evaluate the state as deadlines pass.
+    card.dataset.status = data?.status || '';
 
     // Update badge
     if (badgeEl) {
@@ -329,7 +397,9 @@ function renderCard(card, data) {
     if (countdownEl) {
         if (data && !isDataUnavailable(data)) {
             const display = eventDisplay(data, Date.now());
-            if (display.mode === 'date') {
+            if (display.mode === 'unanswered') {
+                countdownEl.textContent = 'No official date announced';
+            } else if (display.mode === 'date') {
                 countdownEl.textContent = formatCardDate(data.nextEventUtc);
             } else if (display.mode === 'updating') {
                 countdownEl.innerHTML = 'Updating...';
@@ -375,11 +445,34 @@ function updateHomepageCountdowns() {
     cards.forEach(card => {
         const nextUtc = card.dataset.nextUtc;
         if (!nextUtc) return;
-        // A date does not need recomputing, and must never turn into a countdown.
-        if (card.dataset.precision === 'day') return;
 
         const countdownEl = card.querySelector('.card-countdown');
         if (!countdownEl) return;
+
+        // A deadline can pass while the page is open, so the state is recomputed rather than trusted
+        // from load time. Once a card is unanswered it stays that way until new data arrives.
+        const snapshot = {
+            nextEventUtc: nextUtc,
+            type: card.dataset.type,
+            precision: card.dataset.precision,
+            status: card.dataset.status
+        };
+        if (isUnanswered(snapshot, Date.now())) {
+            if (card.dataset.unanswered !== '1') {
+                card.dataset.unanswered = '1';
+                card.dataset.state = 'unavailable';
+                const badgeEl = card.querySelector('.badge');
+                if (badgeEl) {
+                    badgeEl.className = 'badge badge-unavailable';
+                    badgeEl.textContent = 'NO DATE';
+                }
+            }
+            countdownEl.textContent = 'No official date announced';
+            return;
+        }
+
+        // A date does not need recomputing, and must never turn into a countdown.
+        if (card.dataset.precision === 'day') return;
 
         const diff = getTimeDifference(nextUtc);
         const isUpcoming = card.dataset.type?.startsWith('next-') || card.dataset.type?.includes('reset');

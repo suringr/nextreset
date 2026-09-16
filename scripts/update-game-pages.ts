@@ -167,7 +167,7 @@ const gamePages: GamePage[] = [
             'Authentication and login service health'
         ],
         faq: [
-            { q: 'Is Roblox down right now?', a: 'Check the status indicator above for real-time information. We pull data directly from Roblox\'s official status API every 6 hours.' },
+            { q: 'Is Roblox down right now?', a: 'Check the status indicator above for real-time information. We pull data directly from Roblox\'s official status API several times a day.' },
             { q: 'What does "Operational" mean?', a: 'Operational means all Roblox services are running normally with no reported issues. If there\'s a problem, the status will change to reflect the type of disruption.' },
             { q: 'How long do Roblox outages usually last?', a: 'Most Roblox outages are resolved within a few hours. The platform has a strong track record of uptime, but periodic maintenance and rare incidents can cause temporary disruptions.' }
         ]
@@ -477,32 +477,16 @@ function generatePage(page: GamePage): string {
             ${faqHtml}
       </div>
 
-      <!-- Trust Box -->
-      <div class="trust-box">
-        <div class="trust-item">
-          <div class="label">Data Source</div>
-          <div class="value">Official Publisher</div>
-        </div>
-        <div class="trust-item">
-          <div class="label">Update Frequency</div>
-          <div class="value">Every 6 Hours</div>
-        </div>
-        <div class="trust-item">
-          <div class="label">Method</div>
-          <div class="value">Automated Monitoring</div>
-        </div>
-      </div>
-
     </div>
 
     <noscript>
       <div style="text-align: center; padding: 20px; color: #9ca3af; background: #111827; margin-top: 20px; border-radius: 12px;">
-        JavaScript is required for live countdowns. Data shown below is from the latest check.
+        This page shows the last verified values. JavaScript adds a live countdown for events known to the exact second.
       </div>
     </noscript>
 
     <footer>
-      <p>Data automatically updated every 6 hours from official sources.</p>
+      <p>Checked automatically several times a day against official sources.</p>
       <p>Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
       <p><a href="/about/">About</a> · <a href="/privacy/">Privacy Policy</a></p>
     </footer>
