@@ -5,6 +5,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { Event, emptyKnowledge } from "../domain";
 import { findGame, findTopic } from "../games";
+import { failureKindOfRun } from "../adapters/ai-discovery";
 import { FailureKind, PUBLIC_REASONS, failureKindFromFetch, publicReason } from "../reasons";
 import { deriveProviderResult } from "../views";
 
@@ -36,10 +37,28 @@ test("a failed fetch is classified by what actually happened", () => {
     assert.equal(kind({ verdict: { code: "http-error" }, attempts: [{ status: 403 }] }), "source-blocked");
     assert.equal(kind({ verdict: { code: "http-error" }, attempts: [{ status: 429 }] }), "source-blocked");
 
-    // Reached and read, but unusable.
+    // Reached and read, but unusable. A 404 or 410 was answered by the server: the page is gone, not unreachable.
+    assert.equal(kind({ verdict: { code: "http-error" }, attempts: [{ status: 404 }] }), "extraction-failed");
+    assert.equal(kind({ verdict: { code: "http-error" }, attempts: [{ status: 410 }] }), "extraction-failed");
     assert.equal(kind({ verdict: { code: "js-shell" }, attempts: [{ status: 200 }] }), "extraction-failed");
     assert.equal(kind({ verdict: { code: "insufficient" }, attempts: [{ status: 200 }] }), "extraction-failed");
     assert.equal(kind({ verdict: { code: "parse-error" }, attempts: [{ status: 200 }] }), "extraction-failed");
+});
+
+test("a run reports what actually stopped it", () => {
+    const run = (outcomes: string[], fetch?: { mode: "http" | "browser"; status: number; verdict?: string; attempts: number }) =>
+        failureKindOfRun({
+            knownSources: [], skipped: [], ai: { calls: 0, failures: 0, repairs: 0, retries: 0, inputTokens: 0, outputTokens: 0, thoughtTokens: 0, estimatedCostUsd: 0 },
+            attempts: outcomes.map(outcome => ({ url: "https://example.com", via: "config" as const, outcome: outcome as never, elapsedMs: 1, ...(fetch ? { fetch } : {}) }))
+        });
+
+    assert.equal(run(["unchanged"]), "no-new-information");
+    assert.equal(run(["not-relevant"]), "no-new-information", "the page was read fine and simply does not answer this topic");
+    assert.equal(run(["no-facts"]), "extraction-failed", "read, but nothing could be taken from it");
+    assert.equal(run(["no-ai"]), "awaiting-verification");
+    assert.equal(run(["deferred"]), "awaiting-verification");
+    assert.equal(run(["unusable"], { mode: "http", status: 503, verdict: "http-error", attempts: 1 }), "source-unreachable");
+    assert.equal(run(["unusable"], { mode: "http", status: 200, verdict: "challenge", attempts: 1 }), "source-blocked");
 });
 
 test("every kind has one concise sentence, free of internal detail", () => {

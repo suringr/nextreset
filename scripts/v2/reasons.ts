@@ -53,6 +53,8 @@ export function failureKindFromFetch(fetched: FetchFailureLike): FailureKind {
     const code = fetched.verdict?.code;
     if (code === "challenge") return "source-blocked";
     if (status !== undefined && BLOCKED_STATUS.has(status)) return "source-blocked";
-    if (status === undefined || status === 0 || status >= 500 || code === "http-error") return "source-unreachable";
+    // Only a missing answer is "unreachable": no response at all, a transport error, or a server error.
+    // A 404 or 410 was answered by the server, so the page was reached and simply cannot be used.
+    if (status === undefined || status === 0 || status >= 500) return "source-unreachable";
     return "extraction-failed";
 }

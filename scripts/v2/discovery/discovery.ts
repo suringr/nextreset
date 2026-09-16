@@ -153,9 +153,19 @@ export async function discoverSources(options: DiscoveryOptions): Promise<Discov
         }
     };
 
+    // Candidates that cannot answer the open question are dropped before anything is ranked or judged
+    // convincing: a page about a version older than the verified one has nothing to say about the next
+    // one, and must never count as "found", which would skip the web search that could still answer it.
+    const olderThan = rejectsOlderVersions(topic) ? latestKnownVersion(knowledge, topic.type) : undefined;
     const rankAll = (): { ranked: Candidate[]; rejected: RejectedCandidate[] } => {
         const { kept, rejected } = normalizeCandidates(raw);
-        return { ranked: rankCandidates(kept.map(c => scoreCandidate(c, scoring))), rejected };
+        const usable: Candidate[] = [];
+        for (const candidate of kept) {
+            const why = obsoleteReason({ url: candidate.url, title: candidate.title, latest: olderThan });
+            if (why) rejected.push({ url: candidate.url, reason: why });
+            else usable.push(candidate);
+        }
+        return { ranked: rankCandidates(usable.map(c => scoreCandidate(c, scoring))), rejected };
     };
     const convincing = (ranked: Candidate[]) => publishableCandidates(ranked).some(c => c.score >= limits.minOfficialScore);
 
@@ -203,20 +213,7 @@ export async function discoverSources(options: DiscoveryOptions): Promise<Discov
         }
     }
 
-    // 4. Candidates that cannot answer the open question are dropped deterministically, before any model
-    //    call: a page about a version older than the verified one has nothing to say about the next one.
-    if (rejectsOlderVersions(topic)) {
-        const latest = latestKnownVersion(knowledge, topic.type);
-        const kept: Candidate[] = [];
-        for (const candidate of ranked) {
-            const why = obsoleteReason({ url: candidate.url, title: candidate.title, latest });
-            if (why) rejected.push({ url: candidate.url, reason: why });
-            else kept.push(candidate);
-        }
-        ranked = kept;
-    }
-
-    // 5. AI relevance only where the deterministic ranking is too close to call.
+    // 4. AI relevance only where the deterministic ranking is too close to call.
     let ai: DiscoveryResult["ai"];
     if (options.ai && needsAiRelevance(ranked)) {
         const top = ranked.filter(c => c.tier === "official").slice(0, 8);

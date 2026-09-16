@@ -126,6 +126,24 @@ test("obsolete candidates are dropped before the model sees them, with the reaso
     assert.equal(ai.calls, 0, "rejecting a candidate costs nothing");
 });
 
+test("an obsolete page never counts as found, so the web search that could answer still runs", async () => {
+    const game = findGame("lol");
+    const topic = findTopic(game, "next-patch");
+    // Only an old patch-notes page comes back from the official channels, and it would score as convincing.
+    const official = new FixedSearch("sitemap", "official", [{ url: NOTES("26-10"), title: "Patch 26.10 Notes" }]);
+    const web = new FixedSearch("duckduckgo", "web", [{ url: SCHEDULE, title: "Patch Schedule - League of Legends" }]);
+
+    const result = await discoverSources({
+        game, topic, knowledge: lolKnowledge(), now: NOW,
+        officialProviders: [official], webProvider: web, limits: { minOfficialScore: 0 }
+    });
+
+    assert.ok(web.queries.length > 0, "the obsolete page must not stop the fallback search");
+    assert.ok(result.searchedWeb, "web search ran");
+    assert.deepEqual(result.official.map(c => c.url), [SCHEDULE], "and the page that can answer is what survives");
+    assert.equal(result.rejected.filter(r => /older than the verified 26\.19/.test(r.reason)).length, 1);
+});
+
 test("without the opt-in, candidates are untouched", async () => {
     const game = findGame("lol");
     const topic: Topic = { ...findTopic(game, "next-patch"), discovery: { ...findTopic(game, "next-patch").discovery, rejectOlderVersions: false } };

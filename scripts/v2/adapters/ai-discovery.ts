@@ -230,7 +230,9 @@ export function eventFromItem(item: GroundedItem, topic: Topic, spec: AiTopicSpe
  */
 export function failureKindOfRun(report: AiDiscoveryReport): FailureKind {
     if (report.attempts.some(a => a.outcome === "no-ai" || a.outcome === "deferred")) return "awaiting-verification";
-    const last = [...report.attempts].reverse().find(a => a.outcome === "unusable" || a.outcome === "not-relevant" || a.outcome === "no-facts");
+    // A page the model read and judged irrelevant was read perfectly well: it simply does not answer this
+    // topic, which is "nothing new", not a failure to read it.
+    const last = [...report.attempts].reverse().find(a => a.outcome === "unusable" || a.outcome === "no-facts");
     if (!last) return "no-new-information";
     if (last.outcome !== "unusable") return "extraction-failed";
     return failureKindFromFetch({
