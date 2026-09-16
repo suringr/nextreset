@@ -18,7 +18,7 @@ import * as path from "path";
 import * as vm from "vm";
 import { NOINDEX_TAG, indexStateFor } from "../../indexing";
 import { cardValue } from "../../render-home";
-import { TrackerData, blocksFor, renderSite, renderTrackerHtml } from "../../render-pages";
+import { TrackerData, blocksFor, renderSite, renderTrackerHtml, stateLine } from "../../render-pages";
 
 const ROOT = path.join(__dirname, "..", "..", "..");
 const PAGE = fs.readFileSync(path.join(ROOT, "public", "lol", "next-patch", "index.html"), "utf8");
@@ -127,6 +127,25 @@ test("a timestamp nothing can parse is not a value, and not a page worth indexin
         assert.ok(html.includes(NOINDEX_TAG));
         assert.ok(!/<div class="countdown-value[^"]*"><\/div>/.test(html), "and no empty value is published");
     }
+});
+
+test("a rejected payload never claims to be showing a verified value", () => {
+    // Rejected and stale at once: a value the pipeline withdrew, or one whose date cannot be parsed,
+    // on a tracker whose source was also unreachable. Asking "is it stale?" before "is there a value?"
+    // put "Showing the last verified value" directly beneath "Data Unavailable".
+    for (const rejected of [
+        { ...ANSWERED, status: "stale", confidence: "none" },
+        { ...ANSWERED, status: "stale", nextEventUtc: "not a date" },
+        { ...ANSWERED, status: "fallback" }
+    ]) {
+        assert.equal(app.publicStateNote(rejected), "No verified value is available right now", JSON.stringify(rejected.status + "/" + rejected.confidence));
+        assert.equal(stateLine(rejected), "No verified value is available right now", "and the build says the same");
+    }
+
+    // A stale payload that does have a value is still described as stale, in both.
+    const stale = { ...ANSWERED, status: "stale" };
+    assert.equal(app.publicStateNote(stale), "Showing the last verified value; the official source could not be checked");
+    assert.equal(stateLine(stale), app.publicStateNote(stale));
 });
 
 test("a date that has only just passed is still an answer, and still indexed", () => {

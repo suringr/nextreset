@@ -123,12 +123,15 @@ function tidyNotes(value) {
 // reason_code) is never rendered: it can be a crash string, a URL or an environment variable name.
 function publicStateNote(data) {
     if (!data) return '';
-    if (data.status === 'stale') {
-        return data.reason_code && data.reason ? data.reason : 'Showing the last verified value; the official source could not be checked';
-    }
-    if (data.status === 'unavailable') {
+    // Whether there is a value at all comes first, exactly as stateLine asks it in the build. A payload
+    // can be rejected and still say "stale" — a withdrawn value, an unparsable date — and answering in
+    // the other order puts "showing the last verified value" underneath "Data Unavailable".
+    if (isDataUnavailable(data)) {
         var vetted = data.reason_code ? (data.explanation || data.reason) : '';
         return vetted || 'No verified value is available right now';
+    }
+    if (data.status === 'stale') {
+        return data.reason_code && data.reason ? data.reason : 'Showing the last verified value; the official source could not be checked';
     }
     return '';
 }
