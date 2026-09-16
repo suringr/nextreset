@@ -144,6 +144,28 @@ test("a page that announces no date does not list upcoming dates underneath", ()
     assert.deepEqual(unanswered, ["Previously"], "no forward-looking block may contradict the headline");
 });
 
+test("evidence describes the date the event holds now, even after a correction was reverted", () => {
+    // The original claim is content-addressed, so a reverted date does not re-append it with a fresh
+    // timestamp: the intervening correction stays the newest claim while describing a date that is gone.
+    const reverted: GameKnowledge = {
+        events: [
+            patch("26.18", "2026-09-09T00:00:00.000Z"),
+            patch("26.17", "2026-08-26T00:00:00.000Z"),
+            patch("26.16", "2026-08-12T00:00:00.000Z")
+        ],
+        claims: [
+            { eventKey: "lol/next-patch/26.18", field: "at", value: "2026-09-09T00:00:00.000Z", method: "ai", quote: "26.18 September 9, 2026", extractedAt: "2026-08-01T00:00:00.000Z", linkUrl: "https://example.com/original" },
+            { eventKey: "lol/next-patch/26.18", field: "at", value: "2026-09-16T00:00:00.000Z", method: "ai", quote: "26.18 September 16, 2026", extractedAt: "2026-09-05T00:00:00.000Z", linkUrl: "https://example.com/correction" },
+            { eventKey: "lol/next-patch/26.17", field: "at", value: "2026-08-26T00:00:00.000Z", method: "ai", quote: "26.17 August 26, 2026", extractedAt: "2026-08-01T00:00:00.000Z" },
+            { eventKey: "lol/next-patch/26.16", field: "at", value: "2026-08-12T00:00:00.000Z", method: "ai", quote: "26.16 August 12, 2026", extractedAt: "2026-08-01T00:00:00.000Z" }
+        ],
+        documents: []
+    };
+    const row = blocksFor(reverted, "next-patch", { format, now: NOW })[0].rows.find(r => r.label === "26.18")!;
+    assert.equal(row.quote, "26.18 September 9, 2026", "the quote matches the date the event holds now");
+    assert.equal(row.href, "https://example.com/original", "and so does the link");
+});
+
 test("the three regional times are read strictly, or not at all", () => {
     const label = 'The Lone Light Knocks at Night / Epitome Invocation: ends 2026-09-22 14:59 server time (Asia 06:59 UTC, Europe 13:59 UTC, America 19:59 UTC)';
     assert.deepEqual(regionalTimes(label), [

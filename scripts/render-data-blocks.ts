@@ -127,10 +127,25 @@ function published(events: KnowledgeEvent[] | undefined, topic: string): Knowled
     return (events ?? []).filter(e => e.topic === topic && e.publishState !== "held" && typeof e.at === "string");
 }
 
+/**
+ * Whether a claim still describes what the event says today.
+ *
+ * A date that is corrected and later reverted keeps all three claims, and the intervening correction
+ * is the newest of them — but it states a value the event no longer holds. Pairing the restored date
+ * with that quote would show a reader two different dates as one fact.
+ */
+function statesCurrentValue(claim: KnowledgeClaim, event: KnowledgeEvent): boolean {
+    if (claim.field !== "at" || claim.value === undefined || event.at === undefined) return true;
+    if (claim.value === event.at) return true;
+    const claimed = Date.parse(claim.value);
+    const current = Date.parse(event.at);
+    return Number.isFinite(claimed) && Number.isFinite(current) && claimed === current;
+}
+
 /** The claim that carries this event's link and (where readable) its quote. */
 function evidenceFor(event: KnowledgeEvent, knowledge: GameKnowledge): { href?: string; quote?: string } {
     const claims = (knowledge.claims ?? [])
-        .filter(c => c.eventKey === event.key)
+        .filter(c => c.eventKey === event.key && statesCurrentValue(c, event))
         // A corrected date appends a new claim and keeps the old one. The newest claim describes what
         // the event says now, so its link and quote are the ones that belong beside it (views.ts does
         // the same when choosing an attribution link).
