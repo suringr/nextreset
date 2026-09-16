@@ -14,7 +14,8 @@
     "ai:eval:live": "node build/v2/ai/eval.js --live",
     "refresh:data": "node build/refresh-all.js",
     "export:site": "node build/export-site.js",
-    "build:site": "npm run build && (npm run refresh:data || true) && npm run export:site",
+    "render:pages": "node build/render-pages.js",
+    "build:site": "npm run build && (npm run refresh:data || true) && npm run export:site && npm run render:pages",
     "dev": "npm run build && npm run refresh:data"
   },
   "keywords": [
