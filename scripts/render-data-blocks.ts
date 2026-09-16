@@ -172,6 +172,12 @@ function evidenceFor(event: KnowledgeEvent, knowledge: GameKnowledge): { href?: 
 export function regionalTimes(label: string): BlockRow[] {
     const inside = /\(([^)]*)\)/.exec(label);
     if (!inside) return [];
+    // The adapter appends "dates vary" when the shared server time lands on different UTC dates per
+    // region. The label carries each region's clock time but not its date, and deriving one would mean
+    // assuming fixed offsets across daylight saving. Showing a time a reader would pair with the
+    // headline's date — and be a day out — is worse than showing nothing, so the block is dropped.
+    // Publishing the three instants as fields in the adapter would let this render properly.
+    if (/dates vary/i.test(inside[1])) return [];
     const wanted = ["Asia", "Europe", "America"];
     const rows: BlockRow[] = [];
     for (const region of wanted) {

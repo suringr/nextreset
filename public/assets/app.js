@@ -108,6 +108,15 @@ function isUnanswered(data, nowMs) {
     return data.status === 'stale' || (nowMs - over) > 86400000;
 }
 
+// Repairs values a V1 provider concatenated without spaces ("Red Dead OnlineSeptember 1, 2026Distill…").
+// Mirrors tidyNotes in scripts/render-pages.ts, so hydration cannot undo the server-rendered repair.
+function tidyNotes(value) {
+    var months = 'January|February|March|April|May|June|July|August|September|October|November|December';
+    return String(value)
+        .replace(new RegExp('([a-z])(' + months + ')\\b', 'g'), '$1 $2')
+        .replace(/(\d{4})([A-Z])/g, '$1 $2');
+}
+
 // Only a sentence produced for visitors may be shown. A provider's own message (which has no
 // reason_code) is never rendered: it can be a crash string, a URL or an environment variable name.
 function publicStateNote(data) {
@@ -216,17 +225,9 @@ function updateCountdown(data) {
         confidenceEl.className = `confidence confidence-${confidence}`;
     }
 
-    // Update notes
-    let notes = data.notes || '';
-
-    // Add "Next season: Not officially announced" if applicable for Fortnite
-    if (data.game === 'fortnite' && data.type === 'next-season' && data.nextSeasonStart === null) {
-        let nextSeasonMsg = "Next season: Not officially announced";
-        if (data.nextSeasonEstimateFriendly) {
-            nextSeasonMsg = `Next season: Not officially announced (Likely ${data.nextSeasonEstimateFriendly})`;
-        }
-        notes = notes ? `${nextSeasonMsg}\n${notes}` : nextSeasonMsg;
-    }
+    // Update notes, repaired the same way the build repairs them. A predicted date is never shown: the
+    // old Fortnite branch appended the V1 provider's own guess at when a season might end.
+    const notes = data.notes ? tidyNotes(data.notes) : '';
 
     if (notesEl && notes) {
         notesEl.innerText = notes;

@@ -177,6 +177,11 @@ test("the three regional times are read strictly, or not at all", () => {
     assert.deepEqual(regionalTimes("ends 2026-09-22 14:59 server time (Asia 06:59 UTC, Europe 13:59 UTC)"), [], "a missing region yields nothing rather than a guess");
     assert.deepEqual(regionalTimes("Patch 26.19"), [], "a label with no regions yields nothing");
     assert.deepEqual(regionalTimes("ends soon (Asia sometime, Europe 13:59 UTC, America 19:59 UTC)"), [], "an unparsable time yields nothing");
+    assert.deepEqual(
+        regionalTimes("ends 2026-09-22 04:00 server time (Asia 20:00 UTC, Europe 03:00 UTC, America 09:00 UTC, dates vary)"),
+        [],
+        "when the regions fall on different UTC dates, times alone would mislead, so nothing is shown"
+    );
 });
 
 test("a recurring rule is projected forward and labelled as computed", () => {
