@@ -21,8 +21,7 @@ nextreset/
 ├── .github/workflows/     # GitHub Actions automation
 ├── public/
 │   ├── data/              # Generated JSON files (auto-updated)
-│   ├── robots.txt         # SEO configuration
-│   └── sitemap.xml        # Search engine sitemap
+│   └── robots.txt         # Crawl rules (sitemap.xml is generated into dist/)
 ├── scripts/
 │   ├── providers/         # Game-specific data providers
 │   ├── refresh-all.ts     # Orchestration script
@@ -194,6 +193,52 @@ knowledge; the changed page is retried by a later run.
 throwaway store and prints the report; `--no-config-url` removes the configured
 page so discovery has to find it. The "Vertical slice evaluation" workflow does
 both in CI and uploads the results.
+
+## 📰 Publishing
+
+The pages are rendered from verified facts at build time, not assembled in the browser:
+
+```
+refresh:data  ->  export:site (public/ -> dist/)  ->  render:pages  ->  publish dist/
+```
+
+`render:pages` writes only into `dist/`, reads only `dist/data/*.json` and `knowledge/games/*.json`,
+and calls nothing — no model, no search, no fetch. The authored pages under `public/` are untouched by
+a build, so rolling any of this back is one line in `build:site`.
+
+| Step | What it writes |
+|------|----------------|
+| `scripts/render-pages.ts` | each tracker page's value, state, source and verification times |
+| `scripts/render-data-blocks.ts` | the blocks a game's knowledge supports: remaining schedule, verified history with a quote per row, regional end times |
+| `scripts/render-home.ts` | every homepage card, grouped into what is next, what changed recently, and what nobody has answered |
+| `scripts/render-sitemap.ts` | `sitemap.xml`, each page dated by when its own facts last changed |
+| `scripts/version-assets.ts` | a content hash on every asset URL, since `_headers` caches them for a year |
+
+`app.js` is progressive enhancement over the result: it may change the *form* of a value — a date
+becomes a live countdown — and never its meaning. Tests assert that the two agree, because review
+found the browser undoing the build in six different ways: replacing a rendered value when a refresh
+failed, counting down to a midnight nobody announced, restoring a note the build had repaired.
+
+Two rules the rendering follows everywhere:
+
+- **A time is published only where the pipeline states the instant is exact.** A date-only value is
+  shown as a date; the midnight it is stored at was never announced by anyone.
+- **A future-facing value that has expired is not an answer.** The page keeps its question and says no
+  official date has been published, rather than showing a date that has passed.
+
+### Why there are no hub pages
+
+Each of the twelve games answers exactly one question, so a `/<game>/` hub would contain a single link
+and repeat the tracker page's title and value — a near-duplicate, which is worth less than nothing to a
+reader or to an index. A hub per topic (`/next-patch/`) would be the homepage sliced differently, and
+the homepage already groups by what the data says.
+
+A full-history page was considered and rejected on the same ground: the store holds 19 CS2 updates and
+24 League of Legends patches, and the tracker pages already publish every upcoming date and the twelve
+most recent. A page whose only reason to exist is seven more rows of the same table is a thin page.
+
+If a game ever gains a second question worth tracking, a hub becomes worth revisiting. Until then the
+site is deliberately smaller than it could be.
 
 ## 🎮 How It Works
 
