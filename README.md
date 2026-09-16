@@ -223,8 +223,11 @@ Two rules the rendering follows everywhere:
 
 - **A time is published only where the pipeline states the instant is exact.** A date-only value is
   shown as a date; the midnight it is stored at was never announced by anyone.
-- **A future-facing value that has expired is not an answer.** The page keeps its question and says no
-  official date has been published, rather than showing a date that has passed.
+- **A future-facing value that has expired stops being the answer.** Once its moment has passed — the
+  end of its whole day, for a value announced as a date — a stale value is dropped at once, and a
+  freshly verified one is given a day for the next refresh to replace it, because a date that has just
+  passed is a normal moment in the cycle. After that the page keeps its question and says no official
+  date has been published, rather than showing a date that has gone.
 
 ### Why there are no hub pages
 
@@ -233,9 +236,10 @@ and repeat the tracker page's title and value — a near-duplicate, which is wor
 reader or to an index. A hub per topic (`/next-patch/`) would be the homepage sliced differently, and
 the homepage already groups by what the data says.
 
-A full-history page was considered and rejected on the same ground: the store holds 19 CS2 updates and
-24 League of Legends patches, and the tracker pages already publish every upcoming date and the twelve
-most recent. A page whose only reason to exist is seven more rows of the same table is a thin page.
+A full-history page was considered and rejected on the same ground. The store holds 19 CS2 updates and
+24 League of Legends patches; the pages publish the newest as the headline and twelve more below it,
+plus every upcoming date — 13 of CS2's 19, 18 of League's 24. A page whose only reason to exist is the
+six rows below that is a thin page.
 
 If a game ever gains a second question worth tracking, a hub becomes worth revisiting. Until then the
 site is deliberately smaller than it could be.
@@ -302,22 +306,30 @@ GitHub Actions workflow (`.github/workflows/refresh-data.yml`):
 
 ### Cloudflare Pages
 
-1. Connect GitHub repository to Cloudflare Pages
-2. **Build command**: (none - already built by GitHub Actions)
-3. **Output directory**: `public`
-4. Deploy!
+The site Cloudflare serves is the **built** site, not the authored one. `public/` has no values in it:
+the dates, the homepage grouping, the sitemap and the asset versions are all produced by `render:pages`
+into `dist/`. Serving `public/` directly would publish twelve cards that say "Loading..." and pages
+showing `--:--:--`.
 
-The site will automatically update as GitHub Actions commits new JSON files.
+1. Connect the GitHub repository to Cloudflare Pages
+2. **Production branch**: `gh-pages`
+3. **Build command**: (none — the branch already contains the built site)
+4. **Output directory**: `/` (the branch root)
+
+`refresh-data.yml` runs `build:site` on every push to `main` and every six hours, then force-pushes
+`dist/` to the root of an orphan `gh-pages` branch. Cloudflare deploys that branch; a merge has reached the
+site in anything from about a minute to about a quarter of an hour. To reproduce a deployment locally, run `npm run build:site` and serve `dist/`.
 
 ### URL Structure
 
-Each page follows: `https://nextreset.co/<game>/<event>`
+Each page follows: `https://nextreset.co/<game>/<event>/` — with the trailing slash, which is what
+every page declares as its canonical and what the sitemap lists.
 
 Examples:
-- `/fortnite/next-season`
-- `/lol/next-patch`
-- `/gta/weekly-reset`
-- `/cs2/last-update`
+- `/fortnite/next-season/`
+- `/lol/next-patch/`
+- `/gta/weekly-reset/`
+- `/cs2/last-update/`
 
 ## 🛠 Adding a New Provider
 
