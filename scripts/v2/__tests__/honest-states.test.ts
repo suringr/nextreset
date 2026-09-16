@@ -177,7 +177,9 @@ test("a homepage card never counts time since an expired date", () => {
     // innerHTML rather than textContent, so the stub is cleared before comparing.
     els[".card-countdown"].textContent = "";
     els[".card-countdown"].innerHTML = "";
-    const upcoming = { ...FORTNITE, status: "fresh", nextEventUtc: "2026-12-01T00:00:00.000Z" };
+    // renderCard reads the real clock, so this fixture is relative: always 30 days ahead of
+    // whenever the suite runs, and therefore always genuinely upcoming.
+    const upcoming = { ...FORTNITE, status: "fresh", nextEventUtc: new Date(Date.now() + 30 * 86400000).toISOString() };
     app.renderCard(card, upcoming);
     assert.equal(els[".card-countdown"].textContent, "", "not the unanswered text");
     assert.match(els[".card-countdown"].innerHTML, /unit/, "a real countdown is rendered instead");
