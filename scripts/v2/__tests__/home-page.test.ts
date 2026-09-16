@@ -159,6 +159,26 @@ test("a homepage the build cannot read fails the build instead of publishing pla
     assert.throws(() => renderHomeHtml("<html><body>no cards here</body></html>", read, NOW), /no cards found/);
 });
 
+test("a card is recognised by its class, not by how the class attribute is spelled", () => {
+    // The cards are replaced as one region, so a card this step failed to see would be deleted rather
+    // than left alone. A second class, a different order, single quotes: all still cards.
+    const restyled = HOME
+        .replace(`class="card" id="card-lol"`, `class="card featured" id="card-lol"`)
+        .replace(`class="card" id="card-gta"`, `id="card-gta-anchor" class='promoted card'`);
+    const html = renderHomeHtml(restyled, read, NOW).html;
+    assert.equal(cardsOf(html).length, 12, "no card was dropped");
+    assert.ok(html.includes("September 23, 2026") && html.includes("September 17, 2026 at 10:00 UTC"));
+
+    // An anchor that merely looks card-like is not one, and is left where it is.
+    const withLink = HOME.replace(`<div class="grid" id="game-grid">`, `<div class="grid" id="game-grid"><a href="/about/" class="card-link">About</a>`);
+    assert.ok(renderHomeHtml(withLink, read, NOW).html.includes(`<a href="/about/" class="card-link">About</a>`));
+});
+
+test("content that would be swallowed by the rewrite fails the build instead", () => {
+    const withBanner = HOME.replace(`<a href="/lol/next-patch/"`, `<p class="notice">Scheduled maintenance</p>\n      <a href="/lol/next-patch/"`);
+    assert.throws(() => renderHomeHtml(withBanner, read, NOW), /unexpected content between cards/);
+});
+
 test("the authored shell carries what the build cannot invent", () => {
     assert.ok(HOME.includes(`<link rel="canonical" href="https://nextreset.co/">`), "the homepage had no canonical at all");
     assert.equal(HOME.split(`class="card-topic"`).length - 1, 12, "every card says what its date means");

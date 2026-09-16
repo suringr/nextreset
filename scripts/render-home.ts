@@ -178,7 +178,27 @@ export interface HomeSummary {
     counts: Record<CardGroup, number>;
 }
 
-const CARD_PATTERN = /<a\b[^>]*class="card"[^>]*>[\s\S]*?<\/a>/g;
+/** Every anchor on the page. Which of them are cards is decided by class token, not by spelling. */
+const ANCHOR_PATTERN = /<a\b[^>]*>[\s\S]*?<\/a>/g;
+
+/**
+ * The card blocks of a page, in document order.
+ *
+ * Matching `class="card"` literally would miss a card that gained a second class, and the cards are
+ * replaced as one region: a card this step failed to recognise would be deleted from the page rather
+ * than left alone. So anchors are matched loosely and filtered by class token, and the result is
+ * checked against the parsed document — a card that exists but was not collected fails the build.
+ */
+export function cardBlocks(html: string): Array<{ block: string; index: number }> {
+    const blocks = [...html.matchAll(ANCHOR_PATTERN)]
+        .filter(match => cheerio.load(match[0])("a").first().hasClass("card"))
+        .map(match => ({ block: match[0], index: match.index! }));
+    const parsed = cheerio.load(html)("a.card").length;
+    if (parsed !== blocks.length) {
+        throw new Error(`home: found ${parsed} cards in the page but could only read ${blocks.length}`);
+    }
+    return blocks;
+}
 
 /**
  * Writes every card's verified value into the homepage and groups the cards by what the data says.
@@ -187,12 +207,19 @@ const CARD_PATTERN = /<a\b[^>]*class="card"[^>]*>[\s\S]*?<\/a>/g;
  * touches the filesystem, so the whole page is testable as a value.
  */
 export function renderHomeHtml(html: string, read: (game: string, type: string) => TrackerData | undefined, now: Date = new Date()): HomeSummary {
-    const matches = [...html.matchAll(CARD_PATTERN)];
+    const matches = cardBlocks(html);
     if (matches.length === 0) throw new Error("home: no cards found");
     const eol = html.includes("\r\n") ? "\r\n" : "\n";
 
+    // The cards are rewritten as one region, so anything else living between them would be lost. There
+    // is nothing else there today; if that changes, the build says so instead of quietly dropping it.
+    for (let i = 1; i < matches.length; i++) {
+        const between = html.slice(matches[i - 1].index + matches[i - 1].block.length, matches[i].index);
+        if (between.trim() !== "") throw new Error(`home: unexpected content between cards: ${JSON.stringify(between.trim().slice(0, 60))}`);
+    }
+
     const cards = matches.map(match => {
-        const card = readCard(match[0]);
+        const card = readCard(match.block);
         const data = read(card.game, card.type);
         return { card, value: cardValue(data, now), data };
     });
@@ -210,8 +237,8 @@ export function renderHomeHtml(html: string, read: (game: string, type: string) 
         parts.push(renderCardHtml(entry.card, entry.value, entry.data, eol));
     }
 
-    const start = matches[0].index!;
-    const end = matches[matches.length - 1].index! + matches[matches.length - 1][0].length;
+    const start = matches[0].index;
+    const end = matches[matches.length - 1].index + matches[matches.length - 1].block.length;
     // The first card was already indented by the line it sat on, so the first part sheds its own indent.
     const body = parts.join(`${eol}${eol}`).replace(/^ +/, "");
     return { html: html.slice(0, start) + body + html.slice(end), counts };
