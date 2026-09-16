@@ -366,7 +366,10 @@ function renderCard(card, data) {
     let badgeText = 'UNAVAILABLE';
     let badgeClass = 'badge badge-unavailable';
 
-    const unanswered = !!data && isUnanswered(data, Date.now());
+    // Whether a date has expired is only worth asking about a value we would publish at all. A payload
+    // the pipeline has rejected is unavailable, not unanswered — the build decides it the same way, and
+    // badging it NO DATE here would contradict the "Data unavailable" this same card is about to show.
+    const unanswered = !!data && !isDataUnavailable(data) && isUnanswered(data, Date.now());
 
     if (unanswered) {
         // A card must not badge an expired date as LIVE, nor count time since it.

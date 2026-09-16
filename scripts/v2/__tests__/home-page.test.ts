@@ -430,7 +430,11 @@ test("the browser badges a card exactly as the build did", () => {
         ["last update, fresh", data({ type: "last-update", nextEventUtc: new Date(Date.now() - far).toISOString(), precision: "exact" })],
         ["last update, unreachable source", data({ type: "last-update", status: "stale", nextEventUtc: new Date(Date.now() - far).toISOString(), precision: "exact" })],
         ["expired question", data({ type: "next-season", status: "stale", nextEventUtc: new Date(Date.now() - far).toISOString() })],
-        ["nothing published", data({ status: "unavailable" })]
+        ["nothing published", data({ status: "unavailable" })],
+        // A rejected payload that also happens to have expired: unavailable, not unanswered. Asking the
+        // second question before the first produced a NO DATE badge above "Data unavailable".
+        ["expired and rejected", data({ type: "next-season", confidence: "none", nextEventUtc: new Date(Date.now() - far).toISOString() })],
+        ["expired and superseded", data({ type: "next-season", status: "fallback", nextEventUtc: new Date(Date.now() - far).toISOString() })]
     ];
 
     for (const [name, fixture] of cases) {
