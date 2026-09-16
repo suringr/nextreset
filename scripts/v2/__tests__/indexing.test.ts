@@ -82,6 +82,37 @@ test("a value the pipeline has withdrawn is unavailable everywhere, and asks for
     }
 });
 
+test("a withdrawn value takes the rest of the page with it", () => {
+    // The store still holds next month's patches. Listing them under "Data unavailable" would be the
+    // page contradicting itself in two directions at once: no value, and here are the values.
+    const dist = fs.mkdtempSync(path.join(os.tmpdir(), "nextreset-withdrawn-"));
+    fs.mkdirSync(path.join(dist, "lol", "next-patch"), { recursive: true });
+    fs.mkdirSync(path.join(dist, "data"), { recursive: true });
+    fs.mkdirSync(path.join(dist, "knowledge", "games"), { recursive: true });
+    fs.writeFileSync(path.join(dist, "lol", "next-patch", "index.html"), PAGE);
+    fs.writeFileSync(path.join(dist, "data", "lol.next-patch.json"), JSON.stringify({ ...ANSWERED, confidence: "none" }));
+    fs.writeFileSync(path.join(dist, "knowledge", "games", "lol.json"), JSON.stringify({
+        schemaVersion: 1,
+        game: "lol",
+        updatedAt: "2026-09-15T20:04:34.116Z",
+        events: [
+            { key: "lol/next-patch/26.19", game: "lol", topic: "next-patch", kind: "version", label: "26.19", status: "scheduled", at: "2026-09-23T00:00:00.000Z", precision: "day", firstSeen: "2026-09-15T20:04:34.116Z", lastVerified: "2026-09-15T20:04:34.116Z", publishState: "published" },
+            { key: "lol/next-patch/26.20", game: "lol", topic: "next-patch", kind: "version", label: "26.20", status: "scheduled", at: "2026-10-07T00:00:00.000Z", precision: "day", firstSeen: "2026-09-15T20:04:34.116Z", lastVerified: "2026-09-15T20:04:34.116Z", publishState: "published" }
+        ],
+        changes: [], overrides: [], documents: [], claims: [], sources: [], discovered: [], topicStates: []
+    }));
+
+    renderSite(dist, NOW, dist);
+
+    const html = fs.readFileSync(path.join(dist, "lol", "next-patch", "index.html"), "utf8");
+    assert.ok(html.includes("Data unavailable"), "the headline says nothing is published");
+    assert.ok(!html.includes("Also scheduled"), "so nothing schedules dates beneath it");
+    assert.ok(!html.includes("26.20"), "and no future patch is listed");
+    assert.ok(html.includes(NOINDEX_TAG), "and the page is not submitted");
+
+    fs.rmSync(dist, { recursive: true, force: true });
+});
+
 test("a date that has only just passed is still an answer, and still indexed", () => {
     // The grace period the renderer already applies: the next value arrives with the next refresh, and
     // a tracker must not drop out of the index for the few hours in between.

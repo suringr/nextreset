@@ -455,7 +455,7 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
             const knowledge = loadKnowledge(root, tracker.game);
             const currentKey = knowledge?.events?.find(e => e.topic === tracker.type && e.at === data?.nextEventUtc)?.key;
             // A page that is not publishing a value must not list upcoming dates below that headline.
-            const headlineAnswered = !!data && data.status !== "unavailable" && !!data.nextEventUtc && !isUnanswered(data, now);
+            const headlineAnswered = hasVerifiedValue(data) && !isUnanswered(data, now);
             blocksHtml = renderBlocks(dataBlocksFor(knowledge, tracker.type, { format: readable, now, currentKey, headlineAnswered }));
         } catch (error) {
             console.warn(`  ⚠ ${page}: knowledge unusable, publishing without data blocks (${error instanceof Error ? error.message : String(error)})`);
