@@ -206,6 +206,40 @@ test("a card whose deadline passes while the page is open becomes NO DATE withou
     assert.equal(card.dataset.state, "unavailable");
 });
 
+/** The handful of elements a tracker page gives updateCountdown, with nothing else on the page. */
+function stubPage(...ids: string[]): Record<string, any> {
+    const els: Record<string, any> = {};
+    for (const id of ids) els[id] = { textContent: "", innerText: "", innerHTML: "", className: "", style: {} };
+    app.document = { getElementById: (id: string) => els[id] ?? null };
+    return els;
+}
+
+test("the browser repairs a run-together note instead of restoring the raw one", () => {
+    const RAW = "Red Dead OnlineSeptember 1, 2026Distill Your Best Swill for Triple Rewards";
+    const REPAIRED = "Red Dead Online September 1, 2026 Distill Your Best Swill for Triple Rewards";
+    assert.equal(app.tidyNotes(RAW), REPAIRED);
+    for (const untouched of ["Patch 26.19", "EA SPORTS FC 26 version 1.6.5", "Current status: Operational"]) {
+        assert.equal(app.tidyNotes(untouched), untouched);
+    }
+
+    // The build renders the repaired note, then app.js fetches the same JSON and writes the note again.
+    // It has to arrive repaired here, or hydration quietly restores what the build cleaned up.
+    const els = stubPage("event-title", "countdown", "source", "confidence", "last-updated", "notes");
+    app.updateCountdown({
+        game: "red-dead-redemption-2", type: "last-update", title: "Red Dead Online", status: "fresh",
+        nextEventUtc: "2026-08-31T00:00:00.000Z", precision: "day", fetched_at_utc: NOW.toISOString(),
+        last_success_at_utc: NOW.toISOString(), source_url: "https://www.rockstargames.com/newswire",
+        confidence: "high", notes: RAW
+    });
+    assert.equal(els.notes.innerText, REPAIRED);
+});
+
+test("the browser never publishes a predicted date", () => {
+    const source = fs.readFileSync(path.join(ROOT, "public", "assets", "app.js"), "utf8");
+    assert.ok(!source.includes("nextSeasonEstimate"), "a V1 provider's guess is not ours to publish");
+    assert.ok(!source.includes("Likely "), "and nothing else predicts a date either");
+});
+
 test("app.js never shows a provider's own message", () => {
     assert.equal(app.publicStateNote(FORTNITE), "Showing the last verified value; the official source could not be checked");
     assert.ok(!app.publicStateNote(FORTNITE).includes("Crashed"));

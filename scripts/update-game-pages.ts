@@ -457,6 +457,9 @@ function generatePage(page: GamePage): string {
       <!-- Notes -->
       <div id="notes" class="notes" style="display: none;"></div>
 
+      <!-- Verified data, rendered at build time from the knowledge store -->
+      <div id="verified-data"></div>
+
       <!-- What Is It -->
       <div class="content-section">
         <h2>What Is the ${page.typeTitle}?</h2>
