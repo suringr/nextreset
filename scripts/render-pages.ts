@@ -419,7 +419,7 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
     const dataDir = path.join(distDir, "data");
     const readable = (iso: string, precision?: string) => (precision === "exact" ? formatDateTime(iso) : formatDate(iso));
     const pages = htmlFilesIn(distDir);
-    const listed: SitemapInput[] = [];
+    const pagesForSitemap: SitemapInput[] = [];
 
     for (const file of pages) {
         const html = fs.readFileSync(file, "utf8");
@@ -427,7 +427,7 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
         const tracker = trackerOf(html, page);
         if (!tracker) {
             summary.indexing.push({ page, ...STATIC_PAGE_DECISION });
-            listed.push({ page, tracker });
+            pagesForSitemap.push({ page, tracker, listed: true });
             // The homepage has no tracker of its own: it shows all of them. Drift there is not survivable
             // — publishing twelve cards that say "Loading..." is what this milestone exists to end — so a
             // page that cannot be read throws rather than being skipped quietly.
@@ -444,10 +444,11 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
         if (!data) summary.missingData.push(page);
 
         // A page we are asking Google not to index is not also submitted for indexing: asking for both
-        // at once is the kind of contradiction that teaches a crawler to trust neither signal.
+        // at once is the kind of contradiction that teaches a crawler to trust neither. Its facts are
+        // still counted, because the homepage shows its card and is dated by everything on it.
         const decision = indexStateFor(data, now);
         summary.indexing.push({ page, ...decision });
-        if (decision.state === "index") listed.push({ page, tracker });
+        pagesForSitemap.push({ page, tracker, listed: decision.state === "index" });
 
         // Everything else this game has verified: schedules, history, regional times. Absent knowledge
         // (a plain clone) simply produces no blocks.
@@ -472,7 +473,7 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
     }
 
     // The sitemap lists what was actually built, dated by each page's own facts.
-    summary.sitemap = renderSitemap(distDir, root, listed);
+    summary.sitemap = renderSitemap(distDir, root, pagesForSitemap);
 
     // Last, because it stamps the pages this step has just written: the scripts and stylesheets are
     // cached for a year, so their URLs have to change whenever their contents do.

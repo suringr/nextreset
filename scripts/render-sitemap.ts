@@ -79,6 +79,14 @@ export interface SitemapInput {
     page: string;
     /** The tracker the page shows, where it has one. */
     tracker?: { game: string; type: string };
+    /**
+     * Whether this URL is submitted.
+     *
+     * A page carrying `noindex` is not, but its facts still belong to the homepage, which renders its
+     * card either way. Leaving it out of the calculation entirely would let the homepage's date go
+     * stale behind a value it is showing.
+     */
+    listed?: boolean;
 }
 
 /**
@@ -90,14 +98,17 @@ export function sitemapEntries(pages: SitemapInput[], origin: string, knowledgeF
     const entries: SitemapEntry[] = [];
     let newest: string | undefined;
 
-    for (const { page, tracker } of pages) {
+    for (const { page, tracker, listed } of pages) {
         const loc = `${origin}${urlPathOf(page)}`;
         if (!tracker) {
-            entries.push({ loc });
+            if (listed !== false) entries.push({ loc });
             continue;
         }
         const lastmod = factsChangedAt(knowledgeFor(tracker.game), tracker.type);
+        // The homepage shows every tracker's card, so every tracker's facts date it — including those of
+        // a page that is not itself submitted.
         if (lastmod && (!newest || lastmod > newest)) newest = lastmod;
+        if (listed === false) continue;
         entries.push(lastmod ? { loc, lastmod } : { loc });
     }
 
