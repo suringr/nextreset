@@ -209,9 +209,9 @@ a build, so rolling any of this back is one line in `build:site`.
 | Step | What it writes |
 |------|----------------|
 | `scripts/render-pages.ts` | each tracker page's value, state, source and verification times |
-| `scripts/render-data-blocks.ts` | the blocks a game's knowledge supports: remaining schedule, verified history with a quote per row, regional end times |
+| `scripts/render-data-blocks.ts` | the blocks a game's knowledge supports: remaining schedule, verified history — each row linked to the official post, and quoted where that source was prose rather than an API — and regional end times |
 | `scripts/render-home.ts` | every homepage card, grouped into what is next, what changed recently, and what nobody has answered |
-| `scripts/render-sitemap.ts` | `sitemap.xml`, each page dated by when its own facts last changed |
+| `scripts/render-sitemap.ts` | `sitemap.xml`, dating each page the store can date by when its own facts last changed, and leaving the rest undated rather than guessing |
 | `scripts/version-assets.ts` | a content hash on every asset URL, since `_headers` caches them for a year |
 
 `app.js` is progressive enhancement over the result: it may change the *form* of a value — a date
