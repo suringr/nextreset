@@ -27,7 +27,7 @@ interface GamePage {
     faq: FaqItem[];
 }
 
-const gamePages: GamePage[] = [
+export const gamePages: GamePage[] = [
     {
         path: 'fortnite/next-season/index.html',
         game: 'fortnite',
@@ -340,6 +340,62 @@ function generateFaqSchema(faq: FaqItem[]): string {
     </script>`;
 }
 
+/**
+ * Where this page sits, for a reader and for a crawler.
+ *
+ * Two levels, not three: there is no per-game page to point at, and a breadcrumb that links to one
+ * that does not exist would be worse than none. The last crumb carries no URL, which is how Google
+ * expects the current page to appear.
+ */
+function breadcrumbHtml(page: GamePage): string {
+    return `<nav class="breadcrumbs" aria-label="Breadcrumb">
+        <a href="/">Home</a>
+        <span class="crumb-sep" aria-hidden="true">›</span>
+        <span aria-current="page">${page.title}: ${page.typeTitle}</span>
+      </nav>`;
+}
+
+function breadcrumbSchema(page: GamePage): string {
+    return `<script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://nextreset.co/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": ${JSON.stringify(`${page.title}: ${page.typeTitle}`)}
+        }
+      ]
+    }
+    </script>`;
+}
+
+/**
+ * Every tracker, in the footer of every tracker page.
+ *
+ * Each page was previously reachable only from the homepage. Linking them to each other means a reader
+ * who lands on one can reach the rest, and the anchor text says what each one answers rather than
+ * repeating the game's name alone. The current page is named but not linked.
+ */
+export function footerNavHtml(pages: GamePage[], current?: GamePage): string {
+    const items = pages.map(page => {
+        const label = `${page.title} — ${page.typeTitle.toLowerCase()}`;
+        return page === current
+            ? `        <span aria-current="page">${label}</span>`
+            : `        <a href="/${page.game}/${page.type}/">${label}</a>`;
+    });
+    return `<nav class="footer-nav" aria-label="All trackers">
+${items.join('\n')}
+      </nav>`;
+}
+
 // Generate HTML for a game page
 function generatePage(page: GamePage): string {
     const faqHtml = page.faq.map(item =>
@@ -413,11 +469,12 @@ function generatePage(page: GamePage): string {
   </script>
 
   ${faqSchema}
+  ${breadcrumbSchema(page)}
 </head>
 <body>
   <div class="container">
     <div class="game-page">
-      <a href="/" class="back-link">← Back to Home</a>
+      ${breadcrumbHtml(page)}
 
       <!-- Game Header -->
       <div class="game-header">
@@ -489,6 +546,7 @@ function generatePage(page: GamePage): string {
     </noscript>
 
     <footer>
+      ${footerNavHtml(gamePages, page)}
       <p>Checked automatically several times a day against official sources.</p>
       <p>Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
       <p><a href="/about/">About</a> · <a href="/privacy/">Privacy Policy</a></p>
@@ -515,18 +573,21 @@ function generatePage(page: GamePage): string {
 </html>`;
 }
 
-// Write all pages
-for (const page of gamePages) {
-    const filePath = path.join(publicDir, page.path);
-    const dir = path.dirname(filePath);
+// Write all pages. Guarded, so the registry and the footer navigation can be read by other scripts and
+// by tests without rewriting twelve pages as a side effect of importing them.
+if (require.main === module) {
+    for (const page of gamePages) {
+        const filePath = path.join(publicDir, page.path);
+        const dir = path.dirname(filePath);
 
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+
+        const content = generatePage(page);
+        fs.writeFileSync(filePath, content, 'utf-8');
+        console.log(`✓ Generated ${page.title} (${page.typeTitle})`);
     }
 
-    const content = generatePage(page);
-    fs.writeFileSync(filePath, content, 'utf-8');
-    console.log(`✓ Generated ${page.title} (${page.typeTitle})`);
+    console.log(`\n✅ Generated ${gamePages.length} game pages with rich content!`);
 }
-
-console.log(`\n✅ Generated ${gamePages.length} game pages with rich content!`);
