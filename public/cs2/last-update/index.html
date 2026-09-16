@@ -89,11 +89,34 @@
       ]
     }
     </script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://nextreset.co/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Counter-Strike 2: Last Update"
+        }
+      ]
+    }
+    </script>
 </head>
 <body>
   <div class="container">
     <div class="game-page">
-      <a href="/" class="back-link">← Back to Home</a>
+      <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <a href="/">Home</a>
+        <span class="crumb-sep" aria-hidden="true">›</span>
+        <span aria-current="page">Counter-Strike 2: Last Update</span>
+      </nav>
 
       <!-- Game Header -->
       <div class="game-header">
@@ -181,6 +204,20 @@
     </noscript>
 
     <footer>
+      <nav class="footer-nav" aria-label="All trackers">
+        <a href="/fortnite/next-season/">Fortnite — season end</a>
+        <a href="/lol/next-patch/">League of Legends — next patch</a>
+        <a href="/valorant/last-patch/">VALORANT — last patch</a>
+        <span aria-current="page">Counter-Strike 2 — last update</span>
+        <a href="/minecraft/last-release/">Minecraft — last release</a>
+        <a href="/roblox/status/">Roblox — status</a>
+        <a href="/gta/weekly-reset/">GTA Online — weekly reset</a>
+        <a href="/warzone/last-patch/">Warzone — last patch</a>
+        <a href="/genshin/next-banner/">Genshin Impact — next banner end</a>
+        <a href="/pubg/last-patch/">PUBG — last patch</a>
+        <a href="/red-dead-redemption-2/last-update/">Red Dead Redemption 2 — last update</a>
+        <a href="/ea-sports-fc/last-title-update/">EA SPORTS FC — last title update</a>
+      </nav>
       <p>Checked automatically several times a day against official sources.</p>
       <p>Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
       <p><a href="/about/">About</a> · <a href="/privacy/">Privacy Policy</a></p>

@@ -21,6 +21,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { blocksFor as dataBlocksFor, loadKnowledge, renderBlocks } from "./render-data-blocks";
 import { CardGroup, renderHomeHtml } from "./render-home";
+import { SitemapEntry, SitemapInput, renderSitemap } from "./render-sitemap";
 import { VersionedAssets, versionAssets } from "./version-assets";
 
 /** The published tracker shape (see scripts/types.ts). Read defensively: this is file input. */
@@ -351,6 +352,8 @@ export interface RenderSummary {
     home?: Record<CardGroup, number>;
     /** The version stamped on each asset, so a year-long cache cannot hold an old script. */
     assets: VersionedAssets;
+    /** What went into sitemap.xml, and which of those pages could be dated. */
+    sitemap: SitemapEntry[];
 }
 
 function readData(dataDir: string, game: string, type: string): TrackerData | undefined {
@@ -365,15 +368,17 @@ function readData(dataDir: string, game: string, type: string): TrackerData | un
 
 /** Renders every tracker page in `distDir` in place. Throws on template drift; never touches public/. */
 export function renderSite(distDir: string, now: Date = new Date(), root: string = path.dirname(distDir)): RenderSummary {
-    const summary: RenderSummary = { rendered: [], missingData: [], skipped: 0, assets: { versions: {}, pages: 0, missing: [] } };
+    const summary: RenderSummary = { rendered: [], missingData: [], skipped: 0, assets: { versions: {}, pages: 0, missing: [] }, sitemap: [] };
     const dataDir = path.join(distDir, "data");
     const readable = (iso: string, precision?: string) => (precision === "exact" ? formatDateTime(iso) : formatDate(iso));
     const pages = htmlFilesIn(distDir);
+    const listed: SitemapInput[] = [];
 
     for (const file of pages) {
         const html = fs.readFileSync(file, "utf8");
         const page = path.relative(distDir, file).replace(/\\/g, "/");
         const tracker = trackerOf(html, page);
+        listed.push({ page, tracker });
         if (!tracker) {
             // The homepage has no tracker of its own: it shows all of them. Drift there is not survivable
             // — publishing twelve cards that say "Loading..." is what this milestone exists to end — so a
@@ -412,6 +417,9 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
         summary.rendered.push({ page, game: tracker.game, type: tracker.type, status: data?.status ?? "no-data", value: blocks.value, blocks: blocksHtml ? blocksHtml.split("<h2>").length - 1 : 0 });
     }
 
+    // The sitemap lists what was actually built, dated by each page's own facts.
+    summary.sitemap = renderSitemap(distDir, root, listed);
+
     // Last, because it stamps the pages this step has just written: the scripts and stylesheets are
     // cached for a year, so their URLs have to change whenever their contents do.
     summary.assets = versionAssets(distDir, pages);
@@ -428,6 +436,7 @@ if (require.main === module) {
     for (const r of summary.rendered) console.log(`  ✓ ${r.page} — ${r.status}: ${r.value}${r.blocks ? ` (+${r.blocks} data block(s))` : ""}`);
     for (const p of summary.missingData) console.warn(`  ⚠ ${p}: no data file; published as unavailable`);
     if (summary.home) console.log(`  ✓ index.html — ${summary.home.upcoming} upcoming, ${summary.home.recent} recently updated, ${summary.home.unknown} unanswered`);
+    console.log(`  ✓ sitemap.xml — ${summary.sitemap.length} URL(s), ${summary.sitemap.filter(e => e.lastmod).length} dated`);
     for (const [asset, version] of Object.entries(summary.assets.versions)) console.log(`  ✓ ${asset}?v=${version}`);
     for (const absent of summary.assets.missing) console.warn(`  ⚠ ${absent}: referenced but not in the build; left unversioned`);
     console.log(`✅ Rendered ${summary.rendered.length} tracker page(s); ${summary.skipped} page(s) have no tracker.`);

@@ -123,9 +123,12 @@ function endOf(event: KnowledgeEvent): number | undefined {
     return at + (event.precision === "exact" ? 0 : DAY_MS);
 }
 
-function published(events: KnowledgeEvent[] | undefined, topic: string): KnowledgeEvent[] {
+/** The events of a topic this site is allowed to show: held events are ours to know, not to publish. */
+export function publishedEvents(events: KnowledgeEvent[] | undefined, topic: string): KnowledgeEvent[] {
     return (events ?? []).filter(e => e.topic === topic && e.publishState !== "held" && typeof e.at === "string");
 }
+
+const published = publishedEvents;
 
 /**
  * Whether a claim still describes what the event says today.

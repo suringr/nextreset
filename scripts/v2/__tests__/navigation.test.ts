@@ -1,0 +1,190 @@
+/**
+ * Publishing V2, milestone 5: how the site is put together.
+ *
+ * Every page used to be reachable only from the homepage, said nothing about where it sat, and appeared
+ * in a hand-written sitemap that carried the two hints Google ignores and not the one it reads. These
+ * tests hold the pieces to each other: the sitemap lists the pages that exist at the URLs they declare
+ * as canonical, the breadcrumb a reader sees is the breadcrumb the markup claims, and the footer names
+ * every tracker the site actually has.
+ */
+import test from "node:test";
+import assert from "node:assert/strict";
+import * as cheerio from "cheerio";
+import * as fs from "fs";
+import * as path from "path";
+import { GameKnowledge } from "../../render-data-blocks";
+import { trackerOf } from "../../render-pages";
+import { buildSitemap, factsChangedAt, sitemapEntries, urlPathOf } from "../../render-sitemap";
+import { gamePages } from "../../update-game-pages";
+
+const ROOT = path.join(__dirname, "..", "..", "..");
+const PUBLIC = path.join(ROOT, "public");
+const ORIGIN = "https://nextreset.co";
+
+function authoredPages(): string[] {
+    const pages: string[] = [];
+    const walk = (dir: string) => {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+            const full = path.join(dir, entry.name);
+            if (entry.isDirectory()) walk(full);
+            else if (entry.name === "index.html") pages.push(path.relative(PUBLIC, full).replace(/\\/g, "/"));
+        }
+    };
+    walk(PUBLIC);
+    return pages.sort();
+}
+
+const PAGES = authoredPages();
+const load = (page: string) => cheerio.load(fs.readFileSync(path.join(PUBLIC, page), "utf8"));
+
+test("a page's place in the build is its URL", () => {
+    assert.equal(urlPathOf("index.html"), "/");
+    assert.equal(urlPathOf("lol/next-patch/index.html"), "/lol/next-patch/");
+    assert.equal(urlPathOf("about/index.html"), "/about/");
+});
+
+test("a page is dated by when its facts changed, not by when it was last checked", () => {
+    const knowledge: GameKnowledge = {
+        game: "lol",
+        events: [
+            { key: "lol/next-patch/26.19", topic: "next-patch", label: "26.19", status: "observed", at: "2026-09-23T00:00:00.000Z", firstSeen: "2026-09-01T10:00:00.000Z", lastVerified: "2026-09-16T21:24:00.000Z", publishState: "published" },
+            { key: "lol/next-patch/26.20", topic: "next-patch", label: "26.20", status: "observed", at: "2026-10-07T00:00:00.000Z", firstSeen: "2026-09-04T10:00:00.000Z", lastVerified: "2026-09-16T21:24:00.000Z", publishState: "published" }
+        ],
+        claims: [
+            { eventKey: "lol/next-patch/26.19", field: "at", value: "2026-09-23T00:00:00.000Z", extractedAt: "2026-09-01T10:00:00.000Z" },
+            { eventKey: "lol/next-patch/26.20", field: "at", value: "2026-10-07T00:00:00.000Z", extractedAt: "2026-09-06T11:00:00.000Z" }
+        ]
+    };
+
+    // The newest moment a fact appeared or was stated — not either event's lastVerified, which moves
+    // every six hours whether or not anything changed.
+    assert.equal(factsChangedAt(knowledge, "next-patch"), "2026-09-06T11:00:00.000Z");
+    assert.equal(factsChangedAt(knowledge, "last-patch"), undefined, "a topic with no published events cannot be dated");
+    assert.equal(factsChangedAt(undefined, "next-patch"), undefined, "nor can a game with no knowledge file");
+
+    // A held event is ours to know, not to publish, so it cannot date a page either.
+    const held: GameKnowledge = { game: "lol", events: [{ ...knowledge.events![0], firstSeen: "2027-01-01T00:00:00.000Z", publishState: "held" }], claims: [] };
+    assert.equal(factsChangedAt(held, "next-patch"), undefined);
+});
+
+test("the sitemap carries the one hint Google reads and none of the ones it ignores", () => {
+    const xml = buildSitemap([
+        { loc: "https://nextreset.co/", lastmod: "2026-09-06T11:00:00.000Z" },
+        { loc: "https://nextreset.co/about/" }
+    ]);
+    assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8"\?>/);
+    assert.ok(xml.includes("<loc>https://nextreset.co/</loc>"));
+    assert.ok(xml.includes("<lastmod>2026-09-06T11:00:00.000Z</lastmod>"));
+    assert.ok(xml.includes("<loc>https://nextreset.co/about/</loc>\n  </url>"), "a page that cannot be dated carries no date");
+    assert.ok(!xml.includes("changefreq") && !xml.includes("priority"), "neither hint is read, so neither is published");
+    assert.ok(!/<lastmod><\/lastmod>/.test(xml), "and an empty element is never emitted");
+});
+
+test("the homepage is as new as the newest thing on it", () => {
+    const knowledge: Record<string, GameKnowledge> = {
+        lol: { game: "lol", events: [{ key: "k1", topic: "next-patch", label: "26.19", status: "observed", at: "2026-09-23T00:00:00.000Z", firstSeen: "2026-09-02T00:00:00.000Z", publishState: "published" }], claims: [] },
+        cs2: { game: "cs2", events: [{ key: "k2", topic: "last-update", label: "Update", status: "observed", at: "2026-09-09T00:00:00.000Z", firstSeen: "2026-09-10T00:00:00.000Z", publishState: "published" }], claims: [] }
+    };
+    const entries = sitemapEntries(
+        [
+            { page: "lol/next-patch/index.html", tracker: { game: "lol", type: "next-patch" } },
+            { page: "index.html" },
+            { page: "cs2/last-update/index.html", tracker: { game: "cs2", type: "last-update" } },
+            { page: "about/index.html" }
+        ],
+        ORIGIN,
+        game => knowledge[game]
+    );
+
+    assert.deepEqual(entries.map(e => e.loc), [
+        `${ORIGIN}/`,
+        `${ORIGIN}/about/`,
+        `${ORIGIN}/cs2/last-update/`,
+        `${ORIGIN}/lol/next-patch/`
+    ], "the homepage first, then a stable order");
+    assert.equal(entries[0].lastmod, "2026-09-10T00:00:00.000Z", "the newest of its trackers");
+    assert.equal(entries[1].lastmod, undefined, "a static page is left undated rather than guessed at");
+});
+
+test("every page in the sitemap is a page that exists, at the URL it calls canonical", () => {
+    const inputs = PAGES.map(page => {
+        const html = fs.readFileSync(path.join(PUBLIC, page), "utf8");
+        return { page, tracker: trackerOf(html, page) };
+    });
+    const entries = sitemapEntries(inputs, ORIGIN, () => undefined);
+    assert.equal(entries.length, PAGES.length);
+    assert.ok(PAGES.length >= 15, `expected every authored page, found ${PAGES.length}`);
+
+    for (const page of PAGES) {
+        const canonical = load(page)(`link[rel="canonical"]`).attr("href");
+        assert.ok(canonical, `${page} has no canonical`);
+        assert.equal(canonical, `${ORIGIN}${urlPathOf(page)}`, `${page}: canonical and location disagree`);
+        assert.ok(entries.some(entry => entry.loc === canonical), `${page} is not in the sitemap`);
+    }
+});
+
+test("every page says where it sits, and its markup says the same thing", () => {
+    for (const page of PAGES) {
+        const $ = load(page);
+        const crumbs = $(".breadcrumbs");
+        if (page === "index.html") {
+            assert.equal(crumbs.length, 0, "the homepage is the root; it has nowhere to point back to");
+            continue;
+        }
+        assert.equal(crumbs.length, 1, `${page} has no breadcrumb`);
+        assert.equal(crumbs.find("a").attr("href"), "/", `${page}: the first crumb goes home`);
+        const here = crumbs.find(`[aria-current="page"]`).text().trim();
+        assert.ok(here.length > 0, `${page}: the current page is not named`);
+
+        const schemas = $(`script[type="application/ld+json"]`).toArray()
+            .map(node => JSON.parse($(node).html() ?? "{}"))
+            .filter(schema => schema["@type"] === "BreadcrumbList");
+        assert.equal(schemas.length, 1, `${page}: expected exactly one BreadcrumbList`);
+        const items = schemas[0].itemListElement;
+        assert.deepEqual(items.map((i: { position: number }) => i.position), [1, 2], `${page}: positions run from one`);
+        assert.equal(items[0].item, `${ORIGIN}/`);
+        assert.equal(items[1].name, here, `${page}: the markup claims a crumb the page does not show`);
+        assert.equal(items[1].item, undefined, "the page you are on is not a link to itself");
+    }
+});
+
+test("every tracker is reachable from every page", () => {
+    const expected = gamePages.map(page => `/${page.game}/${page.type}/`).sort();
+    assert.equal(expected.length, 12);
+
+    for (const page of PAGES) {
+        if (page === "index.html") continue; // the homepage lists them in its own words
+        const $ = load(page);
+        const nav = $(".footer-nav");
+        assert.equal(nav.length, 1, `${page} has no tracker navigation`);
+
+        const links = nav.find("a").toArray().map(a => $(a).attr("href")!);
+        const current = nav.find(`[aria-current="page"]`);
+        assert.equal(current.length <= 1, true, `${page}: at most one current page`);
+        const listed = [...links, ...(current.length ? [`/${page.replace(/index\.html$/, "")}`] : [])].sort();
+
+        if (trackerOf(fs.readFileSync(path.join(PUBLIC, page), "utf8"), page)) {
+            assert.deepEqual(listed, expected, `${page}: the footer does not name every tracker exactly once`);
+            assert.equal(current.length, 1, `${page}: a tracker page does not link to itself`);
+        } else {
+            assert.deepEqual(links.sort(), expected, `${page}: the footer does not name every tracker`);
+        }
+
+        for (const href of links) {
+            assert.ok(fs.existsSync(path.join(PUBLIC, href.replace(/^\//, ""), "index.html")), `${page}: ${href} does not exist`);
+        }
+    }
+});
+
+test("the sitemap is built, never authored, so it cannot drift from the pages", () => {
+    // It used to be a hand-written file listing fifteen URLs. Keeping a copy in public/ would mean two
+    // sitemaps, and the stale one would be the one nobody remembered to update.
+    assert.equal(fs.existsSync(path.join(PUBLIC, "sitemap.xml")), false);
+});
+
+test("the crawl rules still keep the data files out and point at the sitemap", () => {
+    const robots = fs.readFileSync(path.join(PUBLIC, "robots.txt"), "utf8");
+    assert.match(robots, /^Disallow: \/data\/$/m, "the JSON the pages read is not for the index");
+    assert.match(robots, /^Sitemap: https:\/\/nextreset\.co\/sitemap\.xml$/m);
+    assert.match(robots, /^Allow: \/$/m);
+});

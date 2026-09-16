@@ -293,6 +293,60 @@ a {
   color: var(--text);
 }
 
+/* Where this page sits: one line, wrapping on a phone rather than overflowing. */
+.breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+.breadcrumbs a {
+  color: var(--muted);
+  transition: color .15s ease;
+}
+
+.breadcrumbs a:hover {
+  color: var(--text);
+}
+
+.breadcrumbs [aria-current="page"] {
+  color: var(--text);
+}
+
+.crumb-sep {
+  color: var(--border);
+}
+
+/* Every tracker, reachable from every page. */
+.footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 18px;
+  max-width: 820px;
+  margin: 0 auto 28px;
+  font-size: 13px;
+}
+
+.footer-nav a {
+  color: var(--muted);
+  transition: color .15s ease;
+}
+
+.footer-nav a:hover {
+  color: var(--text);
+}
+
+.footer-nav [aria-current="page"] {
+  color: var(--text);
+  font-weight: 700;
+}
+
 .game-header {
   margin-bottom: 32px;
 }
