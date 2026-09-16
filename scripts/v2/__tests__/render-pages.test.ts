@@ -70,6 +70,30 @@ test("the official source is a named link, and freshness is a real timestamp", (
     assert.ok(html.includes("Verified from the official source"));
 });
 
+test("last verified and last checked are separate facts, so a failed refresh cannot relabel an old value", () => {
+    const stale: TrackerData = {
+        ...FRESH_DAY, status: "stale", reason_code: "source-unreachable", reason: "The official source could not be reached",
+        last_success_at_utc: "2026-04-05T21:30:13.065Z", fetched_at_utc: "2026-09-16T19:00:00.000Z"
+    };
+    const html = renderTrackerHtml(PAGE, stale);
+    assert.ok(html.includes(`<span class="info-value" id="last-verified">April 5, 2026 at 21:30 UTC</span>`), "the verified row holds the last success");
+    assert.ok(html.includes(`<span class="info-value" id="last-updated">September 16, 2026 at 19:00 UTC</span>`), "the checked row holds the latest attempt");
+    // app.js rewrites #last-updated from fetched_at_utc on load. Only the "checked" row carries that id,
+    // so hydration cannot turn a value verified in April into one verified just now.
+    assert.ok(!/id="last-verified"[^>]*>September 16/.test(html), "hydration cannot reach the verified row");
+    assert.ok(html.includes(`<span class="info-label">Last Checked</span>`));
+});
+
+test("a tracker with no successful verification says Never rather than borrowing the attempt time", () => {
+    const never: TrackerData = {
+        game: "genshin", type: "next-banner", status: "unavailable", nextEventUtc: null,
+        fetched_at_utc: "2026-09-16T19:00:00.000Z", explanation: "The official source could not be reached", reason_code: "source-unreachable"
+    };
+    const html = renderTrackerHtml(PAGE, never);
+    assert.ok(html.includes(`<span class="info-value" id="last-verified">Never</span>`));
+    assert.ok(html.includes(`<span class="info-value" id="last-updated">September 16, 2026 at 19:00 UTC</span>`));
+});
+
 test("a stale value is still published, with an honest state", () => {
     const stale: TrackerData = { ...FRESH_DAY, status: "stale", reason: "The official source could not be reached", reason_code: "source-unreachable" };
     const html = renderTrackerHtml(PAGE, stale);
@@ -168,6 +192,7 @@ test("the tracker container is recognised however its attributes are written", (
     assert.deepEqual(trackerOf(PAGE), { game: "lol", type: "next-patch" });
     assert.deepEqual(trackerOf(PAGE.replace(container, `data-type="next-patch" id="countdown-container" data-game="lol"`)), { game: "lol", type: "next-patch" }, "order must not matter");
     assert.deepEqual(trackerOf(PAGE.replace(container, `id="countdown-container" class="hidden" data-game="lol" hidden data-type="next-patch"`)), { game: "lol", type: "next-patch" }, "other attributes must not matter");
+    assert.deepEqual(trackerOf(PAGE.replace(container, `id = 'countdown-container' data-game='lol' data-type='next-patch'`)), { game: "lol", type: "next-patch" }, "quote style and spacing must not matter");
     assert.equal(trackerOf("<html><body>no tracker here</body></html>"), undefined, "a page without a container is legitimately skipped");
 });
 

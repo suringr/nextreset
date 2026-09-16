@@ -16,6 +16,7 @@
  * app.js keeps working as progressive enhancement. It overwrites the same nodes on load, so an exact
  * instant still becomes a live countdown in the browser; the rendered HTML is what everyone else sees.
  */
+import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -130,7 +131,10 @@ export interface RenderedBlocks {
     notes?: string;
     source?: { url: string; name: string };
     confidence?: string;
+    /** When the source last confirmed this value (last_success_at_utc). */
     lastVerified?: string;
+    /** When we last tried, successfully or not (fetched_at_utc). */
+    lastChecked?: string;
     precision?: string;
     state: string;
 }
@@ -139,7 +143,11 @@ export interface RenderedBlocks {
 export function blocksFor(data: TrackerData | undefined): RenderedBlocks {
     const state = stateLine(data);
     if (!data || !data.nextEventUtc || data.status === "unavailable") {
-        return { label: "Status", value: "Data unavailable", valueClass: "countdown-value unavailable", notes: state, state };
+        return {
+            label: "Status", value: "Data unavailable", valueClass: "countdown-value unavailable", notes: state, state,
+            lastVerified: data?.last_success_at_utc ? formatDateTime(data.last_success_at_utc) : undefined,
+            lastChecked: data?.fetched_at_utc ? formatDateTime(data.fetched_at_utc) : undefined
+        };
     }
 
     const stale = data.status === "stale";
@@ -158,6 +166,7 @@ export function blocksFor(data: TrackerData | undefined): RenderedBlocks {
         source: data.source_url ? { url: data.source_url, name: sourceName(data.source_url) } : undefined,
         confidence: data.confidence,
         lastVerified: data.last_success_at_utc ? formatDateTime(data.last_success_at_utc) : undefined,
+        lastChecked: data.fetched_at_utc ? formatDateTime(data.fetched_at_utc) : undefined,
         precision: data.precision === "day" ? "Date only, no time announced" : data.precision === "exact" ? "Exact time" : undefined,
         state
     };
@@ -200,12 +209,17 @@ export function renderTrackerHtml(html: string, data: TrackerData | undefined, p
         ? `<span id="confidence" class="confidence confidence-${escapeHtml(b.confidence)}">${escapeHtml(b.confidence)}</span>`
         : `<span id="confidence" class="confidence confidence-none">none</span>`, page);
 
-    // The "Last Updated" row is rewritten together with the rows that follow it, so precision and
-    // state sit beside it. app.js only ever rewrites #last-updated, leaving the new rows intact.
+    // Two different facts, deliberately kept apart: when the source last confirmed the value, and when
+    // we last tried. app.js rewrites #last-updated from fetched_at_utc on load, so only the "checked"
+    // row carries that id — a failed refresh can never relabel a months-old value as verified just now.
     const rows: string[] = [
         `        <div class="info-row">
           <span class="info-label">Last Verified</span>
-          <span class="info-value" id="last-updated">${escapeHtml(b.lastVerified ?? "Never")}</span>
+          <span class="info-value" id="last-verified">${escapeHtml(b.lastVerified ?? "Never")}</span>
+        </div>`,
+        `        <div class="info-row">
+          <span class="info-label">Last Checked</span>
+          <span class="info-value" id="last-updated">${escapeHtml(b.lastChecked ?? "Never")}</span>
         </div>`
     ];
     if (b.precision) {
@@ -230,16 +244,17 @@ export function renderTrackerHtml(html: string, data: TrackerData | undefined, p
 /**
  * `data-game` / `data-type` on the page's hidden container say which tracker it shows.
  *
- * Attribute order, spacing and any other attributes are irrelevant: an ordinary HTML edit must never
- * turn a tracker page into one we quietly skip, because skipping it would publish its placeholders.
+ * The markup is parsed rather than pattern-matched, so attribute order, quote style, spacing around
+ * `=` and any additional attributes are all irrelevant. An ordinary HTML edit must never turn a
+ * tracker page into one we quietly skip, because skipping it would publish its placeholders.
  * A container that exists but cannot be read is template drift, so it fails the build.
  */
 export function trackerOf(html: string, page = "page"): { game: string; type: string } | undefined {
-    const tag = /<[^>]*\bid="countdown-container"[^>]*>/i.exec(html);
-    if (!tag) return undefined;
-    const game = /\bdata-game="([^"]*)"/i.exec(tag[0])?.[1];
-    const type = /\bdata-type="([^"]*)"/i.exec(tag[0])?.[1];
-    if (!game || !type) throw new Error(`${page}: tracker container has no readable data-game/data-type: ${tag[0].slice(0, 120)}`);
+    const container = cheerio.load(html)("#countdown-container");
+    if (container.length === 0) return undefined;
+    const game = container.attr("data-game");
+    const type = container.attr("data-type");
+    if (!game || !type) throw new Error(`${page}: tracker container has no readable data-game/data-type`);
     return { game, type };
 }
 
