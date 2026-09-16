@@ -68,7 +68,7 @@ test("the earliest regional end is published with all three regional instants na
     const first = await runTracker(game, topic, createGenshinWishAdapter(transportFor()), store, NOW, { ai: gate });
     assert.equal(first.result.status, "fresh");
     const fresh = first.result as Extract<typeof first.result, { status: "fresh" }>;
-    assert.deepEqual(Object.keys(fresh), V1_ROBLOX_FRESH_KEYS);
+    assert.deepEqual(Object.keys(fresh), [...V1_ROBLOX_FRESH_KEYS, "precision"]);
     assert.deepEqual([fresh.provider_id, fresh.game, fresh.type, fresh.title], ["genshin", "genshin", "next-banner", "Genshin Impact Next Banner End"], "same data file and page as V1");
     assert.equal(fresh.nextEventUtc, "2026-09-22T06:59:59.000Z", "the earliest regional end: nobody is told they have more time than they do");
     assert.match(fresh.notes!, /The Lone Light Knocks at Night \/ Astral Actuation \/ Epitome Invocation/);
@@ -97,7 +97,8 @@ test("regions that disagree about a phase keep the stored banner end as stale", 
     const shifted = EURO.split("2026-09-22 14:59:59").join("2026-09-23 14:59:59");
     const run = await runTracker(game, topic, createGenshinWishAdapter(transportFor({ euro: shifted })), store, new Date("2026-09-16T06:00:00Z"));
     assert.equal(run.result.status, "stale");
-    assert.match((run.result as any).reason, /not listed in every region/);
+    assert.equal((run.result as any).reason_code, "extraction-failed");
+    assert.match(run.failureDetail ?? "", /not listed in every region/);
     assert.equal((run.result as any).nextEventUtc, "2026-09-22T06:59:59.000Z");
 });
 

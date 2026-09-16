@@ -104,11 +104,13 @@ const escapeAnnotation = (s: string) => s.replace(/%/g, "%25").replace(/\r/g, "%
 async function runV2(entry: RegistryEntry, store: JsonKnowledgeStore, startTime: number, gate: AiGate): Promise<{ result: ProviderResult; line: TrackerCostLine }> {
     let result: ProviderResult;
     let detail = "";
+    let failureDetail = "";
     const line: TrackerCostLine = { game: entry.id, type: entry.type, engine: "v2", status: "unavailable" };
     try {
         const run = await runV2Tracker(entry.id, entry.type, store, new Date(), { ai: gate });
         result = run.result;
         detail = `${run.created} new event(s), ${run.changes.length} change(s)`;
+        failureDetail = run.failureDetail ?? "";
         logAdapterReport(entry, run.report);
         line.work = run.work;
         const decision = (run.report as { decision?: { discover: boolean; reason: string } } | undefined)?.decision;
@@ -152,7 +154,8 @@ async function runV2(entry: RegistryEntry, store: JsonKnowledgeStore, startTime:
         writeLkgJson(result); // keep the V1 vault current as the migration-time last resort
     } else if (result.status === "stale") {
         console.warn(`⚠ ${entry.name} failed but served stored knowledge (${elapsed}ms)`);
-        console.warn(`  Reason: ${result.reason}`);
+        console.warn(`  Published reason: ${result.reason}${result.reason_code ? ` [${result.reason_code}]` : ""}`);
+        if (failureDetail) console.warn(`  Detail: ${failureDetail}`);
     } else {
         console.error(`✗ ${entry.name} unavailable (${elapsed}ms): ${result.explanation}`);
     }

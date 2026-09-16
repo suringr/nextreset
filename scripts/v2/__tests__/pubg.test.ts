@@ -87,7 +87,7 @@ test("the first run publishes the latest patch at its exact time with a link to 
     assert.equal(transport.gets[0].url, PUBG_NEWS_URL);
     assert.equal(first.result.status, "fresh");
     const fresh = first.result as Extract<typeof first.result, { status: "fresh" }>;
-    assert.deepEqual(Object.keys(fresh), V1_ROBLOX_FRESH_KEYS);
+    assert.deepEqual(Object.keys(fresh), [...V1_ROBLOX_FRESH_KEYS, "precision"]);
     assert.deepEqual([fresh.provider_id, fresh.game, fresh.type, fresh.title], ["pubg", "pubg", "last-patch", "PUBG Last Patch"], "same data file and page as V1");
     assert.equal(fresh.nextEventUtc, LATEST.at, "the exact post time, not midnight of the day");
     assert.equal(fresh.notes, LATEST.title);
@@ -140,7 +140,8 @@ test("a response without any patch notes post keeps the last patch published as 
     for (const at of ["2026-09-16T06:00:00Z", "2026-09-16T12:00:00Z"]) {
         const run = await runTracker(game, topic, createPubgPatchAdapter(fakeTransport({ http: [{ body: esportsOnly }] })), store, new Date(at));
         assert.equal(run.result.status, "stale");
-        assert.match((run.result as any).reason, /no "Patch Notes - Update" post/);
+        assert.equal((run.result as any).reason_code, "no-new-information");
+        assert.match(run.failureDetail ?? "", /no "Patch Notes - Update" post/);
         assert.equal((run.result as any).nextEventUtc, LATEST.at);
     }
     const state = store.load("pubg").sources[0];

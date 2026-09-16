@@ -70,6 +70,44 @@ function formatTimeSince(isoString) {
     return 'just now';
 }
 
+// Format a day-precision value as the date it actually is: "September 23, 2026" (UTC, as published).
+function formatEventDate(isoString) {
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('en-US', { timeZone: 'UTC', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+// Shorter form for homepage cards: "Sep 23".
+function formatCardDate(isoString) {
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
+}
+
+// Only a value known to the second may be shown as a second-level countdown.
+// Data without a precision field (V1 providers) keeps the old behaviour.
+function isDayPrecision(data) {
+    return !!data && data.precision === 'day';
+}
+
+/**
+ * What the tracker should show: a date when the source states only a date, a countdown (or time
+ * since) when the instant is exact, and "Updating..." while an upcoming exact event is re-checked.
+ */
+function eventDisplay(data, nowMs) {
+    const diff = new Date(data.nextEventUtc).getTime() - nowMs;
+    const isFuture = diff > 0;
+    const isUpcoming = data.type ? (data.type.indexOf('next-') === 0 || data.type.indexOf('reset') !== -1) : false;
+
+    if (isDayPrecision(data)) {
+        return { mode: 'date', label: isFuture ? 'Official Date' : 'Date', value: formatEventDate(data.nextEventUtc) };
+    }
+    if (!isFuture && isUpcoming) {
+        return { mode: 'updating', label: 'Status', value: 'Updating...' };
+    }
+    return { mode: 'countdown', label: isFuture ? 'Time Until Event' : 'Time Since Event', value: formatDuration(diff) };
+}
+
 // Check if data is unavailable
 function isDataUnavailable(data) {
     return !data.nextEventUtc ||
@@ -164,34 +202,21 @@ function updateCountdown(data) {
 
     // Update dynamic fields
     function tick() {
-        const diff = getTimeDifference(data.nextEventUtc);
-        const isFuture = diff > 0;
-
         if (countdownEl) {
-            const diff = getTimeDifference(data.nextEventUtc);
-            const isFuture = diff > 0;
-            const isUpcoming = data.type?.startsWith('next-') || data.type?.includes('reset');
-
-            const formattedTime = formatDuration(diff);
-            const label = isFuture ? 'Time Until Event' : 'Time Since Event';
-            let valueClass = isFuture ? 'countdown-value' : 'countdown-value elapsed';
+            const display = eventDisplay(data, Date.now());
+            let valueClass = display.mode === 'countdown' && new Date(data.nextEventUtc).getTime() <= Date.now()
+                ? 'countdown-value elapsed'
+                : 'countdown-value';
 
             // Add stale class if using cached data
             if (data.status === 'stale') {
                 valueClass += ' stale';
             }
 
-            if (!isFuture && isUpcoming) {
-                countdownEl.innerHTML = `
-                    <div class="countdown-label">Status</div>
-                    <div class="${valueClass}">Updating...</div>
-                `;
-            } else {
-                countdownEl.innerHTML = `
-                    <div class="countdown-label">${label}</div>
-                    <div class="${valueClass}">${formattedTime}</div>
-                `;
-            }
+            countdownEl.innerHTML = `
+                <div class="countdown-label">${display.label}</div>
+                <div class="${valueClass}">${display.value}</div>
+            `;
         }
 
         if (updatedEl) {
@@ -203,8 +228,8 @@ function updateCountdown(data) {
     // Initial update
     tick();
 
-    // Update every second
-    setInterval(tick, 1000);
+    // A date does not tick. Only the "last checked" line keeps moving for day-precision values.
+    setInterval(tick, isDayPrecision(data) ? 60000 : 1000);
 }
 
 // Show error message
@@ -292,6 +317,7 @@ function renderCard(card, data) {
     card.dataset.state = state;
     card.dataset.nextUtc = data?.nextEventUtc || '';
     card.dataset.type = data?.type || '';
+    card.dataset.precision = data?.precision || '';
 
     // Update badge
     if (badgeEl) {
@@ -302,13 +328,13 @@ function renderCard(card, data) {
     // Update countdown
     if (countdownEl) {
         if (data && !isDataUnavailable(data)) {
-            const diff = getTimeDifference(data.nextEventUtc);
-            const isUpcoming = data.type?.startsWith('next-') || data.type?.includes('reset');
-
-            if (diff <= 0 && isUpcoming) {
+            const display = eventDisplay(data, Date.now());
+            if (display.mode === 'date') {
+                countdownEl.textContent = formatCardDate(data.nextEventUtc);
+            } else if (display.mode === 'updating') {
                 countdownEl.innerHTML = 'Updating...';
             } else {
-                countdownEl.innerHTML = formatCardDuration(diff);
+                countdownEl.innerHTML = formatCardDuration(getTimeDifference(data.nextEventUtc));
             }
         } else {
             countdownEl.textContent = 'Data unavailable';
@@ -349,6 +375,8 @@ function updateHomepageCountdowns() {
     cards.forEach(card => {
         const nextUtc = card.dataset.nextUtc;
         if (!nextUtc) return;
+        // A date does not need recomputing, and must never turn into a countdown.
+        if (card.dataset.precision === 'day') return;
 
         const countdownEl = card.querySelector('.card-countdown');
         if (!countdownEl) return;
@@ -406,8 +434,11 @@ async function init() {
     }
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init();
+// Guarded so the display helpers above can be loaded and tested outside a browser.
+if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 }

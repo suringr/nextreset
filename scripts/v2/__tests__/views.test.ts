@@ -58,21 +58,22 @@ test("fresh view key order matches V1 with and without fetch metadata", () => {
     const gta = emptyKnowledge("gta", now);
     gta.events.push(event({ key: "gta/weekly-reset/2026-09-17", at: "2026-09-17T10:00:00.000Z" }));
     const gtaView = deriveProviderResult(gtaTopic, gta, { now, outcome: { ok: true } });
-    assert.deepEqual(Object.keys(gtaView), V1_GTA_FRESH_KEYS);
+    assert.deepEqual(Object.keys(gtaView), [...V1_GTA_FRESH_KEYS, "precision"], "V1 keys keep their order; precision is appended");
 
     const roblox = emptyKnowledge("roblox", now);
     roblox.events.push(event({ key: "roblox/status/2026-08-07t04-48-28z", game: "roblox", topic: "status", kind: "occurrence", label: "Operational", status: "observed", at: "2026-08-07T04:48:28.252Z" }));
     const robloxView = deriveProviderResult(robloxTopic, roblox, { now, outcome: { ok: true, httpStatus: 200, fetchMode: "http" } });
-    assert.deepEqual(Object.keys(robloxView), V1_ROBLOX_FRESH_KEYS);
+    assert.deepEqual(Object.keys(robloxView), [...V1_ROBLOX_FRESH_KEYS, "precision"]);
     assert.equal((robloxView as any).notes, "Current status: Operational");
 });
 
 test("stale view carries the failure reason and the last verification time", () => {
     const gta = emptyKnowledge("gta", now);
     gta.events.push(event({ key: "gta/weekly-reset/2026-09-17", at: "2026-09-17T10:00:00.000Z", lastVerified: "2026-09-14T06:00:00.000Z" }));
-    const view = deriveProviderResult(gtaTopic, gta, { now, outcome: { ok: false, reason: "boom" } }) as any;
+    const view = deriveProviderResult(gtaTopic, gta, { now, outcome: { ok: false, reason: "boom", kind: "source-unreachable" } }) as any;
     assert.equal(view.status, "stale");
-    assert.equal(view.reason, "boom");
+    assert.equal(view.reason, "The official source could not be reached", "the adapter's own message is never published");
+    assert.equal(view.reason_code, "source-unreachable");
     assert.equal(view.last_success_at_utc, "2026-09-14T06:00:00.000Z");
     assert.equal(view.fetched_at_utc, now.toISOString());
     assert.equal(view.nextEventUtc, "2026-09-17T10:00:00.000Z");
@@ -83,6 +84,6 @@ test("no known event yields the V1 unavailable shape", () => {
     assert.deepEqual(Object.keys(view), V1_UNAVAILABLE_KEYS);
     assert.equal((view as any).explanation, "No event known for this topic yet");
 
-    const failed = deriveProviderResult(gtaTopic, emptyKnowledge("gta", now), { now, outcome: { ok: false, reason: "offline" } });
-    assert.equal((failed as any).explanation, "offline");
+    const failed = deriveProviderResult(gtaTopic, emptyKnowledge("gta", now), { now, outcome: { ok: false, reason: "offline", kind: "source-unreachable" } });
+    assert.equal((failed as any).explanation, "The official source could not be reached");
 });

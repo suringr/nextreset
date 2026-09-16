@@ -24,6 +24,7 @@ import { selectCurrentEvent } from "../views";
 import { Candidate, RejectedCandidate, ScoringContext, candidateFrom, normalizeCandidates, publishableCandidates, rankCandidates, scoreCandidate } from "./candidates";
 import { DuckDuckGoSearch } from "./duckduckgo";
 import { extractLinks, officialLinks } from "./links";
+import { latestKnownVersion, obsoleteReason, rejectsOlderVersions } from "./obsolete";
 import { buildQueries } from "./queries";
 import { applyRelevance, classifyRelevance, needsAiRelevance } from "./relevance";
 import { SearchConfig, SearchProvider, SearchQuery, SearchUnavailableError, formatQuery } from "./search-provider";
@@ -152,9 +153,19 @@ export async function discoverSources(options: DiscoveryOptions): Promise<Discov
         }
     };
 
+    // Candidates that cannot answer the open question are dropped before anything is ranked or judged
+    // convincing: a page about a version older than the verified one has nothing to say about the next
+    // one, and must never count as "found", which would skip the web search that could still answer it.
+    const olderThan = rejectsOlderVersions(topic) ? latestKnownVersion(knowledge, topic.type) : undefined;
     const rankAll = (): { ranked: Candidate[]; rejected: RejectedCandidate[] } => {
         const { kept, rejected } = normalizeCandidates(raw);
-        return { ranked: rankCandidates(kept.map(c => scoreCandidate(c, scoring))), rejected };
+        const usable: Candidate[] = [];
+        for (const candidate of kept) {
+            const why = obsoleteReason({ url: candidate.url, title: candidate.title, latest: olderThan });
+            if (why) rejected.push({ url: candidate.url, reason: why });
+            else usable.push(candidate);
+        }
+        return { ranked: rankCandidates(usable.map(c => scoreCandidate(c, scoring))), rejected };
     };
     const convincing = (ranked: Candidate[]) => publishableCandidates(ranked).some(c => c.score >= limits.minOfficialScore);
 

@@ -38,6 +38,11 @@ export interface TrackerRunResult {
     work?: WorkStats;
     /** Set when AI work was deferred by the budget; stored knowledge was served instead. */
     deferred?: AdapterOutcome["deferred"];
+    /**
+     * The internal failure detail for this run (the adapter's own message). Logged and reported,
+     * never published: the visitor-facing wording is `result.reason` (see v2/reasons.ts).
+     */
+    failureDetail?: string;
 }
 
 export interface RunOptions {
@@ -73,8 +78,10 @@ export async function runTracker(game: Game, topic: Topic, adapter: Adapter, sto
     try {
         knowledge = store.load(game.id);
     } catch (error) {
-        // Corrupt or unreadable knowledge: report loudly, touch nothing.
-        return { result: unavailableResult(topic, now, `Knowledge store error: ${errorMessage(error)}`), knowledge: null, changes: [], created: 0 };
+        // Corrupt or unreadable knowledge: report loudly, touch nothing. The detail is for the logs.
+        const detail = `Knowledge store error: ${errorMessage(error)}`;
+        console.error(`✗ ${game.id}/${topic.type}: ${detail}`);
+        return { result: unavailableResult(topic, now, "The stored data for this tracker could not be read"), knowledge: null, changes: [], created: 0, failureDetail: detail };
     }
 
     let outcome;
@@ -83,7 +90,7 @@ export async function runTracker(game: Game, topic: Topic, adapter: Adapter, sto
     } catch (error) {
         const reason = errorMessage(error);
         const result = deriveProviderResult(topic, knowledge, { now, outcome: { ok: false, reason } });
-        return { result, knowledge, changes: [], created: 0 };
+        return { result, knowledge, changes: [], created: 0, failureDetail: reason };
     }
 
     // Fetch bookkeeping is persisted even when the source failed, so streaks are visible.
@@ -98,8 +105,8 @@ export async function runTracker(game: Game, topic: Topic, adapter: Adapter, sto
     if (outcome.failure) {
         knowledge.updatedAt = now.toISOString();
         const saveError = trySave(store, knowledge);
-        const result = deriveProviderResult(topic, knowledge, { now, outcome: { ok: false, reason: outcome.failure } });
-        return { result, knowledge, changes: [], created: 0, saveError, report: outcome.report, work: outcome.work, deferred: outcome.deferred };
+        const result = deriveProviderResult(topic, knowledge, { now, outcome: { ok: false, reason: outcome.failure, kind: outcome.failureKind } });
+        return { result, knowledge, changes: [], created: 0, saveError, report: outcome.report, work: outcome.work, deferred: outcome.deferred, failureDetail: outcome.failure };
     }
 
     const changes: Change[] = [];

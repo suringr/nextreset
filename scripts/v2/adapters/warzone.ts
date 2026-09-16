@@ -28,6 +28,7 @@
  * Nothing here works around blocking.
  */
 import * as cheerio from "cheerio";
+import { failureKindFromFetch } from "../reasons";
 import * as crypto from "crypto";
 import { Confidence } from "../../types";
 import { Adapter } from "../adapter";
@@ -115,7 +116,7 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
         const fetched = await smartFetch(source.url, { expect: { kind: "text", minWords: 20, markers: ["Patch Notes"] }, allowRender: false, previous, transport, label: `${game.id}-${topic.type}`, now });
         const sourceStates: SourceState[] = [{ id: source.id, url: source.url, ...fetched.state }];
         if (fetched.outcome === "unusable") {
-            return { events: [], failure: fetched.error ?? fetched.verdict?.reason ?? "fetch failed", sourceStates };
+            return { events: [], failure: fetched.error ?? fetched.verdict?.reason ?? "fetch failed", failureKind: failureKindFromFetch(fetched), sourceStates };
         }
         const fetch = { httpStatus: fetched.document?.status ?? 304, mode: fetched.document?.mode ?? "http" as const };
         if (fetched.outcome === "unchanged") {
@@ -138,7 +139,7 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
                 lastVerdict: "parse-error",
                 consecutiveFailures: (previous?.consecutiveFailures ?? 0) + 1
             };
-            return { events: [], failure: error instanceof Error ? error.message : String(error), sourceStates };
+            return { events: [], failure: error instanceof Error ? error.message : String(error), failureKind: "extraction-failed", sourceStates };
         }
 
         // Evidence only when this update day is new to the knowledge file.

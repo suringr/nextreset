@@ -11,7 +11,7 @@
  * looking pieces are `startAt`/`endAt` (a `period` kind without bounds would be
  * incoherent) and the Document/Claim shapes, both part of the approved model.
  */
-import { Confidence } from "../types";
+import { Confidence, DatePrecision } from "../types";
 
 /** How a topic's events behave. */
 export type TopicKind = "version" | "period" | "occurrence" | "recurring";
@@ -19,8 +19,8 @@ export type TopicKind = "version" | "period" | "occurrence" | "recurring";
 /** Event lifecycle. Later kinds (for example released versions) extend this union. */
 export type EventStatus = "scheduled" | "ended" | "observed";
 
-/** Whether the stored instant is exact or only known to the day. */
-export type DatePrecision = "exact" | "day";
+/** Whether the stored instant is exact or only known to the day; shared with the published contract. */
+export type { DatePrecision };
 
 export type PublishState = "published" | "held";
 
@@ -58,6 +58,12 @@ export interface TopicDiscovery {
      * discovery/cadence.ts). Known sources are still re-checked on every run.
      */
     minIntervalHours?: number;
+    /**
+     * Reject candidates that name a version older than the newest verified one, before any model
+     * call (discovery/obsolete.ts). Opt-in, and only meaningful while the topic's question is about
+     * a future version, so it is never applied to topics that need historical evidence.
+     */
+    rejectOlderVersions?: boolean;
 }
 
 export interface Topic {

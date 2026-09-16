@@ -30,6 +30,7 @@ import { AiBudgetExceededError, AiGate, PlannedCall, createAiGate, currentRunId,
 import { AiCallRecord, AiUsageLedger } from "../cost/ledger";
 import { discoveryDue } from "../discovery/cadence";
 import { discoveredSourceId, knownSourcesFor, LearnInput } from "../discovery/learning";
+import { latestKnownVersion, obsoleteReason, rejectsOlderVersions } from "../discovery/obsolete";
 import { DiscoveryResult, createSearchProviders, discoverSources, shouldDiscover } from "../discovery/discovery";
 import { readSearchConfig, SearchProvider } from "../discovery/search-provider";
 import { versionOf } from "../discovery/queries";
@@ -38,6 +39,7 @@ import { Claim, DiscoveryVia, Document, EventStatus, Game, SourceState, Topic } 
 import { FetchedDocument, smartFetch } from "../fetch/smart-fetch";
 import { Transport, defaultTransport } from "../fetch/transport";
 import { eventKey } from "../identity";
+import { FailureKind, failureKindFromFetch } from "../reasons";
 import { upcomingUntil } from "../knowledge";
 
 export interface AiTopicSpec {
@@ -80,6 +82,8 @@ export interface AttemptReport {
 
 export interface AiDiscoveryReport {
     knownSources: Array<{ url: string; via: "config" | "learned" }>;
+    /** Known pages that were not even fetched: they cannot answer the topic's question (discovery/obsolete.ts). */
+    skipped: Array<{ url: string; reason: string }>;
     attempts: AttemptReport[];
     decision?: { discover: boolean; reason: string };
     discovery?: {
@@ -219,6 +223,25 @@ export function eventFromItem(item: GroundedItem, topic: Topic, spec: AiTopicSpe
     return { event, claims };
 }
 
+/**
+ * What to tell visitors when a run published nothing. A page that could not be fetched keeps its own
+ * kind (unreachable, blocked); a changed page nobody could read is "waiting to be verified"; anything
+ * else means the sources were fine and simply had nothing new.
+ */
+export function failureKindOfRun(report: AiDiscoveryReport): FailureKind {
+    if (report.attempts.some(a => a.outcome === "no-ai" || a.outcome === "deferred")) return "awaiting-verification";
+    // A page the model read and judged irrelevant was read perfectly well: it simply does not answer this
+    // topic, which is "nothing new", not a failure to read it.
+    const last = [...report.attempts].reverse().find(a => a.outcome === "unusable" || a.outcome === "no-facts");
+    if (!last) return "no-new-information";
+    if (last.outcome !== "unusable") return "extraction-failed";
+    return failureKindFromFetch({
+        verdict: last.fetch?.verdict !== undefined ? { code: last.fetch.verdict } : undefined,
+        error: last.reason,
+        attempts: last.fetch ? [{ status: last.fetch.status }] : undefined
+    });
+}
+
 /** Deterministic confidence for what this run publishes, with the reasons. */
 export function confidenceFor(winner: { via: DiscoveryVia; document: FetchedDocument; extraction: ExtractionResult; events: EventInput[] }): { level: Confidence; reasons: string[] } {
     const reasons: string[] = [];
@@ -251,7 +274,7 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
         const callsBefore = gate.callsMade(game.id, topic.type).length;
         const extractionTopic: ExtractionTopic = { game: game.id, gameName: game.name, type: topic.type, description: spec.description };
 
-        const report: AiDiscoveryReport = { knownSources: [], attempts: [], ai: aiUsageReport(gate, callsBefore, game.id, topic.type, ai?.model) };
+        const report: AiDiscoveryReport = { knownSources: [], skipped: [], attempts: [], ai: aiUsageReport(gate, callsBefore, game.id, topic.type, ai?.model) };
         const sourceStates: SourceState[] = [];
         const tried = new Set<string>();
         const failures: string[] = [];
@@ -415,8 +438,16 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
             return finish({ ok: true, unchanged: false, document, docRecord, events, claims, extraction, fetch });
         };
 
-        // 1. Known sources: configured page first, then learned pages.
-        const known = knownSourcesFor(game, topic, knowledge);
+        // 1. Known sources: configured page first, then learned pages. A learned page about a version older than
+        //    the verified one cannot answer a question about the next one, so it is never fetched, rendered or
+        //    read (discovery/obsolete.ts). The configured page is always kept.
+        const olderThan = rejectsOlderVersions(topic) ? latestKnownVersion(knowledge, topic.type) : undefined;
+        const known = knownSourcesFor(game, topic, knowledge).filter(source => {
+            if (source.via === "config") return true;
+            const why = obsoleteReason({ url: source.url, title: source.title, latest: olderThan });
+            if (why) report.skipped.push({ url: source.url, reason: why });
+            return why === undefined;
+        });
         report.knownSources = known.map(k => ({ url: k.url, via: k.via }));
         let winner: (AttemptSuccess & { via: DiscoveryVia }) | undefined;
         let unchangedFetch: AttemptUnchanged["fetch"] | undefined;
@@ -521,9 +552,9 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
         // Work the budget deferred: nothing new is published, stored knowledge is served, and a later run retries.
         if (budget.refusal) {
             const detail = budget.refusal.message;
-            // Visitors see this reason next to the cached value: keep it short, without budget figures. The detail goes to
-            // the knowledge file, the logs and the step summary.
-            return { events: [], failure: "deferred_due_to_budget: an updated official page is waiting to be verified", deferred: { reason: "deferred_due_to_budget", detail }, learned: { successes: [], failures }, ...shared };
+            // `failure` is the internal detail (logs, step summary, knowledge file). Visitors see the sentence the
+            // public vocabulary gives "budget-deferred" (v2/reasons.ts), which carries no budget figures.
+            return { events: [], failure: `deferred_due_to_budget: ${detail}`, failureKind: "budget-deferred", deferred: { reason: "deferred_due_to_budget", detail }, learned: { successes: [], failures }, ...shared };
         }
         // An unchanged page is a success only while stored knowledge still answers the question; otherwise the
         // failed search for an answer surfaces, and the pipeline serves stored knowledge as stale.
@@ -542,7 +573,7 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
             reason = report.decision?.reason ?? "no known source and nothing discovered";
         }
         if (unchangedFetch) reason = `stored knowledge has no upcoming event and no source answered (${reason})`;
-        return { events: [], failure: reason, learned: { successes: [], failures }, ...shared };
+        return { events: [], failure: reason, failureKind: failureKindOfRun(report), learned: { successes: [], failures }, ...shared };
     };
 }
 

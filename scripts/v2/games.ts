@@ -49,7 +49,10 @@ export const GAMES: Game[] = [
                 discovery: {
                     queries: ["{game} patch schedule", "{game} patch notes", "{game} patch {next}"],
                     terms: ["patch schedule"],
-                    answeredWhen: "future-scheduled"
+                    answeredWhen: "future-scheduled",
+                    // Patch numbers order reliably here, and the question is about the next patch: notes for a
+                    // patch older than the verified one can never answer it, so they never reach the model.
+                    rejectOlderVersions: true
                 }
             }
         ],
