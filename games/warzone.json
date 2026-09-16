@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "warzone",
-  "updatedAt": "2026-09-15T23:23:47.003Z",
+  "updatedAt": "2026-09-16T02:22:43.692Z",
   "events": [
     {
       "key": "warzone/last-patch/call-of-duty-bo7-warzone-season-05-reloaded-patch-notes-2026-08-28",
@@ -13,7 +13,7 @@
       "at": "2026-08-28T00:00:00.000Z",
       "precision": "day",
       "firstSeen": "2026-09-15T22:41:25.137Z",
-      "lastVerified": "2026-09-15T23:23:47.003Z",
+      "lastVerified": "2026-09-16T02:22:43.692Z",
       "publishState": "published"
     }
   ],
@@ -57,11 +57,11 @@
     {
       "id": "warzone-patch-notes-page",
       "url": "https://www.callofduty.com/patchnotes",
-      "etag": "\"27874-65aafe0bc7a19-gzip\"",
-      "lastModified": "Fri, 04 Sep 2026 22:34:56 GMT",
-      "textHash": "79c0e1e98e99aba765c155df475ea4301c0d8aefe3d8dd4741d755cda2489c1e",
-      "lastFetchedAt": "2026-09-15T23:23:47.003Z",
-      "lastUsableAt": "2026-09-15T22:41:25.137Z",
+      "etag": "\"27874-65aafe1fdede7-gzip\"",
+      "lastModified": "Fri, 04 Sep 2026 22:35:17 GMT",
+      "textHash": "7fe9cc6728e966bd580a53a14d1e059cccd76fc0b8e1968597efb8c1257efa0b",
+      "lastFetchedAt": "2026-09-16T02:22:43.692Z",
+      "lastUsableAt": "2026-09-16T02:22:43.692Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
