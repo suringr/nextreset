@@ -74,7 +74,7 @@ test("every card carries its verified value, and nothing is left loading", () =>
 
 test("the page is ordered by what the data says, not by the order the cards were written in", () => {
     const html = rendered.html;
-    const headings = [...html.matchAll(/class="group-heading">([^<]*)</g)].map(m => m[1]);
+    const headings = [...html.matchAll(/class="group-heading"[^>]*>([^<]*)</g)].map(m => m[1]);
     assert.deepEqual(headings, [GROUP_HEADINGS.upcoming, GROUP_HEADINGS.recent, GROUP_HEADINGS.unknown]);
 
     const ids = cardsOf(html).map(c => /id="card-([^"]+)"/.exec(c)![1]);
@@ -253,6 +253,107 @@ test("a value with no stated precision is a date in the build and in the browser
     const display = app.eventDisplay({ ...redDead, precision: undefined }, NOW.getTime());
     assert.equal(built.value, "September 1, 2026");
     assert.deepEqual([display.mode, display.value], ["date", "September 1, 2026"], "the browser shows the same date, not a countdown to midnight");
+});
+
+/**
+ * Just enough DOM for the updater: elements that know their parent, their children and their classes.
+ * The regrouping moves nodes between sections, which cannot be observed through a flat stub.
+ */
+class FakeElement {
+    children: FakeElement[] = [];
+    parentNode: FakeElement | undefined;
+    className = "";
+    textContent = "";
+    innerHTML = "";
+    attributes: Record<string, string> = {};
+    dataset: Record<string, string> = {};
+    constructor(public tag: string) {}
+    get classList() {
+        return { contains: (name: string) => this.className.split(/\s+/).includes(name) };
+    }
+    setAttribute(name: string, value: string) {
+        this.attributes[name] = value;
+    }
+    appendChild(node: FakeElement) {
+        node.parentNode?.removeChild(node);
+        node.parentNode = this;
+        this.children.push(node);
+        return node;
+    }
+    removeChild(node: FakeElement) {
+        this.children = this.children.filter(child => child !== node);
+        node.parentNode = undefined;
+        return node;
+    }
+    querySelector(selector: string): FakeElement | null {
+        if (selector === `.group-heading[data-group="unknown"]`) {
+            return this.children.find(c => c.classList.contains("group-heading") && c.attributes["data-group"] === "unknown") ?? null;
+        }
+        return this.children.find(c => c.classList.contains(selector.replace(".", ""))) ?? null;
+    }
+}
+
+function fakeCard(id: string, dataset: Record<string, string>): FakeElement {
+    const card = new FakeElement("a");
+    card.className = "card";
+    card.dataset = { game: id, ...dataset };
+    for (const cls of ["badge", "card-countdown", "last-checked"]) {
+        const child = new FakeElement("span");
+        child.className = cls;
+        card.appendChild(child);
+    }
+    return card;
+}
+
+function fakeGrid(groups: Array<[string, FakeElement[]]>): FakeElement {
+    const grid = new FakeElement("div");
+    for (const [group, cards] of groups) {
+        const heading = new FakeElement("h2");
+        heading.className = "group-heading";
+        heading.setAttribute("data-group", group);
+        heading.textContent = GROUP_HEADINGS[group as keyof typeof GROUP_HEADINGS];
+        grid.appendChild(heading);
+        for (const card of cards) grid.appendChild(card);
+    }
+    return grid;
+}
+
+/** What the page looks like now: headings and the cards under them, in order. */
+function layout(grid: FakeElement): string[] {
+    return grid.children.map(node => (node.classList.contains("group-heading") ? `# ${node.textContent}` : node.dataset.game));
+}
+
+test("a card that expires while the page is open moves to the group it now belongs in", () => {
+    const app = loadApp();
+    const expired = { nextUtc: "2026-06-06T00:00:00.000Z", type: "next-season", precision: "exact", status: "stale", unanswered: "" };
+    const ahead = { nextUtc: new Date(Date.now() + 40 * 86_400_000).toISOString(), type: "next-patch", precision: "exact", status: "fresh", unanswered: "" };
+
+    const fortnite = fakeCard("fortnite", expired);
+    const lol = fakeCard("lol", ahead);
+    const cs2 = fakeCard("cs2", { nextUtc: "2026-09-09T22:51:08.000Z", type: "last-update", precision: "exact", status: "fresh", unanswered: "" });
+    const grid = fakeGrid([["upcoming", [fortnite, lol]], ["recent", [cs2]]]);
+    app.document = { querySelectorAll: () => grid.children.filter(c => c.classList.contains("card")), createElement: (tag: string) => new FakeElement(tag) };
+
+    app.updateHomepageCountdowns();
+
+    assert.deepEqual(layout(grid), [
+        `# ${GROUP_HEADINGS.upcoming}`, "lol",
+        `# ${GROUP_HEADINGS.recent}`, "cs2",
+        `# ${GROUP_HEADINGS.unknown}`, "fortnite"
+    ], "the expired card left 'next up' and the heading it needed was created");
+    assert.equal(fortnite.querySelector(".badge")!.textContent, "NO DATE");
+});
+
+test("a heading left with no cards beneath it is removed, not left hanging", () => {
+    const app = loadApp();
+    const expired = { nextUtc: "2026-06-06T00:00:00.000Z", type: "next-season", precision: "exact", status: "stale", unanswered: "" };
+    const fortnite = fakeCard("fortnite", expired);
+    const grid = fakeGrid([["upcoming", [fortnite]], ["unknown", []]]);
+    app.document = { querySelectorAll: () => grid.children.filter(c => c.classList.contains("card")), createElement: (tag: string) => new FakeElement(tag) };
+
+    app.updateHomepageCountdowns();
+
+    assert.deepEqual(layout(grid), [`# ${GROUP_HEADINGS.unknown}`, "fortnite"], "the emptied 'next up' heading is gone");
 });
 
 test("the browser badges a card exactly as the build did", () => {

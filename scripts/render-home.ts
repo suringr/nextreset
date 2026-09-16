@@ -232,7 +232,8 @@ export function renderHomeHtml(html: string, read: (game: string, type: string) 
     for (const entry of orderCards(cards)) {
         if (entry.value.group !== group) {
             group = entry.value.group;
-            parts.push(`      <h2 class="group-heading">${escapeHtml(GROUP_HEADINGS[group])}</h2>`);
+            // data-group lets app.js find a group when a card's state expires while the page is open.
+            parts.push(`      <h2 class="group-heading" data-group="${group}">${escapeHtml(GROUP_HEADINGS[group])}</h2>`);
         }
         parts.push(renderCardHtml(entry.card, entry.value, entry.data, eol));
     }

@@ -451,6 +451,37 @@ function renderCardUnavailable(card) {
     }
 }
 
+// The heading text the build writes for the unanswered group (GROUP_HEADINGS in scripts/render-home.ts).
+const UNANSWERED_HEADING = 'Waiting on an official source';
+
+// A card whose date expires while the page is open has left the group the build put it in, and a
+// heading it no longer belongs under would contradict the page. That group is the last one, so moving
+// the card to the end of the grid is the whole of the regrouping; a heading left with no cards beneath
+// it is then removed, since an empty section is worse than no section.
+function regroupAsUnanswered(card) {
+    const grid = card.parentNode;
+    if (!grid || typeof grid.appendChild !== 'function') return;
+
+    let heading = grid.querySelector('.group-heading[data-group="unknown"]');
+    if (!heading) {
+        heading = document.createElement('h2');
+        heading.className = 'group-heading';
+        heading.setAttribute('data-group', 'unknown');
+        heading.textContent = UNANSWERED_HEADING;
+        grid.appendChild(heading);
+    }
+    grid.appendChild(card);
+
+    const children = Array.from(grid.children || []);
+    children.forEach((node, i) => {
+        if (!node.classList || !node.classList.contains('group-heading')) return;
+        const next = children[i + 1];
+        if (!next || (next.classList && next.classList.contains('group-heading'))) {
+            if (node.parentNode) node.parentNode.removeChild(node);
+        }
+    });
+}
+
 // Update all homepage countdowns (recompute only, no network fetches)
 function updateHomepageCountdowns() {
     const cards = document.querySelectorAll('.card[data-game]');
@@ -485,6 +516,7 @@ function updateHomepageCountdowns() {
                     badgeEl.className = 'badge badge-unavailable';
                     badgeEl.textContent = 'NO DATE';
                 }
+                regroupAsUnanswered(card);
             }
             countdownEl.textContent = 'No official date announced';
             countdownEl.className = 'card-countdown is-text';
