@@ -19,6 +19,7 @@
 import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
+import { IndexDecision, NOINDEX_TAG, STATIC_PAGE_DECISION, indexStateFor } from "./indexing";
 import { blocksFor as dataBlocksFor, loadKnowledge, renderBlocks } from "./render-data-blocks";
 import { CardGroup, renderHomeHtml } from "./render-home";
 import { SitemapEntry, SitemapInput, renderSitemap } from "./render-sitemap";
@@ -239,6 +240,21 @@ export function blocksFor(data: TrackerData | undefined, now: Date = new Date())
     };
 }
 
+/**
+ * Puts a tag into the head, after the canonical link.
+ *
+ * The canonical is the one line every page has exactly once and no page can lose without failing its
+ * own test, which makes it the anchor. Matched as a pattern rather than a literal, because each page's
+ * canonical names that page.
+ */
+function insertAfterCanonical(html: string, tag: string, page: string): string {
+    const canonical = /<link rel="canonical"[^>]*>/g;
+    const found = html.match(canonical);
+    if (!found || found.length !== 1) throw new Error(`${page}: expected exactly one canonical link, found ${found?.length ?? 0}`);
+    const eol = html.includes("\r\n") ? "\r\n" : "\n";
+    return html.replace(canonical, match => `${match}${eol}  ${tag}`);
+}
+
 /** One replacement that must match exactly once, so template drift fails loudly instead of silently. */
 function replaceOnce(html: string, needle: string, replacement: string, page: string): string {
     // The authored pages are stored with CRLF. Match and write in the file's own line endings, so a
@@ -265,6 +281,13 @@ const PLACEHOLDER_UPDATED_ROW = `        <div class="info-row">
 /** Writes the verified facts into one tracker page. Pure: takes HTML and data, returns HTML. */
 export function renderTrackerHtml(html: string, data: TrackerData | undefined, page = "page", now: Date = new Date(), blocksHtml = ""): string {
     const b = blocksFor(data, now);
+
+    // A page that cannot answer its question is honest but thin, and asking to be indexed on it is
+    // asking to be judged on the page that says the least. It is still crawled, and its links still
+    // followed to the pages that do answer something.
+    if (indexStateFor(data, now).state === "noindex") {
+        html = insertAfterCanonical(html, NOINDEX_TAG, page);
+    }
 
     let out = replaceOnce(html, PLACEHOLDER_LABEL, `<div class="countdown-label">${escapeHtml(b.label)}</div>`, page);
     out = replaceOnce(out, PLACEHOLDER_VALUE, `<div class="${b.valueClass}">${escapeHtml(b.value)}</div>`, page);
@@ -354,6 +377,8 @@ export interface RenderSummary {
     assets: VersionedAssets;
     /** What went into sitemap.xml, and which of those pages could be dated. */
     sitemap: SitemapEntry[];
+    /** Why each page is or is not in the index. */
+    indexing: Array<{ page: string; state: IndexDecision["state"]; reason: string }>;
 }
 
 function readData(dataDir: string, game: string, type: string): TrackerData | undefined {
@@ -368,7 +393,7 @@ function readData(dataDir: string, game: string, type: string): TrackerData | un
 
 /** Renders every tracker page in `distDir` in place. Throws on template drift; never touches public/. */
 export function renderSite(distDir: string, now: Date = new Date(), root: string = path.dirname(distDir)): RenderSummary {
-    const summary: RenderSummary = { rendered: [], missingData: [], skipped: 0, assets: { versions: {}, pages: 0, missing: [] }, sitemap: [] };
+    const summary: RenderSummary = { rendered: [], missingData: [], skipped: 0, assets: { versions: {}, pages: 0, missing: [] }, sitemap: [], indexing: [] };
     const dataDir = path.join(distDir, "data");
     const readable = (iso: string, precision?: string) => (precision === "exact" ? formatDateTime(iso) : formatDate(iso));
     const pages = htmlFilesIn(distDir);
@@ -378,8 +403,9 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
         const html = fs.readFileSync(file, "utf8");
         const page = path.relative(distDir, file).replace(/\\/g, "/");
         const tracker = trackerOf(html, page);
-        listed.push({ page, tracker });
         if (!tracker) {
+            summary.indexing.push({ page, ...STATIC_PAGE_DECISION });
+            listed.push({ page, tracker });
             // The homepage has no tracker of its own: it shows all of them. Drift there is not survivable
             // — publishing twelve cards that say "Loading..." is what this milestone exists to end — so a
             // page that cannot be read throws rather than being skipped quietly.
@@ -394,6 +420,12 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
         }
         const data = readData(dataDir, tracker.game, tracker.type);
         if (!data) summary.missingData.push(page);
+
+        // A page we are asking Google not to index is not also submitted for indexing: asking for both
+        // at once is the kind of contradiction that teaches a crawler to trust neither signal.
+        const decision = indexStateFor(data, now);
+        summary.indexing.push({ page, ...decision });
+        if (decision.state === "index") listed.push({ page, tracker });
 
         // Everything else this game has verified: schedules, history, regional times. Absent knowledge
         // (a plain clone) simply produces no blocks.
@@ -436,6 +468,7 @@ if (require.main === module) {
     for (const r of summary.rendered) console.log(`  ✓ ${r.page} — ${r.status}: ${r.value}${r.blocks ? ` (+${r.blocks} data block(s))` : ""}`);
     for (const p of summary.missingData) console.warn(`  ⚠ ${p}: no data file; published as unavailable`);
     if (summary.home) console.log(`  ✓ index.html — ${summary.home.upcoming} upcoming, ${summary.home.recent} recently updated, ${summary.home.unknown} unanswered`);
+    for (const page of summary.indexing.filter(p => p.state === "noindex")) console.log(`  ⊘ ${page.page} — noindex: ${page.reason}`);
     console.log(`  ✓ sitemap.xml — ${summary.sitemap.length} URL(s), ${summary.sitemap.filter(e => e.lastmod).length} dated`);
     for (const [asset, version] of Object.entries(summary.assets.versions)) console.log(`  ✓ ${asset}?v=${version}`);
     for (const absent of summary.assets.missing) console.warn(`  ⚠ ${absent}: referenced but not in the build; left unversioned`);
