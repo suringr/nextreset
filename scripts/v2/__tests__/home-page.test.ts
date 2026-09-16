@@ -408,6 +408,38 @@ test("cards that expire one after another still read in the order the group is s
     assert.equal(cards.length, 3);
 });
 
+test("a page loaded after its deadline moves the card as it renders it", () => {
+    const app = loadApp();
+    // Built while the date was ahead, opened once it had expired: the card is unanswered from its first
+    // paint, so the updater never sees it change and would leave it under "Next up" forever.
+    // renderCard reads the real clock, so the fixture is relative: always long expired, whenever it runs.
+    const expiredAt = new Date(Date.now() - 40 * 86_400_000).toISOString();
+    const lol = fakeCard("lol", { nextUtc: expiredAt, type: "next-patch", precision: "day", status: "live", unanswered: "" }, "League of Legends");
+    const cs2 = fakeCard("cs2", { nextUtc: "2026-09-09T22:51:08.000Z", type: "last-update", precision: "exact", status: "fresh", unanswered: "" }, "Counter-Strike 2");
+    const grid = fakeGrid([["upcoming", [lol]], ["recent", [cs2]]]);
+    app.document = { createElement: (tag: string) => new FakeElement(tag) };
+
+    app.renderCard(lol, { game: "lol", type: "next-patch", status: "stale", precision: "day", nextEventUtc: expiredAt, confidence: "high", fetched_at_utc: expiredAt });
+
+    assert.equal(lol.querySelector(".badge")!.textContent, "NO DATE");
+    assert.deepEqual(layout(grid), [
+        `# ${GROUP_HEADINGS.recent}`, "cs2",
+        `# ${GROUP_HEADINGS.unknown}`, "lol"
+    ], "it moved as it was rendered, and the heading it left is gone");
+});
+
+test("a date stays set as a date when the browser rewrites it", () => {
+    const app = loadApp();
+    const { card, els } = stubCard({ game: "lol", type: "next-patch", state: "live", nextUtc: "", precision: "", status: "", unanswered: "" });
+    els[".card-countdown"].className = "card-countdown is-text";
+
+    app.renderCard(card, PUBLISHED["lol.next-patch"]);
+    assert.equal(els[".card-countdown"].className, "card-countdown is-text", "a date keeps the styling the build gave it");
+
+    app.renderCard(card, PUBLISHED["gta.weekly-reset"]);
+    assert.equal(els[".card-countdown"].className, "card-countdown", "a countdown does not");
+});
+
 test("a heading left with no cards beneath it is removed, not left hanging", () => {
     const app = loadApp();
     const expired = { nextUtc: "2026-06-06T00:00:00.000Z", type: "next-season", precision: "exact", status: "stale", unanswered: "" };

@@ -405,6 +405,10 @@ function renderCard(card, data) {
         badgeEl.textContent = badgeText;
     }
 
+    // A page built before a deadline can be loaded after it. The card is then unanswered from its first
+    // paint, and the updater will not move it later, because it only acts on a change it sees happen.
+    if (state === 'unavailable') regroupAsUnknown(card);
+
     // Update countdown. The build renders a full date here; a sentence and a date need the smaller
     // size, a countdown does not, so the class moves with the value instead of being left behind.
     if (countdownEl) {
@@ -416,6 +420,8 @@ function renderCard(card, data) {
                 compact = true;
             } else if (display.mode === 'date') {
                 countdownEl.textContent = formatCardDate(data.nextEventUtc);
+                // A date is set the way the build set it, rather than jumping to countdown styling.
+                compact = true;
             } else if (display.mode === 'updating') {
                 countdownEl.innerHTML = 'Updating...';
             } else {
@@ -464,12 +470,15 @@ function cardTitle(card) {
     return (title && title.textContent) || '';
 }
 
-// A card whose date expires while the page is open has left the group the build put it in, and a
-// heading it no longer belongs under would contradict the page. That group is the last one, and the
-// build orders it by name (orderCards in scripts/render-home.ts), so the card goes before the first
-// one that sorts after it; a heading left with no cards beneath it is then removed, since an empty
-// section is worse than no section.
-function regroupAsUnanswered(card) {
+// A card the build put under "next up" can stop belonging there — its date expires while the page is
+// open, or the page is loaded hours after it was built — and a heading it no longer belongs under
+// would contradict the page. That group is the last one, and the build orders it by name (orderCards
+// in scripts/render-home.ts), so the card goes before the first one that sorts after it; a heading
+// left with no cards beneath it is then removed, since an empty section is worse than no section.
+//
+// Only this direction happens: the page and the data it fetches come from the same build, so a card
+// can lose its answer as time passes but cannot gain one without the page being rebuilt.
+function regroupAsUnknown(card) {
     const grid = card.parentNode;
     if (!grid || typeof grid.appendChild !== 'function') return;
 
@@ -535,7 +544,7 @@ function updateHomepageCountdowns() {
                     badgeEl.className = 'badge badge-unavailable';
                     badgeEl.textContent = 'NO DATE';
                 }
-                regroupAsUnanswered(card);
+                regroupAsUnknown(card);
             }
             countdownEl.textContent = 'No official date announced';
             countdownEl.className = 'card-countdown is-text';
