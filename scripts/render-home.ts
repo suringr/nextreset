@@ -154,7 +154,7 @@ export function renderCardHtml(card: AuthoredCard, value: CardValue, data: Track
     const lines = [
         `      <a href="${escapeHtml(card.href)}" class="card" id="${escapeHtml(card.id)}" data-game="${escapeHtml(card.game)}" data-type="${escapeHtml(card.type)}"`,
         `        data-state="${escapeHtml(value.state)}" data-next-utc="${escapeHtml(data?.nextEventUtc ?? "")}" data-precision="${escapeHtml(data?.precision ?? "")}"`,
-        `        data-status="${escapeHtml(data?.status ?? "")}" data-unanswered="${value.unanswered ? "1" : ""}">`,
+        `        data-status="${escapeHtml(data?.status ?? "")}" data-checked-utc="${escapeHtml(data?.fetched_at_utc ?? "")}" data-unanswered="${value.unanswered ? "1" : ""}">`,
         `        <div class="card-header">`,
         `          <h3 class="card-title">${escapeHtml(card.title)}</h3>`,
         `          <span class="${value.badgeClass}">${escapeHtml(value.badgeText)}</span>`,

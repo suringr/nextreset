@@ -84,10 +84,12 @@ function formatCardDate(isoString) {
     return date.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
 }
 
-// Only a value known to the second may be shown as a second-level countdown.
-// Data without a precision field (V1 providers) keeps the old behaviour.
+// Only a value the pipeline states is exact may be shown as a time or counted down to the second.
+// A payload with no precision field is not such a value: its midnight is where the date had to be
+// stored, not a time anyone announced. The build applies the same rule, so hydration cannot turn a
+// date into a countdown to an invented midnight.
 function isDayPrecision(data) {
-    return !!data && data.precision === 'day';
+    return !!data && data.precision !== 'exact';
 }
 
 // Topics that answer "when is the next ...": the value is only an answer while it is still ahead.
@@ -291,9 +293,14 @@ function updateCountdown(data) {
     setInterval(tick, isDayPrecision(data) ? 60000 : 1000);
 }
 
-// Show error message
+// Show error message.
+//
+// The build renders the verified value into this page, so a failed refresh means there is nothing
+// newer to show — not that what is shown became untrue. A rendered page therefore keeps its value,
+// its source and its "last checked" time, and only a page still showing the skeleton is replaced.
 function showError(message) {
     const container = document.getElementById('countdown-container');
+    if (container && container.querySelector && !container.querySelector('.countdown-skeleton')) return;
     if (container) {
         container.innerHTML = `
             <div class="error">
@@ -383,6 +390,9 @@ function renderCard(card, data) {
     card.dataset.unanswered = unanswered ? '1' : '';
     // Kept so the periodic updater can re-evaluate the state as deadlines pass.
     card.dataset.status = data?.status || '';
+    // Kept so "checked 2 hours ago" keeps counting on a tab left open, instead of freezing at the
+    // moment the page loaded.
+    card.dataset.checkedUtc = data?.fetched_at_utc || data?.lastUpdatedUtc || '';
 
     // Update badge
     if (badgeEl) {
@@ -423,6 +433,7 @@ function renderCard(card, data) {
 function renderCardUnavailable(card) {
     card.dataset.state = 'unavailable';
     card.dataset.nextUtc = '';
+    card.dataset.checkedUtc = '';
 
     const badgeEl = card.querySelector('.badge');
     const countdownEl = card.querySelector('.card-countdown');
@@ -444,6 +455,13 @@ function renderCardUnavailable(card) {
 function updateHomepageCountdowns() {
     const cards = document.querySelectorAll('.card[data-game]');
     cards.forEach(card => {
+        // "Checked 2 hours ago" stops being true two hours later, so it is recomputed every cycle from
+        // the instant itself rather than written once at load.
+        const checkedEl = card.querySelector('.last-checked');
+        if (checkedEl && card.dataset.checkedUtc) {
+            checkedEl.textContent = `Checked ${formatTimeSince(card.dataset.checkedUtc)}`;
+        }
+
         const nextUtc = card.dataset.nextUtc;
         if (!nextUtc) return;
 
@@ -473,8 +491,9 @@ function updateHomepageCountdowns() {
             return;
         }
 
-        // A date does not need recomputing, and must never turn into a countdown.
-        if (card.dataset.precision === 'day') return;
+        // A date does not need recomputing, and must never turn into a countdown. Anything the pipeline
+        // has not stated is exact is a date (see isDayPrecision).
+        if (card.dataset.precision !== 'exact') return;
 
         const diff = getTimeDifference(nextUtc);
         const isUpcoming = card.dataset.type?.startsWith('next-') || card.dataset.type?.includes('reset');
@@ -502,7 +521,10 @@ async function initHomepage() {
             const data = await fetchGameData(game, type);
             renderCard(card, data);
         } catch {
-            renderCardUnavailable(card);
+            // The build already wrote a verified value into this card. Replacing it with "Data
+            // unavailable" because this one fetch failed would destroy good content, so only a card the
+            // build had nothing to publish for is emptied.
+            if (!card.dataset.nextUtc) renderCardUnavailable(card);
         }
     });
 

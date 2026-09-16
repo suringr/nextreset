@@ -150,6 +150,68 @@ function loadApp(): Record<string, any> {
     return context;
 }
 
+/** A card as the build leaves it: the dataset carries the value, the stubs record what JS writes. */
+function stubCard(dataset: Record<string, string>) {
+    const els: Record<string, { textContent: string; innerHTML: string; className: string }> = {
+        ".badge": { textContent: "", innerHTML: "", className: "" },
+        ".card-countdown": { textContent: "", innerHTML: "", className: "" },
+        ".last-checked": { textContent: "", innerHTML: "", className: "" }
+    };
+    return { card: { dataset, querySelector: (sel: string) => els[sel] }, els };
+}
+
+test("a refresh that fails leaves the value the build rendered", async () => {
+    const app = loadApp();
+    const published = stubCard({ game: "lol", type: "next-patch", nextUtc: "2026-09-23T00:00:00.000Z", precision: "day", status: "fresh", checkedUtc: "2026-09-16T11:00:00.000Z", unanswered: "" });
+    const nothingPublished = stubCard({ game: "fortnite", type: "next-season", nextUtc: "", precision: "", status: "", checkedUtc: "", unanswered: "" });
+    const cards = [published.card, nothingPublished.card];
+    app.document = { getElementById: (id: string) => (id === "game-grid" ? { querySelectorAll: () => cards } : null) };
+    app.fetchGameData = async () => {
+        throw new Error("offline");
+    };
+
+    await app.initHomepage();
+
+    assert.equal(published.els[".card-countdown"].textContent, "", "the rendered date is left exactly as it was");
+    assert.equal(published.card.dataset.nextUtc, "2026-09-23T00:00:00.000Z", "and the card still knows its date");
+    assert.equal(nothingPublished.els[".card-countdown"].textContent, "Data unavailable", "a card with nothing published still says so");
+});
+
+test("a tracker page that failed to refresh keeps its rendered value instead of an error box", () => {
+    const app = loadApp();
+    const rendered = { innerHTML: "the rendered page", querySelector: () => null };
+    app.document = { getElementById: () => rendered };
+    app.showError("Could not load data for lol.");
+    assert.equal(rendered.innerHTML, "the rendered page", "a page carrying a verified value is not replaced");
+
+    // A page the build never rendered still shows the skeleton, and there the error is all we have.
+    const skeleton = { innerHTML: "--:--:--", querySelector: (sel: string) => (sel === ".countdown-skeleton" ? {} : null) };
+    app.document = { getElementById: () => skeleton };
+    app.showError("Could not load data for lol.");
+    assert.match(skeleton.innerHTML, /Unable to Load Data/);
+});
+
+test("'checked 2 hours ago' keeps counting on a tab left open", () => {
+    const app = loadApp();
+    const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+    const { card, els } = stubCard({ game: "lol", type: "next-patch", nextUtc: "", precision: "day", status: "fresh", checkedUtc: threeHoursAgo, unanswered: "" });
+    app.document = { querySelectorAll: () => [card] };
+
+    app.updateHomepageCountdowns();
+
+    assert.equal(els[".last-checked"].textContent, "Checked 3 hours ago", "the freshness line is recomputed, not frozen at load");
+});
+
+test("a value with no stated precision is a date in the build and in the browser", () => {
+    const app = loadApp();
+    // Red Dead publishes no precision field: its midnight is storage, not an announced time.
+    const redDead = PUBLISHED["red-dead-redemption-2.last-update"];
+    const built = cardValue({ ...redDead, precision: undefined }, NOW);
+    const display = app.eventDisplay({ ...redDead, precision: undefined }, NOW.getTime());
+    assert.equal(built.value, "September 1, 2026");
+    assert.deepEqual([display.mode, display.value], ["date", "September 1, 2026"], "the browser shows the same date, not a countdown to midnight");
+});
+
 test("the browser badges a card exactly as the build did", () => {
     const app = loadApp();
     const far = 400 * 86_400_000;

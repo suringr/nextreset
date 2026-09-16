@@ -102,7 +102,13 @@ test("an upcoming exact event that has just passed still reads as Updating...", 
     assert.deepEqual([display.mode, display.value], ["updating", "Updating..."]);
 });
 
-test("data with no precision field (a V1 provider) behaves exactly as before", () => {
+test("data with no precision field is a date, because nobody said it was an instant", () => {
+    // V1 providers publish no precision. Their midnight is where a date had to be stored, so counting
+    // down to it to the second would invent a time — and would contradict the date the build rendered.
     const display = app.eventDisplay({ nextEventUtc: "2026-09-23T00:00:00.000Z", type: "next-season" }, NOW_MS);
-    assert.equal(display.mode, "countdown");
+    assert.equal(display.mode, "date");
+    assert.equal(display.value, "September 23, 2026");
+
+    const exact = app.eventDisplay({ nextEventUtc: "2026-09-23T21:00:00.000Z", type: "next-season", precision: "exact" }, NOW_MS);
+    assert.equal(exact.mode, "countdown", "a stated instant still counts down");
 });

@@ -156,8 +156,12 @@ test("the browser reaches the same conclusion as the build, so hydration cannot 
     const display = app.eventDisplay(FORTNITE, NOW_MS);
     assert.deepEqual([display.mode, display.value], ["unanswered", "No official date announced"]);
 
+    // Fortnite's V1 payload states no precision, so its value is a date and stays one in the browser.
     const stillAhead = app.eventDisplay({ ...FORTNITE, status: "fresh", nextEventUtc: "2026-12-01T00:00:00.000Z" }, NOW_MS);
-    assert.equal(stillAhead.mode, "countdown", "a date still ahead keeps its countdown");
+    assert.deepEqual([stillAhead.mode, stillAhead.value], ["date", "December 1, 2026"], "a date still ahead is still the answer");
+
+    const exact = app.eventDisplay({ ...FORTNITE, status: "fresh", nextEventUtc: "2026-12-01T18:00:00.000Z", precision: "exact" }, NOW_MS);
+    assert.equal(exact.mode, "countdown", "an instant the source stated still counts down");
 });
 
 test("a homepage card never counts time since an expired date", () => {
@@ -178,8 +182,9 @@ test("a homepage card never counts time since an expired date", () => {
     els[".card-countdown"].textContent = "";
     els[".card-countdown"].innerHTML = "";
     // renderCard reads the real clock, so this fixture is relative: always 30 days ahead of
-    // whenever the suite runs, and therefore always genuinely upcoming.
-    const upcoming = { ...FORTNITE, status: "fresh", nextEventUtc: new Date(Date.now() + 30 * 86400000).toISOString() };
+    // whenever the suite runs, and therefore always genuinely upcoming. It states an exact instant,
+    // because only a stated instant may be counted down to.
+    const upcoming = { ...FORTNITE, status: "fresh", precision: "exact", nextEventUtc: new Date(Date.now() + 30 * 86400000).toISOString() };
     app.renderCard(card, upcoming);
     assert.equal(els[".card-countdown"].textContent, "", "not the unanswered text");
     assert.match(els[".card-countdown"].innerHTML, /unit/, "a real countdown is rendered instead");
