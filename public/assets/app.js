@@ -370,6 +370,8 @@ function renderCard(card, data) {
     card.dataset.type = data?.type || '';
     card.dataset.precision = data?.precision || '';
     card.dataset.unanswered = unanswered ? '1' : '';
+    // Kept so the periodic updater can re-evaluate the state as deadlines pass.
+    card.dataset.status = data?.status || '';
 
     // Update badge
     if (badgeEl) {
@@ -429,11 +431,34 @@ function updateHomepageCountdowns() {
     cards.forEach(card => {
         const nextUtc = card.dataset.nextUtc;
         if (!nextUtc) return;
-        // Neither a date nor an unanswered card needs recomputing, and neither may become a countdown.
-        if (card.dataset.precision === 'day' || card.dataset.unanswered === '1') return;
 
         const countdownEl = card.querySelector('.card-countdown');
         if (!countdownEl) return;
+
+        // A deadline can pass while the page is open, so the state is recomputed rather than trusted
+        // from load time. Once a card is unanswered it stays that way until new data arrives.
+        const snapshot = {
+            nextEventUtc: nextUtc,
+            type: card.dataset.type,
+            precision: card.dataset.precision,
+            status: card.dataset.status
+        };
+        if (isUnanswered(snapshot, Date.now())) {
+            if (card.dataset.unanswered !== '1') {
+                card.dataset.unanswered = '1';
+                card.dataset.state = 'unavailable';
+                const badgeEl = card.querySelector('.badge');
+                if (badgeEl) {
+                    badgeEl.className = 'badge badge-unavailable';
+                    badgeEl.textContent = 'NO DATE';
+                }
+            }
+            countdownEl.textContent = 'No official date announced';
+            return;
+        }
+
+        // A date does not need recomputing, and must never turn into a countdown.
+        if (card.dataset.precision === 'day') return;
 
         const diff = getTimeDifference(nextUtc);
         const isUpcoming = card.dataset.type?.startsWith('next-') || card.dataset.type?.includes('reset');

@@ -159,6 +159,26 @@ test("a homepage card never counts time since an expired date", () => {
     assert.equal(card.dataset.unanswered, "");
 });
 
+test("a card whose deadline passes while the page is open becomes NO DATE without a reload", () => {
+    const els: Record<string, { textContent: string; innerHTML: string; className: string }> = {
+        ".badge": { textContent: "STALE", innerHTML: "", className: "badge badge-stale" },
+        ".card-countdown": { textContent: "", innerHTML: "2d 04h", className: "" }
+    };
+    // A card rendered before its deadline: the dataset says "answered", as renderCard left it.
+    const card = {
+        dataset: { nextUtc: "2026-06-06T00:00:00.000Z", type: "next-season", precision: "", status: "stale", unanswered: "" } as Record<string, string>,
+        querySelector: (sel: string) => els[sel]
+    };
+    app.document = { querySelectorAll: () => [card] };
+
+    app.updateHomepageCountdowns();
+
+    assert.equal(card.dataset.unanswered, "1", "the updater noticed the deadline had passed");
+    assert.equal(els[".card-countdown"].textContent, "No official date announced");
+    assert.equal(els[".badge"].textContent, "NO DATE");
+    assert.equal(card.dataset.state, "unavailable");
+});
+
 test("app.js never shows a provider's own message", () => {
     assert.equal(app.publicStateNote(FORTNITE), "Showing the last verified value; the official source could not be checked");
     assert.ok(!app.publicStateNote(FORTNITE).includes("Crashed"));
