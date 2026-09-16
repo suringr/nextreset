@@ -106,7 +106,12 @@ function published(events: KnowledgeEvent[] | undefined, topic: string): Knowled
 
 /** The claim that carries this event's link and (where readable) its quote. */
 function evidenceFor(event: KnowledgeEvent, knowledge: GameKnowledge): { href?: string; quote?: string } {
-    const claims = (knowledge.claims ?? []).filter(c => c.eventKey === event.key);
+    const claims = (knowledge.claims ?? [])
+        .filter(c => c.eventKey === event.key)
+        // A corrected date appends a new claim and keeps the old one. The newest claim describes what
+        // the event says now, so its link and quote are the ones that belong beside it (views.ts does
+        // the same when choosing an attribution link).
+        .sort((a, b) => (b.extractedAt ?? "").localeCompare(a.extractedAt ?? ""));
     for (const claim of claims) {
         const document = claim.documentId ? (knowledge.documents ?? []).find(d => d.id === claim.documentId) : undefined;
         const href = claim.linkUrl ?? document?.url;
@@ -182,9 +187,16 @@ export function blocksFor(knowledge: GameKnowledge | undefined, topic: string, o
         });
     }
 
-    // 2. What has already happened, newest first.
+    // 2. What has already happened, newest first — but only where the publisher actually evidenced it.
+    //    A rule-based topic (GTA's weekly reset) generates its past occurrences locally, with no claim
+    //    and no document. Listing those under "verified against the publisher's archive" would claim a
+    //    provenance they do not have, so they are left out; the rule is projected forward instead.
+    const evidenced = (event: KnowledgeEvent) => {
+        const evidence = evidenceFor(event, knowledge);
+        return evidence.href !== undefined || evidence.quote !== undefined;
+    };
     const past = events
-        .filter(e => (endOf(e) ?? 0) <= nowMs && e.key !== options.currentKey)
+        .filter(e => (endOf(e) ?? 0) <= nowMs && e.key !== options.currentKey && evidenced(e))
         .sort(byAt)
         .reverse()
         .slice(0, MAX_HISTORY_ROWS);
