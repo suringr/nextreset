@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import { emptyKnowledge } from "../domain";
 import { GameKnowledge, KnowledgeEvent, MIN_HISTORY_ROWS, blocksFor, computedOccurrences, loadKnowledge, regionalTimes, renderBlocks } from "../../render-data-blocks";
 import { renderSite, tidyNotes } from "../../render-pages";
 
@@ -134,6 +135,15 @@ test("the newest claim describes the event, so a correction does not leave stale
     assert.equal(row.href, "https://example.com/corrected");
 });
 
+test("a page that announces no date does not list upcoming dates underneath", () => {
+    const options = { format, now: NOW, currentKey: "lol/next-patch/26.19" };
+    const answered = blocksFor(lolKnowledge(), "next-patch", options).map(b => b.title);
+    assert.deepEqual(answered, ["Also scheduled", "Previously"]);
+
+    const unanswered = blocksFor(lolKnowledge(), "next-patch", { ...options, headlineAnswered: false }).map(b => b.title);
+    assert.deepEqual(unanswered, ["Previously"], "no forward-looking block may contradict the headline");
+});
+
 test("the three regional times are read strictly, or not at all", () => {
     const label = 'The Lone Light Knocks at Night / Epitome Invocation: ends 2026-09-22 14:59 server time (Asia 06:59 UTC, Europe 13:59 UTC, America 19:59 UTC)';
     assert.deepEqual(regionalTimes(label), [
@@ -194,8 +204,20 @@ test("renderSite fills the data slot from the store, and leaves it empty without
             source_url: "https://support.riotgames.com/x", confidence: "high", notes: "Patch 26.19", precision: "day"
         }));
         if (withKnowledge) {
+            // A real knowledge file, because the renderer now validates one exactly as the pipeline does.
+            const store = emptyKnowledge("lol", NOW) as unknown as { events: unknown[] };
+            const event = (version: string, at: string) => ({
+                key: `lol/next-patch/${version}`, game: "lol", topic: "next-patch", kind: "version",
+                label: version, status: "scheduled", at, precision: "day", timezone: "UTC",
+                firstSeen: "2026-01-01T00:00:00.000Z", lastVerified: NOW.toISOString(), publishState: "published"
+            });
+            store.events = [
+                event("26.19", "2026-09-23T00:00:00.000Z"),
+                event("26.20", "2026-10-07T00:00:00.000Z"),
+                event("26.21", "2026-10-21T00:00:00.000Z")
+            ];
             fs.mkdirSync(path.join(root, "knowledge", "games"), { recursive: true });
-            fs.writeFileSync(path.join(root, "knowledge", "games", "lol.json"), JSON.stringify(lolKnowledge()));
+            fs.writeFileSync(path.join(root, "knowledge", "games", "lol.json"), JSON.stringify(store));
         }
         renderSite(dist, NOW, root);
         const html = fs.readFileSync(path.join(dist, "lol", "next-patch", "index.html"), "utf8");
@@ -226,16 +248,18 @@ test("a corrupt knowledge file costs a page its blocks, never the build", () => 
         return root;
     };
 
-    // Valid JSON, wrong shape: the pipeline's own loader treats this as unavailable, and so must this.
-    const wrongShape = write('{"events":{},"claims":"nope"}');
-    const loaded = loadKnowledge(wrongShape, "lol");
-    assert.deepEqual(loaded?.events, [], "a non-array collection reads as empty rather than blowing up");
-    assert.deepEqual(loaded?.claims, []);
-    assert.deepEqual(blocksFor(loaded, "next-patch", { format, now: NOW }), []);
-
+    // A file the pipeline's own loader would refuse must be refused here too, whole — not partly read.
+    assert.equal(loadKnowledge(write('{"events":{},"claims":"nope"}'), "lol"), undefined, "wrong-shaped collections");
     assert.equal(loadKnowledge(write("not json at all"), "lol"), undefined);
     assert.equal(loadKnowledge(write("[]"), "lol"), undefined, "an array is not a knowledge file");
     assert.equal(loadKnowledge(write("null"), "lol"), undefined);
+
+    const valid = emptyKnowledge("lol", NOW);
+    assert.deepEqual(loadKnowledge(write(JSON.stringify(valid)), "lol")?.events, [], "a schema-valid file loads");
+
+    assert.equal(loadKnowledge(write(JSON.stringify({ ...valid, schemaVersion: undefined })), "lol"), undefined, "missing schemaVersion is a schema violation");
+    assert.equal(loadKnowledge(write(JSON.stringify(emptyKnowledge("cs2", NOW))), "lol"), undefined, "a file naming another game is not this game's knowledge");
+    assert.equal(loadKnowledge(write(JSON.stringify({ ...valid, events: [{ key: "lol/next-patch/26.19", game: "lol", topic: "next-patch", kind: "version", label: "26.19", status: "scheduled", at: "2026-09-23T00:00:00.000Z", precision: "day", firstSeen: NOW.toISOString(), lastVerified: NOW.toISOString(), publishState: "nonsense" }] })), "lol"), undefined, "an event with an invalid publishState rejects the file");
 
     // And the page still publishes its value.
     const root = write('{"events":{}}');

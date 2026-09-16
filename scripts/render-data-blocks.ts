@@ -13,6 +13,7 @@
  */
 import * as fs from "fs";
 import * as path from "path";
+import { validateGameKnowledge } from "./v2/validate";
 
 export interface KnowledgeEvent {
     key: string;
@@ -97,15 +98,21 @@ export function loadKnowledge(root: string, game: string): GameKnowledge | undef
     } catch {
         return undefined;
     }
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
-    const record = parsed as Record<string, unknown>;
-    const arrayOf = <T>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
-    return {
-        game: typeof record.game === "string" ? record.game : undefined,
-        events: arrayOf<KnowledgeEvent>(record.events).filter(e => e && typeof e === "object"),
-        claims: arrayOf<KnowledgeClaim>(record.claims).filter(c => c && typeof c === "object"),
-        documents: arrayOf<KnowledgeDocument>(record.documents).filter(d => d && typeof d === "object")
-    };
+    try {
+        // Exactly the validation the pipeline applies before it will store or serve a file. If the
+        // store would refuse to load this, a page must not publish blocks from it either: otherwise
+        // corrupt knowledge could render "verified" rows beside an unavailable headline.
+        const validated = validateGameKnowledge(parsed, `knowledge/games/${game}.json`);
+        if (validated.game !== game) return undefined;
+        return {
+            game: validated.game,
+            events: validated.events as unknown as KnowledgeEvent[],
+            claims: validated.claims as unknown as KnowledgeClaim[],
+            documents: validated.documents as unknown as KnowledgeDocument[]
+        };
+    } catch {
+        return undefined;
+    }
 }
 
 function endOf(event: KnowledgeEvent): number | undefined {
@@ -178,6 +185,13 @@ export interface BlockOptions {
     now: Date;
     /** The event currently shown as the page's headline value, so blocks do not repeat it. */
     currentKey?: string;
+    /**
+     * Whether the page is actually publishing a value. When it is not — the headline reads "no official
+     * date announced" or "data unavailable" — forward-looking blocks are suppressed, because listing
+     * upcoming dates underneath a headline that says none is known contradicts the page.
+     * History is still shown: what already happened is unaffected by today's failed check.
+     */
+    headlineAnswered?: boolean;
 }
 
 /** Every block this game's data supports, in the order they should appear. Empty when it supports none. */
@@ -190,8 +204,10 @@ export function blocksFor(knowledge: GameKnowledge | undefined, topic: string, o
     const nowMs = options.now.getTime();
     const byAt = (a: KnowledgeEvent, b: KnowledgeEvent) => Date.parse(a.at!) - Date.parse(b.at!);
 
+    const answered = options.headlineAnswered !== false;
+
     // 1. Everything still ahead that the source has already published, minus the headline value.
-    const upcoming = events
+    const upcoming = !answered ? [] : events
         .filter(e => e.status === "scheduled" && (endOf(e) ?? 0) > nowMs && e.key !== options.currentKey)
         .sort(byAt)
         .slice(0, MAX_UPCOMING_ROWS);
@@ -229,7 +245,7 @@ export function blocksFor(knowledge: GameKnowledge | undefined, topic: string, o
 
     // 3. One wall clock, three regions, three real instants.
     const current = events.find(e => e.key === options.currentKey) ?? events[events.length - 1];
-    const regional = current ? regionalTimes(current.label) : [];
+    const regional = current && answered ? regionalTimes(current.label) : [];
     if (regional.length > 0) {
         blocks.push({
             title: "When it ends in each region",
@@ -239,7 +255,7 @@ export function blocksFor(knowledge: GameKnowledge | undefined, topic: string, o
     }
 
     // 4. A recurring rule can be projected forward, and is labelled as computed rather than verified.
-    if (current?.kind === "recurring" && current.at) {
+    if (answered && current?.kind === "recurring" && current.at) {
         const rows = computedOccurrences(current.at, 7, COMPUTED_OCCURRENCES, iso => options.format(iso, current.precision));
         if (rows.length > 0) {
             blocks.push({
