@@ -69,8 +69,43 @@ test("the unanswered rule is about staleness and age, not about one game", () =>
     const longPassedButFresh: TrackerData = { ...FORTNITE, status: "fresh", nextEventUtc: "2026-09-10T00:00:00.000Z" };
     assert.equal(isUnanswered(longPassedButFresh, NOW), true, "days past due is not an answer, however it is labelled");
 
-    const justPassedStale: TrackerData = { ...FORTNITE, status: "stale", nextEventUtc: "2026-09-16T11:30:00.000Z" };
-    assert.equal(isUnanswered(justPassedStale, NOW), true, "stale and past means nobody re-verified it");
+    // With no stated precision a value keeps its whole announced day, so "just passed" is judged at the
+    // end of that day rather than at the instant (see the day-precision test below).
+    const justPassedUnstated: TrackerData = { ...FORTNITE, status: "stale", nextEventUtc: "2026-09-16T11:30:00.000Z" };
+    assert.equal(isUnanswered(justPassedUnstated, NOW), false, "an unstated precision keeps its day");
+
+    const justPassedExact: TrackerData = { ...FORTNITE, status: "stale", precision: "exact", nextEventUtc: "2026-09-16T11:30:00.000Z" };
+    assert.equal(isUnanswered(justPassedExact, NOW), true, "an exact instant, stale and past, is not an answer");
+});
+
+test("a date-only value stays the answer for the whole day it names", () => {
+    // LoL's patch date is announced as a day; midnight is only where it had to be stored. A failed
+    // check that morning must not replace "September 23, 2026" with "no date announced".
+    const patch: TrackerData = {
+        game: "lol", type: "next-patch", status: "stale", nextEventUtc: "2026-09-23T00:00:00.000Z",
+        precision: "day", fetched_at_utc: "2026-09-23T09:00:00.000Z", last_success_at_utc: "2026-09-22T06:00:00.000Z",
+        source_url: "https://support.riotgames.com/x", confidence: "high", notes: "Patch 26.19",
+        reason: "The official source could not be reached", reason_code: "source-unreachable"
+    };
+    const morningOfTheDay = new Date("2026-09-23T09:00:00Z");
+    assert.equal(isUnanswered(patch, morningOfTheDay), false, "still the announced day");
+    assert.ok(renderTrackerHtml(PAGE, patch, "lol/next-patch", morningOfTheDay).includes("September 23, 2026"));
+
+    const lateThatNight = new Date("2026-09-23T23:59:00Z");
+    assert.equal(isUnanswered(patch, lateThatNight), false, "the day is not over yet");
+
+    const nextDay = new Date("2026-09-24T01:00:00Z");
+    assert.equal(isUnanswered(patch, nextDay), true, "the announced day has passed without re-verification");
+    assert.ok(renderTrackerHtml(PAGE, patch, "lol/next-patch", nextDay).includes("No official date announced"));
+});
+
+test("an exact instant is passed the moment it passes", () => {
+    const reset: TrackerData = {
+        game: "gta", type: "weekly-reset", status: "stale", nextEventUtc: "2026-09-17T10:00:00.000Z",
+        precision: "exact", fetched_at_utc: "2026-09-17T11:00:00.000Z", confidence: "high"
+    };
+    assert.equal(isUnanswered(reset, new Date("2026-09-17T09:59:00Z")), false);
+    assert.equal(isUnanswered(reset, new Date("2026-09-17T10:01:00Z")), true, "an exact instant gets no extra day");
 });
 
 test("the unanswered page still carries its source and verification times", () => {
@@ -98,6 +133,30 @@ test("the browser reaches the same conclusion as the build, so hydration cannot 
 
     const stillAhead = app.eventDisplay({ ...FORTNITE, status: "fresh", nextEventUtc: "2026-12-01T00:00:00.000Z" }, NOW_MS);
     assert.equal(stillAhead.mode, "countdown", "a date still ahead keeps its countdown");
+});
+
+test("a homepage card never counts time since an expired date", () => {
+    const els: Record<string, { textContent: string; innerHTML: string; className: string }> = {
+        ".badge": { textContent: "", innerHTML: "", className: "" },
+        ".card-countdown": { textContent: "", innerHTML: "", className: "" },
+        ".last-checked": { textContent: "", innerHTML: "", className: "" }
+    };
+    const card = { dataset: {} as Record<string, string>, querySelector: (sel: string) => els[sel] };
+
+    app.renderCard(card, FORTNITE);
+    assert.equal(els[".card-countdown"].textContent, "No official date announced");
+    assert.equal(els[".badge"].textContent, "NO DATE", "and it is not badged LIVE");
+    assert.equal(card.dataset.unanswered, "1", "so the 60-second updater leaves it alone");
+
+    // A tracker with a real upcoming date still behaves as before. The countdown branch writes
+    // innerHTML rather than textContent, so the stub is cleared before comparing.
+    els[".card-countdown"].textContent = "";
+    els[".card-countdown"].innerHTML = "";
+    const upcoming = { ...FORTNITE, status: "fresh", nextEventUtc: "2026-12-01T00:00:00.000Z" };
+    app.renderCard(card, upcoming);
+    assert.equal(els[".card-countdown"].textContent, "", "not the unanswered text");
+    assert.match(els[".card-countdown"].innerHTML, /unit/, "a real countdown is rendered instead");
+    assert.equal(card.dataset.unanswered, "");
 });
 
 test("app.js never shows a provider's own message", () => {

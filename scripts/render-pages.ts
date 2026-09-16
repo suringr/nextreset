@@ -143,8 +143,14 @@ export function isFutureFacing(type: string | undefined): boolean {
 export function isUnanswered(data: TrackerData, now: Date): boolean {
     if (!data.nextEventUtc || !isFutureFacing(data.type)) return false;
     const at = Date.parse(data.nextEventUtc);
-    if (!Number.isFinite(at) || at >= now.getTime()) return false;
-    return data.status === "stale" || now.getTime() - at > DAY_MS;
+    if (!Number.isFinite(at)) return false;
+    // A date-only value is announced for a day, not an instant: midnight is only where it had to be
+    // stored. It stays the answer until that whole UTC day is over, exactly as the pipeline treats it
+    // (see upcomingUntil in scripts/v2/knowledge.ts). The same applies when precision is not stated,
+    // because then we have not been told it is an instant either.
+    const over = at + (data.precision === "exact" ? 0 : DAY_MS);
+    if (over >= now.getTime()) return false;
+    return data.status === "stale" || now.getTime() - over > DAY_MS;
 }
 
 /** Shown when a future-facing tracker has no date anyone has published yet. */

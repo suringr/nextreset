@@ -100,8 +100,12 @@ function isFutureFacing(type) {
 function isUnanswered(data, nowMs) {
     if (!data || !data.nextEventUtc || !isFutureFacing(data.type)) return false;
     const at = new Date(data.nextEventUtc).getTime();
-    if (isNaN(at) || at >= nowMs) return false;
-    return data.status === 'stale' || (nowMs - at) > 86400000;
+    if (isNaN(at)) return false;
+    // A date-only value (or one with no stated precision) is announced for a day, not an instant, so
+    // it stays the answer until that whole UTC day is over. Mirrors isUnanswered in render-pages.ts.
+    const over = at + (data.precision === 'exact' ? 0 : 86400000);
+    if (over >= nowMs) return false;
+    return data.status === 'stale' || (nowMs - over) > 86400000;
 }
 
 // Only a sentence produced for visitors may be shown. A provider's own message (which has no
@@ -340,7 +344,14 @@ function renderCard(card, data) {
     let badgeText = 'UNAVAILABLE';
     let badgeClass = 'badge badge-unavailable';
 
-    if (data && !isDataUnavailable(data)) {
+    const unanswered = !!data && isUnanswered(data, Date.now());
+
+    if (unanswered) {
+        // A card must not badge an expired date as LIVE, nor count time since it.
+        state = 'unavailable';
+        badgeText = 'NO DATE';
+        badgeClass = 'badge badge-unavailable';
+    } else if (data && !isDataUnavailable(data)) {
         const diff = getTimeDifference(data.nextEventUtc);
         if (diff > 0) {
             state = data.status === 'stale' ? 'stale' : 'live';
@@ -358,6 +369,7 @@ function renderCard(card, data) {
     card.dataset.nextUtc = data?.nextEventUtc || '';
     card.dataset.type = data?.type || '';
     card.dataset.precision = data?.precision || '';
+    card.dataset.unanswered = unanswered ? '1' : '';
 
     // Update badge
     if (badgeEl) {
@@ -369,7 +381,9 @@ function renderCard(card, data) {
     if (countdownEl) {
         if (data && !isDataUnavailable(data)) {
             const display = eventDisplay(data, Date.now());
-            if (display.mode === 'date') {
+            if (display.mode === 'unanswered') {
+                countdownEl.textContent = 'No official date announced';
+            } else if (display.mode === 'date') {
                 countdownEl.textContent = formatCardDate(data.nextEventUtc);
             } else if (display.mode === 'updating') {
                 countdownEl.innerHTML = 'Updating...';
@@ -415,8 +429,8 @@ function updateHomepageCountdowns() {
     cards.forEach(card => {
         const nextUtc = card.dataset.nextUtc;
         if (!nextUtc) return;
-        // A date does not need recomputing, and must never turn into a countdown.
-        if (card.dataset.precision === 'day') return;
+        // Neither a date nor an unanswered card needs recomputing, and neither may become a countdown.
+        if (card.dataset.precision === 'day' || card.dataset.unanswered === '1') return;
 
         const countdownEl = card.querySelector('.card-countdown');
         if (!countdownEl) return;
