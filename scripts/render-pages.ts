@@ -21,6 +21,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { blocksFor as dataBlocksFor, loadKnowledge, renderBlocks } from "./render-data-blocks";
 import { CardGroup, renderHomeHtml } from "./render-home";
+import { VersionedAssets, versionAssets } from "./version-assets";
 
 /** The published tracker shape (see scripts/types.ts). Read defensively: this is file input. */
 export interface TrackerData {
@@ -348,6 +349,8 @@ export interface RenderSummary {
     skipped: number;
     /** How the homepage's cards were grouped, when the homepage was rendered. */
     home?: Record<CardGroup, number>;
+    /** The version stamped on each asset, so a year-long cache cannot hold an old script. */
+    assets: VersionedAssets;
 }
 
 function readData(dataDir: string, game: string, type: string): TrackerData | undefined {
@@ -362,11 +365,12 @@ function readData(dataDir: string, game: string, type: string): TrackerData | un
 
 /** Renders every tracker page in `distDir` in place. Throws on template drift; never touches public/. */
 export function renderSite(distDir: string, now: Date = new Date(), root: string = path.dirname(distDir)): RenderSummary {
-    const summary: RenderSummary = { rendered: [], missingData: [], skipped: 0 };
+    const summary: RenderSummary = { rendered: [], missingData: [], skipped: 0, assets: { versions: {}, pages: 0, missing: [] } };
     const dataDir = path.join(distDir, "data");
     const readable = (iso: string, precision?: string) => (precision === "exact" ? formatDateTime(iso) : formatDate(iso));
+    const pages = htmlFilesIn(distDir);
 
-    for (const file of htmlFilesIn(distDir)) {
+    for (const file of pages) {
         const html = fs.readFileSync(file, "utf8");
         const page = path.relative(distDir, file).replace(/\\/g, "/");
         const tracker = trackerOf(html, page);
@@ -407,6 +411,10 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
         const blocks = blocksFor(data, now);
         summary.rendered.push({ page, game: tracker.game, type: tracker.type, status: data?.status ?? "no-data", value: blocks.value, blocks: blocksHtml ? blocksHtml.split("<h2>").length - 1 : 0 });
     }
+
+    // Last, because it stamps the pages this step has just written: the scripts and stylesheets are
+    // cached for a year, so their URLs have to change whenever their contents do.
+    summary.assets = versionAssets(distDir, pages);
     return summary;
 }
 
@@ -420,5 +428,7 @@ if (require.main === module) {
     for (const r of summary.rendered) console.log(`  ✓ ${r.page} — ${r.status}: ${r.value}${r.blocks ? ` (+${r.blocks} data block(s))` : ""}`);
     for (const p of summary.missingData) console.warn(`  ⚠ ${p}: no data file; published as unavailable`);
     if (summary.home) console.log(`  ✓ index.html — ${summary.home.upcoming} upcoming, ${summary.home.recent} recently updated, ${summary.home.unknown} unanswered`);
+    for (const [asset, version] of Object.entries(summary.assets.versions)) console.log(`  ✓ ${asset}?v=${version}`);
+    for (const absent of summary.assets.missing) console.warn(`  ⚠ ${absent}: referenced but not in the build; left unversioned`);
     console.log(`✅ Rendered ${summary.rendered.length} tracker page(s); ${summary.skipped} page(s) have no tracker.`);
 }
