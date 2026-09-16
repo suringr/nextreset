@@ -15,12 +15,22 @@ import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import * as vm from "vm";
 import { NOINDEX_TAG, indexStateFor } from "../../indexing";
-import { TrackerData, renderSite, renderTrackerHtml } from "../../render-pages";
+import { cardValue } from "../../render-home";
+import { TrackerData, blocksFor, renderSite, renderTrackerHtml } from "../../render-pages";
 
 const ROOT = path.join(__dirname, "..", "..", "..");
 const PAGE = fs.readFileSync(path.join(ROOT, "public", "lol", "next-patch", "index.html"), "utf8");
 const NOW = new Date("2026-09-16T12:00:00Z");
+
+/** The published app.js, so "unavailable" can be compared across the build and the browser. */
+const app: Record<string, any> = (() => {
+    const context: Record<string, any> = { console, setInterval: () => 0, clearTimeout: () => undefined, setTimeout: () => 0 };
+    vm.createContext(context);
+    vm.runInContext(fs.readFileSync(path.join(ROOT, "public", "assets", "app.js"), "utf8"), context, { filename: "app.js" });
+    return context;
+})();
 
 const ANSWERED: TrackerData = {
     game: "lol", type: "next-patch", title: "League of Legends", status: "fresh",
@@ -50,6 +60,25 @@ test("a page that answers its question is the one asking to be indexed", () => {
         ["no value", { ...ANSWERED, nextEventUtc: null }]
     ] as Array<[string, TrackerData | undefined]>) {
         assert.equal(indexStateFor(data, NOW).state, "noindex", name);
+    }
+});
+
+test("a value the pipeline has withdrawn is unavailable everywhere, and asks for nothing", () => {
+    // Two ways the pipeline withdraws a value it once published. The tracker page used to miss both:
+    // the build rendered the date as a fact, and a moment later the browser replaced it with "Data
+    // unavailable" — while the homepage card had already said so and the sitemap still listed it.
+    for (const withdrawn of [
+        { ...ANSWERED, confidence: "none" },
+        { ...ANSWERED, status: "fallback" }
+    ]) {
+        assert.equal(indexStateFor(withdrawn, NOW).state, "noindex", "not submitted for indexing");
+        assert.equal(blocksFor(withdrawn, NOW).value, "Data unavailable", "the tracker page says so");
+        assert.equal(cardValue(withdrawn, NOW).value, "Data unavailable", "the homepage card agrees");
+        assert.equal(app.isDataUnavailable(withdrawn), true, "and so does the browser");
+
+        const html = renderTrackerHtml(PAGE, withdrawn, "lol/next-patch", NOW);
+        assert.ok(html.includes(NOINDEX_TAG), "the page carries the tag");
+        assert.ok(!html.includes("September 23, 2026"), "and never shows the withdrawn date");
     }
 });
 

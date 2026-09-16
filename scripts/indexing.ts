@@ -19,7 +19,7 @@
  * indexing, and asking for both at once is the kind of contradictory signal that teaches a crawler to
  * trust neither.
  */
-import { TrackerData, isUnanswered } from "./render-pages";
+import { TrackerData, hasVerifiedValue, isUnanswered } from "./render-pages";
 
 export type IndexState = "index" | "noindex";
 
@@ -39,7 +39,7 @@ export const NOINDEX_TAG = `<meta name="robots" content="noindex, follow">`;
  * can never disagree: no data, an expired question, or a value.
  */
 export function indexStateFor(data: TrackerData | undefined, now: Date): IndexDecision {
-    if (!data || !data.nextEventUtc || data.status === "unavailable") {
+    if (!hasVerifiedValue(data)) {
         return { state: "noindex", reason: "no verified value to publish" };
     }
     if (isUnanswered(data, now)) {

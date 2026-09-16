@@ -14,7 +14,7 @@
  * were removed, the homepage would simply go back to what it was.
  */
 import * as cheerio from "cheerio";
-import { TrackerData, escapeHtml, formatDate, formatDateTime, isFutureFacing, isUnanswered } from "./render-pages";
+import { TrackerData, escapeHtml, formatDate, formatDateTime, hasNoVerifiedValue, isFutureFacing, isUnanswered } from "./render-pages";
 
 /** Which part of the page a card belongs in. The data decides; the page does not choose. */
 export type CardGroup = "upcoming" | "recent" | "unknown";
@@ -51,15 +51,6 @@ export interface CardValue {
     dataset: { nextUtc: string; precision: string; status: string };
 }
 
-/**
- * Whether the published file has a value at all.
- *
- * Mirrors isDataUnavailable in app.js, including `confidence: "none"`: the pipeline uses it to say it
- * no longer stands behind the value, and a card must not badge that as LIVE.
- */
-function hasNoValue(data: TrackerData | undefined): boolean {
-    return !data || !data.nextEventUtc || data.confidence === "none" || data.status === "unavailable" || data.status === "fallback";
-}
 
 /**
  * What one card should say, from that tracker's published file alone.
@@ -71,7 +62,7 @@ export function cardValue(data: TrackerData | undefined, now: Date): CardValue {
     const checked = data?.fetched_at_utc ? `Checked ${formatDateTime(data.fetched_at_utc)}` : undefined;
     const empty = { nextUtc: "", precision: "", status: "" };
 
-    if (hasNoValue(data)) {
+    if (hasNoVerifiedValue(data)) {
         // Nothing published, or a value the pipeline no longer stands behind. Its instant is not carried
         // into the page at all: an hour later the updater would otherwise count down to it.
         return { group: "unknown", badgeText: "UNAVAILABLE", badgeClass: "badge badge-unavailable", value: "Data unavailable", compact: false, state: "unavailable", checked, unanswered: false, dataset: empty };

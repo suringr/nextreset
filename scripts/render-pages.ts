@@ -133,8 +133,26 @@ export function sourceName(url: string): string {
  * visitors (which carries `reason_code`) is shown. V1 providers have no such vocabulary yet, so
  * their failures are described generically rather than quoted.
  */
+/**
+ * Whether the pipeline stands behind a value at all.
+ *
+ * Four ways it says no, and they mean the same thing to a reader: no file, no value in it, a status of
+ * `unavailable` or the legacy `fallback`, or a confidence of `none` — which is how the pipeline
+ * withdraws a value it has published before. app.js has always used all four (isDataUnavailable); the
+ * homepage cards use all four; the tracker pages used two, so a withdrawn value was rendered as a fact
+ * by the build and replaced with "Data unavailable" a moment later by the browser.
+ */
+export function hasVerifiedValue(data: TrackerData | undefined): data is TrackerData & { nextEventUtc: string } {
+    return !!data && !!data.nextEventUtc && data.confidence !== "none" && data.status !== "unavailable" && data.status !== "fallback";
+}
+
+/** The same question asked the other way round, for the places that read better in the negative. */
+export function hasNoVerifiedValue(data: TrackerData | undefined): boolean {
+    return !hasVerifiedValue(data);
+}
+
 export function stateLine(data: TrackerData | undefined): string {
-    if (!data || data.status === "unavailable" || !data.nextEventUtc) {
+    if (!hasVerifiedValue(data)) {
         const vetted = data?.reason_code ? data.explanation ?? data.reason : undefined;
         return vetted ?? "No verified value is available right now";
     }
@@ -194,7 +212,7 @@ export interface RenderedBlocks {
 /** Everything the page needs, derived from the published tracker data alone. */
 export function blocksFor(data: TrackerData | undefined, now: Date = new Date()): RenderedBlocks {
     const state = stateLine(data);
-    if (!data || !data.nextEventUtc || data.status === "unavailable") {
+    if (!hasVerifiedValue(data)) {
         return {
             label: "Status", value: "Data unavailable", valueClass: "countdown-value unavailable", notes: state, state,
             lastVerified: data?.last_success_at_utc ? formatDateTime(data.last_success_at_utc) : undefined,
