@@ -84,10 +84,12 @@ function formatCardDate(isoString) {
     return date.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
 }
 
-// Only a value known to the second may be shown as a second-level countdown.
-// Data without a precision field (V1 providers) keeps the old behaviour.
+// Only a value the pipeline states is exact may be shown as a time or counted down to the second.
+// A payload with no precision field is not such a value: its midnight is where the date had to be
+// stored, not a time anyone announced. The build applies the same rule, so hydration cannot turn a
+// date into a countdown to an invented midnight.
 function isDayPrecision(data) {
-    return !!data && data.precision === 'day';
+    return !!data && data.precision !== 'exact';
 }
 
 // Topics that answer "when is the next ...": the value is only an answer while it is still ahead.
@@ -291,9 +293,14 @@ function updateCountdown(data) {
     setInterval(tick, isDayPrecision(data) ? 60000 : 1000);
 }
 
-// Show error message
+// Show error message.
+//
+// The build renders the verified value into this page, so a failed refresh means there is nothing
+// newer to show — not that what is shown became untrue. A rendered page therefore keeps its value,
+// its source and its "last checked" time, and only a page still showing the skeleton is replaced.
 function showError(message) {
     const container = document.getElementById('countdown-container');
+    if (container && container.querySelector && !container.querySelector('.countdown-skeleton')) return;
     if (container) {
         container.innerHTML = `
             <div class="error">
@@ -359,7 +366,10 @@ function renderCard(card, data) {
     let badgeText = 'UNAVAILABLE';
     let badgeClass = 'badge badge-unavailable';
 
-    const unanswered = !!data && isUnanswered(data, Date.now());
+    // Whether a date has expired is only worth asking about a value we would publish at all. A payload
+    // the pipeline has rejected is unavailable, not unanswered — the build decides it the same way, and
+    // badging it NO DATE here would contradict the "Data unavailable" this same card is about to show.
+    const unanswered = !!data && !isDataUnavailable(data) && isUnanswered(data, Date.now());
 
     if (unanswered) {
         // A card must not badge an expired date as LIVE, nor count time since it.
@@ -367,26 +377,27 @@ function renderCard(card, data) {
         badgeText = 'NO DATE';
         badgeClass = 'badge badge-unavailable';
     } else if (data && !isDataUnavailable(data)) {
-        const diff = getTimeDifference(data.nextEventUtc);
-        if (diff > 0) {
-            state = data.status === 'stale' ? 'stale' : 'live';
-            badgeText = state === 'stale' ? 'STALE' : 'LIVE';
-            badgeClass = state === 'stale' ? 'badge badge-stale' : 'badge badge-live';
-        } else {
-            state = 'live';
-            badgeText = 'LIVE';
-            badgeClass = 'badge badge-live';
-        }
+        // Staleness describes the value, not whether its date has passed: a last-verified value whose
+        // source cannot be reached is stale whichever side of the date we are on. Badging a past event
+        // LIVE would also contradict the badge the build rendered into this same card.
+        state = data.status === 'stale' ? 'stale' : 'live';
+        badgeText = state === 'stale' ? 'STALE' : 'LIVE';
+        badgeClass = state === 'stale' ? 'badge badge-stale' : 'badge badge-live';
     }
 
-    // Update card state
+    // Update card state. A value the pipeline has rejected — no confidence, a fallback status — leaves
+    // no instant behind: the updater works from these attributes and would count down to it.
+    const usable = !!data && !isDataUnavailable(data);
     card.dataset.state = state;
-    card.dataset.nextUtc = data?.nextEventUtc || '';
+    card.dataset.nextUtc = usable ? data.nextEventUtc : '';
     card.dataset.type = data?.type || '';
-    card.dataset.precision = data?.precision || '';
+    card.dataset.precision = usable ? data.precision || '' : '';
     card.dataset.unanswered = unanswered ? '1' : '';
     // Kept so the periodic updater can re-evaluate the state as deadlines pass.
-    card.dataset.status = data?.status || '';
+    card.dataset.status = usable ? data.status || '' : '';
+    // Kept so "checked 2 hours ago" keeps counting on a tab left open, instead of freezing at the
+    // moment the page loaded.
+    card.dataset.checkedUtc = data?.fetched_at_utc || data?.lastUpdatedUtc || '';
 
     // Update badge
     if (badgeEl) {
@@ -394,14 +405,23 @@ function renderCard(card, data) {
         badgeEl.textContent = badgeText;
     }
 
-    // Update countdown
+    // A page built before a deadline can be loaded after it. The card is then unanswered from its first
+    // paint, and the updater will not move it later, because it only acts on a change it sees happen.
+    if (state === 'unavailable') regroupAsUnknown(card);
+
+    // Update countdown. The build renders a full date here; a sentence and a date need the smaller
+    // size, a countdown does not, so the class moves with the value instead of being left behind.
     if (countdownEl) {
+        let compact = false;
         if (data && !isDataUnavailable(data)) {
             const display = eventDisplay(data, Date.now());
             if (display.mode === 'unanswered') {
                 countdownEl.textContent = 'No official date announced';
+                compact = true;
             } else if (display.mode === 'date') {
                 countdownEl.textContent = formatCardDate(data.nextEventUtc);
+                // A date is set the way the build set it, rather than jumping to countdown styling.
+                compact = true;
             } else if (display.mode === 'updating') {
                 countdownEl.innerHTML = 'Updating...';
             } else {
@@ -410,6 +430,7 @@ function renderCard(card, data) {
         } else {
             countdownEl.textContent = 'Data unavailable';
         }
+        countdownEl.className = compact ? 'card-countdown is-text' : 'card-countdown';
     }
 
     // Update last checked
@@ -423,6 +444,7 @@ function renderCard(card, data) {
 function renderCardUnavailable(card) {
     card.dataset.state = 'unavailable';
     card.dataset.nextUtc = '';
+    card.dataset.checkedUtc = '';
 
     const badgeEl = card.querySelector('.badge');
     const countdownEl = card.querySelector('.card-countdown');
@@ -440,10 +462,65 @@ function renderCardUnavailable(card) {
     }
 }
 
+// The heading text the build writes for the unanswered group (GROUP_HEADINGS in scripts/render-home.ts).
+const UNANSWERED_HEADING = 'Waiting on an official source';
+
+function cardTitle(card) {
+    const title = card.querySelector && card.querySelector('.card-title');
+    return (title && title.textContent) || '';
+}
+
+// A card the build put under "next up" can stop belonging there — its date expires while the page is
+// open, or the page is loaded hours after it was built — and a heading it no longer belongs under
+// would contradict the page. That group is the last one, and the build orders it by name (orderCards
+// in scripts/render-home.ts), so the card goes before the first one that sorts after it; a heading
+// left with no cards beneath it is then removed, since an empty section is worse than no section.
+//
+// Only this direction happens: the page and the data it fetches come from the same build, so a card
+// can lose its answer as time passes but cannot gain one without the page being rebuilt.
+function regroupAsUnknown(card) {
+    const grid = card.parentNode;
+    if (!grid || typeof grid.appendChild !== 'function') return;
+
+    let heading = grid.querySelector('.group-heading[data-group="unknown"]');
+    if (!heading) {
+        heading = document.createElement('h2');
+        heading.className = 'group-heading';
+        heading.setAttribute('data-group', 'unknown');
+        heading.textContent = UNANSWERED_HEADING;
+        grid.appendChild(heading);
+    }
+
+    const title = cardTitle(card);
+    const inGroup = Array.from(grid.children || []).slice(Array.from(grid.children || []).indexOf(heading) + 1);
+    const follows = inGroup.find(other => other !== card && other.classList && other.classList.contains('card') && cardTitle(other).localeCompare(title) > 0);
+    if (follows && typeof grid.insertBefore === 'function') {
+        grid.insertBefore(card, follows);
+    } else {
+        grid.appendChild(card);
+    }
+
+    const children = Array.from(grid.children || []);
+    children.forEach((node, i) => {
+        if (!node.classList || !node.classList.contains('group-heading')) return;
+        const next = children[i + 1];
+        if (!next || (next.classList && next.classList.contains('group-heading'))) {
+            if (node.parentNode) node.parentNode.removeChild(node);
+        }
+    });
+}
+
 // Update all homepage countdowns (recompute only, no network fetches)
 function updateHomepageCountdowns() {
     const cards = document.querySelectorAll('.card[data-game]');
     cards.forEach(card => {
+        // "Checked 2 hours ago" stops being true two hours later, so it is recomputed every cycle from
+        // the instant itself rather than written once at load.
+        const checkedEl = card.querySelector('.last-checked');
+        if (checkedEl && card.dataset.checkedUtc) {
+            checkedEl.textContent = `Checked ${formatTimeSince(card.dataset.checkedUtc)}`;
+        }
+
         const nextUtc = card.dataset.nextUtc;
         if (!nextUtc) return;
 
@@ -467,13 +544,16 @@ function updateHomepageCountdowns() {
                     badgeEl.className = 'badge badge-unavailable';
                     badgeEl.textContent = 'NO DATE';
                 }
+                regroupAsUnknown(card);
             }
             countdownEl.textContent = 'No official date announced';
+            countdownEl.className = 'card-countdown is-text';
             return;
         }
 
-        // A date does not need recomputing, and must never turn into a countdown.
-        if (card.dataset.precision === 'day') return;
+        // A date does not need recomputing, and must never turn into a countdown. Anything the pipeline
+        // has not stated is exact is a date (see isDayPrecision).
+        if (card.dataset.precision !== 'exact') return;
 
         const diff = getTimeDifference(nextUtc);
         const isUpcoming = card.dataset.type?.startsWith('next-') || card.dataset.type?.includes('reset');
@@ -501,7 +581,11 @@ async function initHomepage() {
             const data = await fetchGameData(game, type);
             renderCard(card, data);
         } catch {
-            renderCardUnavailable(card);
+            // The build already wrote this card: its value, or an honest "Data unavailable" with the
+            // time it was last checked. Replacing that because one fetch failed would destroy good
+            // content. Only a card the build never reached still says "loading", and only that one is
+            // emptied — an absent instant is not the same thing, since a rejected value has none either.
+            if (card.dataset.state === 'loading') renderCardUnavailable(card);
         }
     });
 

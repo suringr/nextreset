@@ -12,6 +12,7 @@
   <meta property="og:url" content="https://nextreset.co">
   <meta property="og:image" content="https://nextreset.co/og.png">
   <title>NextReset - Live Game Reset Tracker</title>
+  <link rel="canonical" href="https://nextreset.co/">
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/favicon.png">
   <link rel="manifest" href="/site.webmanifest">
@@ -99,11 +100,40 @@
       margin: 0
     }
 
+    .card-topic {
+      color: #9ca3af;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      font-weight: 700;
+      margin-bottom: 8px
+    }
+
     .card-countdown {
       font-size: 28px;
       font-weight: 900;
       color: #6b7280;
       margin-bottom: 12px
+    }
+
+    /* A date is longer than a countdown, so it is set smaller rather than allowed to overflow. */
+    .card-countdown.is-text {
+      font-size: 19px;
+      line-height: 1.35
+    }
+
+    .group-heading {
+      grid-column: 1 / -1;
+      font-size: 15px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: #9ca3af;
+      margin: 14px 0 0
+    }
+
+    .group-heading:first-child {
+      margin-top: 0
     }
 
     .badge {
@@ -177,9 +207,10 @@
       <a href="/fortnite/next-season/" class="card" id="card-fortnite" data-game="fortnite" data-type="next-season"
         data-state="loading" data-next-utc="">
         <div class="card-header">
-          <h2 class="card-title">Fortnite</h2>
+          <h3 class="card-title">Fortnite</h3>
           <span class="badge badge-unavailable">--</span>
         </div>
+        <div class="card-topic">Season end</div>
         <div class="card-countdown">Loading...</div>
         <div class="card-meta">
           <span class="last-checked">--</span>
@@ -189,9 +220,10 @@
       <a href="/lol/next-patch/" class="card" id="card-lol" data-game="lol" data-type="next-patch" data-state="loading"
         data-next-utc="">
         <div class="card-header">
-          <h2 class="card-title">League of Legends</h2>
+          <h3 class="card-title">League of Legends</h3>
           <span class="badge badge-unavailable">--</span>
         </div>
+        <div class="card-topic">Next patch</div>
         <div class="card-countdown">Loading...</div>
         <div class="card-meta">
           <span class="last-checked">--</span>
@@ -201,9 +233,10 @@
       <a href="/valorant/last-patch/" class="card" id="card-valorant" data-game="valorant" data-type="last-patch"
         data-state="loading" data-next-utc="">
         <div class="card-header">
-          <h2 class="card-title">VALORANT</h2>
+          <h3 class="card-title">VALORANT</h3>
           <span class="badge badge-unavailable">--</span>
         </div>
+        <div class="card-topic">Last patch</div>
         <div class="card-countdown">Loading...</div>
         <div class="card-meta">
           <span class="last-checked">--</span>
@@ -213,9 +246,10 @@
       <a href="/cs2/last-update/" class="card" id="card-cs2" data-game="cs2" data-type="last-update"
         data-state="loading" data-next-utc="">
         <div class="card-header">
-          <h2 class="card-title">Counter-Strike 2</h2>
+          <h3 class="card-title">Counter-Strike 2</h3>
           <span class="badge badge-unavailable">--</span>
         </div>
+        <div class="card-topic">Last update</div>
         <div class="card-countdown">Loading...</div>
         <div class="card-meta">
           <span class="last-checked">--</span>
@@ -225,9 +259,10 @@
       <a href="/minecraft/last-release/" class="card" id="card-minecraft" data-game="minecraft" data-type="last-release"
         data-state="loading" data-next-utc="">
         <div class="card-header">
-          <h2 class="card-title">Minecraft</h2>
+          <h3 class="card-title">Minecraft</h3>
           <span class="badge badge-unavailable">--</span>
         </div>
+        <div class="card-topic">Latest release</div>
         <div class="card-countdown">Loading...</div>
         <div class="card-meta">
           <span class="last-checked">--</span>
@@ -237,9 +272,10 @@
       <a href="/roblox/status/" class="card" id="card-roblox" data-game="roblox" data-type="status" data-state="loading"
         data-next-utc="">
         <div class="card-header">
-          <h2 class="card-title">Roblox</h2>
+          <h3 class="card-title">Roblox</h3>
           <span class="badge badge-unavailable">--</span>
         </div>
+        <div class="card-topic">Service status</div>
         <div class="card-countdown">Loading...</div>
         <div class="card-meta">
           <span class="last-checked">--</span>
@@ -249,9 +285,10 @@
       <a href="/gta/weekly-reset/" class="card" id="card-gta" data-game="gta" data-type="weekly-reset"
         data-state="loading" data-next-utc="">
         <div class="card-header">
-          <h2 class="card-title">GTA Online</h2>
+          <h3 class="card-title">GTA Online</h3>
           <span class="badge badge-unavailable">--</span>
         </div>
+        <div class="card-topic">Weekly reset</div>
         <div class="card-countdown">Loading...</div>
         <div class="card-meta">
           <span class="last-checked">--</span>
@@ -261,9 +298,10 @@
       <a href="/warzone/last-patch/" class="card" id="card-warzone" data-game="warzone" data-type="last-patch"
         data-state="loading" data-next-utc="">
         <div class="card-header">
-          <h2 class="card-title">Warzone</h2>
+          <h3 class="card-title">Warzone</h3>
           <span class="badge badge-unavailable">--</span>
         </div>
+        <div class="card-topic">Last patch</div>
         <div class="card-countdown">Loading...</div>
         <div class="card-meta">
           <span class="last-checked">--</span>
@@ -273,9 +311,10 @@
       <a href="/genshin/next-banner/" class="card" id="card-genshin" data-game="genshin" data-type="next-banner"
         data-state="loading" data-next-utc="">
         <div class="card-header">
-          <h2 class="card-title">Genshin Impact</h2>
+          <h3 class="card-title">Genshin Impact</h3>
           <span class="badge badge-unavailable">--</span>
         </div>
+        <div class="card-topic">Banner end</div>
         <div class="card-countdown">Loading...</div>
         <div class="card-meta">
           <span class="last-checked">--</span>
@@ -285,9 +324,10 @@
       <a href="/pubg/last-patch/" class="card" id="card-pubg" data-game="pubg" data-type="last-patch"
         data-state="loading" data-next-utc="">
         <div class="card-header">
-          <h2 class="card-title">PUBG</h2>
+          <h3 class="card-title">PUBG</h3>
           <span class="badge badge-unavailable">--</span>
         </div>
+        <div class="card-topic">Last patch</div>
         <div class="card-countdown">Loading...</div>
         <div class="card-meta">
           <span class="last-checked">--</span>
@@ -297,9 +337,10 @@
       <a href="/red-dead-redemption-2/last-update/" class="card" id="card-red-dead-redemption-2"
         data-game="red-dead-redemption-2" data-type="last-update" data-state="loading" data-next-utc="">
         <div class="card-header">
-          <h2 class="card-title">Red Dead Redemption 2</h2>
+          <h3 class="card-title">Red Dead Redemption 2</h3>
           <span class="badge badge-unavailable">--</span>
         </div>
+        <div class="card-topic">Last update</div>
         <div class="card-countdown">Loading...</div>
         <div class="card-meta">
           <span class="last-checked">--</span>
@@ -309,9 +350,10 @@
       <a href="/ea-sports-fc/last-title-update/" class="card" id="card-ea-sports-fc" data-game="ea-sports-fc"
         data-type="last-title-update" data-state="loading" data-next-utc="">
         <div class="card-header">
-          <h2 class="card-title">EA SPORTS FC</h2>
+          <h3 class="card-title">EA SPORTS FC</h3>
           <span class="badge badge-unavailable">--</span>
         </div>
+        <div class="card-topic">Last title update</div>
         <div class="card-countdown">Loading...</div>
         <div class="card-meta">
           <span class="last-checked">--</span>
@@ -410,7 +452,7 @@
     </style>
     <div
       style="text-align: center; padding: 20px; color: #9ca3af; background: #111827; margin: 20px; border-radius: 12px;">
-      JavaScript is required for live countdowns. Visit individual game pages for static data.
+      Every value below is in this page already. JavaScript only turns the dates into live countdowns.
     </div>
   </noscript>
 
