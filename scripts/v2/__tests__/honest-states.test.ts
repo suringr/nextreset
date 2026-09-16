@@ -108,6 +108,31 @@ test("an exact instant is passed the moment it passes", () => {
     assert.equal(isUnanswered(reset, new Date("2026-09-17T10:01:00Z")), true, "an exact instant gets no extra day");
 });
 
+test("an unanswered tracker reports no confidence, because the stored one described the hidden value", () => {
+    const blocks = blocksFor(FORTNITE, NOW);
+    assert.equal(blocks.confidence, undefined, "high confidence described the June date, not this answer");
+    const html = renderTrackerHtml(PAGE, FORTNITE, "fortnite/next-season", NOW);
+    assert.ok(html.includes(`<span id="confidence" class="confidence confidence-none">none</span>`));
+    assert.ok(!html.includes("confidence-high"), "no confidence is claimed beside 'no date announced'");
+});
+
+test("when a deadline passes while a tracker page is open, the whole page moves together", () => {
+    const el = () => ({ textContent: "", innerHTML: "", className: "", style: { display: "none" } });
+    const els: Record<string, ReturnType<typeof el>> = {
+        "event-title": el(), "countdown": el(), "source": el(), "confidence": el(),
+        "last-updated": el(), "notes": el(), "tracker-status": el()
+    };
+    app.document = { getElementById: (id: string) => els[id] || null };
+
+    app.updateCountdown(FORTNITE);
+
+    assert.match(els["countdown"].innerHTML, /No official date announced/);
+    assert.equal(els["notes"].textContent, NO_DATE_NOTE, "the note agrees with the countdown");
+    assert.equal(els["tracker-status"].textContent, "No verified official date", "and so does the status row");
+    assert.equal(els["confidence"].textContent, "none", "and no confidence is claimed");
+    assert.ok(!els["countdown"].innerHTML.includes("stale"), "an unanswered value is not styled as a stale value");
+});
+
 test("the unanswered page still carries its source and verification times", () => {
     const blocks = blocksFor(FORTNITE, NOW);
     assert.equal(blocks.source?.name, "Epic Games");
@@ -191,6 +216,27 @@ test("app.js never shows a provider's own message", () => {
 
     const vettedUnavailable = { status: "unavailable", explanation: "The official source could not be reached", reason_code: "source-unreachable" };
     assert.equal(app.publicStateNote(vettedUnavailable), "The official source could not be reached");
+});
+
+test("no page promises a fixed check frequency the schedule does not keep", () => {
+    // Phrase-based rather than exact-string: the promise appeared in five different sentences, and a
+    // sixth wording must fail this test too.
+    const frequency = /\b(every\s+)?(6|six)\s+hours?\b/i;
+    const pages: string[] = [];
+    const walk = (dir: string) => {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+            const full = path.join(dir, entry.name);
+            if (entry.isDirectory()) walk(full);
+            else if (entry.name.endsWith(".html")) pages.push(full);
+        }
+    };
+    walk(path.join(ROOT, "public"));
+    for (const page of pages) {
+        const text = fs.readFileSync(page, "utf8");
+        assert.ok(!frequency.test(text), `${path.relative(ROOT, page)} still promises a fixed frequency`);
+    }
+    const generator = fs.readFileSync(path.join(ROOT, "scripts", "update-game-pages.ts"), "utf8");
+    assert.ok(!frequency.test(generator), "the generator would reintroduce the promise");
 });
 
 test("the statements the audit proved false are gone, and cannot come back from the generator", () => {

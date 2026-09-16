@@ -208,10 +208,12 @@ function updateCountdown(data) {
         }
     }
 
-    // Update confidence
+    // Update confidence. An unanswered tracker reports none: the stored confidence described the
+    // expired value, not the answer now being shown.
     if (confidenceEl) {
-        confidenceEl.textContent = data.confidence;
-        confidenceEl.className = `confidence confidence-${data.confidence}`;
+        const confidence = isUnanswered(data, Date.now()) ? 'none' : data.confidence;
+        confidenceEl.textContent = confidence;
+        confidenceEl.className = `confidence confidence-${confidence}`;
     }
 
     // Update notes
@@ -237,23 +239,35 @@ function updateCountdown(data) {
         notesEl.style.display = 'block';
     }
 
-    // A future-facing date that has passed without re-verification is not an answer any more, so the
-    // page says so rather than counting time since a date it still presents as upcoming.
-    if (isUnanswered(data, Date.now()) && notesEl) {
-        notesEl.textContent = NO_DATE_NOTE;
-        notesEl.style.display = 'block';
+    const statusEl = document.getElementById('tracker-status');
+
+    // A deadline can pass while the page is open, so every part of the page moves together rather than
+    // leaving the countdown saying "no date announced" beside a status row still claiming verification.
+    function applyUnanswered() {
+        if (notesEl) {
+            notesEl.textContent = NO_DATE_NOTE;
+            notesEl.style.display = 'block';
+        }
+        if (statusEl) statusEl.textContent = 'No verified official date';
+        if (confidenceEl) {
+            confidenceEl.textContent = 'none';
+            confidenceEl.className = 'confidence confidence-none';
+        }
     }
 
     // Update dynamic fields
     function tick() {
+        const display = eventDisplay(data, Date.now());
+        if (display.mode === 'unanswered') applyUnanswered();
+
         if (countdownEl) {
-            const display = eventDisplay(data, Date.now());
             let valueClass = display.mode === 'countdown' && new Date(data.nextEventUtc).getTime() <= Date.now()
                 ? 'countdown-value elapsed'
                 : 'countdown-value';
+            if (display.mode === 'unanswered') valueClass = 'countdown-value unavailable';
 
             // Add stale class if using cached data
-            if (data.status === 'stale') {
+            if (data.status === 'stale' && display.mode !== 'unanswered') {
                 valueClass += ' stale';
             }
 

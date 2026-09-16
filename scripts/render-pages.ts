@@ -184,13 +184,14 @@ export function blocksFor(data: TrackerData | undefined, now: Date = new Date())
 
     if (isUnanswered(data, now)) {
         // The page keeps its question. The honest answer is that no official date has been published.
+        // The stored confidence described the expired value, not this answer, so it is not carried over.
         return {
             label: "Status",
             value: "No official date announced",
             valueClass: "countdown-value unavailable",
             notes: NO_DATE_NOTE,
             source: data.source_url ? { url: data.source_url, name: sourceName(data.source_url) } : undefined,
-            confidence: data.confidence,
+            confidence: undefined,
             lastVerified: data.last_success_at_utc ? formatDateTime(data.last_success_at_utc) : undefined,
             lastChecked: data.fetched_at_utc ? formatDateTime(data.fetched_at_utc) : undefined,
             state: "No verified official date"
@@ -277,7 +278,7 @@ export function renderTrackerHtml(html: string, data: TrackerData | undefined, p
     }
     rows.push(`        <div class="info-row">
           <span class="info-label">Status</span>
-          <span class="info-value">${escapeHtml(b.state)}</span>
+          <span class="info-value" id="tracker-status">${escapeHtml(b.state)}</span>
         </div>`);
     out = replaceOnce(out, PLACEHOLDER_UPDATED_ROW, rows.join("\n"), page);
 
