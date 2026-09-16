@@ -376,9 +376,17 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
 
         // Everything else this game has verified: schedules, history, regional times. Absent knowledge
         // (a plain clone) simply produces no blocks.
-        const knowledge = loadKnowledge(root, tracker.game);
-        const currentKey = knowledge?.events?.find(e => e.topic === tracker.type && e.at === data?.nextEventUtc)?.key;
-        const blocksHtml = renderBlocks(dataBlocksFor(knowledge, tracker.type, { format: readable, now, currentKey }));
+        //
+        // Blocks are additive, so an unusable knowledge file costs this page its blocks and nothing
+        // more. Template drift still throws, because that means the page itself would be published wrong.
+        let blocksHtml = "";
+        try {
+            const knowledge = loadKnowledge(root, tracker.game);
+            const currentKey = knowledge?.events?.find(e => e.topic === tracker.type && e.at === data?.nextEventUtc)?.key;
+            blocksHtml = renderBlocks(dataBlocksFor(knowledge, tracker.type, { format: readable, now, currentKey }));
+        } catch (error) {
+            console.warn(`  ⚠ ${page}: knowledge unusable, publishing without data blocks (${error instanceof Error ? error.message : String(error)})`);
+        }
 
         const rendered = renderTrackerHtml(html, data, page, now, blocksHtml);
         fs.writeFileSync(file, rendered, "utf8");

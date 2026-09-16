@@ -81,15 +81,31 @@ const MAX_UPCOMING_ROWS = 12;
 /** How many occurrences of a recurring rule to project. */
 const COMPUTED_OCCURRENCES = 4;
 
-/** Reads a game's knowledge, or undefined when the store is not present (a plain clone, or a local run). */
+/**
+ * Reads a game's knowledge, or undefined when the store is absent (a plain clone, or a local run).
+ *
+ * The file is input, not a contract: valid JSON can still be the wrong shape, and the pipeline's own
+ * loader treats that as unavailable rather than trusting it. Each collection is therefore accepted
+ * only if it is actually an array, so a corrupt file costs a page its blocks instead of the build.
+ */
 export function loadKnowledge(root: string, game: string): GameKnowledge | undefined {
     const file = path.join(root, "knowledge", "games", `${game}.json`);
     if (!fs.existsSync(file)) return undefined;
+    let parsed: unknown;
     try {
-        return JSON.parse(fs.readFileSync(file, "utf8")) as GameKnowledge;
+        parsed = JSON.parse(fs.readFileSync(file, "utf8"));
     } catch {
         return undefined;
     }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
+    const record = parsed as Record<string, unknown>;
+    const arrayOf = <T>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
+    return {
+        game: typeof record.game === "string" ? record.game : undefined,
+        events: arrayOf<KnowledgeEvent>(record.events).filter(e => e && typeof e === "object"),
+        claims: arrayOf<KnowledgeClaim>(record.claims).filter(c => c && typeof c === "object"),
+        documents: arrayOf<KnowledgeDocument>(record.documents).filter(d => d && typeof d === "object")
+    };
 }
 
 function endOf(event: KnowledgeEvent): number | undefined {
@@ -203,7 +219,10 @@ export function blocksFor(knowledge: GameKnowledge | undefined, topic: string, o
     if (past.length >= MIN_HISTORY_ROWS) {
         blocks.push({
             title: "Previously",
-            note: "Each entry was verified against the publisher's own archive.",
+            // Deliberately not "verified against the archive": for a schedule-based topic the evidence
+            // shows the publisher announced that date, not that the release happened on it. What is
+            // true for every row is that the date came from the official source at the time.
+            note: "Each of these dates came from the official source at the time.",
             rows: past.map(e => ({ label: e.label, when: options.format(e.at!, e.precision), ...evidenceFor(e, knowledge) }))
         });
     }

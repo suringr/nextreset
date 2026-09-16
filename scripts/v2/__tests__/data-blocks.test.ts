@@ -217,3 +217,46 @@ test("renderSite fills the data slot from the store, and leaves it empty without
 test("the knowledge store is optional", () => {
     assert.equal(loadKnowledge(os.tmpdir(), "definitely-not-a-game"), undefined);
 });
+
+test("a corrupt knowledge file costs a page its blocks, never the build", () => {
+    const write = (contents: string) => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), "nextreset-bad-"));
+        fs.mkdirSync(path.join(root, "knowledge", "games"), { recursive: true });
+        fs.writeFileSync(path.join(root, "knowledge", "games", "lol.json"), contents);
+        return root;
+    };
+
+    // Valid JSON, wrong shape: the pipeline's own loader treats this as unavailable, and so must this.
+    const wrongShape = write('{"events":{},"claims":"nope"}');
+    const loaded = loadKnowledge(wrongShape, "lol");
+    assert.deepEqual(loaded?.events, [], "a non-array collection reads as empty rather than blowing up");
+    assert.deepEqual(loaded?.claims, []);
+    assert.deepEqual(blocksFor(loaded, "next-patch", { format, now: NOW }), []);
+
+    assert.equal(loadKnowledge(write("not json at all"), "lol"), undefined);
+    assert.equal(loadKnowledge(write("[]"), "lol"), undefined, "an array is not a knowledge file");
+    assert.equal(loadKnowledge(write("null"), "lol"), undefined);
+
+    // And the page still publishes its value.
+    const root = write('{"events":{}}');
+    const dist = path.join(root, "dist");
+    fs.mkdirSync(path.join(dist, "lol", "next-patch"), { recursive: true });
+    fs.mkdirSync(path.join(dist, "data"), { recursive: true });
+    fs.copyFileSync(path.join(ROOT, "public", "lol", "next-patch", "index.html"), path.join(dist, "lol", "next-patch", "index.html"));
+    fs.writeFileSync(path.join(dist, "data", "lol.next-patch.json"), JSON.stringify({
+        game: "lol", type: "next-patch", status: "fresh", nextEventUtc: "2026-09-23T00:00:00.000Z",
+        fetched_at_utc: NOW.toISOString(), last_success_at_utc: NOW.toISOString(), precision: "day",
+        source_url: "https://support.riotgames.com/x", confidence: "high", notes: "Patch 26.19"
+    }));
+    renderSite(dist, NOW, root);
+    const html = fs.readFileSync(path.join(dist, "lol", "next-patch", "index.html"), "utf8");
+    assert.ok(html.includes("September 23, 2026"), "the page is published with its value");
+    assert.ok(html.includes(`<div id="verified-data"></div>`), "and simply without blocks");
+});
+
+test("history does not claim a release was confirmed when the evidence announced a plan", () => {
+    const blocks = blocksFor(lolKnowledge(), "next-patch", { format, now: NOW, currentKey: "lol/next-patch/26.19" });
+    const previously = blocks.find(b => b.title === "Previously")!;
+    assert.ok(!/archive/i.test(previously.note ?? ""), "a schedule page is not an archive of what shipped");
+    assert.equal(previously.note, "Each of these dates came from the official source at the time.");
+});
