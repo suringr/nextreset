@@ -79,19 +79,22 @@ export function cardValue(data: TrackerData | undefined, now: Date): CardValue {
     const badgeText = stale ? "STALE" : "LIVE";
     const badgeClass = stale ? "badge badge-stale" : "badge badge-live";
     const state = stale ? "stale" : "live";
-
-    // A future-facing value whose moment has just passed: the next one arrives with the next refresh.
-    // app.js says "Updating..." here, and the homepage says exactly the same rather than presenting a
-    // passed instant as though it were still ahead.
-    if (!ahead && isFutureFacing(value.type)) {
-        return { group: "upcoming", badgeText, badgeClass, value: "Updating...", compact: false, state, checked, at, unanswered: false };
-    }
-
     // A time is published only where the pipeline states the instant is exact; otherwise midnight UTC is
     // a storage artefact and the value is a date (the rule blocksFor applies on the tracker pages).
     const exact = value.precision === "exact";
+    // A future-facing value still answers its question here — isUnanswered has already had its say — so
+    // it belongs under "next up" whether its moment is ahead, happening, or awaiting the next refresh.
+    const group: CardGroup = isFutureFacing(value.type) ? "upcoming" : "recent";
+
+    // An exact instant that has just passed: the next one arrives with the next refresh, and app.js says
+    // "Updating..." for that moment. A date-only value is not in that position — it was announced for a
+    // day, not an instant, so it stays its own date until the day is over.
+    if (!ahead && exact && isFutureFacing(value.type)) {
+        return { group, badgeText, badgeClass, value: "Updating...", compact: false, state, checked, at, unanswered: false };
+    }
+
     return {
-        group: ahead && isFutureFacing(value.type) ? "upcoming" : "recent",
+        group,
         badgeText,
         badgeClass,
         value: exact ? formatDateTime(value.nextEventUtc) : formatDate(value.nextEventUtc),

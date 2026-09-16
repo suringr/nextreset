@@ -111,6 +111,29 @@ test("a future-facing instant that has just passed says so rather than pretendin
     assert.equal(value.badgeText, "LIVE", "it was verified an hour ago; only the next value is pending");
 });
 
+test("a date-only value stays its date, and stays next up, for the whole day it names", () => {
+    const app = loadApp();
+    // The patch is announced for the 23rd. At midday on the 23rd its stored midnight has passed, but the
+    // day it names has not: the answer is still "September 23, 2026".
+    const midday = new Date("2026-09-23T12:00:00Z");
+    const built = cardValue(PUBLISHED["lol.next-patch"], midday);
+    assert.equal(built.value, "September 23, 2026", "not 'Updating...' for the whole announced day");
+    assert.equal(built.group, "upcoming", "and it is still what happens next");
+
+    const display = app.eventDisplay(PUBLISHED["lol.next-patch"], midday.getTime());
+    assert.equal(display.mode, "date", "the browser reaches the same conclusion");
+
+    // The day after, nothing has replaced it, so it stops being an answer at all.
+    const tomorrow = new Date("2026-09-24T12:00:00Z");
+    assert.equal(cardValue({ ...PUBLISHED["lol.next-patch"], status: "stale" }, tomorrow).value, "No official date announced");
+});
+
+test("an exact instant that has just passed is the one case that says Updating", () => {
+    const justPassed = { ...PUBLISHED["gta.weekly-reset"], nextEventUtc: "2026-09-16T10:00:00.000Z" };
+    assert.equal(cardValue(justPassed, NOW).value, "Updating...");
+    assert.equal(cardValue({ ...justPassed, precision: "day" }, NOW).value, "September 16, 2026", "a date-only value is never in that position");
+});
+
 test("a tracker with no published file, or one the pipeline no longer stands behind, says so", () => {
     assert.equal(cardValue(undefined, NOW).value, "Data unavailable");
     assert.equal(cardValue(undefined, NOW).badgeText, "UNAVAILABLE");
