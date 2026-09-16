@@ -456,10 +456,16 @@ function renderCardUnavailable(card) {
 // The heading text the build writes for the unanswered group (GROUP_HEADINGS in scripts/render-home.ts).
 const UNANSWERED_HEADING = 'Waiting on an official source';
 
+function cardTitle(card) {
+    const title = card.querySelector && card.querySelector('.card-title');
+    return (title && title.textContent) || '';
+}
+
 // A card whose date expires while the page is open has left the group the build put it in, and a
-// heading it no longer belongs under would contradict the page. That group is the last one, so moving
-// the card to the end of the grid is the whole of the regrouping; a heading left with no cards beneath
-// it is then removed, since an empty section is worse than no section.
+// heading it no longer belongs under would contradict the page. That group is the last one, and the
+// build orders it by name (orderCards in scripts/render-home.ts), so the card goes before the first
+// one that sorts after it; a heading left with no cards beneath it is then removed, since an empty
+// section is worse than no section.
 function regroupAsUnanswered(card) {
     const grid = card.parentNode;
     if (!grid || typeof grid.appendChild !== 'function') return;
@@ -472,7 +478,15 @@ function regroupAsUnanswered(card) {
         heading.textContent = UNANSWERED_HEADING;
         grid.appendChild(heading);
     }
-    grid.appendChild(card);
+
+    const title = cardTitle(card);
+    const inGroup = Array.from(grid.children || []).slice(Array.from(grid.children || []).indexOf(heading) + 1);
+    const follows = inGroup.find(other => other !== card && other.classList && other.classList.contains('card') && cardTitle(other).localeCompare(title) > 0);
+    if (follows && typeof grid.insertBefore === 'function') {
+        grid.insertBefore(card, follows);
+    } else {
+        grid.appendChild(card);
+    }
 
     const children = Array.from(grid.children || []);
     children.forEach((node, i) => {
@@ -555,10 +569,11 @@ async function initHomepage() {
             const data = await fetchGameData(game, type);
             renderCard(card, data);
         } catch {
-            // The build already wrote a verified value into this card. Replacing it with "Data
-            // unavailable" because this one fetch failed would destroy good content, so only a card the
-            // build had nothing to publish for is emptied.
-            if (!card.dataset.nextUtc) renderCardUnavailable(card);
+            // The build already wrote this card: its value, or an honest "Data unavailable" with the
+            // time it was last checked. Replacing that because one fetch failed would destroy good
+            // content. Only a card the build never reached still says "loading", and only that one is
+            // emptied — an absent instant is not the same thing, since a rejected value has none either.
+            if (card.dataset.state === 'loading') renderCardUnavailable(card);
         }
     });
 

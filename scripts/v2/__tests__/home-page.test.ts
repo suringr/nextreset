@@ -237,9 +237,13 @@ function stubCard(dataset: Record<string, string>) {
 
 test("a refresh that fails leaves the value the build rendered", async () => {
     const app = loadApp();
-    const published = stubCard({ game: "lol", type: "next-patch", nextUtc: "2026-09-23T00:00:00.000Z", precision: "day", status: "fresh", checkedUtc: "2026-09-16T11:00:00.000Z", unanswered: "" });
-    const nothingPublished = stubCard({ game: "fortnite", type: "next-season", nextUtc: "", precision: "", status: "", checkedUtc: "", unanswered: "" });
-    const cards = [published.card, nothingPublished.card];
+    const published = stubCard({ game: "lol", type: "next-patch", state: "live", nextUtc: "2026-09-23T00:00:00.000Z", precision: "day", status: "fresh", checkedUtc: "2026-09-16T11:00:00.000Z", unanswered: "" });
+    // A card the build rendered as unavailable has no instant, but it does have a checked time: that is
+    // build-rendered content too, and a failed refresh must not replace it with "--".
+    const unavailable = stubCard({ game: "pubg", type: "last-patch", state: "unavailable", nextUtc: "", precision: "", status: "", checkedUtc: "2026-09-16T11:00:00.000Z", unanswered: "" });
+    unavailable.els[".last-checked"].textContent = "Checked September 16, 2026 at 11:00 UTC";
+    const nothingPublished = stubCard({ game: "fortnite", type: "next-season", state: "loading", nextUtc: "", precision: "", status: "", checkedUtc: "", unanswered: "" });
+    const cards = [published.card, unavailable.card, nothingPublished.card];
     app.document = { getElementById: (id: string) => (id === "game-grid" ? { querySelectorAll: () => cards } : null) };
     app.fetchGameData = async () => {
         throw new Error("offline");
@@ -249,7 +253,8 @@ test("a refresh that fails leaves the value the build rendered", async () => {
 
     assert.equal(published.els[".card-countdown"].textContent, "", "the rendered date is left exactly as it was");
     assert.equal(published.card.dataset.nextUtc, "2026-09-23T00:00:00.000Z", "and the card still knows its date");
-    assert.equal(nothingPublished.els[".card-countdown"].textContent, "Data unavailable", "a card with nothing published still says so");
+    assert.equal(unavailable.els[".last-checked"].textContent, "Checked September 16, 2026 at 11:00 UTC", "an unavailable card keeps the time it was checked");
+    assert.equal(nothingPublished.els[".card-countdown"].textContent, "Data unavailable", "a card the build never reached still says so");
 });
 
 test("a tracker page that failed to refresh keeps its rendered value instead of an error box", () => {
@@ -312,6 +317,12 @@ class FakeElement {
         this.children.push(node);
         return node;
     }
+    insertBefore(node: FakeElement, before: FakeElement) {
+        node.parentNode?.removeChild(node);
+        node.parentNode = this;
+        this.children.splice(this.children.indexOf(before), 0, node);
+        return node;
+    }
     removeChild(node: FakeElement) {
         this.children = this.children.filter(child => child !== node);
         node.parentNode = undefined;
@@ -325,13 +336,14 @@ class FakeElement {
     }
 }
 
-function fakeCard(id: string, dataset: Record<string, string>): FakeElement {
+function fakeCard(id: string, dataset: Record<string, string>, title = id): FakeElement {
     const card = new FakeElement("a");
     card.className = "card";
     card.dataset = { game: id, ...dataset };
-    for (const cls of ["badge", "card-countdown", "last-checked"]) {
+    for (const cls of ["badge", "card-countdown", "last-checked", "card-title"]) {
         const child = new FakeElement("span");
         child.className = cls;
+        if (cls === "card-title") child.textContent = title;
         card.appendChild(child);
     }
     return card;
@@ -374,6 +386,26 @@ test("a card that expires while the page is open moves to the group it now belon
         `# ${GROUP_HEADINGS.unknown}`, "fortnite"
     ], "the expired card left 'next up' and the heading it needed was created");
     assert.equal(fortnite.querySelector(".badge")!.textContent, "NO DATE");
+});
+
+test("cards that expire one after another still read in the order the group is sorted by", () => {
+    const app = loadApp();
+    const expired = { type: "next-season", precision: "exact", status: "stale", unanswered: "" };
+    const gone = (iso: string) => ({ ...expired, nextUtc: iso });
+    // Fortnite is already unanswered; GTA expires first, then Genshin. The group is ordered by name.
+    const fortnite = fakeCard("fortnite", { ...gone("2026-06-06T00:00:00.000Z"), unanswered: "1" }, "Fortnite");
+    const gta = fakeCard("gta", gone("2026-06-07T00:00:00.000Z"), "GTA Online");
+    const genshin = fakeCard("genshin", gone("2026-06-08T00:00:00.000Z"), "Genshin Impact");
+    const grid = fakeGrid([["upcoming", [gta, genshin]], ["unknown", [fortnite]]]);
+    const cards = [gta, genshin, fortnite];
+    app.document = { querySelectorAll: () => grid.children.filter(c => c.classList.contains("card")), createElement: (tag: string) => new FakeElement(tag) };
+
+    // Two cycles, because GTA's deadline passes before Genshin's: they do not expire together.
+    app.updateHomepageCountdowns();
+    app.updateHomepageCountdowns();
+
+    assert.deepEqual(layout(grid), [`# ${GROUP_HEADINGS.unknown}`, "fortnite", "genshin", "gta"], "not the order they expired in");
+    assert.equal(cards.length, 3);
 });
 
 test("a heading left with no cards beneath it is removed, not left hanging", () => {
