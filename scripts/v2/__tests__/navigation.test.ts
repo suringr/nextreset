@@ -16,6 +16,7 @@ import { GameKnowledge } from "../../render-data-blocks";
 import { trackerOf } from "../../render-pages";
 import { buildSitemap, factsChangedAt, sitemapEntries, urlPathOf } from "../../render-sitemap";
 import { gamePages } from "../../update-game-pages";
+import { GAMES } from "../games";
 
 const ROOT = path.join(__dirname, "..", "..", "..");
 const PUBLIC = path.join(ROOT, "public");
@@ -227,15 +228,54 @@ test("a URL that does not exist has a page of its own", () => {
 
 test("the documented sources are the sources the code actually reads", () => {
     // The table described V1 providers long after ten of the twelve moved to V2 — RSS for Counter-Strike
-    // that is now a JSON API, an HTML scrape for Minecraft that is now Mojang's manifest.
+    // that is now a JSON API, an HTML scrape for Minecraft that is now Mojang's manifest. Checking that
+    // the game names appear would not have caught any of that, so each row is checked against the
+    // registry entry it describes.
     const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
     const table = readme.slice(readme.indexOf("| Game | Question |"));
-    const rows = table.slice(0, table.indexOf("\r\n\r\n")).split(/\r?\n/).filter(line => line.startsWith("|")).slice(2);
+    const rows = table.slice(0, table.indexOf("\r\n\r\n")).split(/\r?\n/)
+        .filter(line => line.startsWith("|"))
+        .slice(2)
+        .map(line => line.split("|").slice(1, -1).map(cell => cell.trim()));
 
     assert.equal(rows.length, gamePages.length, "every tracker the site publishes has a row");
-    for (const page of gamePages) {
-        assert.ok(rows.some(row => row.includes(page.title)), `${page.title} is not in the sources table`);
+    const rowFor = (title: string) => {
+        const found = rows.filter(cells => cells[0] === title);
+        assert.equal(found.length, 1, `expected exactly one row for ${title}`);
+        return { question: found[0][1], source: found[0][2], how: found[0][3] };
+    };
+
+    /** What the registry says a source is, as the table would have to describe it. */
+    const expectedMethod: Record<string, string> = { json: "JSON", html: "HTML", rule: "Computed" };
+
+    for (const entry of GAMES) {
+        const page = gamePages.find(candidate => candidate.game === entry.id);
+        assert.ok(page, `the registry has ${entry.id} but no page does`);
+        const row = rowFor(page!.title);
+        // The question cell is a label, and the site words it differently in different places on
+        // purpose — "Banner end" on a card, "Next Banner End" as a page heading — so only its
+        // presence is checked. What must not drift is the source and how it is read.
+        assert.ok(row.question.length > 0, `${page!.title}: the row does not say what question it answers`);
+
+        const kinds = [...new Set(entry.sources.map(source => source.kind))];
+        assert.equal(kinds.length, 1, `${entry.id}: expected one kind of source, found ${kinds.join("+")}`);
+
+        // Only a tracker with a discovery configuration reads prose with a model; everything else is
+        // parsed, and the table has to say which of the two this is.
+        const usesModel = entry.topics.some(topic => !!topic.discovery);
+        assert.equal(/\bAI\b|model/i.test(row.how), usesModel, `${page!.title}: the row disagrees about whether a model reads it`);
+        if (!usesModel) {
+            assert.match(row.how, new RegExp(expectedMethod[kinds[0]]), `${page!.title}: the registry reads ${kinds[0]}`);
+        }
+        assert.ok(!/V1 provider/.test(row.how), `${page!.title} is on V2, so the row must not call it a V1 provider`);
     }
+
+    // The two the registry does not cover are the two still on their V1 provider, and say so.
+    const onV2 = new Set(GAMES.map(entry => entry.id));
+    for (const page of gamePages.filter(candidate => !onV2.has(candidate.game))) {
+        assert.match(rowFor(page.title).how, /V1 provider/, `${page.title} is not on V2 and the row should say so`);
+    }
+    assert.equal(gamePages.length - onV2.size, 2, "ten of the twelve are on V2");
 });
 
 test("the crawl rules still keep the data files out and point at the sitemap", () => {
