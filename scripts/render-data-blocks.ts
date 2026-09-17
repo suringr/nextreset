@@ -65,13 +65,31 @@ export interface BlockRow {
     href?: string;
     /** A verbatim quote, only where the stored quote is prose a person can read. */
     quote?: string;
+    /** Where this row sits relative to now. Only a timeline sets it. */
+    state?: RowState;
 }
+
+/**
+ * Where a row sits relative to now.
+ *
+ * Only a timeline needs this: a list of past updates is all one thing, but a schedule a reader is
+ * trying to place themselves in has to say which entry is the one they are waiting for.
+ */
+export type RowState = "released" | "next" | "scheduled";
 
 export interface Block {
     title: string;
     rows: BlockRow[];
     /** One sentence explaining what the reader is looking at, where that is not obvious. */
     note?: string;
+    /**
+     * How the block should be read.
+     *
+     * A `list` is a set of rows that happen to be ordered. A `timeline` is a sequence a reader places
+     * themselves in — which is why it runs oldest to newest, marks the current entry, and keeps past
+     * and future in one column instead of two separate sections.
+     */
+    shape?: "list" | "timeline";
 }
 
 const DAY_MS = 86_400_000;
@@ -218,6 +236,81 @@ export interface BlockOptions {
     headlineAnswered?: boolean;
 }
 
+/**
+ * How far either side of the current entry a timeline reaches.
+ *
+ * Deliberately the caps the two lists it replaces already used, so the timeline shows exactly what
+ * "Previously" and "Also scheduled" showed between them and no verified row is lost by changing shape.
+ * A first attempt used a short window for phone readability and quietly dropped eight of League of
+ * Legends' twelve published patches — eight rows of dated, linked, quoted evidence — from a site that
+ * was rejected for thin content. One sequence of the same rows is the change; fewer rows is not.
+ */
+const TIMELINE_BEHIND = MAX_HISTORY_ROWS;
+const TIMELINE_AHEAD = MAX_UPCOMING_ROWS;
+
+/**
+ * A published schedule as one sequence, for a topic whose events are versions of the same thing.
+ *
+ * League of Legends publishes its whole year: twelve patches behind the current one and six ahead. As
+ * two separate sections — "Previously" newest-first and "Also scheduled" soonest-first — a reader
+ * cannot see where the patch they are waiting for sits, and the two lists run in opposite directions.
+ * As one column, oldest to newest, with the current entry marked, the question answers itself.
+ *
+ * This is only right where the events really are a sequence. An update history (Counter-Strike's
+ * nineteen updates, all in the past, none scheduled) is a list, and rendering it as a timeline would
+ * imply a cadence Valve does not publish.
+ */
+export function timelineFor(knowledge: GameKnowledge, topic: string, options: BlockOptions): Block | undefined {
+    const events = published(knowledge.events, topic);
+    if (events.length === 0) return undefined;
+    const nowMs = options.now.getTime();
+
+    // Two things have to be true, and the second is the one that matters.
+    //
+    // The events must be versions of one thing — an update feed, a status observation and a recurring
+    // rule are not sequences however many rows they have.
+    if (!events.some(event => event.kind === "version")) return undefined;
+
+    // And the store must hold entries on both sides of now, because a timeline is something a reader
+    // places themselves in. This is what separates League of Legends, which publishes its whole year,
+    // from PUBG, VALORANT, EA SPORTS FC and Minecraft — all of them "version" events too, and all of
+    // them feeds of releases that have already happened. Drawing those on a rail with Released markers
+    // would imply a cadence the publisher does not announce. They stay a list, which is what they are.
+    const behindNow = events.some(event => (endOf(event) ?? 0) <= nowMs);
+    const aheadNow = events.some(event => (endOf(event) ?? 0) > nowMs);
+    if (!behindNow || !aheadNow) return undefined;
+
+    const ordered = [...events].sort((a, b) => Date.parse(a.at!) - Date.parse(b.at!));
+    const answered = options.headlineAnswered !== false;
+
+    // The entry the page's headline is about, so the timeline marks the same one the reader just read.
+    const currentIndex = options.currentKey
+        ? ordered.findIndex(event => event.key === options.currentKey)
+        : ordered.findIndex(event => (endOf(event) ?? 0) > nowMs);
+
+    const pivot = currentIndex >= 0 ? currentIndex : ordered.length;
+    const behind = ordered.slice(Math.max(0, pivot - TIMELINE_BEHIND), pivot);
+    // A page that cannot answer its question does not list what comes after the answer it does not have.
+    const ahead = answered && currentIndex >= 0 ? ordered.slice(pivot, pivot + TIMELINE_AHEAD + 1) : [];
+
+
+    const rows: BlockRow[] = [...behind, ...ahead].map(event => {
+        const past = (endOf(event) ?? 0) <= nowMs;
+        const state: RowState = event.key === options.currentKey && !past ? "next" : past ? "released" : "scheduled";
+        return { label: event.label, when: options.format(event.at!, event.precision), state, ...evidenceFor(event, knowledge) };
+    });
+    // The same bar every other block clears: fewer rows than this and it is a heading with a couple of
+    // lines under it, which is not worth a section. One rule, not two.
+    if (rows.length < MIN_HISTORY_ROWS) return undefined;
+
+    return {
+        title: "Patch timeline",
+        note: "Every date here was read from the official schedule. Dates after the next one can still change.",
+        shape: "timeline",
+        rows
+    };
+}
+
 /** Every block this game's data supports, in the order they should appear. Empty when it supports none. */
 export function blocksFor(knowledge: GameKnowledge | undefined, topic: string, options: BlockOptions): Block[] {
     if (!knowledge) return [];
@@ -229,6 +322,15 @@ export function blocksFor(knowledge: GameKnowledge | undefined, topic: string, o
     const byAt = (a: KnowledgeEvent, b: KnowledgeEvent) => Date.parse(a.at!) - Date.parse(b.at!);
 
     const answered = options.headlineAnswered !== false;
+
+    // A published sequence replaces the two lists it would otherwise be split across: where a timeline
+    // is the right shape, "Also scheduled" and "Previously" are the same rows read twice, in opposite
+    // directions, on either side of a gap the reader has to hold in their head.
+    const timeline = timelineFor(knowledge, topic, options);
+    if (timeline) {
+        blocks.push(timeline);
+        return blocks;
+    }
 
     // 1. Everything still ahead that the source has already published, minus the headline value.
     const upcoming = !answered ? [] : events
@@ -297,21 +399,41 @@ function escapeHtml(value: string): string {
     return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+/** What a timeline row says about where it sits. The word carries it, not the colour. */
+const STATE_WORDS: Record<RowState, string> = {
+    released: "Released",
+    next: "Next",
+    scheduled: "Scheduled"
+};
+
+/** A row's label, linked to the official post it was verified from where there is one. */
+function rowLabel(row: BlockRow): string {
+    return row.href
+        ? `<a href="${escapeHtml(row.href)}" target="_blank" rel="noopener">${escapeHtml(row.label)}</a>`
+        : escapeHtml(row.label);
+}
+
 /** The blocks as HTML for the page's data slot. Returns "" when there is nothing to show. */
 export function renderBlocks(blocks: Block[]): string {
     if (blocks.length === 0) return "";
     const parts: string[] = [];
     for (const block of blocks) {
-        const rows = block.rows.map(row => {
-            const label = row.href
-                ? `<a href="${escapeHtml(row.href)}" target="_blank" rel="noopener">${escapeHtml(row.label)}</a>`
-                : escapeHtml(row.label);
-            const quote = row.quote ? `<div class="data-quote">${escapeHtml(row.quote)}</div>` : "";
-            return `          <li class="data-row"><span class="data-label">${label}</span><span class="data-when">${escapeHtml(row.when)}</span>${quote}</li>`;
-        }).join("\n");
+        const rows = block.shape === "timeline"
+            ? block.rows.map(row => {
+                const state = row.state ?? "scheduled";
+                const quote = row.quote ? `<div class="data-quote">${escapeHtml(row.quote)}</div>` : "";
+                // The state is a word as well as a class: a reader who cannot separate the colours still
+                // reads which entry is next.
+                return `          <li class="event is-${state}"><span class="event-label">${rowLabel(row)}</span><span class="event-when">${escapeHtml(row.when)}</span><span class="event-state">${STATE_WORDS[state]}</span>${quote}</li>`;
+            }).join("\n")
+            : block.rows.map(row => {
+                const quote = row.quote ? `<div class="data-quote">${escapeHtml(row.quote)}</div>` : "";
+                return `          <li class="data-row"><span class="data-label">${rowLabel(row)}</span><span class="data-when">${escapeHtml(row.when)}</span>${quote}</li>`;
+            }).join("\n");
+        const listClass = block.shape === "timeline" ? "timeline" : "data-list";
         parts.push(`      <div class="content-section">
         <h2>${escapeHtml(block.title)}</h2>
-${block.note ? `        <p class="data-note">${escapeHtml(block.note)}</p>\n` : ""}        <ul class="data-list">
+${block.note ? `        <p class="data-note">${escapeHtml(block.note)}</p>\n` : ""}        <ul class="${listClass}">
 ${rows}
         </ul>
       </div>`);

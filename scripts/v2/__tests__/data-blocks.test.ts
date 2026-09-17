@@ -11,8 +11,8 @@ import * as os from "os";
 import * as path from "path";
 import { emptyKnowledge } from "../domain";
 import { locateSlot } from "../../render-slots";
-import { GameKnowledge, KnowledgeEvent, MIN_HISTORY_ROWS, blocksFor, computedOccurrences, loadKnowledge, regionalTimes, renderBlocks } from "../../render-data-blocks";
-import { renderSite, tidyNotes } from "../../render-pages";
+import { GameKnowledge, KnowledgeEvent, MAX_HISTORY_ROWS, MIN_HISTORY_ROWS, blocksFor, computedOccurrences, loadKnowledge, regionalTimes, renderBlocks, timelineFor } from "../../render-data-blocks";
+import { formatDate, formatDateTime, renderSite, tidyNotes } from "../../render-pages";
 
 const NOW = new Date("2026-09-16T12:00:00Z");
 const ROOT = path.join(__dirname, "..", "..", "..");
@@ -53,15 +53,17 @@ function lolKnowledge(): GameKnowledge {
 }
 
 test("a game's blocks are exactly what its data supports", () => {
+    // A published schedule is one sequence now, not a "Previously" list and an "Also scheduled" list
+    // running in opposite directions either side of the headline. Every row either list carried is
+    // still here, and the headline's own entry is marked rather than omitted.
     const blocks = blocksFor(lolKnowledge(), "next-patch", { format, now: NOW, currentKey: "lol/next-patch/26.19" });
-    assert.deepEqual(blocks.map(b => b.title), ["Also scheduled", "Previously"]);
+    assert.deepEqual(blocks.map(b => b.title), ["Patch timeline"]);
 
-    const scheduled = blocks[0];
-    assert.deepEqual(scheduled.rows.map(r => r.label), ["26.20", "26.21"], "soonest first, and never the headline value again");
-    assert.equal(scheduled.rows[0].quote, "26.20 October 7, 2026", "a prose quote is shown");
-
-    const previously = blocks[1];
-    assert.deepEqual(previously.rows.map(r => r.label), ["26.18", "26.17", "26.16"], "newest first");
+    const timeline = blocks[0];
+    assert.equal(timeline.shape, "timeline");
+    assert.deepEqual(timeline.rows.map(r => r.label), ["26.16", "26.17", "26.18", "26.19", "26.20", "26.21"], "oldest first, reading down towards what is coming");
+    assert.deepEqual(timeline.rows.map(r => r.state), ["released", "released", "released", "next", "scheduled", "scheduled"]);
+    assert.equal(timeline.rows.find(r => r.label === "26.20")!.quote, "26.20 October 7, 2026", "a prose quote is shown");
 });
 
 test("a block that cannot be filled does not appear", () => {
@@ -145,11 +147,13 @@ test("the newest claim describes the event, so a correction does not leave stale
 
 test("a page that announces no date does not list upcoming dates underneath", () => {
     const options = { format, now: NOW, currentKey: "lol/next-patch/26.19" };
-    const answered = blocksFor(lolKnowledge(), "next-patch", options).map(b => b.title);
-    assert.deepEqual(answered, ["Also scheduled", "Previously"]);
+    const answered = blocksFor(lolKnowledge(), "next-patch", options)[0];
+    assert.ok(answered.rows.some(r => r.state === "scheduled"), "an answered page shows what follows the answer");
 
-    const unanswered = blocksFor(lolKnowledge(), "next-patch", { ...options, headlineAnswered: false }).map(b => b.title);
-    assert.deepEqual(unanswered, ["Previously"], "no forward-looking block may contradict the headline");
+    const unanswered = blocksFor(lolKnowledge(), "next-patch", { ...options, headlineAnswered: false })[0];
+    assert.ok(unanswered.rows.every(r => r.state === "released"),
+        "no forward-looking row may contradict a headline that says no date is known");
+    assert.ok(unanswered.rows.length >= MIN_HISTORY_ROWS, "what already happened is unaffected by a failed check");
 });
 
 test("evidence describes the date the event holds now, even after a correction was reverted", () => {
@@ -261,9 +265,12 @@ test("renderSite fills the data slot from the store, and leaves it empty without
     };
 
     const withStore = make(true);
+    // This store holds only future patches — nothing behind the headline — so there is no sequence to
+    // place yourself in and it stays the list it always was. A timeline needs both sides of now.
     assert.ok(withStore.includes("<h2>Also scheduled</h2>"), "the schedule is published");
+    assert.ok(!withStore.includes(`class="timeline"`), "and a forward-only set is not drawn as a timeline");
     assert.ok(withStore.includes("26.20") && withStore.includes("26.21"));
-    assert.ok(!withStore.includes(">26.19<"), "the headline value is not repeated in a block");
+    assert.ok(!withStore.includes(">26.19<"), "a list does not repeat the headline value");
     assert.ok(withStore.includes("September 23, 2026"), "and the headline value is still there");
 
     const withoutStore = make(false);
@@ -314,8 +321,231 @@ test("a corrupt knowledge file costs a page its blocks, never the build", () => 
 });
 
 test("history does not claim a release was confirmed when the evidence announced a plan", () => {
-    const blocks = blocksFor(lolKnowledge(), "next-patch", { format, now: NOW, currentKey: "lol/next-patch/26.19" });
-    const previously = blocks.find(b => b.title === "Previously")!;
-    assert.ok(!/archive/i.test(previously.note ?? ""), "a schedule page is not an archive of what shipped");
-    assert.equal(previously.note, "Each of these dates came from the official source at the time.");
+    // The evidence for a schedule shows the publisher announced a date, not that the release happened
+    // on it. Whatever shape the block takes, its note may not claim more than that.
+    const timeline = blocksFor(lolKnowledge(), "next-patch", { format, now: NOW, currentKey: "lol/next-patch/26.19" })[0];
+    assert.ok(!/archive/i.test(timeline.note ?? ""), "a schedule page is not an archive of what shipped");
+    assert.ok(!/confirmed|shipped|released on/i.test(timeline.note ?? ""), "and it does not claim the releases were confirmed");
+    assert.equal(timeline.note, "Every date here was read from the official schedule. Dates after the next one can still change.");
+
+    // An update feed, which really is a record of things that happened, keeps its own note.
+    const feed: GameKnowledge = {
+        game: "cs2",
+        events: Array.from({ length: 4 }, (_, i) => ({
+            key: `cs2/last-update/${i}`, topic: "last-update", kind: "occurrence", label: "Counter-Strike 2 Update",
+            status: "observed", at: `2026-0${i + 1}-10T22:00:00.000Z`, precision: "exact", publishState: "published"
+        })),
+        claims: Array.from({ length: 4 }, (_, i) => ({ eventKey: `cs2/last-update/${i}`, field: "at", value: `2026-0${i + 1}-10T22:00:00.000Z`, linkUrl: `https://steam.test/${i}` })),
+        documents: []
+    };
+    const updates = blocksFor(feed, "last-update", { format, now: NOW }).find(b => b.title === "Previously");
+    assert.ok(updates, "an update feed still gets its list");
+    assert.equal(updates!.note, "Each of these dates came from the official source at the time.");
+});
+
+// === V4 PR 6: each game gets the shape its data supports ===
+
+/** A version-kind schedule: what League of Legends publishes — a year of patches, past and future. */
+function versionSchedule(): GameKnowledge {
+    const events: KnowledgeEvent[] = [
+        ["26.16", "2026-08-12", "observed"],
+        ["26.17", "2026-08-26", "observed"],
+        ["26.18", "2026-09-10", "observed"],
+        ["26.19", "2026-09-23", "scheduled"],
+        ["26.20", "2026-10-07", "scheduled"],
+        ["26.21", "2026-10-21", "scheduled"],
+        ["26.22", "2026-11-04", "scheduled"]
+    ].map(([label, day, status]) => ({
+        key: `lol/next-patch/${label}`,
+        topic: "next-patch",
+        kind: "version",
+        label: label as string,
+        status: status as string,
+        at: `${day}T00:00:00.000Z`,
+        precision: "day",
+        publishState: "published"
+    }));
+    return {
+        game: "lol",
+        events,
+        claims: events.map(event => ({
+            eventKey: event.key,
+            field: "at",
+            value: event.at,
+            method: "ai",
+            quote: `${event.label} ${event.at!.slice(0, 10)}`,
+            linkUrl: "https://support.riotgames.com/schedule",
+            extractedAt: "2026-09-01T00:00:00.000Z"
+        })),
+        documents: []
+    };
+}
+
+const TIMELINE_NOW = new Date("2026-09-16T12:00:00Z");
+const readable = (iso: string, precision?: string) => (precision === "exact" ? formatDateTime(iso) : formatDate(iso));
+
+test("a published schedule is one sequence, oldest to newest, with the next entry marked", () => {
+    const blocks = blocksFor(versionSchedule(), "next-patch", {
+        format: readable,
+        now: TIMELINE_NOW,
+        currentKey: "lol/next-patch/26.19",
+        headlineAnswered: true
+    });
+    assert.equal(blocks.length, 1, "one timeline instead of two lists running in opposite directions");
+    const timeline = blocks[0];
+    assert.equal(timeline.shape, "timeline");
+    assert.equal(timeline.title, "Patch timeline");
+
+    const labels = timeline.rows.map(row => row.label);
+    assert.deepEqual(labels, ["26.16", "26.17", "26.18", "26.19", "26.20", "26.21", "26.22"]);
+    // Oldest first: the reader reads down towards what is coming.
+    assert.deepEqual(timeline.rows.map(row => row.state), [
+        "released", "released", "released", "next", "scheduled", "scheduled", "scheduled"
+    ]);
+    assert.equal(timeline.rows.find(row => row.state === "next")!.label, "26.19");
+});
+
+test("every timeline row keeps the evidence its list rows had", () => {
+    const timeline = blocksFor(versionSchedule(), "next-patch", {
+        format: readable, now: TIMELINE_NOW, currentKey: "lol/next-patch/26.19", headlineAnswered: true
+    })[0];
+    for (const row of timeline.rows) {
+        assert.equal(row.href, "https://support.riotgames.com/schedule", `${row.label} lost its official link`);
+        assert.ok(row.quote && row.quote.includes(row.label), `${row.label} lost its verbatim quote`);
+        assert.ok(row.when.length > 0);
+    }
+    // A date-only schedule is still dates, all the way down.
+    assert.equal(timeline.rows.find(row => row.label === "26.19")!.when, "September 23, 2026");
+    assert.ok(!timeline.rows.some(row => row.when.includes("00:00")), "midnight is never published as a time");
+});
+
+test("a page that cannot answer its question lists nothing after the answer it does not have", () => {
+    const blocks = blocksFor(versionSchedule(), "next-patch", {
+        format: readable, now: TIMELINE_NOW, currentKey: "lol/next-patch/26.19", headlineAnswered: false
+    });
+    const timeline = blocks[0];
+    assert.ok(timeline.rows.every(row => row.state === "released"), "only what already happened");
+    assert.ok(!timeline.rows.some(row => row.state === "next" || row.state === "scheduled"));
+    // What already happened is unaffected by today's failed check, so it is still shown.
+    assert.ok(timeline.rows.length >= 2);
+});
+
+test("an update feed is a list, not a timeline, however many rows it has", () => {
+    // Nineteen Counter-Strike updates, all in the past, none scheduled. Rendering them on a rail with
+    // "Next" markers would imply a cadence Valve does not publish.
+    const events: KnowledgeEvent[] = Array.from({ length: 6 }, (_, i) => ({
+        key: `cs2/last-update/${i}`,
+        topic: "last-update",
+        kind: "occurrence",
+        label: "Counter-Strike 2 Update",
+        status: "observed",
+        at: `2026-0${i + 1}-10T22:00:00.000Z`,
+        precision: "exact",
+        publishState: "published"
+    }));
+    const knowledge: GameKnowledge = {
+        game: "cs2",
+        events,
+        claims: events.map(e => ({ eventKey: e.key, field: "at", value: e.at, linkUrl: "https://steam.test/" + e.key, extractedAt: "2026-09-01T00:00:00.000Z" })),
+        documents: []
+    };
+    assert.equal(timelineFor(knowledge, "last-update", { format: readable, now: TIMELINE_NOW }), undefined);
+    const blocks = blocksFor(knowledge, "last-update", { format: readable, now: TIMELINE_NOW, headlineAnswered: true });
+    assert.deepEqual(blocks.map(b => b.title), ["Previously"]);
+    assert.equal(blocks[0].shape, undefined, "a list stays a list");
+});
+
+test("a recurring rule is projected, and says it was computed rather than read", () => {
+    const knowledge: GameKnowledge = {
+        game: "gta",
+        events: [{
+            key: "gta/weekly-reset/2026-09-17", topic: "weekly-reset", kind: "recurring", label: "Weekly reset",
+            status: "scheduled", at: "2026-09-17T10:00:00.000Z", precision: "exact", publishState: "published"
+        }],
+        claims: [],
+        documents: []
+    };
+    assert.equal(timelineFor(knowledge, "weekly-reset", { format: readable, now: TIMELINE_NOW }), undefined, "a rule is not a schedule of versions");
+    const blocks = blocksFor(knowledge, "weekly-reset", { format: readable, now: TIMELINE_NOW, currentKey: "gta/weekly-reset/2026-09-17", headlineAnswered: true });
+    assert.deepEqual(blocks.map(b => b.title), ["Then"]);
+    assert.match(blocks[0].note!, /Computed/, "a projection says it is one");
+    assert.equal(blocks[0].rows.length, 4);
+});
+
+test("a single status observation supports no block at all", () => {
+    // Roblox's store holds one observation. An empty heading would be worse than no section, and a
+    // one-row "history" is not a history.
+    const knowledge: GameKnowledge = {
+        game: "roblox",
+        events: [{
+            key: "roblox/status/2026-08-07", topic: "status", kind: "occurrence", label: "Operational",
+            status: "observed", at: "2026-08-07T04:48:28.252Z", precision: "exact", publishState: "published"
+        }],
+        claims: [],
+        documents: []
+    };
+    assert.equal(timelineFor(knowledge, "status", { format: readable, now: TIMELINE_NOW }), undefined);
+    assert.deepEqual(blocksFor(knowledge, "status", { format: readable, now: TIMELINE_NOW, headlineAnswered: true }), []);
+});
+
+test("a timeline of one entry is not a timeline", () => {
+    const knowledge = versionSchedule();
+    knowledge.events = knowledge.events!.slice(0, 1);
+    assert.equal(timelineFor(knowledge, "next-patch", { format: readable, now: TIMELINE_NOW }), undefined);
+});
+
+test("the timeline shows everything the two lists it replaces showed", () => {
+    const knowledge = versionSchedule();
+    // A full year of fortnightly patches, which is what the store actually holds for League of Legends.
+    knowledge.events = Array.from({ length: 26 }, (_, i) => ({
+        key: `lol/next-patch/26.${String(i + 1).padStart(2, "0")}`,
+        topic: "next-patch",
+        kind: "version",
+        label: `26.${String(i + 1).padStart(2, "0")}`,
+        status: i < 18 ? "observed" : "scheduled",
+        at: new Date(Date.UTC(2026, 0, 8 + i * 14)).toISOString(),
+        precision: "day",
+        publishState: "published"
+    }));
+    const timeline = timelineFor(knowledge, "next-patch", { format: readable, now: TIMELINE_NOW, headlineAnswered: true })!;
+    // The caps are the ones "Previously" and "Also scheduled" already used, so changing shape cannot
+    // cost the page a single verified row. A shorter window dropped eight of League of Legends' twelve
+    // published patches, which is content loss dressed as a redesign.
+    assert.ok(timeline.rows.length <= MIN_HISTORY_ROWS + MAX_HISTORY_ROWS * 2, `${timeline.rows.length} rows`);
+    const released = timeline.rows.filter(r => r.state === "released").length;
+    assert.ok(released >= 12, `expected the full published history, got ${released} released rows`);
+    assert.ok(timeline.rows.some(row => row.state !== "released"), "and it still reaches what is coming");
+});
+
+test("timeline markup carries the state as a word, not only as a colour", () => {
+    const timeline = blocksFor(versionSchedule(), "next-patch", {
+        format: readable, now: TIMELINE_NOW, currentKey: "lol/next-patch/26.19", headlineAnswered: true
+    })[0];
+    const html = renderBlocks([timeline]);
+    assert.match(html, /<ul class="timeline">/);
+    assert.match(html, /class="event is-next"/);
+    assert.match(html, /<span class="event-state">Next<\/span>/);
+    assert.match(html, /<span class="event-state">Released<\/span>/);
+    assert.match(html, /<span class="event-state">Scheduled<\/span>/);
+    // Still one heading, still the official links, still the quotes.
+    assert.equal((html.match(/<h2>/g) ?? []).length, 1);
+    assert.ok(html.includes('rel="noopener"'));
+    assert.ok(html.includes('class="data-quote"'));
+});
+
+test("a held event never reaches a timeline", () => {
+    const knowledge = versionSchedule();
+    knowledge.events![3].publishState = "held";
+    const timeline = timelineFor(knowledge, "next-patch", { format: readable, now: TIMELINE_NOW, headlineAnswered: true })!;
+    assert.ok(!timeline.rows.some(row => row.label === "26.19"), "ours to know, not to publish");
+});
+
+test("data from the store cannot inject markup into a timeline", () => {
+    const knowledge = versionSchedule();
+    knowledge.events![3].label = '26.19"><script>alert(1)</script>';
+    knowledge.claims![3].linkUrl = 'javascript:alert(1)"';
+    const html = renderBlocks([timelineFor(knowledge, "next-patch", { format: readable, now: TIMELINE_NOW, headlineAnswered: true })!]);
+    assert.ok(!html.includes("<script>"));
+    assert.ok(!html.includes('javascript:alert(1)"'), "the href is escaped");
+    assert.ok(html.includes("&lt;script&gt;"));
 });
