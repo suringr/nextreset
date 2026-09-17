@@ -321,6 +321,7 @@ test("the privacy policy describes the site that actually exists", () => {
     assert.ok(privacy.includes("Google AdSense"), "the intended advertising is disclosed");
     assert.ok(privacy.includes("may place and read cookies"), "third-party ad cookies are disclosed, as Google requires");
     assert.ok(privacy.includes("policies.google.com/technologies/partner-sites"), "and how Google uses that data is linked");
-    assert.ok(privacy.includes("No advertising code is served on the Site today"), "while staying true about today");
+    assert.ok(privacy.includes("includes the Google AdSense site code"), "the site code that is now served is disclosed");
+    assert.ok(privacy.includes("no ad placements of its own"), "while staying true about what is not there");
     assert.ok(privacy.includes("Google Analytics 4"), "the analytics disclosure is kept");
 });

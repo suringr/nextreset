@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { ADSENSE_LOADER } from './adsense';
 
 /**
  * Generate all game pages with rich content for AdSense compliance.
@@ -467,6 +468,9 @@ function generatePage(page: GamePage): string {
     gtag('js', new Date());
     gtag('config', 'G-YY6V5SR1DN');
   </script>
+
+  <!-- Google AdSense site code -->
+  ${ADSENSE_LOADER}
 
   ${faqSchema}
   ${breadcrumbSchema(page)}
