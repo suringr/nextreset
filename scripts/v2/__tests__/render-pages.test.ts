@@ -15,7 +15,7 @@ const PAGE = fs.readFileSync(path.join(__dirname, "..", "..", "..", "public", "l
 const PLACEHOLDERS = ["--:--:--", "Checking official sources...", `id="source">...`, `class="confidence">...`];
 
 /** A homepage in the authored shape: cards that say "Loading..." until the build fills them in. */
-const HOME = `<html><body><div class="grid" id="game-grid">
+const HOME = `<html><body><section data-nr-slot="next-drop"></section><div class="grid" id="game-grid" data-nr-region="cards">
       <a href="/lol/next-patch/" class="card" id="card-lol" data-game="lol" data-type="next-patch" data-state="loading" data-next-utc="">
         <div class="card-header">
           <h3 class="card-title">League of Legends</h3>

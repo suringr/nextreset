@@ -172,14 +172,16 @@ h3 {
 /* ---------- hero ---------- */
 
 .hero {
-  margin: 0 0 var(--sp-6);
+  margin: 0 0 var(--sp-5);
 }
 
+/* The page heading is deliberately modest. It names what the page is for — which a crawler and a
+   screen-reader outline both need — while the next drop below it is what a visitor came to read. */
 .h1 {
-  font-size: var(--size-h1);
-  font-weight: 900;
-  letter-spacing: -.02em;
-  margin: 0 0 var(--sp-2);
+  font-size: var(--size-lead);
+  font-weight: 800;
+  letter-spacing: -.01em;
+  margin: 0 0 var(--sp-1);
 }
 
 .sub {
@@ -187,6 +189,212 @@ h3 {
   margin: 0;
   font-size: var(--size-lead);
   max-width: var(--measure);
+}
+
+/* ---------- sections ---------- */
+
+.section,
+.shelf-section {
+  margin: 0 0 var(--sp-6);
+}
+
+.section-heading {
+  font-size: var(--size-label);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: var(--ink-faint);
+  margin: 0 0 var(--sp-3);
+}
+
+/* ---------- buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--tap);
+  padding: 0 var(--sp-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color .12s ease, background-color .12s ease;
+}
+
+.btn:hover {
+  border-color: var(--brand-line);
+}
+
+.btn-primary {
+  border-color: transparent;
+  background: var(--brand);
+  color: var(--ink);
+}
+
+.btn-primary:hover {
+  background: var(--brand-bright);
+  color: var(--ground);
+}
+
+/* ---------- next drop ---------- */
+
+/* The lead block. Violet marks it as NextReset's own framing; the value inside stays in the state
+   colours, because what the value IS remains the data's business and not the brand's. */
+.drop {
+  background:
+    radial-gradient(520px 260px at 88% -20%, var(--brand-soft), transparent 70%),
+    linear-gradient(180deg, var(--sheen), transparent 55%),
+    var(--surface);
+  border: 1px solid var(--brand-line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--sp-5) var(--sp-4);
+  margin: 0 0 var(--sp-6);
+}
+
+.drop-eyebrow {
+  font-size: var(--size-label);
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--brand-bright);
+  margin: 0 0 var(--sp-2);
+}
+
+.drop-game {
+  font-size: var(--size-h1);
+  font-weight: 900;
+  letter-spacing: -.02em;
+  margin: 0;
+}
+
+.drop-topic {
+  color: var(--ink-muted);
+  margin: var(--sp-1) 0 var(--sp-4);
+  font-size: var(--size-lead);
+}
+
+.drop-value {
+  font-family: var(--font-num);
+  font-size: var(--size-display);
+  font-weight: 700;
+  letter-spacing: -.03em;
+  line-height: 1.05;
+  color: var(--state-verified);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: break-word;
+}
+
+/* A date is a sentence, not a readout, and it is longer. */
+.drop-value.is-date {
+  font-family: var(--font);
+  font-size: clamp(26px, 6.5vw, 40px);
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+
+.drop[data-status="stale"] .drop-value {
+  color: var(--state-stale);
+}
+
+/* The live countdown app.js builds in place of the absolute value. The build never writes these: a
+   page built six hours ago would be counting from the wrong moment. */
+.drop-count {
+  display: flex;
+  gap: var(--sp-2);
+  margin: 0;
+  list-style: none;
+  padding: 0;
+}
+
+.drop-count li {
+  flex: 1 1 0;
+  max-width: 96px;
+  text-align: center;
+  border: 1px solid var(--line);
+  background: var(--ground);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2) var(--sp-1);
+  margin: 0;
+}
+
+.drop-count b {
+  display: block;
+  font-family: var(--font-num);
+  font-size: clamp(22px, 7vw, 34px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--state-verified);
+  line-height: 1.1;
+}
+
+.drop-count small {
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 700;
+}
+
+.drop-precision {
+  color: var(--ink-faint);
+  font-size: var(--size-small);
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin: var(--sp-2) 0 0;
+}
+
+.drop-trust {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  margin: var(--sp-4) 0 0;
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+
+.drop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: var(--sp-5) 0 0;
+}
+
+.drop-actions .btn {
+  flex: 1 1 auto;
+}
+
+/* ---------- my games shelf ---------- */
+
+/* Horizontal, snapping, with the next card peeking past the edge — the peek is what tells a thumb
+   there is more. `contain` so a fast swipe cannot hand the gesture to the browser's back navigation. */
+.shelf {
+  display: flex;
+  gap: var(--sp-3);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--gutter);
+  overscroll-behavior-x: contain;
+  padding-bottom: var(--sp-2);
+  -webkit-overflow-scrolling: touch;
+}
+
+.shelf .card-slot {
+  flex: 0 0 auto;
+  width: min(78%, 280px);
+  scroll-snap-align: start;
+}
+
+.shelf .card {
+  height: 100%;
 }
 
 /* ---------- card grid ---------- */
@@ -212,7 +420,15 @@ h3 {
   margin-top: 0;
 }
 
+/* A card and its track control are siblings, never nested: a button inside an anchor is invalid, and
+   on a phone it gives one tap two possible meanings. The slot positions them against each other. */
+.card-slot {
+  position: relative;
+  display: flex;
+}
+
 .card {
+  flex: 1 1 auto;
   display: block;
   background: linear-gradient(180deg, var(--sheen), transparent 60%), var(--surface);
   border: 1px solid var(--line);
@@ -298,6 +514,73 @@ h3 {
 
 .card[data-state="live"] .card-countdown {
   color: var(--state-verified);
+}
+
+/* ---------- track control ---------- */
+
+/* Sits over the card's top-right corner, which is why the card's own header leaves room for it. Its
+   own 44px target, clear of the card's link area. */
+.track {
+  position: absolute;
+  top: var(--sp-2);
+  right: var(--sp-2);
+  width: var(--tap);
+  height: var(--tap);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink-faint);
+  font: inherit;
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color .12s ease, border-color .12s ease;
+}
+
+.track:hover {
+  color: var(--ink);
+  border-color: var(--brand-line);
+}
+
+.track[aria-pressed="true"] {
+  color: var(--state-stale);
+  border-color: var(--stale-line);
+  background: var(--stale-soft);
+}
+
+/* In the lead block the control sits in the row of buttons rather than over a corner. */
+.track-wide {
+  position: static;
+  width: auto;
+  height: auto;
+  font-size: inherit;
+}
+
+.track-wide .track-label {
+  position: static;
+  width: auto;
+  height: auto;
+  clip-path: none;
+  white-space: normal;
+}
+
+/* The card control shows a star; the name it stands for is still read aloud. */
+.track-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The card's header keeps its badge clear of the control. */
+.card-slot .card-header {
+  padding-right: var(--sp-6);
 }
 
 /* ---------- badges ---------- */

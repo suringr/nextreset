@@ -31,6 +31,7 @@ export const SLOT_ATTRIBUTE = "data-nr-slot";
 export const REGION_ATTRIBUTE = "data-nr-region";
 
 export type SlotName =
+    | "next-drop"
     | "answer-label"
     | "answer-value"
     | "source"
@@ -49,6 +50,12 @@ interface SlotDefinition {
 }
 
 const SLOTS: Record<SlotName, SlotDefinition> = {
+    // The homepage's lead block. It has no pre-V4 shape to fall back to: the homepage never had one,
+    // so the page must declare the slot and a page that does not fails rather than silently losing it.
+    "next-drop": {
+        legacy: () => false,
+        describe: "the lead block the page opens with"
+    },
     "answer-label": {
         legacy: (name, attributes) => name === "div" && hasClass(attributes, "countdown-label"),
         describe: "the label above the headline value"
@@ -150,6 +157,21 @@ export function cardRegion(html: string, cards: Array<{ block: string; index: nu
     }
     if (containers.length === 1) {
         const container = containers[0];
+        // Owning the region is permission to emit headings and wrappers between cards — not permission
+        // to delete whatever else was put there. Anything that is not a card, a card's slot or a group
+        // heading would be destroyed by the rewrite, so it stops the build exactly as it did when the
+        // region was only the span between the first card and the last.
+        const stray = findElements(container.inner, (name, attributes) =>
+            !hasClass(attributes, "card") && !hasClass(attributes, "card-slot") && !hasClass(attributes, "group-heading")
+        ).filter(element => {
+            // Only what sits at the top of the region: everything inside a card is the card's business.
+            const enclosing = findElements(container.inner, (_n, a) => hasClass(a, "card") || hasClass(a, "card-slot") || hasClass(a, "group-heading"));
+            return !enclosing.some(owner => element.start > owner.start && element.end <= owner.end);
+        });
+        if (stray.length > 0) {
+            throw new SlotError(`${page}: unexpected content between cards: ${JSON.stringify(stray[0].source.trim().slice(0, 60))}`);
+        }
+
         // Measured from the element's own parts rather than from the length of a closing tag we assume
         // was written `</div>`: `</div >` is the same tag and would put the end one byte short.
         const start = container.start + container.openTag.length;

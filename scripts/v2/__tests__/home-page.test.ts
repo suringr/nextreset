@@ -13,7 +13,8 @@ import * as fs from "fs";
 import * as path from "path";
 import * as vm from "vm";
 import { TrackerData } from "../../render-pages";
-import { GROUP_HEADINGS, cardBlocks, cardValue, readCard, renderHomeHtml } from "../../render-home";
+import * as cheerio from "cheerio";
+import { AuthoredCard, GROUP_HEADINGS, cardBlocks, cardValue, nextDrop, readCard, renderHomeHtml, renderNextDropHtml } from "../../render-home";
 
 const ROOT = path.join(__dirname, "..", "..", "..");
 const HOME = fs.readFileSync(path.join(ROOT, "public", "index.html"), "utf8");
@@ -170,7 +171,9 @@ test("a card is recognised by its class, not by how the class attribute is spell
     assert.ok(html.includes("September 23, 2026") && html.includes("September 17, 2026 at 10:00 UTC"));
 
     // An anchor that merely looks card-like is not one, and is left where it is.
-    const withLink = HOME.replace(`<div class="grid" id="game-grid">`, `<div class="grid" id="game-grid"><a href="/about/" class="card-link">About</a>`);
+    // Outside the cards region: inside it, the renderer owns every node and stray content stops the
+    // build rather than being silently deleted (see "content that would be swallowed" below).
+    const withLink = HOME.replace(`<section class="section" id="all-games">`, `<a href="/about/" class="card-link">About</a><section class="section" id="all-games">`);
     assert.ok(renderHomeHtml(withLink, read, NOW).html.includes(`<a href="/about/" class="card-link">About</a>`));
 });
 
@@ -328,12 +331,44 @@ class FakeElement {
         node.parentNode = undefined;
         return node;
     }
+    /** Descendants, not just children: a card's title now sits one level further down, inside its slot. */
     querySelector(selector: string): FakeElement | null {
         if (selector === `.group-heading[data-group="unknown"]`) {
             return this.children.find(c => c.classList.contains("group-heading") && c.attributes["data-group"] === "unknown") ?? null;
         }
-        return this.children.find(c => c.classList.contains(selector.replace(".", ""))) ?? null;
+        const wanted = selector.replace(".", "");
+        for (const child of this.children) {
+            if (child.classList.contains(wanted)) return child;
+            const deeper = child.querySelector(selector);
+            if (deeper) return deeper;
+        }
+        return null;
     }
+    /** The nearest ancestor matching the selector, as the real DOM answers it. */
+    closest(selector: string): FakeElement | null {
+        const wanted = selector.replace(".", "");
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        let node: FakeElement | undefined = this;
+        while (node) {
+            if (node.classList.contains(wanted)) return node;
+            node = node.parentNode;
+        }
+        return null;
+    }
+}
+
+/**
+ * The slot the build wraps every card in, holding the card and its track control side by side.
+ *
+ * The fake carries it because the real page does: regrouping moves the slot, not the card, and a fake
+ * that skipped the wrapper would let a broken regrouping pass.
+ */
+function fakeSlot(card: FakeElement): FakeElement {
+    const slot = new FakeElement("div");
+    slot.className = "card-slot";
+    slot.dataset = { game: card.dataset.game };
+    slot.appendChild(card);
+    return slot;
 }
 
 function fakeCard(id: string, dataset: Record<string, string>, title = id): FakeElement {
@@ -357,9 +392,17 @@ function fakeGrid(groups: Array<[string, FakeElement[]]>): FakeElement {
         heading.setAttribute("data-group", group);
         heading.textContent = GROUP_HEADINGS[group as keyof typeof GROUP_HEADINGS];
         grid.appendChild(heading);
-        for (const card of cards) grid.appendChild(card);
+        for (const card of cards) grid.appendChild(fakeSlot(card));
     }
     return grid;
+}
+
+/** The cards a page holds, as `document.querySelectorAll('.card[data-game]')` finds them: inside slots. */
+function cardsIn(grid: FakeElement): FakeElement[] {
+    return grid.children
+        .filter(node => node.classList.contains("card-slot"))
+        .map(slot => slot.children.find(child => child.classList.contains("card"))!)
+        .filter(Boolean);
 }
 
 /** What the page looks like now: headings and the cards under them, in order. */
@@ -376,7 +419,7 @@ test("a card that expires while the page is open moves to the group it now belon
     const lol = fakeCard("lol", ahead);
     const cs2 = fakeCard("cs2", { nextUtc: "2026-09-09T22:51:08.000Z", type: "last-update", precision: "exact", status: "fresh", unanswered: "" });
     const grid = fakeGrid([["upcoming", [fortnite, lol]], ["recent", [cs2]]]);
-    app.document = { querySelectorAll: () => grid.children.filter(c => c.classList.contains("card")), createElement: (tag: string) => new FakeElement(tag) };
+    app.document = { querySelectorAll: () => cardsIn(grid), createElement: (tag: string) => new FakeElement(tag) };
 
     app.updateHomepageCountdowns();
 
@@ -398,7 +441,7 @@ test("cards that expire one after another still read in the order the group is s
     const genshin = fakeCard("genshin", gone("2026-06-08T00:00:00.000Z"), "Genshin Impact");
     const grid = fakeGrid([["upcoming", [gta, genshin]], ["unknown", [fortnite]]]);
     const cards = [gta, genshin, fortnite];
-    app.document = { querySelectorAll: () => grid.children.filter(c => c.classList.contains("card")), createElement: (tag: string) => new FakeElement(tag) };
+    app.document = { querySelectorAll: () => cardsIn(grid), createElement: (tag: string) => new FakeElement(tag) };
 
     // Two cycles, because GTA's deadline passes before Genshin's: they do not expire together.
     app.updateHomepageCountdowns();
@@ -445,7 +488,7 @@ test("a heading left with no cards beneath it is removed, not left hanging", () 
     const expired = { nextUtc: "2026-06-06T00:00:00.000Z", type: "next-season", precision: "exact", status: "stale", unanswered: "" };
     const fortnite = fakeCard("fortnite", expired);
     const grid = fakeGrid([["upcoming", [fortnite]], ["unknown", []]]);
-    app.document = { querySelectorAll: () => grid.children.filter(c => c.classList.contains("card")), createElement: (tag: string) => new FakeElement(tag) };
+    app.document = { querySelectorAll: () => cardsIn(grid), createElement: (tag: string) => new FakeElement(tag) };
 
     app.updateHomepageCountdowns();
 
@@ -482,4 +525,139 @@ test("the browser badges a card exactly as the build did", () => {
         assert.equal(els[".badge"].className, built.badgeClass, `${name}: badge class`);
         assert.equal(card.dataset.unanswered, built.unanswered ? "1" : "", `${name}: unanswered`);
     }
+});
+
+// === V4: the lead block, the track control and My Games ===
+
+/** The rendered homepage, parsed, so structure can be asked about rather than matched as a string. */
+function renderedHome(over: Record<string, TrackerData | undefined> = {}, now = NOW) {
+    const read = (game: string, type: string): TrackerData | undefined => {
+        const key = `${game}.${type}`;
+        return key in over ? over[key] : PUBLISHED[key];
+    };
+    const html = renderHomeHtml(HOME, read, now).html;
+    return { html, $: cheerio.load(html) };
+}
+
+test("the lead block is the first card of the upcoming group, and nothing decides it twice", () => {
+    const { $ } = renderedHome();
+    const drop = $(".drop");
+    assert.equal(drop.length, 1);
+    // GTA is the soonest upcoming event in the fixture, and the grid must agree, because both come from
+    // the same ordering. If they ever disagreed the page would contradict itself in its two most
+    // visible places.
+    assert.equal(drop.attr("data-game"), "gta");
+    assert.equal(drop.attr("data-kind"), "upcoming");
+    assert.equal(drop.find(".drop-eyebrow").text(), "Next drop");
+    assert.equal($("a.card").first().attr("data-game"), "gta", "the grid leads with the same tracker");
+});
+
+test("the lead block publishes a countdown only where the source stated an exact instant", () => {
+    // The build writes the absolute instant even when it is exact, because a page built six hours ago
+    // would be counting from the wrong moment. app.js turns it into a countdown in the browser.
+    const { $ } = renderedHome();
+    assert.equal($(".drop").attr("data-precision"), "exact");
+    assert.equal($(".drop-value").text(), "September 17, 2026 at 10:00 UTC");
+    assert.equal($(".drop-precision").length, 0, "an exact instant does not claim the time is unannounced");
+    assert.equal($(".drop-count").length, 0, "the build never writes countdown tiles");
+});
+
+test("a day-only lead block stays a date and says the time was not announced", () => {
+    const { $ } = renderedHome({
+        "gta.weekly-reset": data({ game: "gta", type: "weekly-reset", nextEventUtc: "2026-09-17T00:00:00.000Z", precision: "day" }),
+        "genshin.next-banner": data({ game: "genshin", type: "next-banner", nextEventUtc: "2026-09-22T00:00:00.000Z", precision: "day" })
+    });
+    assert.equal($(".drop").attr("data-game"), "gta");
+    assert.equal($(".drop").attr("data-precision"), "day");
+    assert.equal($(".drop-value").text(), "September 17, 2026");
+    assert.ok($(".drop-value").hasClass("is-date"));
+    assert.equal($(".drop-precision").text(), "Time not announced");
+    assert.ok(!$(".drop-value").text().includes("00:00"), "midnight is a storage artefact, never a time");
+});
+
+test("with nothing upcoming the page leads with the latest verified change, and says so", () => {
+    const nothingAhead: Record<string, TrackerData | undefined> = {};
+    for (const [key, value] of Object.entries(PUBLISHED)) {
+        // Every future-facing tracker loses its answer; the recently-updated ones keep theirs.
+        if (value.type?.startsWith("next-") || value.type?.includes("reset")) nothingAhead[key] = undefined;
+    }
+    const { $ } = renderedHome(nothingAhead);
+    const drop = $(".drop");
+    assert.equal(drop.attr("data-kind"), "latest");
+    assert.equal(drop.find(".drop-eyebrow").text(), "Latest verified change");
+    assert.ok(drop.find(".drop-value").text().length > 0, "it still leads with a real value");
+    assert.equal($("a.card").length, 12, "and every tracker is still on the page");
+});
+
+test("with nothing verified at all the page still says something true", () => {
+    const nothing: Record<string, TrackerData | undefined> = {};
+    for (const key of Object.keys(PUBLISHED)) nothing[key] = undefined;
+    const { $ } = renderedHome(nothing);
+    assert.equal($(".drop").length, 1);
+    assert.equal($(".drop-game").text(), "Nothing verified right now");
+    assert.equal($(".drop-value").length, 0, "no value is invented to fill the space");
+    assert.equal($("a.card").length, 12, "and the trackers still say what they know");
+});
+
+test("nextDrop prefers upcoming, falls back to recent, and gives up honestly", () => {
+    const card = (game: string): AuthoredCard => ({ href: "/" + game + "/x/", id: "card-" + game, game, type: "x", title: game, topic: "t", attributes: {} });
+    const entry = (game: string, group: "upcoming" | "recent" | "unknown", at: number) =>
+        ({ card: card(game), value: { ...cardValue(undefined, NOW), group, at }, data: undefined });
+
+    assert.equal(nextDrop([entry("a", "recent", 2), entry("b", "upcoming", 5), entry("c", "upcoming", 1)])!.card.game, "c", "soonest upcoming");
+    assert.equal(nextDrop([entry("a", "recent", 2), entry("b", "recent", 9)])!.card.game, "b", "newest recent");
+    assert.equal(nextDrop([entry("a", "recent", 2), entry("b", "recent", 9)])!.kind, "latest");
+    assert.equal(nextDrop([entry("a", "unknown", 0)]), undefined, "nothing verified is nothing to lead with");
+    assert.equal(nextDrop([]), undefined);
+});
+
+test("the lead block escapes what it is given", () => {
+    const hostile = data({ game: "x", type: "next-x", nextEventUtc: "2026-09-20T00:00:00.000Z", precision: "day" });
+    const drop = nextDrop([{
+        card: { href: "/x/\"><script>", id: "card-x", game: "x\"><script>", type: "t", title: "<img src=x>", topic: "\"", attributes: {} },
+        value: cardValue(hostile, NOW),
+        data: hostile
+    }])!;
+    const html = renderNextDropHtml(drop, "\n");
+    assert.ok(!html.includes("<script>"), "no markup from data reaches the page");
+    assert.ok(html.includes("&lt;img src=x&gt;"));
+});
+
+test("the track control is a sibling of the card, never a child of it", () => {
+    const { $ } = renderedHome();
+    assert.equal($("a.card button").length, 0, "a button inside an anchor is invalid and ambiguous to tap");
+    assert.equal($(".card-slot").length, 12);
+    for (const slot of $(".card-slot").toArray()) {
+        const el = $(slot);
+        assert.equal(el.children("a.card").length, 1);
+        assert.equal(el.children("button.track").length, 1);
+        assert.equal(el.attr("data-game"), el.children("a.card").attr("data-game"));
+    }
+});
+
+test("the track control ships hidden, because without JavaScript it does nothing", () => {
+    const { $ } = renderedHome();
+    for (const button of $("button.track").toArray()) {
+        assert.equal($(button).attr("hidden") !== undefined, true, "a dead control is worse than no control");
+        assert.equal($(button).attr("aria-pressed"), "false");
+        assert.ok($(button).find(".track-label").text().length > 0, "and it is named for a screen reader");
+    }
+});
+
+test("the page carries every tracker exactly once, with one link each", () => {
+    const { $ } = renderedHome();
+    const games = $("a.card").map((_, el) => $(el).attr("data-game")).get();
+    assert.equal(games.length, 12);
+    assert.equal(new Set(games).size, 12, "no tracker is rendered twice");
+    for (const game of games) {
+        assert.equal($('a.card[data-game="' + game + '"]').length, 1, game + " has exactly one card");
+    }
+});
+
+test("the cards region is the only thing the renderer rewrites", () => {
+    const { $ } = renderedHome();
+    assert.equal($("#my-games").length, 1, "the My Games shelf is authored and stays");
+    assert.equal($("#my-games").attr("hidden") !== undefined, true, "and stays hidden until app.js fills it");
+    assert.equal($("#all-games").length, 1);
+    assert.ok($(".content-section").length >= 3, "the explainer prose survives");
 });
