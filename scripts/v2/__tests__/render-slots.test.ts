@@ -51,6 +51,16 @@ test("markup inside a script, a style or a comment is not an element", () => {
     assert.equal(masked.split("\n").length, html.split("\n").length);
 });
 
+test("looking for a style or a script reveals that kind, since masking it would hide the search itself", () => {
+    const html = `<head>\n  <style>.a{color:red}</style>\n  <script>var x = 1;</script>\n</head>`;
+    const styles = findByTag(html, "style");
+    assert.equal(styles.length, 1);
+    assert.equal(styles[0].inner, ".a{color:red}");
+    assert.equal(findByTag(html, "script").length, 1);
+    // The other kind stays masked, so CSS that mentions a tag name is still not markup.
+    assert.equal(findByTag(`<style>div{color:red}</style><div id="real"></div>`, "div").length, 1);
+});
+
 test("an element reports the indentation of its own line, and nothing else's", () => {
     const html = `<body>\n    <div id="a"></div>\n<p>x</p><div id="b"></div>\n</body>`;
     const found = findByTag(html, "div");
