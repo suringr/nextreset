@@ -57,12 +57,19 @@ const VOID_ELEMENTS = new Set([
  *
  * Offsets have to survive because callers slice the *original* string with them. Line breaks have to
  * survive because indentation is derived by looking back to the start of a line.
+ *
+ * `reveal` names raw-text elements to leave alone. A scan cannot find the `<style>` element itself if
+ * style regions are masked, which is the one case where masking defeats the search rather than
+ * protecting it — so a caller looking for a script or a style says so.
  */
-export function maskNonMarkup(html: string): string {
+export function maskNonMarkup(html: string, reveal: string[] = []): string {
     const blank = (text: string) => text.replace(/[^\r\n]/g, " ");
-    return html
-        .replace(/<!--[\s\S]*?-->/g, blank)
-        .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, blank);
+    const hidden = ["script", "style"].filter(name => !reveal.includes(name));
+    let masked = html.replace(/<!--[\s\S]*?-->/g, blank);
+    if (hidden.length > 0) {
+        masked = masked.replace(new RegExp(`<(${hidden.join("|")})\\b[^>]*>[\\s\\S]*?<\\/\\1\\s*>`, "gi"), blank);
+    }
+    return masked;
 }
 
 /** Reads an opening tag's attributes. Double-quoted, single-quoted, unquoted and bare are all accepted. */
@@ -191,9 +198,10 @@ function toMatch(html: string, masked: string, tag: OpenTag): ElementMatch | und
  */
 export function findElements(
     html: string,
-    accept: (name: string, attributes: Record<string, string>) => boolean
+    accept: (name: string, attributes: Record<string, string>) => boolean,
+    reveal: string[] = []
 ): ElementMatch[] {
-    const masked = maskNonMarkup(html);
+    const masked = maskNonMarkup(html, reveal);
     const found: ElementMatch[] = [];
     for (const tag of scanOpenTags(masked)) {
         if (!accept(tag.name, parseAttributes(tag.source))) continue;
@@ -203,10 +211,16 @@ export function findElements(
     return found;
 }
 
-/** Every element with the given tag name. */
+/**
+ * Every element with the given tag name.
+ *
+ * Asking for a script or a style reveals that kind, since masking it would hide the very thing being
+ * looked for; the other kind stays masked.
+ */
 export function findByTag(html: string, tagName: string): ElementMatch[] {
     const wanted = tagName.toLowerCase();
-    return findElements(html, name => name === wanted);
+    const reveal = wanted === "script" || wanted === "style" ? [wanted] : [];
+    return findElements(html, name => name === wanted, reveal);
 }
 
 /** Every element carrying an attribute set to a given value, whatever its tag. */

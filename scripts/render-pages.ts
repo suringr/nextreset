@@ -23,6 +23,7 @@ import { IndexDecision, NOINDEX_TAG, indexStateFor, staticPageDecision } from ".
 import { blocksFor as dataBlocksFor, loadKnowledge, renderBlocks } from "./render-data-blocks";
 import { CardGroup, renderHomeHtml } from "./render-home";
 import { SitemapEntry, SitemapInput, renderSitemap } from "./render-sitemap";
+import { minifyCss } from "./minify-css";
 import { replaceSlot } from "./render-slots";
 import { VersionedAssets, versionAssets } from "./version-assets";
 
@@ -393,6 +394,28 @@ export interface RenderSummary {
     sitemap: SitemapEntry[];
     /** Why each page is or is not in the index. */
     indexing: Array<{ page: string; state: IndexDecision["state"]; reason: string }>;
+    /** Stylesheets stripped of their documentation, with the bytes saved. */
+    css: Array<{ asset: string; before: number; after: number }>;
+}
+
+/**
+ * Strips every stylesheet in the build of its comments and indentation.
+ *
+ * Only in dist/: the authored file under public/ keeps every word of its reasoning.
+ */
+function minifyStylesheets(distDir: string): Array<{ asset: string; before: number; after: number }> {
+    const assets = path.join(distDir, "assets");
+    if (!fs.existsSync(assets)) return [];
+    const done: Array<{ asset: string; before: number; after: number }> = [];
+    for (const name of fs.readdirSync(assets)) {
+        if (!name.endsWith(".css")) continue;
+        const file = path.join(assets, name);
+        const css = fs.readFileSync(file, "utf8");
+        const out = minifyCss(css);
+        fs.writeFileSync(file, out, "utf8");
+        done.push({ asset: `/assets/${name}`, before: css.length, after: out.length });
+    }
+    return done;
 }
 
 function readData(dataDir: string, game: string, type: string): TrackerData | undefined {
@@ -407,7 +430,7 @@ function readData(dataDir: string, game: string, type: string): TrackerData | un
 
 /** Renders every tracker page in `distDir` in place. Throws on template drift; never touches public/. */
 export function renderSite(distDir: string, now: Date = new Date(), root: string = path.dirname(distDir)): RenderSummary {
-    const summary: RenderSummary = { rendered: [], missingData: [], skipped: 0, assets: { versions: {}, pages: 0, missing: [] }, sitemap: [], indexing: [] };
+    const summary: RenderSummary = { rendered: [], missingData: [], skipped: 0, assets: { versions: {}, pages: 0, missing: [] }, sitemap: [], indexing: [], css: [] };
     const dataDir = path.join(distDir, "data");
     const readable = (iso: string, precision?: string) => (precision === "exact" ? formatDateTime(iso) : formatDate(iso));
     const pages = htmlFilesIn(distDir);
@@ -468,6 +491,10 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
     // The sitemap lists what was actually built, dated by each page's own facts.
     summary.sitemap = renderSitemap(distDir, root, pagesForSitemap);
 
+    // The authored stylesheet documents itself; the served one does not need to. Stripped before the
+    // hashes are taken, so each hash names the bytes a visitor actually downloads.
+    summary.css = minifyStylesheets(distDir);
+
     // Last, because it stamps the pages this step has just written: the scripts and stylesheets are
     // cached for a year, so their URLs have to change whenever their contents do.
     summary.assets = versionAssets(distDir, pages);
@@ -486,6 +513,7 @@ if (require.main === module) {
     if (summary.home) console.log(`  ✓ index.html — ${summary.home.upcoming} upcoming, ${summary.home.recent} recently updated, ${summary.home.unknown} unanswered`);
     for (const page of summary.indexing.filter(p => p.state === "noindex")) console.log(`  ⊘ ${page.page} — noindex: ${page.reason}`);
     console.log(`  ✓ sitemap.xml — ${summary.sitemap.length} URL(s), ${summary.sitemap.filter(e => e.lastmod).length} dated`);
+    for (const sheet of summary.css) console.log(`  ✓ ${sheet.asset} — ${sheet.before} → ${sheet.after} bytes`);
     for (const [asset, version] of Object.entries(summary.assets.versions)) console.log(`  ✓ ${asset}?v=${version}`);
     for (const absent of summary.assets.missing) console.warn(`  ⚠ ${absent}: referenced but not in the build; left unversioned`);
     console.log(`✅ Rendered ${summary.rendered.length} tracker page(s); ${summary.skipped} page(s) have no tracker.`);
