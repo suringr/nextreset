@@ -484,8 +484,14 @@ function cardTitle(card) {
 // Only this direction happens: the page and the data it fetches come from the same build, so a card
 // can lose its answer as time passes but cannot gain one without the page being rebuilt.
 function regroupAsUnknown(card) {
-    const grid = card.parentNode;
+    // A card lives inside a slot that also holds its track control, so it is the slot that moves.
+    const slot = (card.closest && card.closest('.card-slot')) || card;
+    const grid = slot.parentNode;
     if (!grid || typeof grid.appendChild !== 'function') return;
+    // A card the visitor tracks has been moved into My Games, which is their shelf and not a group the
+    // data decides. Its badge and value still update; where it sits is their choice, not the build's.
+    if (grid.id === 'my-games-shelf') return;
+    card = slot;
 
     let heading = grid.querySelector('.group-heading[data-group="unknown"]');
     if (!heading) {
@@ -498,7 +504,7 @@ function regroupAsUnknown(card) {
 
     const title = cardTitle(card);
     const inGroup = Array.from(grid.children || []).slice(Array.from(grid.children || []).indexOf(heading) + 1);
-    const follows = inGroup.find(other => other !== card && other.classList && other.classList.contains('card') && cardTitle(other).localeCompare(title) > 0);
+    const follows = inGroup.find(other => other !== card && other.classList && other.classList.contains('card-slot') && cardTitle(other).localeCompare(title) > 0);
     if (follows && typeof grid.insertBefore === 'function') {
         grid.insertBefore(card, follows);
     } else {
@@ -571,10 +577,201 @@ function updateHomepageCountdowns() {
     });
 }
 
+// === MY GAMES, THE TRACK CONTROL AND THE LEAD BLOCK ===
+
+// The player record, where it is available. Everything below degrades to "no personalisation" without
+// it, because tracking is presentation and the page is already correct without it.
+function player() {
+    return typeof window !== 'undefined' ? window.NextResetPlayer : undefined;
+}
+
+// Moves tracked cards into the My Games shelf, and returns how many moved.
+//
+// The cards are MOVED, never copied. A duplicate would publish two links to the same tracker from one
+// page, and would leave two copies of a value that the updater then has to keep in step.
+function fillMyGames() {
+    var state = player();
+    if (!state || !document.getElementById || !document.querySelector) return 0;
+    var section = document.getElementById('my-games');
+    var shelf = document.getElementById('my-games-shelf');
+    if (!section || !shelf) return 0;
+
+    var tracked = state.trackedGames();
+    // The shelf is rebuilt from scratch each time so that untracking returns a card to the grid in the
+    // position the build decided, rather than wherever it happened to be removed from.
+    var grid = document.getElementById('game-grid');
+    var returning = Array.prototype.slice.call(shelf.querySelectorAll ? shelf.querySelectorAll('.card-slot') : []);
+    for (var r = 0; r < returning.length; r++) {
+        restoreToGrid(grid, returning[r]);
+    }
+
+    for (var i = 0; i < tracked.length; i++) {
+        var slot = document.querySelector('.card-slot[data-game="' + cssEscape(tracked[i]) + '"]');
+        if (slot) shelf.appendChild(slot);
+    }
+
+    var count = shelf.querySelectorAll ? shelf.querySelectorAll('.card-slot').length : 0;
+    section.hidden = count === 0;
+    return count;
+}
+
+// Puts a card back where the build put it: inside its group, ordered as that group is ordered.
+function restoreToGrid(grid, slot) {
+    if (!grid) return;
+    var group = slot.getAttribute('data-home-group') || '';
+    var index = parseInt(slot.getAttribute('data-home-index') || '-1', 10);
+    var siblings = Array.prototype.slice.call(grid.children);
+    var before = null;
+    for (var i = 0; i < siblings.length; i++) {
+        var node = siblings[i];
+        if (!node.classList || !node.classList.contains('card-slot')) continue;
+        if ((node.getAttribute('data-home-group') || '') !== group) continue;
+        if (parseInt(node.getAttribute('data-home-index') || '-1', 10) > index) { before = node; break; }
+    }
+    if (before) grid.insertBefore(slot, before);
+    else {
+        // After the last card of its group, which is the node before the next group's heading.
+        var heading = null;
+        var seen = false;
+        for (var j = 0; j < siblings.length; j++) {
+            var el = siblings[j];
+            if (el.classList && el.classList.contains('group-heading')) {
+                if (seen) { heading = el; break; }
+                if (el.getAttribute('data-group') === group) seen = true;
+            }
+        }
+        if (heading) grid.insertBefore(slot, heading);
+        else grid.appendChild(slot);
+    }
+}
+
+// A game id is [a-z0-9-], so this only has to be safe rather than complete.
+function cssEscape(value) {
+    return String(value).replace(/[^a-z0-9-]/gi, '');
+}
+
+// Remembers where the build put each card, so untracking can put it back there.
+function markHomePositions(grid) {
+    if (!grid || !grid.children) return;
+    var group = '';
+    var index = 0;
+    var children = Array.prototype.slice.call(grid.children);
+    for (var i = 0; i < children.length; i++) {
+        var node = children[i];
+        if (node.classList && node.classList.contains('group-heading')) {
+            group = node.getAttribute('data-group') || '';
+            index = 0;
+            continue;
+        }
+        if (node.classList && node.classList.contains('card-slot')) {
+            node.setAttribute('data-home-group', group);
+            node.setAttribute('data-home-index', String(index++));
+        }
+    }
+}
+
+// Reveals every track control and wires it up. They ship hidden because without this they do nothing,
+// and a control that does nothing is worse than no control.
+function enableTracking() {
+    var state = player();
+    if (!state || !document.querySelectorAll) return;
+    var buttons = document.querySelectorAll('[data-track]');
+    if (!buttons) return;
+
+    for (var i = 0; i < buttons.length; i++) {
+        (function (button) {
+            var game = button.getAttribute('data-track');
+            syncTrackButton(button, state.isTracked(game));
+            button.hidden = false;
+            button.addEventListener('click', function (event) {
+                event.preventDefault();
+                var nowTracked = state.toggleTracked(game);
+                // Every control for this game moves together: the card's star and the lead block's.
+                var all = document.querySelectorAll('[data-track="' + cssEscape(game) + '"]');
+                for (var k = 0; k < all.length; k++) syncTrackButton(all[k], nowTracked);
+                fillMyGames();
+            });
+        })(buttons[i]);
+    }
+}
+
+function syncTrackButton(button, tracked) {
+    button.setAttribute('aria-pressed', tracked ? 'true' : 'false');
+    var mark = button.querySelector('.track-mark');
+    if (mark) mark.textContent = tracked ? '★' : '☆';
+    var label = button.querySelector('.track-label');
+    if (label && button.classList.contains('track-wide')) {
+        label.textContent = tracked ? 'Tracked' : 'Track';
+    }
+}
+
+// === THE LEAD BLOCK ===
+
+// Turns the lead block's absolute value into a live countdown, but only where the source stated an
+// exact instant. A date-only value stays the date it is: the build renders the date, and inventing a
+// countdown to a midnight nobody announced is the one thing this site must never do.
+function initNextDrop() {
+    if (!document.querySelector) return;
+    var drop = document.querySelector('.drop[data-next-utc]');
+    if (!drop) return;
+    var nextUtc = drop.getAttribute('data-next-utc');
+    var value = drop.querySelector('.drop-value');
+    if (!nextUtc || !value || drop.getAttribute('data-precision') !== 'exact') return;
+
+    var checked = drop.querySelector('.drop-checked');
+    var checkedUtc = drop.getAttribute('data-checked-utc');
+
+    function tick() {
+        var diff = new Date(nextUtc).getTime() - Date.now();
+        if (!isFinite(diff)) return;
+        if (diff <= 0) {
+            // The moment has passed and the next refresh has not landed yet. The card grid says
+            // "Updating..." for exactly this state, so the lead block says the same thing.
+            value.textContent = 'Updating...';
+            value.className = 'drop-value is-date';
+            return;
+        }
+        value.className = 'drop-value';
+        value.innerHTML = countdownTiles(diff);
+    }
+
+    tick();
+    setInterval(tick, 1000);
+    if (checked && checkedUtc) {
+        setInterval(function () {
+            checked.textContent = 'Checked ' + formatTimeSince(checkedUtc);
+        }, 60000);
+    }
+}
+
+function countdownTiles(ms) {
+    var seconds = Math.floor(ms / 1000) % 60;
+    var minutes = Math.floor(ms / 60000) % 60;
+    var hours = Math.floor(ms / 3600000) % 24;
+    var days = Math.floor(ms / 86400000);
+    var pad = function (n) { return String(n).padStart(2, '0'); };
+    var parts = [
+        ['Days', pad(days)],
+        ['Hours', pad(hours)],
+        ['Min', pad(minutes)],
+        ['Sec', pad(seconds)]
+    ];
+    var html = '<ul class="drop-count">';
+    for (var i = 0; i < parts.length; i++) {
+        html += '<li><b>' + parts[i][1] + '</b><small>' + parts[i][0] + '</small></li>';
+    }
+    return html + '</ul>';
+}
+
 // Initialize homepage
 async function initHomepage() {
     const grid = document.getElementById('game-grid');
     if (!grid) return false; // Not homepage
+
+    markHomePositions(grid);
+    enableTracking();
+    fillMyGames();
+    initNextDrop();
 
     const cards = grid.querySelectorAll('.card[data-game]');
 

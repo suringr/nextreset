@@ -171,8 +171,8 @@ test("a declared region hands the renderer everything inside it", () => {
     assert.equal(owned.slice(region.start, region.end), `\n  <a class="card" data-game="lol">one</a>\n`);
     // Which is the point: headings and wrappers between cards are now the renderer's to emit.
     assert.doesNotThrow(() => cardRegion(
-        `<div data-nr-region="cards"><h2>Next up</h2><a class="card" data-game="lol">one</a><h2>Later</h2><a class="card" data-game="gta">two</a></div>`,
-        blocksOf(`<div data-nr-region="cards"><h2>Next up</h2><a class="card" data-game="lol">one</a><h2>Later</h2><a class="card" data-game="gta">two</a></div>`),
+        `<div data-nr-region="cards"><h2 class="group-heading">Next up</h2><a class="card" data-game="lol">one</a><h2 class="group-heading">Later</h2><a class="card" data-game="gta">two</a></div>`,
+        blocksOf(`<div data-nr-region="cards"><h2 class="group-heading">Next up</h2><a class="card" data-game="lol">one</a><h2 class="group-heading">Later</h2><a class="card" data-game="gta">two</a></div>`),
         "home"
     ));
 });

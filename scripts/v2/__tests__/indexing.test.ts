@@ -221,7 +221,7 @@ test("the site never asks for indexing and refuses it at the same time", () => {
             .replace(`data-game="lol" data-type="next-patch"`, `data-game="fortnite" data-type="next-season"`)
             .replace(`<link rel="canonical" href="https://nextreset.co/lol/next-patch/">`, `<link rel="canonical" href="https://nextreset.co/fortnite/next-season/">`)
     );
-    fs.writeFileSync(path.join(dist, "index.html"), `<html><head><link rel="canonical" href="https://nextreset.co/"></head><body><div class="grid" id="game-grid">
+    fs.writeFileSync(path.join(dist, "index.html"), `<html><head><link rel="canonical" href="https://nextreset.co/"></head><body><section data-nr-slot="next-drop"></section><div class="grid" id="game-grid" data-nr-region="cards">
       <a href="/lol/next-patch/" class="card" id="card-lol" data-game="lol" data-type="next-patch" data-state="loading" data-next-utc="">
         <div class="card-header"><h3 class="card-title">League of Legends</h3><span class="badge badge-unavailable">--</span></div>
         <div class="card-topic">Next patch</div>
