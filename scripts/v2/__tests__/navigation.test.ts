@@ -16,6 +16,7 @@ import { GameKnowledge } from "../../render-data-blocks";
 import { trackerOf } from "../../render-pages";
 import { buildSitemap, factsChangedAt, sitemapEntries, urlPathOf } from "../../render-sitemap";
 import { gamePages } from "../../update-game-pages";
+import { GAMES } from "../games";
 
 const ROOT = path.join(__dirname, "..", "..", "..");
 const PUBLIC = path.join(ROOT, "public");
@@ -202,6 +203,139 @@ test("the sitemap is built, never authored, so it cannot drift from the pages", 
     // It used to be a hand-written file listing fifteen URLs. Keeping a copy in public/ would mean two
     // sitemaps, and the stale one would be the one nobody remembered to update.
     assert.equal(fs.existsSync(path.join(PUBLIC, "sitemap.xml")), false);
+});
+
+test("a URL that does not exist has a page of its own", () => {
+    // Every unknown path was answering 200 with the homepage, which tells a crawler that an unbounded
+    // number of invented URLs are real pages — all of them the homepage. Cloudflare Pages serves a
+    // 404.html from the build root with a real 404 status.
+    const file = path.join(PUBLIC, "404.html");
+    assert.ok(fs.existsSync(file), "the site has no page for a URL that does not exist");
+    const $ = cheerio.load(fs.readFileSync(file, "utf8"));
+
+    assert.equal($(`meta[name="robots"]`).attr("content"), "noindex, follow");
+    assert.equal($("h1").length, 1);
+    assert.ok($(`a[href="/"]`).length >= 1, "a lost visitor is offered the way home");
+    assert.equal($(`link[rel="canonical"]`).length, 0, "a page that is not a page has no canonical");
+
+    // It is not a page, so it is not one of the pages: absent from the sitemap and from the breadcrumb
+    // trail, but still offering every tracker.
+    assert.ok(!PAGES.includes("404.html"), "it is not an index.html and so is never listed");
+    assert.equal($(".breadcrumbs").length, 0, "it sits nowhere in the hierarchy");
+    const links = $(".footer-nav a").toArray().map(a => $(a).attr("href")!).sort();
+    assert.deepEqual(links, gamePages.map(page => `/${page.game}/${page.type}/`).sort(), "every tracker is reachable from it");
+});
+
+test("the documented sources are the sources the code actually reads", () => {
+    // The table described V1 providers long after ten of the twelve moved to V2 — RSS for Counter-Strike
+    // that is now a JSON API, an HTML scrape for Minecraft that is now Mojang's manifest. Checking that
+    // the game names appear would not have caught any of that, so each row is checked against the
+    // registry entry it describes.
+    const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
+    // The file is stored with CRLF and checked out with LF in CI, so the blank line that ends the table
+    // has to be matched either way; splitting on "\r\n\r\n" alone reads the rest of the README in CI.
+    const table = readme.slice(readme.indexOf("| Game | Question |")).split(/\r?\n\s*\r?\n/)[0];
+    const rows = table.split(/\r?\n/)
+        .filter(line => line.startsWith("|"))
+        .slice(2)
+        .map(line => line.split("|").slice(1, -1).map(cell => cell.trim()));
+
+    assert.equal(rows.length, gamePages.length, "every tracker the site publishes has a row");
+    const rowFor = (title: string) => {
+        const found = rows.filter(cells => cells[0] === title);
+        assert.equal(found.length, 1, `expected exactly one row for ${title}`);
+        return { question: found[0][1], source: found[0][2], how: found[0][3] };
+    };
+
+    /** What the registry says a source is, as the table would have to describe it. */
+    const expectedMethod: Record<string, string> = { json: "JSON", html: "HTML", rule: "Computed" };
+
+    /** The publisher in a source URL: "api.steampowered.com" -> "steampowered". */
+    const publisherOf = (url: string) => {
+        const host = new URL(url).hostname.replace(/^www\./, "").split(".");
+        return (host.length > 1 ? host[host.length - 2] : host[0]).toLowerCase();
+    };
+
+    /**
+     * What a row may call each publisher.
+     *
+     * Spelled out rather than inferred: matching on shared substrings accepted "status.roblox.com" for
+     * a source that is actually hostedstatus.com, and would have accepted statuspage.io just as
+     * happily. A publisher with no entry here fails, so a new source cannot pass by being unknown.
+     */
+    const PUBLISHER_NAMES: Record<string, string[]> = {
+        steampowered: ["steam"],
+        riotgames: ["riot"],
+        playvalorant: ["valorant"],
+        callofduty: ["callofduty"],
+        mojang: ["mojang"],
+        hoyoverse: ["hoyoverse"],
+        rockstargames: ["rockstar"],
+        hostedstatus: ["hostedstatus"],
+        fortnite: ["fortnite", "epic"]
+    };
+
+    /** Whether a prose description names that publisher, ignoring spacing and punctuation. */
+    const names = (description: string, publisher: string) => {
+        const accepted = PUBLISHER_NAMES[publisher];
+        assert.ok(accepted, `no documented name for ${publisher}: add it to PUBLISHER_NAMES`);
+        const flattened = description.toLowerCase().replace(/[^a-z]/g, "");
+        return [publisher, ...accepted].some(name => flattened.includes(name));
+    };
+
+    for (const entry of GAMES) {
+        const page = gamePages.find(candidate => candidate.game === entry.id);
+        assert.ok(page, `the registry has ${entry.id} but no page does`);
+        const row = rowFor(page!.title);
+        // The question cell is a label, and the site words it differently in different places on
+        // purpose — "Banner end" on a card, "Next Banner End" as a page heading — so only its
+        // presence is checked. What must not drift is the source and how it is read.
+        assert.ok(row.question.length > 0, `${page!.title}: the row does not say what question it answers`);
+
+        const kinds = [...new Set(entry.sources.map(source => source.kind))];
+        assert.equal(kinds.length, 1, `${entry.id}: expected one kind of source, found ${kinds.join("+")}`);
+
+        // The row must name the publisher the registry actually reads, so swapping one real source for
+        // another real one — a Steam feed described as Mojang's manifest — does not pass.
+        const urls = entry.sources.map(source => source.url).filter(url => /^https?:/.test(url));
+        if (urls.length > 0) {
+            const publishers = [...new Set(urls.map(publisherOf))];
+            assert.ok(
+                publishers.some(publisher => names(row.source, publisher)),
+                `${page!.title}: the row says "${row.source}" but the registry reads ${publishers.join(", ")}`
+            );
+        }
+
+        // Only a tracker with a discovery configuration reads prose with a model; everything else is
+        // parsed, and the table has to say which of the two this is.
+        const usesModel = entry.topics.some(topic => !!topic.discovery);
+        assert.equal(/\bAI\b|model/i.test(row.how), usesModel, `${page!.title}: the row disagrees about whether a model reads it`);
+        if (!usesModel) {
+            assert.match(row.how, new RegExp(expectedMethod[kinds[0]]), `${page!.title}: the registry reads ${kinds[0]}`);
+        }
+        assert.ok(!/V1 provider/.test(row.how), `${page!.title} is on V2, so the row must not call it a V1 provider`);
+    }
+
+    // The two the registry does not cover are the two still on their V1 provider. Their rows are held to
+    // the same standard, against the URLs in the provider that fetches them: a V1 row is documentation
+    // too, and "V1 provider" in the method cell says nothing about where the value comes from.
+    const onV2 = new Set(GAMES.map(entry => entry.id));
+    const v1Providers: Record<string, string> = { fortnite: "fortnite.ts", "red-dead-redemption-2": "rdr2.ts" };
+    for (const page of gamePages.filter(candidate => !onV2.has(candidate.game))) {
+        const row = rowFor(page.title);
+        assert.match(row.how, /V1 provider/, `${page.title} is not on V2 and the row should say so`);
+
+        const provider = v1Providers[page.game];
+        assert.ok(provider, `${page.game} is on neither the registry nor a known V1 provider`);
+        const source = fs.readFileSync(path.join(ROOT, "scripts", "providers", provider), "utf8");
+        const publishers = [...new Set([...source.matchAll(/https?:\/\/[^"'`\s)]+/g)].map(match => publisherOf(match[0])))];
+        assert.ok(publishers.length > 0, `${provider} fetches nothing`);
+        assert.ok(
+            publishers.some(publisher => names(row.source, publisher)),
+            `${page.title}: the row says "${row.source}" but ${provider} fetches ${publishers.join(", ")}`
+        );
+    }
+    assert.equal(gamePages.length - onV2.size, 2, "ten of the twelve are on V2");
 });
 
 test("the crawl rules still keep the data files out and point at the sitemap", () => {

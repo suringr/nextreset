@@ -16,7 +16,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import * as vm from "vm";
-import { NOINDEX_TAG, indexStateFor } from "../../indexing";
+import { NOINDEX_TAG, declaresNoindex, indexStateFor, staticPageDecision } from "../../indexing";
 import { cardValue } from "../../render-home";
 import { TrackerData, blocksFor, renderSite, renderTrackerHtml, stateLine } from "../../render-pages";
 
@@ -168,6 +168,42 @@ test("the tag says what the page says, in the head, once", () => {
     assert.equal(cheerio.load(answered)(`meta[name="robots"]`).length, 0, "a page with a value asks for nothing");
 });
 
+test("a page asking not to be indexed is heard however the tag is written", () => {
+    // Attribute order, quoting and spacing are the author's choice, and an ordinary edit or formatter
+    // can change all three. Missing the tag would put the page back in the sitemap while it asks to
+    // stay out — the contradiction this rule exists to prevent.
+    for (const tag of [
+        `<meta name="robots" content="noindex, follow">`,
+        `<meta content="noindex, follow" name="robots">`,
+        `<meta name='robots' content='noindex'>`,
+        `<meta   name = "robots"   content = "noindex, nofollow" >`,
+        `<meta name="ROBOTS" content="NOINDEX">`,
+        `<meta name="robots" content="none">`,
+        `<meta name="robots" content="NONE">`,
+        `<meta name="robots" content="max-snippet:-1, none">`
+    ]) {
+        assert.equal(declaresNoindex(`<html><head>${tag}</head><body></body></html>`), true, tag);
+        assert.equal(staticPageDecision(`<html><head>${tag}</head><body></body></html>`).state, "noindex", tag);
+    }
+
+    // Several tags at once: a crawler combines what it finds and obeys the most restrictive, so the
+    // build has to read them all rather than the first one it comes across.
+    assert.equal(declaresNoindex(`<html><head><meta name="robots" content="index, follow"><meta name="robots" content="noindex"></head><body></body></html>`), true);
+    assert.equal(staticPageDecision(`<html><head><meta name="robots" content="index, follow"><meta name="robots" content="noindex"></head><body></body></html>`).state, "noindex");
+
+    for (const tag of [
+        ``,
+        `<meta name="robots" content="index, follow">`,
+        `<meta name="robots" content="index"><meta name="robots" content="follow">`,
+        `<meta name="googlebot" content="noindex">`,
+        `<meta name="description" content="a page about noindex">`,
+        `<meta name="robots" content="nonetheless">`
+    ]) {
+        assert.equal(declaresNoindex(`<html><head>${tag}</head><body></body></html>`), false, tag || "(no tag)");
+        assert.equal(staticPageDecision(`<html><head>${tag}</head><body></body></html>`).state, "index", tag || "(no tag)");
+    }
+});
+
 test("a page with no canonical to anchor to fails the build", () => {
     const drifted = PAGE.replace(/<link rel="canonical"[^>]*>/, "");
     assert.throws(() => renderTrackerHtml(drifted, UNANSWERED, "fortnite/next-season", NOW), /exactly one canonical/);
@@ -195,11 +231,14 @@ test("the site never asks for indexing and refuses it at the same time", () => {
 </div></body></html>`);
     fs.writeFileSync(path.join(dist, "data", "lol.next-patch.json"), JSON.stringify(ANSWERED));
     fs.writeFileSync(path.join(dist, "data", "fortnite.next-season.json"), JSON.stringify(UNANSWERED));
+    // The 404 page says noindex in its own head. "Has no tracker" must not be read as "index it".
+    fs.writeFileSync(path.join(dist, "404.html"), `<html><head><meta name="robots" content="noindex, follow"><title>Not found</title></head><body><h1>Not here</h1></body></html>`);
 
     const summary = renderSite(dist, NOW, dist);
 
     const states = Object.fromEntries(summary.indexing.map(entry => [entry.page, entry.state]));
     assert.deepEqual(states, {
+        "404.html": "noindex",
         "fortnite/next-season/index.html": "noindex",
         "index.html": "index",
         "lol/next-patch/index.html": "index"
@@ -212,7 +251,7 @@ test("the site never asks for indexing and refuses it at the same time", () => {
     for (const [page, state] of Object.entries(states)) {
         const html = fs.readFileSync(path.join(dist, page), "utf8");
         const tagged = cheerio.load(html)(`meta[name="robots"][content*="noindex"]`).length > 0;
-        const listed = locs.includes(`https://nextreset.co/${page.replace(/index\.html$/, "")}`);
+        const listed = locs.some(loc => loc === `https://nextreset.co/${page.replace(/index\.html$/, "")}`);
         assert.equal(tagged, state === "noindex", `${page}: the tag disagrees with the decision`);
         assert.equal(listed, !tagged, `${page}: asking to be indexed and refusing it at once`);
     }

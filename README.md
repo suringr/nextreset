@@ -21,6 +21,7 @@ nextreset/
 ├── .github/workflows/     # GitHub Actions automation
 ├── public/
 │   ├── data/              # Generated JSON files (auto-updated)
+│   ├── 404.html           # Served with a 404 status for anything that does not exist
 │   └── robots.txt         # Crawl rules (sitemap.xml is generated into dist/)
 ├── scripts/
 │   ├── providers/         # Game-specific data providers
@@ -301,24 +302,33 @@ The `refresh-all.ts` script:
 
 GitHub Actions workflow (`.github/workflows/refresh-data.yml`):
 
-- **Triggers**: Every 6 hours via cron + manual dispatch
-- **Steps**: Install deps → Build → Refresh data → Commit changes
-- **Permissions**: `contents: write` to auto-commit
+- **Triggers**: every push to `main`, every six hours via cron, and manual dispatch. A pull request
+  runs the checks only — it never publishes.
+- **Steps**: install → build → refresh data → render pages → persist the knowledge branch → force-push
+  `dist/` to `gh-pages`
+- **Permissions**: `contents: write`, to push the `gh-pages` and `knowledge` branches
 
 ### Data Sources
 
-| Game | Source | Type | Confidence |
-|------|--------|------|-----------|
-| Fortnite | Epic Games Help Center | HTML scrape | Medium |
-| League of Legends | Riot Patch Schedule | HTML scrape | High |
-| VALORANT | Official Patch Notes | HTML scrape | Medium |
-| Counter-Strike 2 | Steam Store RSS | RSS/XML | High |
-| Minecraft | Feedback Changelog | HTML scrape | High |
-| Roblox | Hostedstatus JSON API | JSON API | High |
-| GTA Online | Computed (Thu 10:00 UTC) | Computed | High |
-| Warzone | CoD Patch Notes | HTML scrape | Medium |
-| Genshin Impact | HoYoLAB Notices | HTML scrape | Medium |
-| PUBG | Official Patch Notes | HTML scrape | Medium |
+Ten of the twelve run on the V2 pipeline (`scripts/v2/games.ts`); two are still on their V1 provider.
+
+| Game | Question | Official source | How it is read |
+|------|----------|-----------------|----------------|
+| League of Legends | Next patch | Riot's patch schedule page | AI extraction, every fact quoted and grounded |
+| Counter-Strike 2 | Last update | Steam Web API news, app 730 | Deterministic JSON |
+| Minecraft | Latest release | Mojang's launcher version manifest | Deterministic JSON |
+| PUBG | Last patch | Steam Web API news, app 578080 | Deterministic JSON |
+| VALORANT | Last patch | The official VALORANT patch notes page | Deterministic HTML |
+| Warzone | Last patch | Call of Duty patch notes page | Deterministic HTML |
+| Genshin Impact | Banner end | HoYoverse announcements API, three regions | Deterministic JSON |
+| EA SPORTS FC | Last title update | Steam Web API news, FC 26 and FC 27 | Deterministic JSON |
+| GTA Online | Weekly reset | Rockstar publishes the rule: Thursdays 10:00 UTC | Computed |
+| Roblox | Service status | hostedstatus.com, the API behind status.roblox.com | Deterministic JSON |
+| Fortnite | Season end | Epic's Battle Pass page on fortnite.com, behind a challenge we do not circumvent | V1 provider — currently unanswered |
+| Red Dead Redemption 2 | Last update | Rockstar Newswire | V1 provider |
+
+Only League of Legends uses a model, and only to read prose a person would otherwise read. Everything
+else is parsed deterministically, because a schedule in JSON is not a comprehension problem.
 
 ## 🌐 Deployment
 

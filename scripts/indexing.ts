@@ -19,6 +19,7 @@
  * indexing, and asking for both at once is the kind of contradictory signal that teaches a crawler to
  * trust neither.
  */
+import * as cheerio from "cheerio";
 import { TrackerData, hasVerifiedValue, isUnanswered } from "./render-pages";
 
 export type IndexState = "index" | "noindex";
@@ -49,9 +50,39 @@ export function indexStateFor(data: TrackerData | undefined, now: Date): IndexDe
 }
 
 /**
+ * Whether a page has already asked not to be indexed, in its own markup.
+ *
+ * Parsed rather than pattern-matched: attribute order, quoting and spacing are all the author's choice,
+ * and `<meta content="noindex, follow" name="robots">` is the same instruction written the other way
+ * round. Missing it would put the page back in the sitemap while it asks to stay out.
+ */
+/** The directives that mean "do not index this": `none` is shorthand for `noindex, nofollow`. */
+const NOINDEX_DIRECTIVES = new Set(["noindex", "none"]);
+
+export function declaresNoindex(html: string): boolean {
+    const $ = cheerio.load(html);
+    // Every matching tag, not the first: a crawler combines the directives it finds and obeys the most
+    // restrictive, so an index tag followed by a noindex one is a noindex page. Each tag's content is a
+    // comma-separated list, read as tokens so a value that merely contains the word does not count.
+    return $(`meta[name="robots" i]`).toArray().some(node =>
+        ($(node).attr("content") ?? "")
+            .toLowerCase()
+            .split(",")
+            .map(directive => directive.trim())
+            .some(directive => NOINDEX_DIRECTIVES.has(directive))
+    );
+}
+
+/**
  * Pages with no tracker of their own.
  *
  * The homepage carries every value the site has; About and Privacy are what a visitor (and a reviewer)
- * reads to decide whether to trust it. All three are always worth indexing.
+ * reads to decide whether to trust it. Those are worth indexing — but "has no tracker" is not the same
+ * as "should be indexed", and assuming it was submitted the 404 page, which says noindex in its own
+ * head. A page that has already answered this question answers it here too.
  */
-export const STATIC_PAGE_DECISION: IndexDecision = { state: "index", reason: "not a tracker page" };
+export function staticPageDecision(html: string): IndexDecision {
+    return declaresNoindex(html)
+        ? { state: "noindex", reason: "the page asks not to be indexed" }
+        : { state: "index", reason: "not a tracker page" };
+}
