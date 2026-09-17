@@ -48,10 +48,21 @@ export function indexStateFor(data: TrackerData | undefined, now: Date): IndexDe
     return { state: "index", reason: "publishes a verified value" };
 }
 
+/** Whether a page has already asked not to be indexed, in its own markup. */
+export function declaresNoindex(html: string): boolean {
+    return /<meta[^>]+name=["']robots["'][^>]*content=["'][^"']*noindex/i.test(html);
+}
+
 /**
  * Pages with no tracker of their own.
  *
  * The homepage carries every value the site has; About and Privacy are what a visitor (and a reviewer)
- * reads to decide whether to trust it. All three are always worth indexing.
+ * reads to decide whether to trust it. Those are worth indexing — but "has no tracker" is not the same
+ * as "should be indexed", and assuming it was submitted the 404 page, which says noindex in its own
+ * head. A page that has already answered this question answers it here too.
  */
-export const STATIC_PAGE_DECISION: IndexDecision = { state: "index", reason: "not a tracker page" };
+export function staticPageDecision(html: string): IndexDecision {
+    return declaresNoindex(html)
+        ? { state: "noindex", reason: "the page asks not to be indexed" }
+        : { state: "index", reason: "not a tracker page" };
+}

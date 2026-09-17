@@ -19,7 +19,7 @@
 import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
-import { IndexDecision, NOINDEX_TAG, STATIC_PAGE_DECISION, indexStateFor } from "./indexing";
+import { IndexDecision, NOINDEX_TAG, indexStateFor, staticPageDecision } from "./indexing";
 import { blocksFor as dataBlocksFor, loadKnowledge, renderBlocks } from "./render-data-blocks";
 import { CardGroup, renderHomeHtml } from "./render-home";
 import { SitemapEntry, SitemapInput, renderSitemap } from "./render-sitemap";
@@ -426,8 +426,9 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
         const page = path.relative(distDir, file).replace(/\\/g, "/");
         const tracker = trackerOf(html, page);
         if (!tracker) {
-            summary.indexing.push({ page, ...STATIC_PAGE_DECISION });
-            pagesForSitemap.push({ page, tracker, listed: true });
+            const decision = staticPageDecision(html);
+            summary.indexing.push({ page, ...decision });
+            pagesForSitemap.push({ page, tracker, listed: decision.state === "index" });
             // The homepage has no tracker of its own: it shows all of them. Drift there is not survivable
             // — publishing twelve cards that say "Loading..." is what this milestone exists to end — so a
             // page that cannot be read throws rather than being skipped quietly.

@@ -204,6 +204,40 @@ test("the sitemap is built, never authored, so it cannot drift from the pages", 
     assert.equal(fs.existsSync(path.join(PUBLIC, "sitemap.xml")), false);
 });
 
+test("a URL that does not exist has a page of its own", () => {
+    // Every unknown path was answering 200 with the homepage, which tells a crawler that an unbounded
+    // number of invented URLs are real pages — all of them the homepage. Cloudflare Pages serves a
+    // 404.html from the build root with a real 404 status.
+    const file = path.join(PUBLIC, "404.html");
+    assert.ok(fs.existsSync(file), "the site has no page for a URL that does not exist");
+    const $ = cheerio.load(fs.readFileSync(file, "utf8"));
+
+    assert.equal($(`meta[name="robots"]`).attr("content"), "noindex, follow");
+    assert.equal($("h1").length, 1);
+    assert.ok($(`a[href="/"]`).length >= 1, "a lost visitor is offered the way home");
+    assert.equal($(`link[rel="canonical"]`).length, 0, "a page that is not a page has no canonical");
+
+    // It is not a page, so it is not one of the pages: absent from the sitemap and from the breadcrumb
+    // trail, but still offering every tracker.
+    assert.ok(!PAGES.includes("404.html"), "it is not an index.html and so is never listed");
+    assert.equal($(".breadcrumbs").length, 0, "it sits nowhere in the hierarchy");
+    const links = $(".footer-nav a").toArray().map(a => $(a).attr("href")!).sort();
+    assert.deepEqual(links, gamePages.map(page => `/${page.game}/${page.type}/`).sort(), "every tracker is reachable from it");
+});
+
+test("the documented sources are the sources the code actually reads", () => {
+    // The table described V1 providers long after ten of the twelve moved to V2 — RSS for Counter-Strike
+    // that is now a JSON API, an HTML scrape for Minecraft that is now Mojang's manifest.
+    const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
+    const table = readme.slice(readme.indexOf("| Game | Question |"));
+    const rows = table.slice(0, table.indexOf("\r\n\r\n")).split(/\r?\n/).filter(line => line.startsWith("|")).slice(2);
+
+    assert.equal(rows.length, gamePages.length, "every tracker the site publishes has a row");
+    for (const page of gamePages) {
+        assert.ok(rows.some(row => row.includes(page.title)), `${page.title} is not in the sources table`);
+    }
+});
+
 test("the crawl rules still keep the data files out and point at the sitemap", () => {
     const robots = fs.readFileSync(path.join(PUBLIC, "robots.txt"), "utf8");
     assert.match(robots, /^Disallow: \/data\/$/m, "the JSON the pages read is not for the index");

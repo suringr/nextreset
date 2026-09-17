@@ -195,11 +195,14 @@ test("the site never asks for indexing and refuses it at the same time", () => {
 </div></body></html>`);
     fs.writeFileSync(path.join(dist, "data", "lol.next-patch.json"), JSON.stringify(ANSWERED));
     fs.writeFileSync(path.join(dist, "data", "fortnite.next-season.json"), JSON.stringify(UNANSWERED));
+    // The 404 page says noindex in its own head. "Has no tracker" must not be read as "index it".
+    fs.writeFileSync(path.join(dist, "404.html"), `<html><head><meta name="robots" content="noindex, follow"><title>Not found</title></head><body><h1>Not here</h1></body></html>`);
 
     const summary = renderSite(dist, NOW, dist);
 
     const states = Object.fromEntries(summary.indexing.map(entry => [entry.page, entry.state]));
     assert.deepEqual(states, {
+        "404.html": "noindex",
         "fortnite/next-season/index.html": "noindex",
         "index.html": "index",
         "lol/next-patch/index.html": "index"
@@ -212,7 +215,7 @@ test("the site never asks for indexing and refuses it at the same time", () => {
     for (const [page, state] of Object.entries(states)) {
         const html = fs.readFileSync(path.join(dist, page), "utf8");
         const tagged = cheerio.load(html)(`meta[name="robots"][content*="noindex"]`).length > 0;
-        const listed = locs.includes(`https://nextreset.co/${page.replace(/index\.html$/, "")}`);
+        const listed = locs.some(loc => loc === `https://nextreset.co/${page.replace(/index\.html$/, "")}`);
         assert.equal(tagged, state === "noindex", `${page}: the tag disagrees with the decision`);
         assert.equal(listed, !tagged, `${page}: asking to be indexed and refusing it at once`);
     }
