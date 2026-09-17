@@ -18,6 +18,7 @@
     "build:site": "npm run build && (npm run refresh:data || true) && npm run export:site && npm run render:pages",
     "dev": "npm run build && npm run refresh:data",
     "design:apply": "node build/update-design.js",
+    "chrome:apply": "node build/update-chrome.js",
     "play:apply": "node build/update-play-page.js"
   },
   "keywords": [

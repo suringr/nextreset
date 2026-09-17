@@ -130,16 +130,25 @@ const SHARED = [
     `body{margin:0;background-color:var(--ground);color:var(--ink);font-family:var(--font);font-size:var(--size-body);line-height:1.55;min-height:100vh;-webkit-text-size-adjust:100%}`,
     `.container{width:100%;max-width:1040px;margin:0 auto;padding-inline:var(--gutter);padding-block:var(--sp-5)}`,
     `a{color:inherit;text-decoration:none}`,
-    `h1,h2,h3{line-height:1.15;margin:0;text-wrap:balance}`
+    `h1,h2,h3{line-height:1.15;margin:0;text-wrap:balance}`,
+    // The shared header. On every page kind, so it paints first on every page kind. It wraps only when
+    // it has to: at 360px and up the whole header is one 44px row, and only the narrowest phone takes
+    // a second line — which matters, because everything below it is what the visitor came for.
+    `.chrome{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-1) var(--sp-3);margin-bottom:var(--sp-4)}`,
+    `.chrome-brand{display:inline-flex;align-items:center;gap:var(--sp-2);min-height:var(--tap);font-weight:800;font-size:19px;letter-spacing:-.01em}`,
+    `.dot{width:9px;height:9px;border-radius:50%;background:var(--state-verified);flex:none}`,
+    `.chrome-nav{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2);margin-right:auto;font-size:var(--size-small);font-weight:700}`,
+    `.chrome-nav a{display:inline-flex;align-items:center;justify-content:center;min-height:var(--tap);min-width:var(--tap);padding-inline:var(--sp-2);color:var(--ink-muted)}`,
+    `.chrome-nav a[aria-current]{color:var(--brand-bright)}`,
+    `.chrome-player{margin:0 0 0 auto;padding:3px 9px;border:1px solid var(--brand-line);border-radius:var(--radius-pill);background:var(--brand-soft);color:var(--brand-bright);font-family:var(--font-num);font-size:11px;font-weight:700;white-space:nowrap}`,
+    `.chrome-player[hidden]{display:none}`,
+    `.trust-badges{display:none;gap:var(--sp-2)}`,
+    `.trust-badge{font-size:var(--size-label);color:var(--ink-faint);padding:4px 10px;border:1px solid var(--line-soft);border-radius:var(--radius-pill);text-transform:uppercase;letter-spacing:.06em;font-weight:700}`,
+    `@media(min-width:768px){.trust-badges{display:flex}}`
 ].join("");
 
 /** The homepage: brand row, hero, and the card grid, which is what a phone sees first. */
 const HOME = [
-    `.topbar{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);margin-bottom:var(--sp-5)}`,
-    `.brand{display:flex;align-items:center;gap:var(--sp-2);font-weight:800;font-size:19px;letter-spacing:-.01em}`,
-    `.dot{width:9px;height:9px;border-radius:50%;background:var(--state-verified);flex:none}`,
-    `.trust-badges{display:none;gap:var(--sp-2)}`,
-    `.trust-badge{font-size:var(--size-label);color:var(--ink-faint);padding:4px 10px;border:1px solid var(--line-soft);border-radius:var(--radius-pill);text-transform:uppercase;letter-spacing:.06em;font-weight:700}`,
     `.section,.shelf-section{margin:0 0 var(--sp-6)}`,
     `.section-heading{font-size:var(--size-label);font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--ink-faint);margin:0 0 var(--sp-3)}`,
     `.drop{background:linear-gradient(180deg,var(--sheen),transparent 55%),var(--surface);border:1px solid var(--brand-line);border-radius:var(--radius);padding:var(--sp-5) var(--sp-4);margin:0 0 var(--sp-6)}`,
@@ -171,7 +180,7 @@ const HOME = [
     `.badge-live{background:var(--verified-soft);color:var(--state-verified);border:1px solid var(--verified-line)}`,
     `.badge-stale{background:var(--stale-soft);color:var(--state-stale);border:1px solid var(--stale-line)}`,
     `.badge-unavailable{background:var(--unavailable-soft);color:var(--state-unavailable);border:1px solid var(--unavailable-line)}`,
-    `@media(min-width:768px){.grid{grid-template-columns:repeat(2,1fr)}.trust-badges{display:flex}.h1{font-size:var(--size-h1)}}`,
+    `@media(min-width:768px){.grid{grid-template-columns:repeat(2,1fr)}.h1{font-size:var(--size-h1)}}`,
     `@media(min-width:1080px){.grid{grid-template-columns:repeat(3,1fr)}}`
 ].join("");
 

@@ -40,6 +40,9 @@
     var LEGACY_TRACKED = 'nrTracked';
     var LEGACY_ARCADE = 'nrScopeV3';
 
+    /** The element the shared header gives this file to fill. Kept in step by chrome.test.ts. */
+    var CHIP_ID = 'chrome-player';
+
     /**
      * The twelve games the site tracks.
      *
@@ -441,6 +444,40 @@
         cache = null;
     }
 
+    /**
+     * What the header's chip says, or null when it should say nothing.
+     *
+     * Pure, so the one piece of wording every page shares is written once and can be tested without a
+     * DOM. Null until there is XP: a visitor who has never played is not "Level 1" with nothing to show
+     * for it, they are someone this site knows nothing about, and saying so is the honest state.
+     */
+    function chipText() {
+        var state = load();
+        if (!state.profile.xp) return null;
+        return 'LVL ' + state.profile.level + ' · ' + state.profile.xp.toLocaleString() + ' XP';
+    }
+
+    /**
+     * Fills the header's chip, where the page has one.
+     *
+     * The only DOM this file touches, and deliberately: the chip is the one view of this record that
+     * all seventeen pages share, and duplicating it into app.js and scope-play.js would be the same
+     * wording in two places waiting to disagree. Every other view stays with the page that owns it.
+     */
+    function paintChip() {
+        if (typeof document === 'undefined' || !document.getElementById) return false;
+        var node = document.getElementById(CHIP_ID);
+        if (!node) return false;
+        var text = chipText();
+        if (!text) {
+            node.hidden = true;
+            return false;
+        }
+        node.textContent = text;
+        node.hidden = false;
+        return true;
+    }
+
     global.NextResetPlayer = {
         KEY: KEY,
         VERSION: VERSION,
@@ -466,10 +503,18 @@
         xpToNextLevel: xpToNextLevel,
         hasAchievement: hasAchievement,
         grantAchievement: grantAchievement,
+        chipText: chipText,
+        paintChip: paintChip,
+        CHIP_ID: CHIP_ID,
         storageAvailable: function () { return !!storage(); }
     };
 
     // Reading once on load is what performs the migration, so a visitor who tracked games in the
     // prototype keeps them from the first page they open, rather than from the first page that asks.
-    if (typeof document !== 'undefined') load();
+    // Painting here rather than from each page's own script means the header fills on About and the
+    // 404 too, which carry no other script at all.
+    if (typeof document !== 'undefined') {
+        load();
+        paintChip();
+    }
 })(typeof window !== 'undefined' ? window : this);

@@ -124,23 +124,84 @@ h3 {
   padding-block: var(--sp-5);
 }
 
-/* ---------- top bar ---------- */
+/* ---------- the shared header ----------
 
-.topbar {
+   One header on all seventeen pages, written by scripts/update-chrome.ts from scripts/design/chrome.ts.
+   Before it, only the homepage had any chrome at all, so a visitor who arrived on a tracker page from a
+   search result could reach nothing else except through the footer.
+
+   It wraps rather than shrinking: at 360px and up the whole thing is one row the height of one tap
+   target, and only the narrowest phone takes a second line. The height matters because everything a
+   visitor came for is underneath it. */
+
+.chrome {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  margin-bottom: var(--sp-5);
+  gap: var(--sp-1) var(--sp-3);
+  margin-bottom: var(--sp-4);
 }
 
-.brand {
-  display: flex;
+.chrome-brand {
+  display: inline-flex;
   align-items: center;
   gap: var(--sp-2);
+  min-height: var(--tap);
   font-weight: 800;
   font-size: 19px;
   letter-spacing: -.01em;
+}
+
+/* The nav takes the free space, so the player chip is pushed to the far edge. */
+.chrome-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-right: auto;
+  font-size: var(--size-small);
+  font-weight: 700;
+}
+
+/* A full tap target in both directions, not only in height. "About" is 38px of text, and a 38px-wide
+   target with a gap either side is how a thumb lands on the wrong link. The padding buys the width and
+   the gap is narrowed to pay for it, so the nav is no wider than it was. */
+.chrome-nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding-inline: var(--sp-2);
+  color: var(--ink-muted);
+}
+
+.chrome-nav a:hover {
+  color: var(--ink);
+}
+
+/* "page" where the link is this page, "true" on a tracker, which belongs to Trackers without being it. */
+.chrome-nav a[aria-current] {
+  color: var(--brand-bright);
+}
+
+/* Empty and hidden until player.js finds something true to put in it. A visitor who has never played
+   is told nothing about a player, the same way a card says nothing about a date nobody announced. */
+.chrome-player {
+  margin: 0 0 0 auto;
+  padding: 3px 9px;
+  border: 1px solid var(--brand-line);
+  border-radius: var(--radius-pill);
+  background: var(--brand-soft);
+  color: var(--brand-bright);
+  font-family: var(--font-num);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.chrome-player[hidden] {
+  display: none;
 }
 
 .dot {
