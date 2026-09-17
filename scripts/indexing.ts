@@ -56,11 +56,21 @@ export function indexStateFor(data: TrackerData | undefined, now: Date): IndexDe
  * and `<meta content="noindex, follow" name="robots">` is the same instruction written the other way
  * round. Missing it would put the page back in the sitemap while it asks to stay out.
  */
+/** The directives that mean "do not index this": `none` is shorthand for `noindex, nofollow`. */
+const NOINDEX_DIRECTIVES = new Set(["noindex", "none"]);
+
 export function declaresNoindex(html: string): boolean {
     const $ = cheerio.load(html);
     // Every matching tag, not the first: a crawler combines the directives it finds and obeys the most
-    // restrictive, so an index tag followed by a noindex one is a noindex page.
-    return $(`meta[name="robots" i]`).toArray().some(node => /\bnoindex\b/i.test($(node).attr("content") ?? ""));
+    // restrictive, so an index tag followed by a noindex one is a noindex page. Each tag's content is a
+    // comma-separated list, read as tokens so a value that merely contains the word does not count.
+    return $(`meta[name="robots" i]`).toArray().some(node =>
+        ($(node).attr("content") ?? "")
+            .toLowerCase()
+            .split(",")
+            .map(directive => directive.trim())
+            .some(directive => NOINDEX_DIRECTIVES.has(directive))
+    );
 }
 
 /**

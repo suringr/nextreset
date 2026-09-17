@@ -177,7 +177,10 @@ test("a page asking not to be indexed is heard however the tag is written", () =
         `<meta content="noindex, follow" name="robots">`,
         `<meta name='robots' content='noindex'>`,
         `<meta   name = "robots"   content = "noindex, nofollow" >`,
-        `<meta name="ROBOTS" content="NOINDEX">`
+        `<meta name="ROBOTS" content="NOINDEX">`,
+        `<meta name="robots" content="none">`,
+        `<meta name="robots" content="NONE">`,
+        `<meta name="robots" content="max-snippet:-1, none">`
     ]) {
         assert.equal(declaresNoindex(`<html><head>${tag}</head><body></body></html>`), true, tag);
         assert.equal(staticPageDecision(`<html><head>${tag}</head><body></body></html>`).state, "noindex", tag);
@@ -193,7 +196,8 @@ test("a page asking not to be indexed is heard however the tag is written", () =
         `<meta name="robots" content="index, follow">`,
         `<meta name="robots" content="index"><meta name="robots" content="follow">`,
         `<meta name="googlebot" content="noindex">`,
-        `<meta name="description" content="a page about noindex">`
+        `<meta name="description" content="a page about noindex">`,
+        `<meta name="robots" content="nonetheless">`
     ]) {
         assert.equal(declaresNoindex(`<html><head>${tag}</head><body></body></html>`), false, tag || "(no tag)");
         assert.equal(staticPageDecision(`<html><head>${tag}</head><body></body></html>`).state, "index", tag || "(no tag)");
