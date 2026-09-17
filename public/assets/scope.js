@@ -62,6 +62,11 @@
             confirms: 0,
             fired: 0,
             hits: 0,
+            // Per-mission, for PERFECT: no life lost and no shot missed inside this mission.
+            missionMisses: 0,
+            missionLivesLost: 0,
+            perfectMissions: 0,
+            hurtInnocents: false,
             missionTime: 0,
             spawnIn: 0.4,
             recentHits: [],
@@ -257,6 +262,7 @@
 
     function loseLife(run, label, hud) {
         run.lives -= 1;
+        run.missionLivesLost += 1;
         run.combo = 1;
         say(run, label, W / 2, 0.5, 'bad');
         if (hud) hud.flash();
@@ -290,6 +296,7 @@
 
         if (hit.kind === 'miss') {
             run.combo = 1;
+            run.missionMisses += 1;
             run.score = Math.max(0, run.score - 15);
             say(run, 'MISS', x, y, 'note');
             return;
@@ -297,6 +304,7 @@
 
         if (hit.kind === 'hostage') {
             hit.actor.dead = true;
+            run.hurtInnocents = true;
             say(run, 'HOSTAGE DOWN', hit.actor.x, hit.actor.y, 'bad');
             loseLife(run, '', hud);
             return;
@@ -304,6 +312,7 @@
 
         if (hit.kind === 'civilian') {
             hit.actor.dead = true;
+            run.hurtInnocents = true;
             say(run, 'CIVILIAN', hit.actor.x, hit.actor.y, 'bad');
             loseLife(run, '', hud);
             return;
@@ -344,8 +353,20 @@
                 run.progress.confirms = (run.progress.confirms || 0) + 1;
             }
             run.confirms += 1;
+            var before = run.combo;
             run.combo = Math.min(core.COMBO_CAP, run.combo + 1);
             run.bestCombo = Math.max(run.bestCombo, run.combo);
+            // Milestones only: a shout on every increment is noise, and noise on a board you are
+            // reading is worse than no feedback at all.
+            if (run.combo !== before && core.COMBO_MILESTONES.indexOf(run.combo) >= 0) {
+                say(run, 'COMBO ×' + run.combo, W / 2, 0.2, 'brand');
+            }
+        }
+
+        // Beating your own best is worth knowing while it still matters, not only on the end screen.
+        if (!run.beatenBest && run.bestBefore > 0 && run.score > run.bestBefore) {
+            run.beatenBest = true;
+            say(run, 'NEW HIGH SCORE', W / 2, 0.24, 'good');
         }
 
         var label = scored.events.length ? scored.events.join(' · ') : '+' + scored.points;
@@ -364,6 +385,17 @@
     // ─────────────────────────────── mission flow ───────────────────────────────
 
     function completeMission(run, hud) {
+        var perfect = run.missionLivesLost === 0 && run.missionMisses === 0;
+        if (perfect) run.perfectMissions += 1;
+        run.lastMission = {
+            name: mission(run).name,
+            perfect: perfect,
+            seconds: run.missionTime,
+            misses: run.missionMisses,
+            livesLost: run.missionLivesLost
+        };
+        run.missionMisses = 0;
+        run.missionLivesLost = 0;
         run.missionIndex += 1;
         if (run.missionIndex >= core.MISSIONS.length) {
             run.over = true;
@@ -532,6 +564,12 @@
             ctx.lineTo(canvas.width, H * px - 0.001);
             ctx.stroke();
 
+            // Feedback is drawn BEFORE the contacts, not after. The brief is explicit that effects must
+            // not obscure targets, and the only way to guarantee that rather than hope for it is for the
+            // contacts to be painted on top: where floating score and a contact collide, the thing being
+            // identified wins. The text is offset above its contact so in practice both are readable.
+            drawEffects(run, px);
+
             for (var a = 0; a < run.actors.length; a++) {
                 var actor = run.actors[a];
                 if (actor.dead || actor.hidden) continue;
@@ -546,7 +584,6 @@
             if (run.scoped) drawScope(run, px);
             if (run.inCover) drawCover(px);
             drawCrosshair(run, px);
-            drawEffects(run, px);
         }
 
         function drawScope(run, px) {

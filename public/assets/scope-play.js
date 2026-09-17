@@ -91,8 +91,51 @@
         ], 'Start run', startRun);
     }
 
+    /** An achievement's readable title, from the same table the page prints. */
+    function titleOf(id) {
+        for (var i = 0; i < core.ACHIEVEMENTS.length; i++) {
+            if (core.ACHIEVEMENTS[i].id === id) return core.ACHIEVEMENTS[i].title;
+        }
+        return id;
+    }
+
+    /** What one XP award is worth, so a screen can quote it without hardcoding the number. */
+    function xpFor(id) {
+        for (var i = 0; i < core.XP_AWARDS.length; i++) {
+            if (core.XP_AWARDS[i].id === id) return core.XP_AWARDS[i].xp;
+        }
+        return 0;
+    }
+
+    /**
+     * The screen between missions.
+     *
+     * Clearing a mission used to go straight to the next brief, so clearing one felt exactly like not
+     * clearing one. It now says what was just achieved — and whether it was perfect — before it says
+     * what is next.
+     */
     function briefScreen() {
         var m = game.mission(run);
+        var done = run.lastMission;
+        if (done) {
+            showOverlay(done.perfect ? done.name + ' — PERFECT' : done.name + ' cleared', [
+                done.perfect
+                    ? 'No life lost and no shot missed. That is worth ' + xpFor('perfect-mission') + ' XP on top of the mission itself.'
+                    : 'Cleared in ' + done.seconds.toFixed(1) + ' seconds'
+                        + (done.misses ? ', with ' + done.misses + (done.misses === 1 ? ' miss' : ' misses') : '')
+                        + (done.livesLost ? ' and ' + done.livesLost + (done.livesLost === 1 ? ' life' : ' lives') + ' lost' : '') + '.',
+                'Next: ' + m.name + '. ' + m.brief,
+                'Objective: ' + core.objectiveText(m, run.progress) + '. ' + m.seconds + ' seconds, '
+                    + run.lives + (run.lives === 1 ? ' life' : ' lives') + ' left.'
+            ], 'Begin ' + m.name, function () {
+                run.lastMission = null;
+                run.paused = false;
+                hideOverlay();
+                last = 0;
+                focusStage();
+            });
+            return;
+        }
         showOverlay(m.name, [
             m.brief,
             'Objective: ' + core.objectiveText(m, run.progress) + '.',
@@ -123,6 +166,20 @@
         var missionsCleared = run.missionIndex;
         var records = null;
 
+        var summary = {
+            score: run.score,
+            missionsCleared: missionsCleared,
+            perfectMissions: run.perfectMissions,
+            bestCombo: run.bestCombo,
+            fired: run.fired,
+            hits: run.hits,
+            hurtInnocents: run.hurtInnocents,
+            newHighScore: false
+        };
+        var awarded = null;
+        var unlocked = [];
+        var profile = null;
+
         if (player) {
             records = player.recordRun({
                 score: run.score,
@@ -130,20 +187,45 @@
                 combo: run.bestCombo,
                 rank: rank
             });
-            // XP for what was actually done, never for arriving. A finished run, and a mission reached.
-            player.addXp(40 + missionsCleared * 25, 'completed-run');
-            if (records.newHighScore) player.addXp(50, 'new-high-score');
-            if (missionsCleared >= core.MISSIONS.length) player.grantAchievement('all-missions');
-            if (run.bestCombo >= core.COMBO_CAP) player.grantAchievement('combo-cap');
+            summary.newHighScore = records.newHighScore;
+
+            // XP for what was actually done, itemised from the ledger in scope-core.js. Nothing in that
+            // table can be earned by loading a page, reloading one, or coming back to it.
+            awarded = core.xpForRun(summary);
+            for (var i = 0; i < awarded.items.length; i++) {
+                player.addXp(awarded.items[i].xp, awarded.items[i].id);
+            }
+            var earned = core.achievementsFor(summary);
+            for (var e = 0; e < earned.length; e++) {
+                if (player.grantAchievement(earned[e])) unlocked.push(titleOf(earned[e]));
+            }
+            profile = player.profile();
+            paintRecords();
         }
 
         var lines = [
             run.outcome,
-            'Score ' + run.score.toLocaleString() + ' · rank ' + rank + ' · ' + missionsCleared + ' of ' + core.MISSIONS.length + ' missions cleared.',
+            'Score ' + run.score.toLocaleString() + ' · rank ' + rank + ' · ' + missionsCleared
+                + ' of ' + core.MISSIONS.length + ' missions cleared'
+                + (run.perfectMissions ? ', ' + run.perfectMissions + ' of them perfect' : '') + '.',
             'Accuracy ' + accuracy + '% over ' + run.fired + ' shots, best combo ×' + run.bestCombo + '.',
             'Rank comes from the score alone: S at 26,000, A at 16,000, B at 9,000, C at 4,000.'
         ];
-        if (records && records.newHighScore) lines.push('NEW HIGH SCORE.');
+        if (summary.newHighScore) lines.push('NEW HIGH SCORE.');
+        if (awarded) {
+            // Shown itemised, so the number is explainable rather than something that just went up.
+            var parts = [];
+            for (var a = 0; a < awarded.items.length; a++) {
+                var item = awarded.items[a];
+                parts.push(item.why + (item.times > 1 ? ' ×' + item.times : '') + ' (+' + item.xp + ')');
+            }
+            lines.push('+' + awarded.total + ' XP — ' + parts.join('; ') + '.');
+        }
+        if (profile) {
+            lines.push('Level ' + profile.level + ', ' + profile.xp.toLocaleString() + ' XP'
+                + (profile.xpToNext !== null ? ', ' + profile.xpToNext + ' to the next.' : ', top of the curve.'));
+        }
+        if (unlocked.length) lines.push('Unlocked: ' + unlocked.join(', ') + '.');
         showOverlay('Run over', lines, 'Play again', startRun);
     }
 
@@ -203,6 +285,9 @@
     function startRun() {
         run = game.createRun((Date.now() ^ 0x9e3779b9) >>> 0);
         run.aim = { x: core.WORLD.w / 2, y: core.WORLD.h / 2 };
+        // The score to beat, read once, so the callout can fire the moment it is passed.
+        run.bestBefore = player ? player.arcadeRecords().highScore : 0;
+        run.beatenBest = false;
         run.pixelsPerUnit = fitStage();
         run.paused = false;
         hideOverlay();
@@ -422,11 +507,23 @@
             'record-score': records.highScore ? records.highScore.toLocaleString() : '0',
             'record-mission': String(records.highestMission),
             'record-rank': records.bestRank || '—',
-            'record-played': String(records.gamesPlayed)
+            'record-played': String(records.gamesPlayed),
+            'record-level': String(player.profile().level),
+            'record-xp': player.profile().xp.toLocaleString()
         };
         for (var id in map) {
             var node = document.getElementById(id);
             if (node) node.textContent = map[id];
+        }
+        // The achievement list is authored on the page, with what each one asks for. This only marks
+        // which are earned, so the page reads the same with or without a record behind it.
+        for (var a = 0; a < core.ACHIEVEMENTS.length; a++) {
+            var row = document.querySelector('[data-achievement="' + core.ACHIEVEMENTS[a].id + '"]');
+            if (!row) continue;
+            var got = player.hasAchievement(core.ACHIEVEMENTS[a].id);
+            row.setAttribute('data-earned', got ? '1' : '');
+            var mark = row.querySelector('.achievement-state');
+            if (mark) mark.textContent = got ? 'Earned' : 'Locked';
         }
     }
 

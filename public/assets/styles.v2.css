@@ -1504,6 +1504,60 @@ h3 {
   font-size: var(--size-small);
 }
 
+/* The achievement list. Locked is the default, because the page has to read correctly before any run
+   has been played and with no record behind it at all. */
+.achievements {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.achievement {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--sp-1) var(--sp-3);
+  padding: var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+}
+
+.achievement-title {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.achievement-how {
+  grid-column: 1 / -1;
+  color: var(--ink-muted);
+  font-size: var(--size-small);
+}
+
+/* A word, not only a colour. */
+.achievement-state {
+  font-size: var(--size-label);
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.achievement[data-earned="1"] {
+  border-color: var(--verified-line);
+}
+
+.achievement[data-earned="1"] .achievement-state {
+  color: var(--state-verified);
+}
+
+@media (min-width: 768px) {
+  .achievements {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 /* A table is the clearest way to show three columns of controls, and the only thing on the site allowed
    to scroll sideways — inside its own container, never taking the page with it. */
 .table-wrap {
