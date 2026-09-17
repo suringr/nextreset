@@ -502,6 +502,9 @@
 
     function paintRecords() {
         if (!player) return;
+        // The header's chip is the same record seen from every other page, so it moves when this does.
+        // Without this a run would earn XP that only appeared after a reload.
+        if (player.paintChip) player.paintChip();
         var records = player.arcadeRecords();
         var map = {
             'record-score': records.highScore ? records.highScore.toLocaleString() : '0',
