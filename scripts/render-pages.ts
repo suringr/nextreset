@@ -23,6 +23,7 @@ import { IndexDecision, NOINDEX_TAG, indexStateFor, staticPageDecision } from ".
 import { blocksFor as dataBlocksFor, loadKnowledge, renderBlocks } from "./render-data-blocks";
 import { CardGroup, renderHomeHtml } from "./render-home";
 import { SitemapEntry, SitemapInput, renderSitemap } from "./render-sitemap";
+import { replaceSlot } from "./render-slots";
 import { VersionedAssets, versionAssets } from "./version-assets";
 
 /** The published tracker shape (see scripts/types.ts). Read defensively: this is file input. */
@@ -277,28 +278,20 @@ function insertAfterCanonical(html: string, tag: string, page: string): string {
     return html.replace(canonical, match => `${match}${eol}  ${tag}`);
 }
 
-/** One replacement that must match exactly once, so template drift fails loudly instead of silently. */
-function replaceOnce(html: string, needle: string, replacement: string, page: string): string {
-    // The authored pages are stored with CRLF. Match and write in the file's own line endings, so a
-    // multi-line anchor is found and the rendered file keeps the endings it had.
-    const eol = html.includes("\r\n") ? "\r\n" : "\n";
-    const find = needle.split("\n").join(eol);
-    const put = replacement.split("\n").join(eol);
-    const count = html.split(find).length - 1;
-    if (count !== 1) throw new Error(`${page}: expected exactly one ${JSON.stringify(needle.slice(0, 60))}, found ${count}`);
-    return html.replace(find, () => put);
+/**
+ * One verification row, indented to sit where the slot it replaces sat.
+ *
+ * The indentation is taken from the page rather than hardcoded, because the row's own first line is
+ * already indented by the document: only the lines this adds need spacing of their own.
+ */
+function infoRow(indent: string, eol: string, label: string, value: string): string {
+    return [
+        `<div class="info-row">`,
+        `${indent}  <span class="info-label">${label}</span>`,
+        `${indent}  ${value}`,
+        `${indent}</div>`
+    ].join(eol);
 }
-
-const PLACEHOLDER_LABEL = `<div class="countdown-label">Checking official sources...</div>`;
-const PLACEHOLDER_VALUE = `<div class="countdown-value countdown-skeleton">--:--:--</div>`;
-const PLACEHOLDER_SOURCE = `<span class="info-value" id="source">...</span>`;
-const PLACEHOLDER_CONFIDENCE = `<span id="confidence" class="confidence">...</span>`;
-const PLACEHOLDER_NOTES = `<div id="notes" class="notes" style="display: none;"></div>`;
-const PLACEHOLDER_DATA = `<div id="verified-data"></div>`;
-const PLACEHOLDER_UPDATED_ROW = `        <div class="info-row">
-          <span class="info-label">Last Updated</span>
-          <span class="info-value" id="last-updated">...</span>
-        </div>`;
 
 /** Writes the verified facts into one tracker page. Pure: takes HTML and data, returns HTML. */
 export function renderTrackerHtml(html: string, data: TrackerData | undefined, page = "page", now: Date = new Date(), blocksHtml = ""): string {
@@ -311,51 +304,50 @@ export function renderTrackerHtml(html: string, data: TrackerData | undefined, p
         html = insertAfterCanonical(html, NOINDEX_TAG, page);
     }
 
-    let out = replaceOnce(html, PLACEHOLDER_LABEL, `<div class="countdown-label">${escapeHtml(b.label)}</div>`, page);
-    out = replaceOnce(out, PLACEHOLDER_VALUE, `<div class="${b.valueClass}">${escapeHtml(b.value)}</div>`, page);
+    // The authored pages are stored with CRLF and checked out with LF in CI. Everything written here
+    // uses the line ending the file already has, so a rendered page keeps the endings it came with.
+    const eol = html.includes("\r\n") ? "\r\n" : "\n";
 
-    out = replaceOnce(out, PLACEHOLDER_SOURCE, b.source
+    let out = replaceSlot(html, "answer-label", () => `<div class="countdown-label">${escapeHtml(b.label)}</div>`, page);
+    out = replaceSlot(out, "answer-value", () => `<div class="${b.valueClass}">${escapeHtml(b.value)}</div>`, page);
+
+    out = replaceSlot(out, "source", () => b.source
         ? `<span class="info-value" id="source"><a href="${escapeHtml(b.source.url)}" target="_blank" rel="noopener">${escapeHtml(b.source.name)}</a></span>`
         : `<span class="info-value" id="source">Unavailable</span>`, page);
 
-    out = replaceOnce(out, PLACEHOLDER_CONFIDENCE, b.confidence
+    out = replaceSlot(out, "confidence", () => b.confidence
         ? `<span id="confidence" class="confidence confidence-${escapeHtml(b.confidence)}">${escapeHtml(b.confidence)}</span>`
         : `<span id="confidence" class="confidence confidence-none">none</span>`, page);
 
     // Two different facts, deliberately kept apart: when the source last confirmed the value, and when
     // we last tried. app.js rewrites #last-updated from fetched_at_utc on load, so only the "checked"
     // row carries that id — a failed refresh can never relabel a months-old value as verified just now.
-    const rows: string[] = [
-        `        <div class="info-row">
-          <span class="info-label">Last Verified</span>
-          <span class="info-value" id="last-verified">${escapeHtml(b.lastVerified ?? "Never")}</span>
-        </div>`,
-        `        <div class="info-row">
-          <span class="info-label">Last Checked</span>
-          <span class="info-value" id="last-updated">${escapeHtml(b.lastChecked ?? "Never")}</span>
-        </div>`
-    ];
-    if (b.precision) {
-        rows.push(`        <div class="info-row">
-          <span class="info-label">Precision</span>
-          <span class="info-value">${escapeHtml(b.precision)}</span>
-        </div>`);
-    }
-    rows.push(`        <div class="info-row">
-          <span class="info-label">Status</span>
-          <span class="info-value" id="tracker-status">${escapeHtml(b.state)}</span>
-        </div>`);
-    out = replaceOnce(out, PLACEHOLDER_UPDATED_ROW, rows.join("\n"), page);
+    out = replaceSlot(out, "meta-rows", element => {
+        const indent = element.indent;
+        const rows: string[] = [
+            infoRow(indent, eol, "Last Verified", `<span class="info-value" id="last-verified">${escapeHtml(b.lastVerified ?? "Never")}</span>`),
+            infoRow(indent, eol, "Last Checked", `<span class="info-value" id="last-updated">${escapeHtml(b.lastChecked ?? "Never")}</span>`)
+        ];
+        if (b.precision) {
+            rows.push(infoRow(indent, eol, "Precision", `<span class="info-value">${escapeHtml(b.precision)}</span>`));
+        }
+        rows.push(infoRow(indent, eol, "Status", `<span class="info-value" id="tracker-status">${escapeHtml(b.state)}</span>`));
+        return rows.join(eol + indent);
+    }, page);
 
-    out = replaceOnce(out, PLACEHOLDER_NOTES, b.notes
+    out = replaceSlot(out, "notes", element => b.notes
         ? `<div id="notes" class="notes">${escapeHtml(tidyNotes(b.notes))}</div>`
-        : PLACEHOLDER_NOTES, page);
+        : element.source, page);
 
     // The data slot stays empty unless this game's knowledge supports a block: an empty section is
     // worse than no section.
-    out = replaceOnce(out, PLACEHOLDER_DATA, blocksHtml
-        ? `<div id="verified-data">\n${blocksHtml}\n      </div>`
-        : PLACEHOLDER_DATA, page);
+    //
+    // The blocks are built with "\n" whatever the page uses, so they are rewritten in the page's own
+    // line endings on the way in. A CRLF page carrying LF-only rows renders fine and diffs terribly.
+    const blocks = blocksHtml.replace(/\r\n/g, "\n").split("\n").join(eol);
+    out = replaceSlot(out, "verified-data", element => blocks
+        ? `<div id="verified-data">${eol}${blocks}${eol}${element.indent}</div>`
+        : element.source, page);
 
     return out;
 }
