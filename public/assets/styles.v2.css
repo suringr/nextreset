@@ -231,10 +231,12 @@ h3 {
   border-color: var(--brand-line);
 }
 
+ /* Near-black on violet, not near-white: #f5f7ff on #8b5cf6 is 3.96:1, which fails AA at this size.
+   The hover state already did this; the resting state did not, and only a rendered check found it. */
 .btn-primary {
   border-color: transparent;
   background: var(--brand);
-  color: var(--ink);
+  color: var(--ground);
 }
 
 .btn-primary:hover {
@@ -737,7 +739,7 @@ h3 {
 }
 
 .crumb-sep {
-  color: var(--line);
+  color: var(--ink-faint);
 }
 
 /* Every tracker, reachable from every page. A stacked list on a phone: twelve links at 13px in a
@@ -1255,6 +1257,34 @@ h3 {
 .last-updated {
   color: var(--ink-faint);
   font-size: var(--size-small);
+}
+
+/* ---------- while you wait ---------- */
+
+/* One line and one link on a tracker page. The tracker is what the page is for; this is what there is
+   to do once it has answered, and it is sized accordingly. */
+.waiting {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  margin: var(--sp-6) 0;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-left: 3px solid var(--brand-line);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.waiting p {
+  flex: 1 1 14ch;
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--size-small);
+}
+
+.waiting strong {
+  color: var(--ink);
 }
 
 /* ---------- the arcade ---------- */

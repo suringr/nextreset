@@ -98,7 +98,11 @@ export const TEXT_ON_SURFACE: ReadonlyArray<{ ink: string; on: string[]; minimum
     { ink: "--state-stale", on: ["--ground", "--surface"], minimum: 4.5, note: "badge text on a stale value" },
     { ink: "--state-unavailable", on: ["--ground", "--surface"], minimum: 4.5, note: "badge text and the unavailable value" },
     { ink: "--brand-bright", on: ["--ground", "--surface", "--surface-2"], minimum: 4.5, note: "links and the brand as text" },
-    { ink: "--brand", on: ["--ground", "--surface"], minimum: 3, note: "never text: an edge, a dot, a meter fill" }
+    { ink: "--brand", on: ["--ground", "--surface"], minimum: 3, note: "never text: an edge, a dot, a meter fill" },
+    // The brand is also a BACKGROUND, on the primary button — a pairing this table did not describe
+    // until a rendered contrast sweep found the button failing at 3.96:1 with near-white text on it.
+    // A token used as a surface has to be checked as one.
+    { ink: "--ground", on: ["--brand", "--brand-bright"], minimum: 4.5, note: "text on a primary button" }
 ];
 
 /** The `:root` block, generated so the stylesheet and every page agree by construction. */
@@ -148,7 +152,7 @@ const HOME = [
     `.drop-trust{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2) var(--sp-3);margin:var(--sp-4) 0 0;color:var(--ink-faint);font-size:12px}`,
     `.drop-actions{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin:var(--sp-5) 0 0}`,
     `.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-2);min-height:var(--tap);padding:0 var(--sp-4);border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);color:var(--ink);font:inherit;font-weight:700;cursor:pointer;text-align:center;flex:1 1 auto}`,
-    `.btn-primary{border-color:transparent;background:var(--brand)}`,
+    `.btn-primary{border-color:transparent;background:var(--brand);color:var(--ground)}`,
     `.card-slot{position:relative;display:flex}`,
     `.hero{margin:0 0 var(--sp-5)}`,
     `.h1{font-size:var(--size-lead);font-weight:800;letter-spacing:-.01em;margin:0 0 var(--sp-1)}`,
