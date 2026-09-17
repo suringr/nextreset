@@ -319,6 +319,10 @@ function showError(message) {
 
 // Initialize game page
 async function initGamePage() {
+    // Tracking first, and outside the guard below: a tracker page can offer its own track control
+    // whether or not the live countdown fetch works, and this is the page most visitors arrive on.
+    enableTracking();
+
     const container = document.getElementById('countdown-container');
 
     if (!container) {
@@ -596,6 +600,7 @@ function fillMyGames() {
     var shelf = document.getElementById('my-games-shelf');
     if (!section || !shelf) return 0;
 
+    var empty = document.getElementById('my-games-empty');
     var tracked = state.trackedGames();
     // The shelf is rebuilt from scratch each time so that untracking returns a card to the grid in the
     // position the build decided, rather than wherever it happened to be removed from.
@@ -611,7 +616,22 @@ function fillMyGames() {
     }
 
     var count = shelf.querySelectorAll ? shelf.querySelectorAll('.card-slot').length : 0;
-    section.hidden = count === 0;
+
+    // The section is always shown once this has run, because the empty state is the whole point: a
+    // first-time visitor has to be told what the star does before they will press one.
+    //
+    // While empty it is one line and nothing else — no heading. The line already names the feature
+    // ("Track a game..."), and every pixel here pushes the arcade below the first screen, which is the
+    // gap this same round of work exists to close. The heading arrives with the first tracked card.
+    section.hidden = false;
+    if (empty) empty.hidden = count > 0;
+    shelf.hidden = count === 0;
+    var heading = section.querySelector ? section.querySelector('.section-heading') : null;
+    if (heading) heading.hidden = count === 0;
+    if (section.classList) {
+        if (count === 0) section.classList.add('is-empty');
+        else section.classList.remove('is-empty');
+    }
     return count;
 }
 

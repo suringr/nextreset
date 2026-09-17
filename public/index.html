@@ -74,8 +74,13 @@
 
     <!-- My games: app.js moves tracked cards here. Hidden until it has something to hold, because
          an empty section is worse than no section and this one is empty without JavaScript. -->
+    <!-- My games. app.js moves tracked cards into the shelf; until there are any it shows the line
+         below instead, because a star nobody has explained is a control nobody presses. Both the line
+         and the shelf ship hidden: without JavaScript tracking does nothing, and explaining a feature
+         that does not work would be worse than staying quiet. -->
     <section class="shelf-section" id="my-games" hidden>
       <h2 class="section-heading">My games</h2>
+      <p class="shelf-empty" id="my-games-empty" hidden><span class="shelf-empty-mark" aria-hidden="true">☆</span> Track a game to keep it at the top. Stays on this device.</p>
       <div class="shelf" id="my-games-shelf"></div>
     </section>
 
