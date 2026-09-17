@@ -76,6 +76,20 @@
       <div class="shelf" id="my-games-shelf"></div>
     </section>
 
+    <!-- The arcade. A compact entry card and three numbers read from local player state: the game
+         itself lives on /play/ and none of its code is loaded here. -->
+    <section class="section arcade-card">
+      <p class="drop-eyebrow">NEXT//RESET Arcade</p>
+      <h2 class="arcade-name">RESET//SCOPE</h2>
+      <p class="arcade-line">Five missions. Fast, precise, and do not hit the hostage.</p>
+      <div class="arcade-stats">
+        <div class="record"><small>High score</small><b id="arcade-score">&mdash;</b></div>
+        <div class="record"><small>Missions cleared</small><b id="arcade-mission">&mdash;</b></div>
+        <div class="record"><small>Best rank</small><b id="arcade-rank">&mdash;</b></div>
+      </div>
+      <a class="btn btn-primary arcade-play" href="/play/">Play now</a>
+    </section>
+
     <!-- All trackers. The renderer owns everything inside this region: it writes the cards and the
          group headings the data decides on. -->
     <section class="section" id="all-games">

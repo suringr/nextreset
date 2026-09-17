@@ -113,7 +113,7 @@ export function rootBlockCompact(): string {
 }
 
 /** Which page a critical-CSS block is for. Each ships only what its own first paint needs. */
-export type PageKind = "home" | "tracker" | "static";
+export type PageKind = "home" | "tracker" | "static" | "play";
 
 /**
  * What every page needs before the stylesheet arrives: the tokens, the page ground, the wrapper.
@@ -196,6 +196,38 @@ const TRACKER = [
     `@media(min-width:768px){.countdown-box{padding:var(--sp-7) var(--sp-6)}}`
 ].join("");
 
+/**
+ * The arcade. Only what decides the board's size and the controls' reach.
+ *
+ * Sized by height as well as width, because on a phone in portrait the limit is vertical: the HUD, the
+ * board and the control bar all have to be on screen at once without the page scrolling during a run.
+ */
+const PLAY = [
+    `.page{max-width:var(--measure);margin:0 auto}`,
+    `.breadcrumbs{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2);color:var(--ink-faint);font-size:var(--size-small);font-weight:600;margin-bottom:var(--sp-5)}`,
+    `.breadcrumbs a,.breadcrumbs [aria-current="page"]{display:inline-flex;align-items:center;min-height:var(--tap)}`,
+    `.game-header{margin-bottom:var(--sp-3)}`,
+    `.game-title{font-size:var(--size-h1);font-weight:900;letter-spacing:-.02em;margin:0 0 var(--sp-2)}`,
+    `.game-meta{display:flex;gap:var(--sp-3);color:var(--ink-faint);font-size:var(--size-small)}`,
+    `.kicker{color:var(--ink-faint);font-size:var(--size-label);letter-spacing:.14em;text-transform:uppercase;font-weight:800}`,
+    `.sub{color:var(--ink-muted);margin:0 0 var(--sp-5);font-size:var(--size-lead);max-width:var(--measure)}`,
+    `.play{margin:0 0 var(--sp-6)}`,
+    `.stage{position:relative;width:100%;max-width:min(100%,calc((100dvh - 260px) * 0.8));aspect-ratio:4 / 5;margin:0 auto;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--ground)}`,
+    `#board{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}`,
+    `.hud{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-1);margin-bottom:var(--sp-2)}`,
+    `.hud-cell{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:var(--sp-2)}`,
+    `.hud-cell small{display:block;color:var(--ink-faint);font-size:9px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}`,
+    `.hud-cell b{font-family:var(--font-num);font-size:14px;font-variant-numeric:tabular-nums}`,
+    `.controls{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-2);margin-top:var(--sp-2)}`,
+    `.control{min-height:var(--tap);border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);color:var(--ink);font:inherit;font-weight:800;letter-spacing:.06em;cursor:pointer}`,
+    `.meter{height:6px;background:var(--surface-2);border-radius:var(--radius-pill);overflow:hidden;margin-top:var(--sp-2)}`,
+    `.meter i{display:block;height:100%;width:0;background:var(--brand)}`,
+    `.overlay{position:absolute;inset:0;display:grid;place-items:center;padding:var(--sp-4);background:var(--scrim);text-align:center}`,
+    `.overlay[hidden]{display:none}`,
+    `.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}`,
+    `@media(min-width:560px){.hud{grid-template-columns:repeat(7,1fr)}.controls{grid-template-columns:repeat(4,1fr)}}`
+].join("");
+
 /** About, Privacy, 404: prose and a way back. */
 const STATIC = [
     `.page{max-width:var(--measure);margin:0 auto}`,
@@ -214,13 +246,14 @@ const STATIC = [
  * files. `design-tokens.test.ts` asserts every page carries exactly what this function returns for it.
  */
 export function criticalCss(kind: PageKind): string {
-    const body = kind === "home" ? HOME : kind === "tracker" ? TRACKER : STATIC;
+    const body = kind === "home" ? HOME : kind === "tracker" ? TRACKER : kind === "play" ? PLAY : STATIC;
     return rootBlockCompact() + SHARED + body;
 }
 
 /** Which kind of critical CSS a page in the build gets, by its path. */
 export function pageKind(page: string): PageKind {
     if (page === "index.html") return "home";
+    if (page === "play/index.html") return "play";
     // "lol/next-patch/index.html" — a tracker is a game and a topic; about/privacy are one segment.
     return page.split("/").length === 3 ? "tracker" : "static";
 }

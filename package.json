@@ -17,7 +17,8 @@
     "render:pages": "node build/render-pages.js",
     "build:site": "npm run build && (npm run refresh:data || true) && npm run export:site && npm run render:pages",
     "dev": "npm run build && npm run refresh:data",
-    "design:apply": "node build/update-design.js"
+    "design:apply": "node build/update-design.js",
+    "play:apply": "node build/update-play-page.js"
   },
   "keywords": [
     "gaming",

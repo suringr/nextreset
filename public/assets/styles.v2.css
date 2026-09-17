@@ -397,6 +397,74 @@ h3 {
   height: 100%;
 }
 
+/* ---------- arcade entry ---------- */
+
+/* Compact on purpose. The arcade is a reason to come back, not the product: one card, three numbers,
+   one button, and none of the game's code. */
+.arcade-card {
+  background:
+    radial-gradient(420px 220px at 92% -30%, var(--brand-soft), transparent 70%),
+    var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--sp-4);
+}
+
+.arcade-name {
+  font-size: var(--size-h2);
+  font-weight: 900;
+  letter-spacing: -.01em;
+  margin: 0;
+}
+
+.arcade-line {
+  color: var(--ink-muted);
+  font-size: var(--size-small);
+  margin: var(--sp-1) 0 var(--sp-4);
+}
+
+.arcade-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+
+.arcade-play {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .arcade-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: var(--sp-4) var(--sp-5);
+  }
+
+  .arcade-card .drop-eyebrow,
+  .arcade-name,
+  .arcade-line {
+    grid-column: 1;
+  }
+
+  .arcade-line {
+    margin-bottom: 0;
+  }
+
+  .arcade-stats {
+    grid-column: 1;
+    margin-bottom: 0;
+  }
+
+  .arcade-play {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    width: auto;
+    align-self: center;
+  }
+}
+
 /* ---------- card grid ---------- */
 
 .grid {
@@ -1187,6 +1255,320 @@ h3 {
 .last-updated {
   color: var(--ink-faint);
   font-size: var(--size-small);
+}
+
+/* ---------- the arcade ---------- */
+
+.play {
+  margin: 0 0 var(--sp-6);
+}
+
+/* Sized by height as well as width. On a phone in portrait the vertical space is the constraint: the
+   HUD, the board and the control bar all have to be on screen at once, because the page must not scroll
+   during a run. 0.8 is the 4:5 ratio, so a height budget becomes a width. */
+.stage {
+  position: relative;
+  width: 100%;
+  max-width: min(100%, calc((100dvh - 260px) * 0.8));
+  aspect-ratio: 4 / 5;
+  margin: 0 auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--ground);
+  box-shadow: var(--shadow);
+}
+
+.stage:focus-visible {
+  outline: 2px solid var(--brand-bright);
+  outline-offset: 2px;
+}
+
+.stage.is-reset {
+  border-color: var(--brand-line);
+}
+
+/* A hit is felt as well as seen — and not at all when the reader has asked for less motion. */
+.stage.is-hit {
+  border-color: var(--stale-line);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .stage.is-hit {
+    animation: nr-shake .16s ease;
+  }
+}
+
+@keyframes nr-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+/* `touch-action: none` on the board alone, never on the page: the prose below has to scroll. */
+#board {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.hud {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-2);
+}
+
+.hud-cell {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2);
+  min-width: 0;
+}
+
+.hud-cell small {
+  display: block;
+  color: var(--ink-faint);
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+/* Never mid-word: "confirmed" broke as "confirme/d" in a quarter-width cell. The objective is the
+   longest thing the HUD holds, so it gets two columns on a narrow screen instead of a hyphen. */
+.hud-cell b {
+  display: block;
+  font-family: var(--font-num);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: break-word;
+  hyphens: none;
+}
+
+
+.meter {
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  margin-top: var(--sp-2);
+}
+
+.meter i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--brand);
+  transition: width .2s ease;
+}
+
+/* The three mechanics and a pause, all thumb-sized, all on screen throughout a run. */
+.controls {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
+.control {
+  min-height: var(--tap);
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 800;
+  letter-spacing: .06em;
+  cursor: pointer;
+  transition: border-color .12s ease, background-color .12s ease, color .12s ease;
+}
+
+.control:hover:not(:disabled) {
+  border-color: var(--brand-line);
+}
+
+.control[aria-pressed="true"] {
+  background: var(--verified-soft);
+  border-color: var(--verified-line);
+  color: var(--state-verified);
+}
+
+.control-reset:not(:disabled) {
+  background: var(--brand-soft);
+  border-color: var(--brand-line);
+  color: var(--brand-bright);
+}
+
+.control:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-4);
+  background: var(--scrim);
+  text-align: center;
+}
+
+.overlay[hidden] {
+  display: none;
+}
+
+.overlay-panel {
+  max-width: 44ch;
+}
+
+.overlay-panel h2 {
+  font-size: var(--size-h2);
+  font-weight: 900;
+  margin: 0 0 var(--sp-3);
+}
+
+.overlay-panel p {
+  color: var(--ink-muted);
+  font-size: var(--size-small);
+  margin: 0 0 var(--sp-3);
+}
+
+.overlay-panel .btn {
+  width: 100%;
+}
+
+.records {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--sp-2);
+}
+
+.record {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-3);
+}
+
+.record small {
+  display: block;
+  color: var(--ink-faint);
+  font-size: var(--size-label);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: var(--sp-1);
+}
+
+.record b {
+  font-family: var(--font-num);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  color: var(--state-verified);
+}
+
+.missions {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.mission {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-4);
+}
+
+.mission-name {
+  font-size: 17px;
+  font-weight: 800;
+  margin: 0 0 var(--sp-1);
+}
+
+.mission-objective {
+  color: var(--state-verified);
+  font-family: var(--font-num);
+  font-size: var(--size-small);
+  margin: 0 0 var(--sp-2);
+}
+
+.mission p {
+  color: var(--ink-muted);
+  margin: 0;
+  font-size: var(--size-small);
+}
+
+/* A table is the clearest way to show three columns of controls, and the only thing on the site allowed
+   to scroll sideways — inside its own container, never taking the page with it. */
+.table-wrap {
+  overflow-x: auto;
+  margin: 0 0 var(--sp-4);
+}
+
+.controls-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 380px;
+  font-size: var(--size-small);
+}
+
+.controls-table th,
+.controls-table td {
+  text-align: left;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.controls-table thead th {
+  color: var(--ink-faint);
+  font-size: var(--size-label);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.controls-table tbody th {
+  color: var(--ink);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.controls-table td {
+  color: var(--ink-muted);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (min-width: 560px) {
+  .hud {
+    grid-template-columns: repeat(7, 1fr);
+  }
+
+  .controls {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .records {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .missions {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* ---------- without JavaScript ---------- */

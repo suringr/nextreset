@@ -49,15 +49,25 @@ export function hasAdUnitMarkup(html: string): boolean {
 /**
  * Which pages carry the loader.
  *
- * Every page a reader is meant to read, and only those. The 404 page is excluded deliberately: Google's
- * publisher policy does not allow ads on screens "used for alerts, navigation or other behavioral
- * purposes", and a not-found page is exactly that — no publisher content, just a signpost back to the
- * site. Excluding it costs nothing (nobody monetises an error page) and keeps the site clear of the one
- * policy family it is currently trying to get out of.
+ * Every page a reader is meant to read, and only those. Two are excluded, for two different reasons,
+ * and both are decisions rather than oversights.
+ *
+ * **404.html** — Google's publisher policy does not allow ads on screens "used for alerts, navigation or
+ * other behavioral purposes", and a not-found page is exactly that: no publisher content, just a
+ * signpost back to the site. Excluding it costs nothing, since nobody monetises an error page.
+ *
+ * **play/index.html** — the arcade is an interactive surface where a mis-tap costs a life. Auto ads
+ * place anchors and vignettes over the viewport at the account's discretion, and this repository can
+ * neither see nor control that setting; the only way to be certain nothing lands over the board, beside
+ * the fire controls, or across a mission transition is for the page not to carry the library at all.
+ * Ads outside the gameplay area may be worth revisiting later, and that is an account-side decision
+ * taken deliberately, not something to arrive at by default because a new page inherited the rule.
  *
  * `page` is the path relative to the site root, as the renderer names it: "index.html",
- * "lol/next-patch/index.html", "404.html".
+ * "lol/next-patch/index.html", "404.html", "play/index.html".
  */
+const WITHOUT_LOADER = new Set(["404.html", "play/index.html"]);
+
 export function carriesLoader(page: string): boolean {
-    return page !== "404.html";
+    return !WITHOUT_LOADER.has(page);
 }

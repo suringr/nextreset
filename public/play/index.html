@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="RESET//SCOPE is a five-mission arcade identification shooter you can play in the browser while you wait for a patch. Confirm targets, protect everyone else.">
+  <meta property="og:title" content="RESET//SCOPE - NextReset Arcade">
+  <meta property="og:description" content="A five-mission arcade identification shooter. Confirm targets, protect everyone else.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://nextreset.co/og.png">
+  <link rel="canonical" href="https://nextreset.co/play/">
+  <meta name="robots" content="noindex, follow">
+  <title>RESET//SCOPE - NextReset Arcade</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#050812">
+
+  <!-- CRITICAL: Inline CSS for guaranteed first paint -->
+  <style>
+    :root{--ground:#050812;--ground-2:#0a1020;--surface:#0b1325;--surface-2:#101a31;--line:#26395f;--line-soft:#1b2a47;--ink:#f5f7ff;--ink-muted:#aab7cf;--ink-faint:#93a2be;--brand:#8b5cf6;--brand-bright:#b69dff;--state-verified:#34d399;--state-stale:#fbbf24;--state-unavailable:#9fb0c9;--brand-soft:rgba(139, 92, 246, .15);--brand-line:rgba(139, 92, 246, .38);--verified-soft:rgba(52, 211, 153, .14);--verified-line:rgba(52, 211, 153, .32);--stale-soft:rgba(251, 191, 36, .14);--stale-line:rgba(251, 191, 36, .34);--unavailable-soft:rgba(159, 176, 201, .13);--unavailable-line:rgba(159, 176, 201, .30);--sheen:rgba(255, 255, 255, .035);--scrim:rgba(3, 6, 17, .72);--radius:14px;--radius-sm:10px;--radius-pill:999px;--shadow:0 10px 30px rgba(0, 0, 0, .45);--shadow-lift:0 16px 40px rgba(0, 0, 0, .55);--font:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;--font-num:ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;--size-display:clamp(34px, 9vw, 54px);--size-h1:clamp(27px, 6vw, 40px);--size-h2:clamp(19px, 3.2vw, 23px);--size-lead:clamp(15px, 2.2vw, 17px);--size-body:15px;--size-small:13px;--size-label:11px;--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;--sp-7:48px;--gutter:16px;--measure:68ch;--tap:44px}*{box-sizing:border-box}body{margin:0;background-color:var(--ground);color:var(--ink);font-family:var(--font);font-size:var(--size-body);line-height:1.55;min-height:100vh;-webkit-text-size-adjust:100%}.container{width:100%;max-width:1040px;margin:0 auto;padding-inline:var(--gutter);padding-block:var(--sp-5)}a{color:inherit;text-decoration:none}h1,h2,h3{line-height:1.15;margin:0;text-wrap:balance}.page{max-width:var(--measure);margin:0 auto}.breadcrumbs{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2);color:var(--ink-faint);font-size:var(--size-small);font-weight:600;margin-bottom:var(--sp-5)}.breadcrumbs a,.breadcrumbs [aria-current="page"]{display:inline-flex;align-items:center;min-height:var(--tap)}.game-header{margin-bottom:var(--sp-3)}.game-title{font-size:var(--size-h1);font-weight:900;letter-spacing:-.02em;margin:0 0 var(--sp-2)}.game-meta{display:flex;gap:var(--sp-3);color:var(--ink-faint);font-size:var(--size-small)}.kicker{color:var(--ink-faint);font-size:var(--size-label);letter-spacing:.14em;text-transform:uppercase;font-weight:800}.sub{color:var(--ink-muted);margin:0 0 var(--sp-5);font-size:var(--size-lead);max-width:var(--measure)}.play{margin:0 0 var(--sp-6)}.stage{position:relative;width:100%;max-width:min(100%,calc((100dvh - 260px) * 0.8));aspect-ratio:4 / 5;margin:0 auto;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--ground)}#board{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}.hud{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-1);margin-bottom:var(--sp-2)}.hud-cell{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:var(--sp-2)}.hud-cell small{display:block;color:var(--ink-faint);font-size:9px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}.hud-cell b{font-family:var(--font-num);font-size:14px;font-variant-numeric:tabular-nums}.controls{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-2);margin-top:var(--sp-2)}.control{min-height:var(--tap);border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);color:var(--ink);font:inherit;font-weight:800;letter-spacing:.06em;cursor:pointer}.meter{height:6px;background:var(--surface-2);border-radius:var(--radius-pill);overflow:hidden;margin-top:var(--sp-2)}.meter i{display:block;height:100%;width:0;background:var(--brand)}.overlay{position:absolute;inset:0;display:grid;place-items:center;padding:var(--sp-4);background:var(--scrim);text-align:center}.overlay[hidden]{display:none}.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}@media(min-width:560px){.hud{grid-template-columns:repeat(7,1fr)}.controls{grid-template-columns:repeat(4,1fr)}}
+  </style>
+
+  <link rel="stylesheet" href="/assets/styles.v2.css">
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-YY6V5SR1DN');
+  </script>
+
+  <!-- No AdSense loader on this page. See carriesLoader in scripts/adsense.ts: this is an interactive
+       surface, and an Auto ads anchor or vignette over the board is a mis-tap that costs a life. -->
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://nextreset.co/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Arcade: RESET//SCOPE"
+        }
+      ]
+    }
+    </script>
+</head>
+<body>
+  <div class="container">
+    <div class="page">
+      <nav class="breadcrumbs" aria-label="Breadcrumb">
+        <a href="/">Home</a>
+        <span class="crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <span aria-current="page">Arcade: RESET//SCOPE</span>
+      </nav>
+
+      <div class="game-header">
+        <h1 class="game-title">RESET//SCOPE</h1>
+        <div class="game-meta">
+          <span class="kicker">NextReset Arcade</span>
+        </div>
+      </div>
+
+      <p class="sub">Five missions. Confirm the targets, protect everyone else. It runs in this page and keeps your records on this device.</p>
+
+      <!-- The board. Sized from its own box at every change, so the same run plays the same on a phone
+           and a desktop; nothing here assumes a pixel size. -->
+      <div class="play">
+        <div class="hud" role="group" aria-label="Run status">
+          <div class="hud-cell"><small>Score</small><b id="hud-score">0</b></div>
+          <div class="hud-cell"><small>Mission</small><b id="hud-mission">&mdash;</b></div>
+          <div class="hud-cell"><small id="hud-objective-label">Objective</small><b id="hud-objective">&mdash;</b></div>
+          <div class="hud-cell"><small>Time</small><b id="hud-clock">&mdash;</b></div>
+          <div class="hud-cell"><small>Lives</small><b id="hud-lives">&hearts;&hearts;&hearts;</b></div>
+          <div class="hud-cell"><small>Ammo</small><b id="hud-ammo">6/6</b></div>
+          <div class="hud-cell"><small>Combo</small><b id="hud-combo">&times;1</b></div>
+        </div>
+
+        <div class="stage" id="stage" tabindex="0" role="application" aria-label="RESET//SCOPE game board">
+          <canvas id="board" aria-label="Game board. Use the controls below, or arrow keys to aim and F to fire."></canvas>
+          <div class="overlay" id="overlay">
+            <div class="overlay-panel">
+              <h2 id="overlay-title">RESET//SCOPE</h2>
+              <div id="overlay-body"></div>
+              <button type="button" class="btn btn-primary" id="overlay-action">Start run</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="meter" aria-hidden="true"><i id="hud-meter"></i></div>
+
+        <div class="controls" role="group" aria-label="Game controls">
+          <button type="button" class="control" id="control-scope" aria-pressed="false">SCOPE</button>
+          <button type="button" class="control" id="control-cover" aria-pressed="false">COVER</button>
+          <button type="button" class="control control-reset" id="control-reset" disabled>RESET 0%</button>
+          <button type="button" class="control control-pause" id="control-pause">PAUSE</button>
+        </div>
+
+        <p class="visually-hidden" id="game-status" role="status" aria-live="polite"></p>
+      </div>
+
+      <section class="section">
+        <h2 class="section-heading">Your records on this device</h2>
+        <div class="records">
+          <div class="record"><small>High score</small><b id="record-score">0</b></div>
+          <div class="record"><small>Missions cleared</small><b id="record-mission">0</b></div>
+          <div class="record"><small>Best rank</small><b id="record-rank">&mdash;</b></div>
+          <div class="record"><small>Runs played</small><b id="record-played">0</b></div>
+        </div>
+        <p class="data-note">Kept in this browser only. There is no account, no server and no leaderboard &mdash; so there is no global ranking to show you, and we are not going to invent one.</p>
+      </section>
+
+      <div class="content-section">
+        <h2>How to play</h2>
+        <p>Tap or click a contact to fire at it. A target is a hard-edged diamond; a civilian is a circle with an open line. Shooting a civilian, or the hostage a target is holding, costs a life. Every mission ends when its objective is met &mdash; not when a clock runs out, which is only there to fail you.</p>
+        <div class="table-wrap">
+          <table class="controls-table">
+            <thead><tr><th scope="col">Action</th><th scope="col">Touch</th><th scope="col">Keyboard</th></tr></thead>
+            <tbody>
+            <tr><th scope="row">Fire</th><td>Tap the contact</td><td>F or Enter</td></tr>
+            <tr><th scope="row">Aim</th><td>Tap where you want to shoot</td><td>Arrow keys or WASD</td></tr>
+            <tr><th scope="row">Scope</th><td>Tap SCOPE to latch it on</td><td>Hold Shift</td></tr>
+            <tr><th scope="row">Cover</th><td>Tap COVER to latch it on</td><td>Hold C</td></tr>
+            <tr><th scope="row">RESET MODE</th><td>Tap RESET when the meter is full</td><td>Space</td></tr>
+            <tr><th scope="row">Pause</th><td>Tap PAUSE</td><td>P</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="content-section">
+        <h2>Scope and cover are trades, not buttons</h2>
+        <p><strong>Scope</strong> widens your hit area by about a third and makes a bullseye far easier &mdash; and it takes away the rest of the board. While it is on, anything outside the scope circle is neither drawn nor hittable. It is worth it when you need to tell a target from a civilian at distance, and it will cost you the contact arriving behind you.</p>
+        <p><strong>Cover</strong> reloads roughly four times faster and stops incoming fire, and you cannot shoot from it. Outside cover a magazine still refills, slowly, so cover is a choice about tempo rather than something you are forced into. It dims the board; it does not blind you.</p>
+      </div>
+
+      <div class="content-section">
+        <h2>RESET MODE</h2>
+        <p>The meter fills from skill, not from time: a clean hit charges it, a bullseye charges it more, a quick confirm and a hostage save more again. At 100% you can spend it. For four and a half seconds the world runs at 45% speed, your hit area widens, and the score multiplier goes to 1.5&times;.</p>
+        <p>It is deliberately not a bigger multiplier. RESET MODE should be worth using for what it does to time and precision &mdash; the moment where a mission you were losing becomes readable &mdash; rather than for the points. The combo caps at &times;8 for the same reason.</p>
+      </div>
+
+      <div class="content-section">
+        <h2>The five missions</h2>
+        <div class="missions">
+        <div class="mission">
+          <h3 class="mission-name">Quick Draw</h3>
+          <p class="mission-objective">Confirm 8 targets in 28 seconds</p>
+          <p>Contacts appear one or two at a time and break contact quickly. The exposure window narrows as you go, so the pressure comes from the window rather than from anything moving faster.</p>
+        </div>
+        <div class="mission">
+          <h3 class="mission-name">Hostage</h3>
+          <p class="mission-objective">Save 5 hostages in 40 seconds</p>
+          <p>A hostage is held on one side of the target, and the safe side is drawn as an arc you can see. Shoot the other side. A shot into the arc costs a life.</p>
+        </div>
+        <div class="mission">
+          <h3 class="mission-name">Sniper</h3>
+          <p class="mission-objective">Confirm 6 targets in 38 seconds</p>
+          <p>Contacts are distant and hard to tell apart. Scope to identify them — and lose everything outside the scope while you do. The tap area never shrinks below a finger's width, so this is an identification problem, not a dexterity one.</p>
+        </div>
+        <div class="mission">
+          <h3 class="mission-name">Crossfire</h3>
+          <p class="mission-objective">Confirm 10 targets in 45 seconds</p>
+          <p>Three lanes move at once and civilians cross in front of targets, so a contact you can see is not always a contact you have a shot at. Targets here shoot back: get into cover before the ring closes.</p>
+        </div>
+        <div class="mission">
+          <h3 class="mission-name">Boss</h3>
+          <p class="mission-objective">Break 3 phases in 60 seconds</p>
+          <p>Armoured and behind cover. It exposes for a moment, you fire, it answers — expose, fire, cover, reload. Four hits break a phase.</p>
+        </div>
+        </div>
+      </div>
+
+      <div class="content-section">
+        <h2>Scoring</h2>
+        <ul>
+          <li>A confirmed target is worth 100, plus up to 100 more for how centred the shot was.</li>
+          <li><strong>Quickshot</strong> adds 60 when you confirm a contact within half a second of it appearing.</li>
+          <li><strong>Bullseye</strong> adds 80 for a shot in the middle of the target.</li>
+          <li><strong>Hostage save</strong> adds 200.</li>
+          <li><strong>Multikill</strong> adds a flat 150 for three confirms inside 1.6 seconds.</li>
+          <li>The total is multiplied by your combo, up to &times;8, and by 1.5&times; during RESET MODE.</li>
+          <li>A miss costs 15 and resets the combo. So does letting a target break contact.</li>
+        </ul>
+        <p>Rank comes from the score alone, so the end screen can tell you how it was worked out: S at 26,000, A at 16,000, B at 9,000, C at 4,000, D below that.</p>
+      </div>
+
+      <div class="content-section">
+        <h2>Accessibility</h2>
+        <ul>
+          <li>The game is fully playable from the keyboard: arrows or WASD to aim, F or Enter to fire, Shift to scope, C for cover, Space for RESET MODE, P to pause. Those keys only act while the board has focus, so the rest of this page scrolls normally.</li>
+          <li>Targets and civilians differ in <em>shape</em> as well as colour, and the hostage's safe side is drawn as an arc rather than being something you learn by losing.</li>
+          <li>Every hit area is at least 44&nbsp;CSS pixels across however small the contact is drawn, so difficulty comes from exposure, identification and timing rather than from precision your device cannot give you.</li>
+          <li>With <code>prefers-reduced-motion</code> set, the screen does not flash, floating score does not drift, and nothing pulses. Scoring is unchanged.</li>
+          <li>The run pauses when you switch tabs, rotate the device or leave the window, and never resumes without you asking it to.</li>
+        </ul>
+      </div>
+
+      <div class="content-section">
+        <h2>Why a game is on a tracker site</h2>
+        <p>NextReset exists to tell you when something is happening. The honest answer is often "in four days", and there is nothing to do with that answer but come back later. RESET//SCOPE is what there is to do in the meantime. It does not touch the tracked data, it is not loaded on any other page, and none of it is on the homepage except three numbers.</p>
+        <p><a href="/">Back to the command center</a> for what is actually coming.</p>
+      </div>
+    </div>
+
+    <noscript>
+      <div class="noscript-note">
+        RESET//SCOPE needs JavaScript to run. Everything the rest of the site publishes works without it &mdash;
+        <a href="/">the trackers</a> carry their verified dates in the page itself.
+      </div>
+    </noscript>
+
+    <footer>
+      <nav class="footer-nav" aria-label="All trackers">
+        <a href="/fortnite/next-season/">Fortnite — season end</a>
+        <a href="/lol/next-patch/">League of Legends — next patch</a>
+        <a href="/valorant/last-patch/">VALORANT — last patch</a>
+        <a href="/cs2/last-update/">Counter-Strike 2 — last update</a>
+        <a href="/minecraft/last-release/">Minecraft — last release</a>
+        <a href="/roblox/status/">Roblox — status</a>
+        <a href="/gta/weekly-reset/">GTA Online — weekly reset</a>
+        <a href="/warzone/last-patch/">Warzone — last patch</a>
+        <a href="/genshin/next-banner/">Genshin Impact — next banner end</a>
+        <a href="/pubg/last-patch/">PUBG — last patch</a>
+        <a href="/red-dead-redemption-2/last-update/">Red Dead Redemption 2 — last update</a>
+        <a href="/ea-sports-fc/last-title-update/">EA SPORTS FC — last title update</a>
+      </nav>
+      <p>Checked automatically several times a day against official sources.</p>
+      <p>Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
+      <p><a href="/about/">About</a> &middot; <a href="/privacy/">Privacy Policy</a></p>
+    </footer>
+  </div>
+
+  <script src="/assets/player.js" defer></script>
+  <script src="/assets/scope-core.js" defer></script>
+  <script src="/assets/scope.js" defer></script>
+  <script src="/assets/scope-play.js" defer></script>
+</body>
+</html>

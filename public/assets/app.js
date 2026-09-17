@@ -705,6 +705,23 @@ function syncTrackButton(button, tracked) {
     }
 }
 
+// The arcade card's three numbers, from the same record the game writes. Dashes until then, because a
+// zero would claim the visitor has played and scored nothing.
+function paintArcadeCard() {
+    var state = player();
+    if (!state || !document.getElementById) return;
+    var records = state.arcadeRecords();
+    var cells = {
+        'arcade-score': records.gamesPlayed ? records.highScore.toLocaleString() : '—',
+        'arcade-mission': records.gamesPlayed ? String(records.highestMission) : '—',
+        'arcade-rank': records.bestRank || '—'
+    };
+    for (var id in cells) {
+        var node = document.getElementById(id);
+        if (node) node.textContent = cells[id];
+    }
+}
+
 // === THE LEAD BLOCK ===
 
 // Turns the lead block's absolute value into a live countdown, but only where the source stated an
@@ -772,6 +789,7 @@ async function initHomepage() {
     enableTracking();
     fillMyGames();
     initNextDrop();
+    paintArcadeCard();
 
     const cards = grid.querySelectorAll('.card[data-game]');
 

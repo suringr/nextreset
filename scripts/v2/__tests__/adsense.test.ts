@@ -40,10 +40,30 @@ const read = (page: string) => fs.readFileSync(path.join(PUBLIC, page), "utf8");
 
 test("the site has the pages this test thinks it has", () => {
     // If a page is added and this list is not, the coverage tests below would pass by never looking.
-    assert.equal(PAGES.length, 16, `expected 16 authored pages, found ${PAGES.length}: ${PAGES.join(", ")}`);
+    assert.equal(PAGES.length, 17, `expected 17 authored pages, found ${PAGES.length}: ${PAGES.join(", ")}`);
     assert.ok(PAGES.includes("404.html"));
     assert.ok(PAGES.includes("index.html"));
+    assert.ok(PAGES.includes("play/index.html"), "the arcade route");
     assert.equal(PAGES.filter(p => p.split("/").length === 3).length, 12, "expected 12 tracker pages");
+});
+
+test("the arcade carries no ad code at all", () => {
+    // Not a placement, not even the library. `/play/` is an interactive surface where a mis-tap costs a
+    // life, and Auto ads position anchors and vignettes from the account, which this repository cannot
+    // see. The only way to be sure nothing lands over the board is for the page not to load it.
+    assert.equal(carriesLoader("play/index.html"), false);
+    assert.equal(adsenseLoaderCount(read("play/index.html")), 0);
+    assert.equal(hasAdUnitMarkup(read("play/index.html")), false);
+    // And it says why, so the next person to add a page does not restore it by pattern-matching.
+    const rule = fs.readFileSync(path.join(ROOT, "scripts", "adsense.ts"), "utf8");
+    assert.match(rule, /play\/index\.html/);
+    assert.match(rule, /interactive surface/);
+});
+
+test("every other content page still carries the loader", () => {
+    // The exclusions are two, named, and deliberate. Nothing else may quietly join them.
+    const without = PAGES.filter(page => !carriesLoader(page));
+    assert.deepEqual(without.sort(), ["404.html", "play/index.html"]);
 });
 
 test("every content page carries the loader, exactly once", () => {
@@ -178,6 +198,8 @@ test("the consent platform is Google's, not code in this repository", () => {
 test("analytics survived the change", () => {
     // The loader was inserted next to the Analytics tag; this is the guard against landing on top of it.
     const withAnalytics = PAGES.filter(page => read(page).includes("G-YY6V5SR1DN"));
-    assert.equal(withAnalytics.length, 15, "Analytics should remain on all 15 content pages");
+    assert.equal(withAnalytics.length, 16, "Analytics should remain on all 16 content pages");
     assert.ok(!withAnalytics.includes("404.html"));
+    // The arcade has no ad code and still has analytics: they are separate decisions.
+    assert.ok(withAnalytics.includes("play/index.html"));
 });
