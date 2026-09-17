@@ -183,9 +183,15 @@ test("a page asking not to be indexed is heard however the tag is written", () =
         assert.equal(staticPageDecision(`<html><head>${tag}</head><body></body></html>`).state, "noindex", tag);
     }
 
+    // Several tags at once: a crawler combines what it finds and obeys the most restrictive, so the
+    // build has to read them all rather than the first one it comes across.
+    assert.equal(declaresNoindex(`<html><head><meta name="robots" content="index, follow"><meta name="robots" content="noindex"></head><body></body></html>`), true);
+    assert.equal(staticPageDecision(`<html><head><meta name="robots" content="index, follow"><meta name="robots" content="noindex"></head><body></body></html>`).state, "noindex");
+
     for (const tag of [
         ``,
         `<meta name="robots" content="index, follow">`,
+        `<meta name="robots" content="index"><meta name="robots" content="follow">`,
         `<meta name="googlebot" content="noindex">`,
         `<meta name="description" content="a page about noindex">`
     ]) {

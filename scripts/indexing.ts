@@ -57,8 +57,10 @@ export function indexStateFor(data: TrackerData | undefined, now: Date): IndexDe
  * round. Missing it would put the page back in the sitemap while it asks to stay out.
  */
 export function declaresNoindex(html: string): boolean {
-    const content = cheerio.load(html)(`meta[name="robots" i]`).attr("content") ?? "";
-    return /\bnoindex\b/i.test(content);
+    const $ = cheerio.load(html);
+    // Every matching tag, not the first: a crawler combines the directives it finds and obeys the most
+    // restrictive, so an index tag followed by a noindex one is a noindex page.
+    return $(`meta[name="robots" i]`).toArray().some(node => /\bnoindex\b/i.test($(node).attr("content") ?? ""));
 }
 
 /**
