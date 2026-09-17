@@ -15,6 +15,7 @@
  */
 import * as cheerio from "cheerio";
 import { TrackerData, escapeHtml, formatDate, formatDateTime, hasNoVerifiedValue, isFutureFacing, isUnanswered } from "./render-pages";
+import { cardRegion } from "./render-slots";
 
 /** Which part of the page a card belongs in. The data decides; the page does not choose. */
 export type CardGroup = "upcoming" | "recent" | "unknown";
@@ -223,15 +224,16 @@ export function cardBlocks(html: string): Array<{ block: string; index: number }
  */
 export function renderHomeHtml(html: string, read: (game: string, type: string) => TrackerData | undefined, now: Date = new Date()): HomeSummary {
     const matches = cardBlocks(html);
+    // A homepage with no cards is not a homepage. Asked here rather than left to the region, because a
+    // page that declares a cards region would otherwise be allowed to render an empty one.
     if (matches.length === 0) throw new Error("home: no cards found");
     const eol = html.includes("\r\n") ? "\r\n" : "\n";
 
-    // The cards are rewritten as one region, so anything else living between them would be lost. There
-    // is nothing else there today; if that changes, the build says so instead of quietly dropping it.
-    for (let i = 1; i < matches.length; i++) {
-        const between = html.slice(matches[i - 1].index + matches[i - 1].block.length, matches[i].index);
-        if (between.trim() !== "") throw new Error(`home: unexpected content between cards: ${JSON.stringify(between.trim().slice(0, 60))}`);
-    }
+    // How much of the page the renderer may rewrite. A page that declares a cards region hands over
+    // everything inside it, so headings and group wrappers can be emitted freely; a page that does not
+    // — the homepage as authored before V4 — gives up only the span from the first card to the last,
+    // and anything found between two cards is content this rewrite would destroy, so it throws.
+    const region = cardRegion(html, matches, "home");
 
     const cards = matches.map(match => {
         const card = readCard(match.block);
@@ -253,9 +255,12 @@ export function renderHomeHtml(html: string, read: (game: string, type: string) 
         parts.push(renderCardHtml(entry.card, entry.value, entry.data, eol));
     }
 
-    const start = matches[0].index;
-    const end = matches[matches.length - 1].index + matches[matches.length - 1].block.length;
-    // The first card was already indented by the line it sat on, so the first part sheds its own indent.
-    const body = parts.join(`${eol}${eol}`).replace(/^ +/, "");
-    return { html: html.slice(0, start) + body + html.slice(end), counts };
+    // In a region the renderer owns, the replacement starts on a line of its own. Where it replaces a
+    // span that began with the first card, that card was already indented by the line it sat on, so the
+    // first part sheds its own indent.
+    const joined = parts.join(`${eol}${eol}`);
+    const body = region.owned
+        ? `${eol}${joined}${eol}${region.indent}`
+        : joined.replace(/^ +/, "");
+    return { html: html.slice(0, region.start) + body + html.slice(region.end), counts };
 }

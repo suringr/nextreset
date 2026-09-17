@@ -239,9 +239,48 @@ test("a tracker container that cannot be read fails the build instead of publish
     assert.throws(() => trackerOf(broken, "lol/next-patch"), /no readable data-game\/data-type/);
 });
 
-test("template drift fails the build instead of publishing a half-rendered page", () => {
-    const drifted = PAGE.replace(`<div class="countdown-value countdown-skeleton">--:--:--</div>`, `<div class="countdown-value">tbd</div>`);
-    assert.throws(() => renderTrackerHtml(drifted, FRESH_DAY, "lol/next-patch", NOW), /expected exactly one/);
+test("a slot the page no longer has fails the build instead of publishing a half-rendered page", () => {
+    // Drift that matters: the element the value is written into is gone, so rendering would silently
+    // publish a page with no value on it.
+    const drifted = PAGE.replace(`<div class="countdown-value countdown-skeleton">--:--:--</div>`, `<p>tbd</p>`);
+    assert.throws(() => renderTrackerHtml(drifted, FRESH_DAY, "lol/next-patch", NOW), /expected exactly one "answer-value" slot/);
+});
+
+test("a slot the page has twice fails the build rather than the renderer guessing", () => {
+    const duplicated = PAGE.replace(
+        `<div class="countdown-value countdown-skeleton">--:--:--</div>`,
+        `<div class="countdown-value countdown-skeleton">--:--:--</div><div class="countdown-value">--:--:--</div>`
+    );
+    assert.throws(() => renderTrackerHtml(duplicated, FRESH_DAY, "lol/next-patch", NOW), /expected exactly one "answer-value" slot/);
+});
+
+test("rewording or reformatting a placeholder is not drift", () => {
+    // What the renderer needs is the element, not the words inside it. Before the slots existed, every
+    // one of these edits broke the build, which is why the pages could not be redesigned.
+    const reworded = PAGE
+        .replace(`<div class="countdown-label">Checking official sources...</div>`, `<div class="countdown-label">Loading</div>`)
+        .replace(`<div class="countdown-value countdown-skeleton">--:--:--</div>`, `<div class="countdown-skeleton countdown-value">please wait</div>`)
+        .replace(`<span class="info-value" id="source">...</span>`, `<span id="source" class="info-value">unknown</span>`)
+        .replace(`<span id="confidence" class="confidence">...</span>`, `<span  class='confidence'  id='confidence'>-</span>`);
+
+    const html = renderTrackerHtml(reworded, FRESH_DAY, "lol/next-patch", NOW);
+    assert.ok(html.includes("September 23, 2026"), "the verified value is still published");
+    assert.ok(html.includes(`<div class="countdown-label">Official date</div>`));
+    assert.ok(html.includes(`id="source"`) && html.includes("Riot Games"), "the source is still attributed");
+    assert.ok(html.includes(`confidence-high`), "the confidence is still rendered");
+    assert.ok(!html.includes("please wait") && !html.includes("unknown"), "no placeholder survived");
+});
+
+test("a page that declares its slots is rendered through them, whatever else the markup says", () => {
+    // The V4 templates say what each element is. A declared slot wins over the structural fallback, so
+    // a redesign can move the value into an element that looks nothing like a countdown box.
+    const declared = PAGE.replace(
+        `<div class="countdown-value countdown-skeleton">--:--:--</div>`,
+        `<output data-nr-slot="answer-value">--:--:--</output>`
+    );
+    const html = renderTrackerHtml(declared, FRESH_DAY, "lol/next-patch", NOW);
+    assert.ok(html.includes("September 23, 2026"), "the declared slot received the value");
+    assert.ok(!html.includes("--:--:--"), "the placeholder is gone");
 });
 
 test("formatting and source naming are deterministic", () => {
