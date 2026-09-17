@@ -102,38 +102,44 @@
         </div>
       </div>
 
-      <!-- About -->
-      <div class="content-section">
-        <p>This page monitors the current Roblox platform service status. Data comes directly from Roblox's official hosted status API, which reports real-time operational status across all Roblox services.</p>
-      </div>
-
-      <!-- Countdown -->
+      <!-- The answer. It comes straight after the heading now: this page exists to answer one
+           question, and it used to open with a paragraph about how the tracker works. -->
       <div class="countdown-box" id="countdown">
-        <div class="countdown-label">Checking official sources...</div>
-        <div class="countdown-value countdown-skeleton">--:--:--</div>
+        <div class="countdown-label" data-nr-slot="answer-label">Checking official sources...</div>
+        <div class="countdown-value countdown-skeleton" data-nr-slot="answer-value">--:--:--</div>
       </div>
 
-      <!-- Info Panel -->
-      <div class="info-panel">
-        <div class="info-row">
-          <span class="info-label">Source</span>
-          <span class="info-value" id="source">...</span>
+      <!-- How we know: the source, how sure the pipeline is, and the two times that are not the same
+           question — when the source last confirmed the value, and when we last tried. -->
+      <section class="evidence">
+        <h2 class="section-heading">How we know</h2>
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">Source</span>
+            <span class="info-value" id="source" data-nr-slot="source">...</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Confidence</span>
+            <span id="confidence" class="confidence" data-nr-slot="confidence">...</span>
+          </div>
+          <div class="info-row" data-nr-slot="meta-rows">
+            <span class="info-label">Last Updated</span>
+            <span class="info-value" id="last-updated">...</span>
+          </div>
         </div>
-        <div class="info-row">
-          <span class="info-label">Confidence</span>
-          <span id="confidence" class="confidence">...</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Last Updated</span>
-          <span class="info-value" id="last-updated">...</span>
-        </div>
-      </div>
 
-      <!-- Notes -->
-      <div id="notes" class="notes" style="display: none;"></div>
+        <!-- Notes -->
+        <div id="notes" class="notes" data-nr-slot="notes" style="display: none;"></div>
+      </section>
 
       <!-- Verified data, rendered at build time from the knowledge store -->
-      <div id="verified-data"></div>
+      <div id="verified-data" data-nr-slot="verified-data"></div>
+
+      <!-- About -->
+      <div class="content-section">
+        <h2>About this tracker</h2>
+        <p>This page monitors the current Roblox platform service status. Data comes directly from Roblox's official hosted status API, which reports real-time operational status across all Roblox services.</p>
+      </div>
 
       <!-- What Is It -->
       <div class="content-section">

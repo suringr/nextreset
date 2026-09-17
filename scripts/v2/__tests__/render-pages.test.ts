@@ -9,6 +9,8 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { TrackerData, blocksFor, formatDate, formatDateTime, renderSite, renderTrackerHtml, sourceName, stateLine, trackerOf } from "../../render-pages";
+import { SlotName, locateSlot } from "../../render-slots";
+import { gamePages } from "../../update-game-pages";
 
 const PAGE = fs.readFileSync(path.join(__dirname, "..", "..", "..", "public", "lol", "next-patch", "index.html"), "utf8");
 
@@ -239,29 +241,31 @@ test("a tracker container that cannot be read fails the build instead of publish
     assert.throws(() => trackerOf(broken, "lol/next-patch"), /no readable data-game\/data-type/);
 });
 
+/** The answer slot exactly as the page writes it today, found the way the renderer finds it. */
+const ANSWER_SLOT = locateSlot(PAGE, "answer-value", "lol/next-patch").source;
+
 test("a slot the page no longer has fails the build instead of publishing a half-rendered page", () => {
     // Drift that matters: the element the value is written into is gone, so rendering would silently
     // publish a page with no value on it.
-    const drifted = PAGE.replace(`<div class="countdown-value countdown-skeleton">--:--:--</div>`, `<p>tbd</p>`);
+    const drifted = PAGE.replace(ANSWER_SLOT, `<p>tbd</p>`);
     assert.throws(() => renderTrackerHtml(drifted, FRESH_DAY, "lol/next-patch", NOW), /expected exactly one "answer-value" slot/);
 });
 
 test("a slot the page has twice fails the build rather than the renderer guessing", () => {
-    const duplicated = PAGE.replace(
-        `<div class="countdown-value countdown-skeleton">--:--:--</div>`,
-        `<div class="countdown-value countdown-skeleton">--:--:--</div><div class="countdown-value">--:--:--</div>`
-    );
+    const duplicated = PAGE.replace(ANSWER_SLOT, ANSWER_SLOT + ANSWER_SLOT);
     assert.throws(() => renderTrackerHtml(duplicated, FRESH_DAY, "lol/next-patch", NOW), /expected exactly one "answer-value" slot/);
 });
 
 test("rewording or reformatting a placeholder is not drift", () => {
     // What the renderer needs is the element, not the words inside it. Before the slots existed, every
     // one of these edits broke the build, which is why the pages could not be redesigned.
+    // Each slot is replaced with a differently-spelled element carrying no slot attribute at all, so
+    // the structural fallback is what has to find it.
     const reworded = PAGE
-        .replace(`<div class="countdown-label">Checking official sources...</div>`, `<div class="countdown-label">Loading</div>`)
-        .replace(`<div class="countdown-value countdown-skeleton">--:--:--</div>`, `<div class="countdown-skeleton countdown-value">please wait</div>`)
-        .replace(`<span class="info-value" id="source">...</span>`, `<span id="source" class="info-value">unknown</span>`)
-        .replace(`<span id="confidence" class="confidence">...</span>`, `<span  class='confidence'  id='confidence'>-</span>`);
+        .replace(locateSlot(PAGE, "answer-label", "p").source, `<div class="countdown-label">Loading</div>`)
+        .replace(ANSWER_SLOT, `<div class="countdown-skeleton countdown-value">please wait</div>`)
+        .replace(locateSlot(PAGE, "source", "p").source, `<span id="source" class="info-value">unknown</span>`)
+        .replace(locateSlot(PAGE, "confidence", "p").source, `<span  class='confidence'  id='confidence'>-</span>`);
 
     const html = renderTrackerHtml(reworded, FRESH_DAY, "lol/next-patch", NOW);
     assert.ok(html.includes("September 23, 2026"), "the verified value is still published");
@@ -274,10 +278,7 @@ test("rewording or reformatting a placeholder is not drift", () => {
 test("a page that declares its slots is rendered through them, whatever else the markup says", () => {
     // The V4 templates say what each element is. A declared slot wins over the structural fallback, so
     // a redesign can move the value into an element that looks nothing like a countdown box.
-    const declared = PAGE.replace(
-        `<div class="countdown-value countdown-skeleton">--:--:--</div>`,
-        `<output data-nr-slot="answer-value">--:--:--</output>`
-    );
+    const declared = PAGE.replace(ANSWER_SLOT, `<output data-nr-slot="answer-value">--:--:--</output>`);
     const html = renderTrackerHtml(declared, FRESH_DAY, "lol/next-patch", NOW);
     assert.ok(html.includes("September 23, 2026"), "the declared slot received the value");
     assert.ok(!html.includes("--:--:--"), "the placeholder is gone");
@@ -295,4 +296,82 @@ test("formatting and source naming are deterministic", () => {
     assert.equal(stateLine(undefined), "No verified value is available right now");
     assert.equal(blocksFor(FRESH_EXACT, NOW).precision, "Exact time");
     assert.equal(blocksFor({ ...FRESH_DAY, precision: undefined }, NOW).precision, undefined, "an unknown precision is not claimed");
+});
+
+// === V4 PR 5: the tracker shell ===
+
+test("every tracker page declares all seven of its slots", () => {
+    // Declared rather than inferred: the structural fallback exists for pages authored before slots,
+    // and the twelve generated pages are not those pages any more. A page that stopped declaring one
+    // would still render through the fallback, so this is what keeps the templates honest.
+    const slots: SlotName[] = ["answer-label", "answer-value", "source", "confidence", "meta-rows", "notes", "verified-data"];
+    for (const page of gamePages) {
+        const html = fs.readFileSync(path.join(__dirname, "..", "..", "..", "public", page.path), "utf8");
+        for (const slot of slots) {
+            const declared = (html.match(new RegExp(`data-nr-slot="${slot}"`, "g")) ?? []).length;
+            assert.equal(declared, 1, `${page.path} declares ${slot} ${declared} times`);
+        }
+    }
+});
+
+test("the answer comes before the explanation of how the tracker works", () => {
+    // The page exists to answer one question and used to open with a paragraph about the tracker.
+    for (const page of gamePages) {
+        const html = fs.readFileSync(path.join(__dirname, "..", "..", "..", "public", page.path), "utf8");
+        const h1 = html.indexOf("<h1");
+        const answer = html.indexOf(`id="countdown"`);
+        const evidence = html.indexOf(`class="evidence"`);
+        const data = html.indexOf(`id="verified-data"`);
+        const about = html.indexOf("About this tracker");
+        const faq = html.indexOf("Frequently Asked Questions");
+        assert.ok(h1 < answer, `${page.path}: the answer should follow the heading`);
+        assert.ok(answer < evidence, `${page.path}: the answer should come before its evidence`);
+        assert.ok(evidence < data, `${page.path}: the evidence should come before the data blocks`);
+        assert.ok(data < about, `${page.path}: the verified data should come before the prose`);
+        assert.ok(about < faq, `${page.path}: the FAQ stays last`);
+    }
+});
+
+test("the evidence panel is named, and still carries every fact it carried before", () => {
+    const html = fs.readFileSync(path.join(__dirname, "..", "..", "..", "public", "cs2", "last-update", "index.html"), "utf8");
+    assert.ok(html.includes(">How we know<"), "the panel says what it is");
+    const rendered = renderTrackerHtml(html, FRESH_EXACT, "cs2/last-update", NOW);
+    for (const label of ["Source", "Confidence", "Last Verified", "Last Checked", "Status"]) {
+        assert.ok(rendered.includes(`>${label}<`), `${label} is still published`);
+    }
+    assert.ok(rendered.includes(`id="last-verified"`), "the verified time keeps its own id");
+    assert.ok(rendered.includes(`id="last-updated"`), "and the checked time keeps the id app.js rewrites");
+});
+
+test("the answer box is built for the longest thing it ever holds", () => {
+    // "No official date announced" is longer than any date, and at 320px it is what decides the box.
+    // Asserted as a CSS constraint rather than a screenshot: a clamped size and a wrap rule.
+    const css = fs.readFileSync(path.join(__dirname, "..", "..", "..", "public", "assets", "styles.v2.css"), "utf8");
+    const value = css.match(/\.countdown-value\s*\{[^}]*\}/)![0];
+    assert.match(value, /overflow-wrap:\s*break-word/, "a long value wraps rather than overflowing");
+    const unavailable = css.match(/\.countdown-value\.unavailable\s*\{[^}]*\}/)![0];
+    assert.match(unavailable, /font-size:\s*clamp\(/, "the sentence case is sized fluidly, not at the display size");
+
+    // And the renderer really does put that sentence there.
+    const unanswered: TrackerData = { ...FRESH_DAY, type: "next-season", status: "stale", nextEventUtc: "2026-06-06T00:00:00.000Z", last_success_at_utc: "2026-04-05T21:30:13.065Z" };
+    const html = fs.readFileSync(path.join(__dirname, "..", "..", "..", "public", "fortnite", "next-season", "index.html"), "utf8");
+    const out = renderTrackerHtml(html, unanswered, "fortnite/next-season", NOW);
+    assert.ok(out.includes("No official date announced"));
+    assert.ok(out.includes("countdown-value unavailable"), "and styles it as the sentence it is");
+});
+
+test("the regenerated pages kept everything Publishing V2 put on them", () => {
+    for (const page of gamePages) {
+        const html = fs.readFileSync(path.join(__dirname, "..", "..", "..", "public", page.path), "utf8");
+        assert.ok(html.includes(`<link rel="canonical" href="https://nextreset.co/${page.game}/${page.type}/">`), `${page.path}: canonical`);
+        assert.ok(html.includes(`id="countdown-container" data-game="${page.game}" data-type="${page.type}"`), `${page.path}: tracker container`);
+        assert.ok(html.includes("adsbygoogle.js"), `${page.path}: AdSense loader`);
+        assert.ok(html.includes("G-YY6V5SR1DN"), `${page.path}: analytics`);
+        assert.ok(html.includes("<noscript>"), `${page.path}: noscript fallback`);
+        assert.ok(html.includes(`class="breadcrumbs"`), `${page.path}: breadcrumb`);
+        assert.ok(html.includes(`class="footer-nav"`), `${page.path}: footer navigation`);
+        assert.equal((html.match(/"@type": "FAQPage"/g) ?? []).length, 1, `${page.path}: FAQ schema`);
+        assert.equal((html.match(/"@type": "BreadcrumbList"/g) ?? []).length, 1, `${page.path}: breadcrumb schema`);
+        assert.equal((html.match(/<h1/g) ?? []).length, 1, `${page.path}: exactly one h1`);
+    }
 });

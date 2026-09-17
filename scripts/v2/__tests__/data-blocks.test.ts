@@ -10,11 +10,19 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { emptyKnowledge } from "../domain";
+import { locateSlot } from "../../render-slots";
 import { GameKnowledge, KnowledgeEvent, MIN_HISTORY_ROWS, blocksFor, computedOccurrences, loadKnowledge, regionalTimes, renderBlocks } from "../../render-data-blocks";
 import { renderSite, tidyNotes } from "../../render-pages";
 
 const NOW = new Date("2026-09-16T12:00:00Z");
 const ROOT = path.join(__dirname, "..", "..", "..");
+
+/** The data slot as the tracker template writes it, so this file does not paste a copy of the markup. */
+const EMPTY_DATA_SLOT = locateSlot(
+    fs.readFileSync(path.join(ROOT, "public", "lol", "next-patch", "index.html"), "utf8"),
+    "verified-data",
+    "lol/next-patch"
+).source;
 const format = (iso: string, precision?: string) => (precision === "exact" ? `${iso} (exact)` : iso.slice(0, 10));
 
 function patch(version: string, at: string, status = "ended"): KnowledgeEvent {
@@ -259,7 +267,7 @@ test("renderSite fills the data slot from the store, and leaves it empty without
     assert.ok(withStore.includes("September 23, 2026"), "and the headline value is still there");
 
     const withoutStore = make(false);
-    assert.ok(withoutStore.includes(`<div id="verified-data"></div>`), "no store means an untouched, empty slot");
+    assert.ok(withoutStore.includes(EMPTY_DATA_SLOT), "no store means an untouched, empty slot");
     assert.ok(withoutStore.includes("September 23, 2026"), "milestone 1 output is unaffected");
 });
 
@@ -302,7 +310,7 @@ test("a corrupt knowledge file costs a page its blocks, never the build", () => 
     renderSite(dist, NOW, root);
     const html = fs.readFileSync(path.join(dist, "lol", "next-patch", "index.html"), "utf8");
     assert.ok(html.includes("September 23, 2026"), "the page is published with its value");
-    assert.ok(html.includes(`<div id="verified-data"></div>`), "and simply without blocks");
+    assert.ok(html.includes(EMPTY_DATA_SLOT), "and simply without blocks");
 });
 
 test("history does not claim a release was confirmed when the evidence announced a plan", () => {
