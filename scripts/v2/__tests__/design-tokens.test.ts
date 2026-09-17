@@ -175,13 +175,19 @@ test("the side gutter is set once, and never by a shorthand that could zero it",
     assert.match(container[0], /padding-block:/);
 });
 
-test("reduced motion is honoured, and the two animations the site has are the two it stops", () => {
+test("reduced motion is honoured, and every animation the site has is one it stops", () => {
     const css = authoredCss();
     assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
-    const animations = [...css.matchAll(/@keyframes\s+([a-z-]+)/g)].map(m => m[1]);
-    assert.deepEqual(animations.sort(), ["nr-pulse", "nr-skeleton"]);
+    // Named rather than counted, so adding one is a decision about whether it stops, not a number to
+    // bump. Every one of these is decorative: the colour and the text carry the meaning without them.
+    const animations = [...css.matchAll(/@keyframes\s+([a-z-]+)/g)].map(m => m[1]).sort();
+    assert.deepEqual(animations, ["nr-pulse", "nr-shake", "nr-skeleton"]);
+
     const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
-    assert.match(reduced, /animation-duration:\s*\.001ms\s*!important/);
+    assert.match(reduced, /animation-duration:\s*\.001ms\s*!important/,
+        "the blanket rule stops every animation, including any added later");
+    // The board's hit shake is the one that is opted IN to instead, so it never plays by default.
+    assert.match(css, /@media \(prefers-reduced-motion: no-preference\)[\s\S]{0,120}nr-shake/);
 });
 
 test("keyboard focus is visible", () => {
@@ -221,7 +227,7 @@ test("the served stylesheet keeps every rule and none of the prose", () => {
         "every rule survived"
     );
     assert.equal((min.match(/@media/g) || []).length, (STYLESHEET.match(/@media/g) || []).length);
-    assert.equal((min.match(/@keyframes/g) || []).length, 2);
+    assert.equal((min.match(/@keyframes/g) || []).length, (STYLESHEET.match(/@keyframes/g) || []).length);
     assert.ok(min.length < STYLESHEET.length, "and it is smaller");
 });
 
