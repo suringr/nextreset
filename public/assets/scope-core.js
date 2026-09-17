@@ -409,7 +409,109 @@
         return mission.expose[0] + (mission.expose[1] - mission.expose[0]) * t;
     }
 
+    // ─────────────────────────────── progression ───────────────────────────────
+
+    /**
+     * What earns XP, in one place.
+     *
+     * A table rather than numbers scattered through the game, because "what earns XP" is a question
+     * somebody will ask and the answer has to be auditable — the /play/ page prints this list. Every
+     * entry is something a player DID. Nothing here can be earned by loading a page, refreshing one, or
+     * coming back: the brief is explicit that this must not become a fake engagement system, and the
+     * only way to keep that true is for the list to be short enough to read.
+     */
+    var XP_AWARDS = [
+        { id: 'completed-run', xp: 40, why: 'Finishing a run, however it ends' },
+        { id: 'mission-cleared', xp: 25, why: 'Each mission you clear in that run', repeats: true },
+        { id: 'perfect-mission', xp: 35, why: 'Clearing a mission without losing a life or missing a shot', repeats: true },
+        { id: 'new-high-score', xp: 50, why: 'Beating your own best score' },
+        { id: 'first-track', xp: 20, why: 'Tracking your first game' }
+    ];
+
+    var XP_BY_ID = {};
+    for (var x = 0; x < XP_AWARDS.length; x++) XP_BY_ID[XP_AWARDS[x].id] = XP_AWARDS[x];
+
+    /** The XP a finished run earns, itemised so the end screen can show its working. */
+    function xpForRun(summary) {
+        var s = summary || {};
+        var items = [];
+        var add = function (id, times) {
+            var award = XP_BY_ID[id];
+            if (!award || times <= 0) return;
+            items.push({ id: id, why: award.why, times: times, xp: award.xp * times });
+        };
+        add('completed-run', 1);
+        add('mission-cleared', Math.max(0, Math.floor(s.missionsCleared || 0)));
+        add('perfect-mission', Math.max(0, Math.floor(s.perfectMissions || 0)));
+        if (s.newHighScore) add('new-high-score', 1);
+        var total = 0;
+        for (var i = 0; i < items.length; i++) total += items[i].xp;
+        return { items: items, total: total };
+    }
+
+    /**
+     * The achievements a run can earn, and what each one asks for.
+     *
+     * Deliberately few, and every one is a thing you have to do on purpose. `check` reads a run summary
+     * and nothing else, so an achievement cannot be granted by anything but play.
+     */
+    var ACHIEVEMENTS = [
+        {
+            id: 'first-run',
+            title: 'First contact',
+            how: 'Finish a run.',
+            check: function () { return true; }
+        },
+        {
+            id: 'all-missions',
+            title: 'Full rotation',
+            how: 'Clear all five missions in one run.',
+            check: function (s) { return s.missionsCleared >= MISSIONS.length; }
+        },
+        {
+            id: 'combo-cap',
+            title: 'Unbroken',
+            how: 'Reach the maximum combo of ×' + COMBO_CAP + '.',
+            check: function (s) { return s.bestCombo >= COMBO_CAP; }
+        },
+        {
+            id: 'clean-hands',
+            title: 'Clean hands',
+            how: 'Finish a run without hitting a civilian or a hostage.',
+            check: function (s) { return s.missionsCleared >= 1 && !s.hurtInnocents; }
+        },
+        {
+            id: 'sharpshooter',
+            title: 'Sharpshooter',
+            how: 'Finish a run at 80% accuracy or better, over at least 15 shots.',
+            check: function (s) { return s.fired >= 15 && s.hits / s.fired >= 0.8; }
+        },
+        {
+            id: 'perfectionist',
+            title: 'Perfectionist',
+            how: 'Clear a mission without losing a life or missing a shot.',
+            check: function (s) { return (s.perfectMissions || 0) >= 1; }
+        }
+    ];
+
+    /** Which achievements a run summary earns. Granting them once is the player record's job. */
+    function achievementsFor(summary) {
+        var earned = [];
+        for (var i = 0; i < ACHIEVEMENTS.length; i++) {
+            if (ACHIEVEMENTS[i].check(summary || {})) earned.push(ACHIEVEMENTS[i].id);
+        }
+        return earned;
+    }
+
+    /** Combo milestones worth telling the player about. Not every increment deserves a shout. */
+    var COMBO_MILESTONES = [3, 5, COMBO_CAP];
+
     global.ResetScopeCore = {
+        XP_AWARDS: XP_AWARDS,
+        ACHIEVEMENTS: ACHIEVEMENTS,
+        COMBO_MILESTONES: COMBO_MILESTONES,
+        xpForRun: xpForRun,
+        achievementsFor: achievementsFor,
         WORLD: WORLD,
         MIN_TAP_PX: MIN_TAP_PX,
         COMBO_CAP: COMBO_CAP,

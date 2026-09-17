@@ -115,6 +115,8 @@
           <div class="record"><small>Missions cleared</small><b id="record-mission">0</b></div>
           <div class="record"><small>Best rank</small><b id="record-rank">&mdash;</b></div>
           <div class="record"><small>Runs played</small><b id="record-played">0</b></div>
+          <div class="record"><small>Level</small><b id="record-level">1</b></div>
+          <div class="record"><small>XP</small><b id="record-xp">0</b></div>
         </div>
         <p class="data-note">Kept in this browser only. There is no account, no server and no leaderboard &mdash; so there is no global ranking to show you, and we are not going to invent one.</p>
       </section>
@@ -202,6 +204,61 @@
           <li>Every hit area is at least 44&nbsp;CSS pixels across however small the contact is drawn, so difficulty comes from exposure, identification and timing rather than from precision your device cannot give you.</li>
           <li>With <code>prefers-reduced-motion</code> set, the screen does not flash, floating score does not drift, and nothing pulses. Scoring is unchanged.</li>
           <li>The run pauses when you switch tabs, rotate the device or leave the window, and never resumes without you asking it to.</li>
+        </ul>
+      </div>
+
+      <div class="content-section">
+        <h2>What earns XP</h2>
+        <p>XP comes from things you did, and the list is short enough to print in full. There is nothing here for opening the page, reloading it, or coming back tomorrow &mdash; a number that goes up for showing up is not progress, it is a habit meter.</p>
+        <div class="table-wrap">
+          <table class="controls-table">
+            <thead><tr><th scope="col">XP</th><th scope="col">For</th></tr></thead>
+            <tbody>
+            <tr><th scope="row">+40</th><td>Finishing a run, however it ends</td></tr>
+            <tr><th scope="row">+25 each</th><td>Each mission you clear in that run</td></tr>
+            <tr><th scope="row">+35 each</th><td>Clearing a mission without losing a life or missing a shot</td></tr>
+            <tr><th scope="row">+50</th><td>Beating your own best score</td></tr>
+            <tr><th scope="row">+20</th><td>Tracking your first game</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="data-note">Levels arrive at 100, 300, 700, 1,400, 2,600, 4,500, 7,200, 11,000 and 16,000 XP.</p>
+      </div>
+
+      <div class="content-section">
+        <h2>Achievements</h2>
+        <p>Six, each of which has to be done on purpose. They are kept in this browser with everything else.</p>
+        <ul class="achievements">
+          <li class="achievement" data-achievement="first-run">
+            <span class="achievement-title">First contact</span>
+            <span class="achievement-state">Locked</span>
+            <span class="achievement-how">Finish a run.</span>
+          </li>
+          <li class="achievement" data-achievement="all-missions">
+            <span class="achievement-title">Full rotation</span>
+            <span class="achievement-state">Locked</span>
+            <span class="achievement-how">Clear all five missions in one run.</span>
+          </li>
+          <li class="achievement" data-achievement="combo-cap">
+            <span class="achievement-title">Unbroken</span>
+            <span class="achievement-state">Locked</span>
+            <span class="achievement-how">Reach the maximum combo of ×8.</span>
+          </li>
+          <li class="achievement" data-achievement="clean-hands">
+            <span class="achievement-title">Clean hands</span>
+            <span class="achievement-state">Locked</span>
+            <span class="achievement-how">Finish a run without hitting a civilian or a hostage.</span>
+          </li>
+          <li class="achievement" data-achievement="sharpshooter">
+            <span class="achievement-title">Sharpshooter</span>
+            <span class="achievement-state">Locked</span>
+            <span class="achievement-how">Finish a run at 80% accuracy or better, over at least 15 shots.</span>
+          </li>
+          <li class="achievement" data-achievement="perfectionist">
+            <span class="achievement-title">Perfectionist</span>
+            <span class="achievement-state">Locked</span>
+            <span class="achievement-how">Clear a mission without losing a life or missing a shot.</span>
+          </li>
         </ul>
       </div>
 

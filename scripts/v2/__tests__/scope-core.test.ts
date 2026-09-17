@@ -17,6 +17,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import * as fs from "fs";
 import * as path from "path";
+import { ACHIEVEMENTS, XP_AWARDS } from "../../design/progression";
 import { staticPageDecision } from "../../indexing";
 import { gamePages } from "../../update-game-pages";
 import { PLAY_PATH, PLAY_URL } from "../../update-play-page";
@@ -435,4 +436,89 @@ test("the five missions the page describes are the five the game runs", () => {
         assert.ok(play.includes(mission), `the page does not state "${mission}"`);
         assert.ok(core.includes(count), `the rules do not encode "${count}"`);
     }
+});
+
+// === V4 PR 8: progression ===
+
+test("the XP table the page prints is the one the game awards", () => {
+    // scope-core.js is the runtime copy and cannot be imported by the build, so the two are held
+    // together here. A page that advertises a different number from the one it grants is a lie.
+    const runtime = (core as unknown as { XP_AWARDS: Array<{ id: string; xp: number; why: string; repeats?: boolean }> }).XP_AWARDS;
+    assert.deepEqual(
+        runtime.map(a => ({ id: a.id, xp: a.xp, why: a.why, repeats: !!a.repeats })),
+        XP_AWARDS.map(a => ({ id: a.id, xp: a.xp, why: a.why, repeats: !!a.repeats }))
+    );
+});
+
+test("the achievement list the page prints is the one the game grants", () => {
+    const runtime = (core as unknown as { ACHIEVEMENTS: Array<{ id: string; title: string; how: string }> }).ACHIEVEMENTS;
+    assert.deepEqual(runtime.map(a => ({ id: a.id, title: a.title, how: a.how })),
+        ACHIEVEMENTS.map(a => ({ id: a.id, title: a.title, how: a.how })));
+    // And the page really does print every one, with what it asks for.
+    const play = fs.readFileSync(path.join(ROOT, "public", PLAY_PATH), "utf8");
+    for (const a of ACHIEVEMENTS) {
+        assert.ok(play.includes(`data-achievement="${a.id}"`), `${a.id} is not on the page`);
+        assert.ok(play.includes(a.title), `${a.title} is not named`);
+    }
+    // Locked by default, so the page reads correctly before any run and with no record behind it.
+    assert.equal((play.match(/>Locked</g) ?? []).length, ACHIEVEMENTS.length);
+});
+
+test("XP is only ever for something that was done", () => {
+    const runtime = (core as unknown as {
+        XP_AWARDS: Array<{ id: string; why: string }>;
+        xpForRun(s: Record<string, unknown>): { items: Array<{ id: string; xp: number; times: number }>; total: number };
+    });
+    // Nothing in the table is earned by arriving, reloading, or returning. The brief is explicit that
+    // this must not become a fake engagement system, and a short auditable list is how that stays true.
+    for (const award of runtime.XP_AWARDS) {
+        assert.ok(!/visit|open|return|daily|login|log in|refresh/i.test(award.why),
+            `"${award.why}" reads like XP for showing up`);
+    }
+    // A run that did nothing still earns the finishing award and nothing else.
+    const nothing = runtime.xpForRun({ missionsCleared: 0, perfectMissions: 0, newHighScore: false });
+    assert.deepEqual(nothing.items.map(i => i.id), ["completed-run"]);
+    assert.equal(nothing.total, 40);
+});
+
+test("the XP a run earns is itemised, and adds up", () => {
+    const runtime = (core as unknown as { xpForRun(s: Record<string, unknown>): { items: Array<{ id: string; xp: number; times: number }>; total: number } });
+    const awarded = runtime.xpForRun({ missionsCleared: 5, perfectMissions: 2, newHighScore: true });
+    assert.deepEqual(awarded.items.map(i => i.id), ["completed-run", "mission-cleared", "perfect-mission", "new-high-score"]);
+    assert.equal(awarded.items.find(i => i.id === "mission-cleared")!.times, 5);
+    assert.equal(awarded.total, awarded.items.reduce((sum, i) => sum + i.xp, 0));
+    assert.equal(awarded.total, 40 + 125 + 70 + 50);
+    // A negative or nonsense count cannot mint XP.
+    assert.equal(runtime.xpForRun({ missionsCleared: -5, perfectMissions: -1 }).total, 40);
+});
+
+test("an achievement is earned by play and by nothing else", () => {
+    const runtime = (core as unknown as { achievementsFor(s: Record<string, unknown>): string[] });
+    // A run that finished and did nothing notable earns exactly one.
+    assert.deepEqual(runtime.achievementsFor({ missionsCleared: 0, bestCombo: 1, fired: 2, hits: 0, perfectMissions: 0, hurtInnocents: true }), ["first-run"]);
+    // Clean hands needs a mission cleared as well as nobody hurt, so idling cannot earn it.
+    assert.ok(!runtime.achievementsFor({ missionsCleared: 0, hurtInnocents: false, fired: 0, hits: 0, bestCombo: 1 }).includes("clean-hands"));
+    assert.ok(runtime.achievementsFor({ missionsCleared: 1, hurtInnocents: false, fired: 0, hits: 0, bestCombo: 1 }).includes("clean-hands"));
+    // Sharpshooter needs volume as well as accuracy, so one lucky shot is not a run.
+    assert.ok(!runtime.achievementsFor({ missionsCleared: 1, fired: 1, hits: 1, bestCombo: 1 }).includes("sharpshooter"));
+    assert.ok(runtime.achievementsFor({ missionsCleared: 1, fired: 15, hits: 12, bestCombo: 1 }).includes("sharpshooter"));
+});
+
+test("combo milestones are a few moments, not every increment", () => {
+    const runtime = (core as unknown as { COMBO_MILESTONES: number[]; COMBO_CAP: number });
+    assert.ok(runtime.COMBO_MILESTONES.length <= 4, "a shout on every hit is noise on a board you are reading");
+    assert.ok(runtime.COMBO_MILESTONES.includes(runtime.COMBO_CAP), "and the cap is worth marking");
+    for (const m of runtime.COMBO_MILESTONES) {
+        assert.ok(m >= 2 && m <= runtime.COMBO_CAP, `${m} is not a reachable combo`);
+    }
+});
+
+test("feedback is drawn under the contacts, so it cannot hide one", () => {
+    // The brief is explicit. Asserted on the draw order rather than by looking at a screenshot: where
+    // floating score and a contact overlap, the thing being identified has to win.
+    const board = fs.readFileSync(path.join(ROOT, "public", "assets", "scope.js"), "utf8");
+    const effects = board.indexOf("drawEffects(run, px);");
+    const actors = board.indexOf("figure(run, actor);");
+    assert.ok(effects > 0 && actors > 0);
+    assert.ok(effects < actors, "effects must be painted before the contacts, not over them");
 });

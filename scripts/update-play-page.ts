@@ -22,6 +22,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { criticalCss } from "./design/tokens";
+import { ACHIEVEMENTS, XP_AWARDS } from "./design/progression";
 import { footerNavHtml, gamePages } from "./update-game-pages";
 
 const publicDir = path.join(__dirname, "../public");
@@ -77,6 +78,28 @@ function missionsHtml(): string {
           <p class="mission-objective">${escapeHtml(m.objective)}</p>
           <p>${escapeHtml(m.rule)}</p>
         </div>`).join("\n");
+}
+
+/**
+ * The XP table and the achievement list, read from the game's own tables.
+ *
+ * Printed rather than described, because "what earns XP" is a question a player is entitled to a
+ * complete answer to — and because a list generated from the rules cannot drift from them.
+ */
+function xpHtml(): string {
+    return XP_AWARDS.map(award =>
+        `            <tr><th scope="row">+${award.xp}${award.repeats ? " each" : ""}</th><td>${escapeHtml(award.why)}</td></tr>`
+    ).join("\n");
+}
+
+function achievementsHtml(): string {
+    return ACHIEVEMENTS.map(a =>
+        `          <li class="achievement" data-achievement="${escapeHtml(a.id)}">
+            <span class="achievement-title">${escapeHtml(a.title)}</span>
+            <span class="achievement-state">Locked</span>
+            <span class="achievement-how">${escapeHtml(a.how)}</span>
+          </li>`
+    ).join("\n");
 }
 
 function controlsHtml(): string {
@@ -201,6 +224,8 @@ export function generatePlayPage(): string {
           <div class="record"><small>Missions cleared</small><b id="record-mission">0</b></div>
           <div class="record"><small>Best rank</small><b id="record-rank">&mdash;</b></div>
           <div class="record"><small>Runs played</small><b id="record-played">0</b></div>
+          <div class="record"><small>Level</small><b id="record-level">1</b></div>
+          <div class="record"><small>XP</small><b id="record-xp">0</b></div>
         </div>
         <p class="data-note">Kept in this browser only. There is no account, no server and no leaderboard &mdash; so there is no global ranking to show you, and we are not going to invent one.</p>
       </section>
@@ -259,6 +284,28 @@ ${missionsHtml()}
           <li>Every hit area is at least 44&nbsp;CSS pixels across however small the contact is drawn, so difficulty comes from exposure, identification and timing rather than from precision your device cannot give you.</li>
           <li>With <code>prefers-reduced-motion</code> set, the screen does not flash, floating score does not drift, and nothing pulses. Scoring is unchanged.</li>
           <li>The run pauses when you switch tabs, rotate the device or leave the window, and never resumes without you asking it to.</li>
+        </ul>
+      </div>
+
+      <div class="content-section">
+        <h2>What earns XP</h2>
+        <p>XP comes from things you did, and the list is short enough to print in full. There is nothing here for opening the page, reloading it, or coming back tomorrow &mdash; a number that goes up for showing up is not progress, it is a habit meter.</p>
+        <div class="table-wrap">
+          <table class="controls-table">
+            <thead><tr><th scope="col">XP</th><th scope="col">For</th></tr></thead>
+            <tbody>
+${xpHtml()}
+            </tbody>
+          </table>
+        </div>
+        <p class="data-note">Levels arrive at 100, 300, 700, 1,400, 2,600, 4,500, 7,200, 11,000 and 16,000 XP.</p>
+      </div>
+
+      <div class="content-section">
+        <h2>Achievements</h2>
+        <p>Six, each of which has to be done on purpose. They are kept in this browser with everything else.</p>
+        <ul class="achievements">
+${achievementsHtml()}
         </ul>
       </div>
 
