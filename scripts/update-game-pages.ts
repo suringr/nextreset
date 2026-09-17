@@ -521,6 +521,13 @@ function generatePage(page: GamePage): string {
       <!-- Verified data, rendered at build time from the knowledge store -->
       <div id="verified-data" data-nr-slot="verified-data"></div>
 
+      <!-- While you wait. One line and one link: this page exists to answer a question, and the
+           arcade is what there is to do once it has. -->
+      <aside class="waiting">
+        <p><strong>While you wait.</strong> RESET//SCOPE is a five-mission arcade run that lives on this site.</p>
+        <a class="btn" href="/play/">Open the arcade</a>
+      </aside>
+
       <!-- About -->
       <div class="content-section">
         <h2>About this tracker</h2>
@@ -559,7 +566,7 @@ function generatePage(page: GamePage): string {
       ${footerNavHtml(gamePages, page)}
       <p>Checked automatically several times a day against official sources.</p>
       <p>Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
-      <p><a href="/about/">About</a> · <a href="/privacy/">Privacy Policy</a></p>
+      <p><a href="/about/">About</a> · <a href="/privacy/">Privacy Policy</a> · <a href="/play/">Arcade</a></p>
     </footer>
   </div>
 

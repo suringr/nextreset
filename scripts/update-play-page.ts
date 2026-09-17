@@ -327,7 +327,7 @@ ${achievementsHtml()}
       ${footerNavHtml(gamePages)}
       <p>Checked automatically several times a day against official sources.</p>
       <p>Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
-      <p><a href="/about/">About</a> &middot; <a href="/privacy/">Privacy Policy</a></p>
+      <p><a href="/about/">About</a> &middot; <a href="/privacy/">Privacy Policy</a> &middot; <span aria-current="page">Arcade</span></p>
     </footer>
   </div>
 
