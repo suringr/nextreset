@@ -318,11 +318,11 @@ Ten of the twelve run on the V2 pipeline (`scripts/v2/games.ts`); two are still 
 | Counter-Strike 2 | Last update | Steam Web API news, app 730 | Deterministic JSON |
 | Minecraft | Latest release | Mojang's launcher version manifest | Deterministic JSON |
 | PUBG | Last patch | Steam Web API news, app 578080 | Deterministic JSON |
-| VALORANT | Last patch | Official patch notes page data | Deterministic HTML |
+| VALORANT | Last patch | The official VALORANT patch notes page | Deterministic HTML |
 | Warzone | Last patch | Call of Duty patch notes page | Deterministic HTML |
 | Genshin Impact | Banner end | HoYoverse announcements API, three regions | Deterministic JSON |
 | EA SPORTS FC | Last title update | Steam Web API news, FC 26 and FC 27 | Deterministic JSON |
-| GTA Online | Weekly reset | A published rule: Thursdays 10:00 UTC | Computed |
+| GTA Online | Weekly reset | Rockstar publishes the rule: Thursdays 10:00 UTC | Computed |
 | Roblox | Service status | status.roblox.com | Deterministic JSON |
 | Fortnite | Season end | Epic's own pages, behind a challenge we do not circumvent | V1 provider — currently unanswered |
 | Red Dead Redemption 2 | Last update | Rockstar Newswire | V1 provider |

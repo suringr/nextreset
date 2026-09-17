@@ -232,8 +232,10 @@ test("the documented sources are the sources the code actually reads", () => {
     // the game names appear would not have caught any of that, so each row is checked against the
     // registry entry it describes.
     const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
-    const table = readme.slice(readme.indexOf("| Game | Question |"));
-    const rows = table.slice(0, table.indexOf("\r\n\r\n")).split(/\r?\n/)
+    // The file is stored with CRLF and checked out with LF in CI, so the blank line that ends the table
+    // has to be matched either way; splitting on "\r\n\r\n" alone reads the rest of the README in CI.
+    const table = readme.slice(readme.indexOf("| Game | Question |")).split(/\r?\n\s*\r?\n/)[0];
+    const rows = table.split(/\r?\n/)
         .filter(line => line.startsWith("|"))
         .slice(2)
         .map(line => line.split("|").slice(1, -1).map(cell => cell.trim()));
@@ -248,6 +250,23 @@ test("the documented sources are the sources the code actually reads", () => {
     /** What the registry says a source is, as the table would have to describe it. */
     const expectedMethod: Record<string, string> = { json: "JSON", html: "HTML", rule: "Computed" };
 
+    /** The publisher in a source URL: "api.steampowered.com" -> "steampowered". */
+    const publisherOf = (url: string) => {
+        const host = new URL(url).hostname.replace(/^www\./, "").split(".");
+        return (host.length > 1 ? host[host.length - 2] : host[0]).toLowerCase();
+    };
+
+    /** Whether a prose description names that publisher: "Steam Web API news" does, "Mojang's" does. */
+    const names = (description: string, publisher: string) =>
+        description
+            .replace(/['’]s\b/g, "")
+            .split(/[^A-Za-z]+/)
+            .filter(word => word.length >= 4)
+            .some(word => {
+                const lower = word.toLowerCase();
+                return publisher.includes(lower) || lower.includes(publisher);
+            });
+
     for (const entry of GAMES) {
         const page = gamePages.find(candidate => candidate.game === entry.id);
         assert.ok(page, `the registry has ${entry.id} but no page does`);
@@ -259,6 +278,17 @@ test("the documented sources are the sources the code actually reads", () => {
 
         const kinds = [...new Set(entry.sources.map(source => source.kind))];
         assert.equal(kinds.length, 1, `${entry.id}: expected one kind of source, found ${kinds.join("+")}`);
+
+        // The row must name the publisher the registry actually reads, so swapping one real source for
+        // another real one — a Steam feed described as Mojang's manifest — does not pass.
+        const urls = entry.sources.map(source => source.url).filter(url => /^https?:/.test(url));
+        if (urls.length > 0) {
+            const publishers = [...new Set(urls.map(publisherOf))];
+            assert.ok(
+                publishers.some(publisher => names(row.source, publisher)),
+                `${page!.title}: the row says "${row.source}" but the registry reads ${publishers.join(", ")}`
+            );
+        }
 
         // Only a tracker with a discovery configuration reads prose with a model; everything else is
         // parsed, and the table has to say which of the two this is.
