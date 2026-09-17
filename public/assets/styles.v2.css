@@ -967,6 +967,124 @@ h3 {
   margin: 0 0 var(--sp-3);
 }
 
+/* ---------- timeline ---------- */
+
+/* A published schedule read as one sequence, oldest to newest, with the entry the page is about
+   marked. As two lists — past newest-first, upcoming soonest-first — a reader could not see where the
+   thing they are waiting for sits, and the two halves ran in opposite directions. */
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--sp-5);
+  border-left: 2px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.event {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--sp-1) var(--sp-3);
+  align-items: baseline;
+}
+
+/* The marker sits on the rail, not in the flow, so a wrapping row cannot drag it out of line. */
+.event::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--sp-5) * -1 - 6px);
+  top: .55em;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--line);
+  border: 2px solid var(--ground);
+}
+
+.event-label {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.event-label a {
+  color: var(--brand-bright);
+}
+
+.event-label a:hover {
+  text-decoration: underline;
+}
+
+.event-when {
+  color: var(--ink-muted);
+  font-size: var(--size-small);
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* The state is a word, so colour is never the only thing carrying it. */
+.event-state {
+  grid-column: 1 / -1;
+  font-size: var(--size-label);
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.event.is-released::before {
+  background: var(--state-unavailable);
+}
+
+.event.is-released .event-state {
+  color: var(--ink-faint);
+}
+
+/* The one a reader came for. */
+.event.is-next::before {
+  background: var(--state-verified);
+  box-shadow: 0 0 0 4px var(--verified-soft);
+}
+
+.event.is-next .event-label {
+  font-size: var(--size-h2);
+}
+
+.event.is-next .event-state {
+  color: var(--state-verified);
+}
+
+.event.is-scheduled::before {
+  background: var(--brand);
+}
+
+.event.is-scheduled .event-state {
+  color: var(--brand-bright);
+}
+
+.event .data-quote {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 560px) {
+  .event-state {
+    grid-column: auto;
+    grid-row: 1;
+    order: -1;
+    min-width: 88px;
+  }
+
+  .event {
+    grid-template-columns: 88px 1fr auto;
+  }
+
+  .event .data-quote {
+    grid-column: 2 / -1;
+  }
+}
+
 .data-list {
   list-style: none;
   margin: 0;
