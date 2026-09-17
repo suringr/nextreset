@@ -229,6 +229,24 @@ Two rules the rendering follows everywhere:
   passed is a normal moment in the cycle. After that the page keeps its question and says no official
   date has been published, rather than showing a date that has gone.
 
+### Which pages ask to be indexed
+
+A tracker page exists to answer one question, and the rule is the one the renderer already applies to
+the headline, so the tag and the page can never disagree:
+
+| The page publishes | Robots | In the sitemap |
+|--------------------|--------|----------------|
+| a verified value | nothing | yes |
+| `No official date announced` | `noindex, follow` | no |
+| `Data unavailable` | `noindex, follow` | no |
+
+`follow`, because the page is still worth crawling: its footer reaches every tracker that does answer
+something. Nothing is hidden from a reader — the page stays where it was and says what it knows — and
+it returns to the index by itself on the next build after a source answers.
+
+Today that is Fortnite alone, whose season end has had no official date since April. It was in the
+sitemap for three months while showing a date that had already passed.
+
 ### Why there are no hub pages
 
 Each of the twelve games answers exactly one question, so a `/<game>/` hub would contain a single link

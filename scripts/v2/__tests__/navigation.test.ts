@@ -106,6 +106,28 @@ test("the homepage is as new as the newest thing on it", () => {
     assert.equal(entries[1].lastmod, undefined, "a static page is left undated rather than guessed at");
 });
 
+test("a page that is not submitted still dates the homepage it appears on", () => {
+    // The homepage renders every tracker's card, including one carrying noindex. Dropping that
+    // tracker's facts along with its URL would let the homepage's date go stale behind a value it is
+    // showing — or leave it undated entirely, if the noindexed tracker is the only dated one.
+    const knowledge: Record<string, GameKnowledge> = {
+        lol: { game: "lol", events: [{ key: "k1", topic: "next-patch", label: "26.19", status: "scheduled", at: "2026-09-23T00:00:00.000Z", firstSeen: "2026-09-02T00:00:00.000Z", publishState: "published" }], claims: [] },
+        fortnite: { game: "fortnite", events: [{ key: "k2", topic: "next-season", label: "Season 9", status: "scheduled", at: "2026-06-06T00:00:00.000Z", firstSeen: "2026-09-14T00:00:00.000Z", publishState: "published" }], claims: [] }
+    };
+    const entries = sitemapEntries(
+        [
+            { page: "index.html", listed: true },
+            { page: "lol/next-patch/index.html", tracker: { game: "lol", type: "next-patch" }, listed: true },
+            { page: "fortnite/next-season/index.html", tracker: { game: "fortnite", type: "next-season" }, listed: false }
+        ],
+        ORIGIN,
+        game => knowledge[game]
+    );
+
+    assert.deepEqual(entries.map(e => e.loc), [`${ORIGIN}/`, `${ORIGIN}/lol/next-patch/`], "the unsubmitted page is not listed");
+    assert.equal(entries[0].lastmod, "2026-09-14T00:00:00.000Z", "but it is still the newest thing the homepage shows");
+});
+
 test("every page in the sitemap is a page that exists, at the URL it calls canonical", () => {
     const inputs = PAGES.map(page => {
         const html = fs.readFileSync(path.join(PUBLIC, page), "utf8");
