@@ -271,7 +271,8 @@ test("the documented sources are the sources the code actually reads", () => {
         mojang: ["mojang"],
         hoyoverse: ["hoyoverse"],
         rockstargames: ["rockstar"],
-        hostedstatus: ["hostedstatus"]
+        hostedstatus: ["hostedstatus"],
+        fortnite: ["fortnite", "epic"]
     };
 
     /** Whether a prose description names that publisher, ignoring spacing and punctuation. */
@@ -315,10 +316,24 @@ test("the documented sources are the sources the code actually reads", () => {
         assert.ok(!/V1 provider/.test(row.how), `${page!.title} is on V2, so the row must not call it a V1 provider`);
     }
 
-    // The two the registry does not cover are the two still on their V1 provider, and say so.
+    // The two the registry does not cover are the two still on their V1 provider. Their rows are held to
+    // the same standard, against the URLs in the provider that fetches them: a V1 row is documentation
+    // too, and "V1 provider" in the method cell says nothing about where the value comes from.
     const onV2 = new Set(GAMES.map(entry => entry.id));
+    const v1Providers: Record<string, string> = { fortnite: "fortnite.ts", "red-dead-redemption-2": "rdr2.ts" };
     for (const page of gamePages.filter(candidate => !onV2.has(candidate.game))) {
-        assert.match(rowFor(page.title).how, /V1 provider/, `${page.title} is not on V2 and the row should say so`);
+        const row = rowFor(page.title);
+        assert.match(row.how, /V1 provider/, `${page.title} is not on V2 and the row should say so`);
+
+        const provider = v1Providers[page.game];
+        assert.ok(provider, `${page.game} is on neither the registry nor a known V1 provider`);
+        const source = fs.readFileSync(path.join(ROOT, "scripts", "providers", provider), "utf8");
+        const publishers = [...new Set([...source.matchAll(/https?:\/\/[^"'`\s)]+/g)].map(match => publisherOf(match[0])))];
+        assert.ok(publishers.length > 0, `${provider} fetches nothing`);
+        assert.ok(
+            publishers.some(publisher => names(row.source, publisher)),
+            `${page.title}: the row says "${row.source}" but ${provider} fetches ${publishers.join(", ")}`
+        );
     }
     assert.equal(gamePages.length - onV2.size, 2, "ten of the twelve are on V2");
 });

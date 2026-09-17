@@ -324,7 +324,7 @@ Ten of the twelve run on the V2 pipeline (`scripts/v2/games.ts`); two are still 
 | EA SPORTS FC | Last title update | Steam Web API news, FC 26 and FC 27 | Deterministic JSON |
 | GTA Online | Weekly reset | Rockstar publishes the rule: Thursdays 10:00 UTC | Computed |
 | Roblox | Service status | hostedstatus.com, the API behind status.roblox.com | Deterministic JSON |
-| Fortnite | Season end | Epic's own pages, behind a challenge we do not circumvent | V1 provider — currently unanswered |
+| Fortnite | Season end | Epic's Battle Pass page on fortnite.com, behind a challenge we do not circumvent | V1 provider — currently unanswered |
 | Red Dead Redemption 2 | Last update | Rockstar Newswire | V1 provider |
 
 Only League of Legends uses a model, and only to read prose a person would otherwise read. Everything
