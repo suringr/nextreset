@@ -19,6 +19,7 @@
  * indexing, and asking for both at once is the kind of contradictory signal that teaches a crawler to
  * trust neither.
  */
+import * as cheerio from "cheerio";
 import { TrackerData, hasVerifiedValue, isUnanswered } from "./render-pages";
 
 export type IndexState = "index" | "noindex";
@@ -48,9 +49,16 @@ export function indexStateFor(data: TrackerData | undefined, now: Date): IndexDe
     return { state: "index", reason: "publishes a verified value" };
 }
 
-/** Whether a page has already asked not to be indexed, in its own markup. */
+/**
+ * Whether a page has already asked not to be indexed, in its own markup.
+ *
+ * Parsed rather than pattern-matched: attribute order, quoting and spacing are all the author's choice,
+ * and `<meta content="noindex, follow" name="robots">` is the same instruction written the other way
+ * round. Missing it would put the page back in the sitemap while it asks to stay out.
+ */
 export function declaresNoindex(html: string): boolean {
-    return /<meta[^>]+name=["']robots["'][^>]*content=["'][^"']*noindex/i.test(html);
+    const content = cheerio.load(html)(`meta[name="robots" i]`).attr("content") ?? "";
+    return /\bnoindex\b/i.test(content);
 }
 
 /**

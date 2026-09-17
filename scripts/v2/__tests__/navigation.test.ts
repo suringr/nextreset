@@ -256,16 +256,31 @@ test("the documented sources are the sources the code actually reads", () => {
         return (host.length > 1 ? host[host.length - 2] : host[0]).toLowerCase();
     };
 
-    /** Whether a prose description names that publisher: "Steam Web API news" does, "Mojang's" does. */
-    const names = (description: string, publisher: string) =>
-        description
-            .replace(/['’]s\b/g, "")
-            .split(/[^A-Za-z]+/)
-            .filter(word => word.length >= 4)
-            .some(word => {
-                const lower = word.toLowerCase();
-                return publisher.includes(lower) || lower.includes(publisher);
-            });
+    /**
+     * What a row may call each publisher.
+     *
+     * Spelled out rather than inferred: matching on shared substrings accepted "status.roblox.com" for
+     * a source that is actually hostedstatus.com, and would have accepted statuspage.io just as
+     * happily. A publisher with no entry here fails, so a new source cannot pass by being unknown.
+     */
+    const PUBLISHER_NAMES: Record<string, string[]> = {
+        steampowered: ["steam"],
+        riotgames: ["riot"],
+        playvalorant: ["valorant"],
+        callofduty: ["callofduty"],
+        mojang: ["mojang"],
+        hoyoverse: ["hoyoverse"],
+        rockstargames: ["rockstar"],
+        hostedstatus: ["hostedstatus"]
+    };
+
+    /** Whether a prose description names that publisher, ignoring spacing and punctuation. */
+    const names = (description: string, publisher: string) => {
+        const accepted = PUBLISHER_NAMES[publisher];
+        assert.ok(accepted, `no documented name for ${publisher}: add it to PUBLISHER_NAMES`);
+        const flattened = description.toLowerCase().replace(/[^a-z]/g, "");
+        return [publisher, ...accepted].some(name => flattened.includes(name));
+    };
 
     for (const entry of GAMES) {
         const page = gamePages.find(candidate => candidate.game === entry.id);

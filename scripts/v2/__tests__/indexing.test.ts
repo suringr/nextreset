@@ -16,7 +16,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import * as vm from "vm";
-import { NOINDEX_TAG, indexStateFor } from "../../indexing";
+import { NOINDEX_TAG, declaresNoindex, indexStateFor, staticPageDecision } from "../../indexing";
 import { cardValue } from "../../render-home";
 import { TrackerData, blocksFor, renderSite, renderTrackerHtml, stateLine } from "../../render-pages";
 
@@ -166,6 +166,32 @@ test("the tag says what the page says, in the head, once", () => {
 
     const answered = renderTrackerHtml(PAGE, ANSWERED, "lol/next-patch", NOW);
     assert.equal(cheerio.load(answered)(`meta[name="robots"]`).length, 0, "a page with a value asks for nothing");
+});
+
+test("a page asking not to be indexed is heard however the tag is written", () => {
+    // Attribute order, quoting and spacing are the author's choice, and an ordinary edit or formatter
+    // can change all three. Missing the tag would put the page back in the sitemap while it asks to
+    // stay out — the contradiction this rule exists to prevent.
+    for (const tag of [
+        `<meta name="robots" content="noindex, follow">`,
+        `<meta content="noindex, follow" name="robots">`,
+        `<meta name='robots' content='noindex'>`,
+        `<meta   name = "robots"   content = "noindex, nofollow" >`,
+        `<meta name="ROBOTS" content="NOINDEX">`
+    ]) {
+        assert.equal(declaresNoindex(`<html><head>${tag}</head><body></body></html>`), true, tag);
+        assert.equal(staticPageDecision(`<html><head>${tag}</head><body></body></html>`).state, "noindex", tag);
+    }
+
+    for (const tag of [
+        ``,
+        `<meta name="robots" content="index, follow">`,
+        `<meta name="googlebot" content="noindex">`,
+        `<meta name="description" content="a page about noindex">`
+    ]) {
+        assert.equal(declaresNoindex(`<html><head>${tag}</head><body></body></html>`), false, tag || "(no tag)");
+        assert.equal(staticPageDecision(`<html><head>${tag}</head><body></body></html>`).state, "index", tag || "(no tag)");
+    }
 });
 
 test("a page with no canonical to anchor to fails the build", () => {
