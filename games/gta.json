@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "gta",
-  "updatedAt": "2026-09-17T19:51:31.461Z",
+  "updatedAt": "2026-09-17T20:45:17.500Z",
   "events": [
     {
       "key": "gta/weekly-reset/2026-09-17",
@@ -28,7 +28,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-17T10:39:20.553Z",
-      "lastVerified": "2026-09-17T19:51:31.461Z",
+      "lastVerified": "2026-09-17T20:45:17.500Z",
       "publishState": "published"
     }
   ],
