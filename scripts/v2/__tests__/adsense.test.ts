@@ -148,12 +148,30 @@ test("the privacy policy describes the site that now exists", () => {
     assert.match(privacy, /Google Analytics Opt-out Browser Add-on/);
 });
 
-test("the privacy policy does not claim a consent platform that does not exist", () => {
+test("the privacy policy describes the consent platform that is actually configured", () => {
     const privacy = read("privacy/index.html");
-    assert.match(privacy, /No consent management platform is configured on the Site/);
-    // Nothing anywhere in the site implements one, so nothing may imply one does.
+
+    // The claim the account's published European regulations message falsified.
+    assert.ok(!privacy.includes("No consent management platform is configured"), "the policy still denies the CMP");
+
+    // What is configured: Google's own CMP, account-side, for this site.
+    assert.match(privacy, /Google's own consent management platform/);
+    assert.match(privacy, /AdSense Privacy &amp; messaging/);
+    assert.match(privacy, /European regulations message/);
+
+    // And what it must not overstate. Not every visitor sees the message, and consent being available
+    // is not the same as personalised advertising being switched on.
+    assert.match(privacy, /Where it applies/);
+    assert.ok(!/personalised advertising is (now )?(active|enabled|on)\b/i.test(privacy),
+        "the policy claims personalised advertising is active");
+});
+
+test("the consent platform is Google's, not code in this repository", () => {
+    // Google serves the message through the AdSense code already on the page. No official
+    // documentation asks an AdSense publisher to add a CMP, Funding Choices or TCF tag for this
+    // configuration, so nothing here may quietly grow one.
     for (const page of PAGES) {
-        assert.ok(!/__tcfapi|googlefc|fundingchoices/i.test(read(page)), `${page} references a consent platform`);
+        assert.ok(!/__tcfapi|googlefc|fundingchoices/i.test(read(page)), `${page} implements its own consent platform`);
     }
 });
 
