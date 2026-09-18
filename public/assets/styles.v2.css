@@ -563,8 +563,17 @@ h3 {
 }
 
 /* Four facts fit on one row once there is room for them; below that a 2x2 block reads better than
-   three across and one stranded underneath. */
-@media (min-width: 560px) {
+   three across and one stranded underneath.
+
+   "Room" is the width of the copy column, not of the viewport — at 768px the card turns two-column and
+   the copy narrows to 346px, where four across need 371 and the last label is squeezed to 71px of its
+   96. A viewport breakpoint cannot see that; a container query measures the thing that matters. A
+   browser without container queries keeps the 2x2, which always fits. */
+.arcade-copy {
+  container-type: inline-size;
+}
+
+@container (min-width: 380px) {
   .arcade-records {
     grid-template-columns: repeat(4, minmax(0, auto));
     justify-content: start;
