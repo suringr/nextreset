@@ -599,3 +599,40 @@ test("a resync that reads successfully still picks up another tab's change", () 
     assert.deepEqual(here.trackedGames(), ["warzone"]);
 });
 
+// === Codex review of 1fb2502 (missed at the time) and 4731a65 ===
+
+test("with no storage at all, a resync keeps what the page holds", () => {
+    // Codex P2 on 1fb2502: storage() returned null but writable stayed true, so the predicate said
+    // storage was authoritative and a back-forward resync could clear the only copy. reread() already
+    // keeps the copy when there is no store (4731a65); this holds both the predicate and the behaviour.
+    const { player } = boot({}, null);
+    player.track("lol");
+    (player as unknown as { refresh(): void }).refresh();
+    assert.deepEqual(player.trackedGames(), ["lol"]);
+    assert.equal(player.profile().xp, 20);
+});
+
+test("player.js resyncs on a back-forward restore by itself, so pages without app.js stay current", () => {
+    // Codex P2 on 4731a65: only app.js listened for pageshow, and /play/, About, Privacy and the 404 do
+    // not load it — their header chip stayed stale after Back.
+    const storage = new FakeStorage();
+    const listeners: Record<string, (event: unknown) => void> = {};
+    const window: Record<string, unknown> = {
+        localStorage: storage,
+        addEventListener: (type: string, fn: (event: unknown) => void) => { listeners[type] = fn; }
+    };
+    // eslint-disable-next-line no-new-func
+    (new Function("window", "document", SOURCE) as (w: unknown, d: unknown) => void)(window, {});
+    const player = window.NextResetPlayer as Player;
+    assert.ok(listeners.pageshow, "player.js registers no pageshow handler");
+
+    const elsewhere = boot({}, storage).player;          // the tracker page the visitor went to
+    elsewhere.track("valorant");
+    assert.deepEqual(player.trackedGames(), [], "before the restore this page still shows its old copy");
+    listeners.pageshow({ persisted: true });            // pressing Back
+    assert.deepEqual(player.trackedGames(), ["valorant"]);
+    assert.equal(player.profile().xp, 20);
+
+    listeners.pageshow({ persisted: false });           // an ordinary load is not a restore
+});
+

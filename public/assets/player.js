@@ -370,12 +370,13 @@
     /**
      * Whether this page's copy may hold changes that storage does not.
      *
-     * True when writes are failing (a full quota, private mode), and when the stored record belongs to a
-     * later version of the site, which this version never writes over. In both, memory holds the only
-     * copy of what the visitor did this session, and must not be replaced by what storage says.
+     * True when there is no storage at all (disabled, or its getter throws), when writes are failing (a
+     * full quota, private mode), and when the stored record belongs to a later version of the site,
+     * which this version never writes over. In each, memory holds the only copy of what the visitor did
+     * this session, and must not be replaced by what storage says.
      */
     function memoryHoldsChanges() {
-        return !writable || !!(cache && cache.fromFuture);
+        return !storage() || !writable || !!(cache && cache.fromFuture);
     }
 
     /**
@@ -665,6 +666,15 @@
         if (global.addEventListener) {
             global.addEventListener('storage', function (event) {
                 if (event && event.key !== KEY && event.key !== null) return;
+                refresh();
+                paintChip();
+            });
+            // A page restored from the back-forward cache runs no load handler, and every page that loads
+            // this file shows the chip — including /play/, About, Privacy and the 404, which load no
+            // app.js. Resyncing here rather than in app.js reaches all of them; a page with more of the
+            // record on it (the homepage, /play/) repaints the rest itself after this has run.
+            global.addEventListener('pageshow', function (event) {
+                if (!event || !event.persisted) return;
                 refresh();
                 paintChip();
             });
