@@ -75,7 +75,7 @@ export interface BlockRow {
  * Only a timeline needs this: a list of past updates is all one thing, but a schedule a reader is
  * trying to place themselves in has to say which entry is the one they are waiting for.
  */
-export type RowState = "released" | "next" | "scheduled" | "unconfirmed";
+export type RowState = "past" | "next" | "scheduled";
 
 export interface Block {
     title: string;
@@ -274,7 +274,7 @@ export function timelineFor(knowledge: GameKnowledge, topic: string, options: Bl
     // And the store must hold entries on both sides of now, because a timeline is something a reader
     // places themselves in. This is what separates League of Legends, which publishes its whole year,
     // from PUBG, VALORANT, EA SPORTS FC and Minecraft — all of them "version" events too, and all of
-    // them feeds of releases that have already happened. Drawing those on a rail with Released markers
+    // them feeds of releases that have already happened. Drawing those on a rail with past markers
     // would imply a cadence the publisher does not announce. They stay a list, which is what they are.
     //
     // "Ahead" means a *scheduled* event ahead — one the publisher announced. An update feed's observed
@@ -301,13 +301,12 @@ export function timelineFor(knowledge: GameKnowledge, topic: string, options: Bl
 
     const rows: BlockRow[] = [...behind, ...ahead].map(event => {
         const past = (endOf(event) ?? 0) <= nowMs;
-        // "Released" says the patch shipped. A date passing says only that the date passed: a scheduled
-        // event can go by delayed, cancelled, or with a refresh that failed. So a past row is Released
-        // when the release was observed, and otherwise says plainly that it was not confirmed.
-        const state: RowState = event.key === options.currentKey && !past ? "next"
-            : !past ? "scheduled"
-            : event.status === "observed" ? "released"
-            : "unconfirmed";
+        // A past row says "Past", never "Released". A timeline is a schedule, and a schedule shows that a
+        // date was announced, not that the patch shipped on it: a patch can slip, be cancelled, or go
+        // unobserved. No status in the store is evidence of a release either — discovery marks every
+        // version whose date has gone by "observed" on the clock alone, and a date that passes on its own
+        // becomes "ended". So the row claims exactly what the schedule supports, as the block's note does.
+        const state: RowState = event.key === options.currentKey && !past ? "next" : past ? "past" : "scheduled";
         return { label: event.label, when: options.format(event.at!, event.precision), state, ...evidenceFor(event, knowledge) };
     });
     // The same bar every other block clears: fewer rows than this and it is a heading with a couple of
@@ -412,10 +411,9 @@ function escapeHtml(value: string): string {
 
 /** What a timeline row says about where it sits. The word carries it, not the colour. */
 const STATE_WORDS: Record<RowState, string> = {
-    released: "Released",
+    past: "Past",
     next: "Next",
-    scheduled: "Scheduled",
-    unconfirmed: "Not confirmed"
+    scheduled: "Scheduled"
 };
 
 /** A row's label, linked to the official post it was verified from where there is one. */

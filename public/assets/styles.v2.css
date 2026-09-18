@@ -1343,22 +1343,11 @@ h3 {
   color: var(--ink-faint);
 }
 
-.event.is-released::before {
+.event.is-past::before {
   background: var(--state-unavailable);
 }
 
-.event.is-released .event-state {
-  color: var(--ink-faint);
-}
-
-/* A scheduled date that has passed without the release being observed. It makes no claim either way,
-   so it is drawn as quietly as a released row, with a hollow marker instead of a filled one. */
-.event.is-unconfirmed::before {
-  background: var(--ground);
-  box-shadow: inset 0 0 0 2px var(--state-unavailable);
-}
-
-.event.is-unconfirmed .event-state {
+.event.is-past .event-state {
   color: var(--ink-faint);
 }
 
