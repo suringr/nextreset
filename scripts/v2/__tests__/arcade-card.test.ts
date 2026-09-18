@@ -15,6 +15,7 @@ import assert from "node:assert/strict";
 import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
+import * as vm from "vm";
 import { ACHIEVEMENTS } from "../../design/progression";
 
 const ROOT = path.join(__dirname, "..", "..", "..");
@@ -97,12 +98,83 @@ test("nothing is claimed about a player who has not played", () => {
     assert.ok(!/&mdash;|—/.test(card.find(".arcade-copy").html() ?? "").valueOf() || row.attr("hidden") !== undefined);
 });
 
-test("the achievement goal on the card is the goal the game actually awards", () => {
-    // The card quotes "3/6". The 6 has to be the length of the table the game grants from, or the card
-    // promises a total that does not exist.
-    const total = Number(card.attr("data-achievement-total"));
-    assert.equal(total, ACHIEVEMENTS.length,
-        `the card says ${total} achievements; scripts/design/progression.ts defines ${ACHIEVEMENTS.length}`);
+test("the achievements the card counts are exactly the ones the game awards", () => {
+    // The card quotes "3/6", and both numbers come from this list: the 6 is its length and the 3 is how
+    // many of its ids the player holds. So the list has to be the table the game grants from, id for id.
+    const ids = (card.attr("data-achievement-ids") ?? "").split(/\s+/).filter(Boolean);
+    assert.deepEqual([...ids].sort(), ACHIEVEMENTS.map(a => a.id).sort(),
+        "the card's achievement ids have drifted from scripts/design/progression.ts");
+    assert.equal(new Set(ids).size, ids.length, "the card lists an achievement twice");
+    assert.equal(card.attr("data-achievement-total"), undefined, "a second, separate total is back on the card");
+});
+
+// === the numerator, run through the real app.js ===
+
+/** A minimal DOM for the arcade card: enough for paintArcadeCard, and nothing it does not touch. */
+function arcadeDom(ids: string) {
+    const nodes: Record<string, { textContent: string; hidden: boolean }> = {};
+    for (const id of ["arcade-records", "arcade-score", "arcade-rank", "arcade-mission", "arcade-achievements"]) {
+        nodes[id] = { textContent: "", hidden: id === "arcade-records" };
+    }
+    const cardNode = { getAttribute: (name: string) => (name === "data-achievement-ids" ? ids : null) };
+    const document = {
+        getElementById: (id: string) => nodes[id] ?? null,
+        querySelector: (selector: string) => (selector === ".arcade-card" ? cardNode : null)
+    };
+    return { document, nodes };
+}
+
+/** A player record as player.js would return it, with whatever achievement ids it happens to hold. */
+function fakePlayer(achievements: string[]) {
+    return {
+        arcadeRecords: () => ({ highScore: 14303, highestMission: 2, bestCombo: 8, bestRank: "B", gamesPlayed: 3 }),
+        load: () => ({ achievements })
+    };
+}
+
+function paintWith(achievements: string[], ids = ACHIEVEMENTS.map(a => a.id).join(" ")) {
+    const context: Record<string, any> = { console, setInterval: () => 0, clearTimeout: () => undefined, setTimeout: () => 0 };
+    vm.createContext(context);
+    vm.runInContext(fs.readFileSync(path.join(ROOT, "public", "assets", "app.js"), "utf8"), context, { filename: "app.js" });
+    const { document, nodes } = arcadeDom(ids);
+    context.document = document;
+    context.window = { NextResetPlayer: fakePlayer(achievements) };
+    context.paintArcadeCard();
+    return nodes;
+}
+
+test("achievements from outside RESET//SCOPE are not counted, so the card can never read 7/6", () => {
+    // player.js keeps every valid id it is given, deliberately — including ids written by a later
+    // version of the site, or by a game this site does not have yet. The card must count only its own.
+    const all = ACHIEVEMENTS.map(a => a.id);
+    const nodes = paintWith([
+        ...all,                          // every RESET//SCOPE achievement
+        "next-game-first-win",          // another game's
+        "v2-daily-streak-30",           // a later version's
+        "some-unknown-id"
+    ]);
+    assert.equal(nodes["arcade-achievements"].textContent, `${all.length}/${all.length}`);
+    assert.equal(nodes["arcade-records"].hidden, false);
+});
+
+test("the count is of this game's ids, not of the record's length", () => {
+    const nodes = paintWith(["first-run", "future-badge-a", "combo-cap", "future-badge-b", "future-badge-c"]);
+    assert.equal(nodes["arcade-achievements"].textContent, `2/${ACHIEVEMENTS.length}`);
+});
+
+test("with only foreign ids in the record, the card reads zero, not a borrowed number", () => {
+    const nodes = paintWith(["another-game-a", "another-game-b", "another-game-c", "another-game-d",
+        "another-game-e", "another-game-f", "another-game-g"]);
+    assert.equal(nodes["arcade-achievements"].textContent, `0/${ACHIEVEMENTS.length}`);
+});
+
+test("the numerator never exceeds the denominator, whatever the record holds", () => {
+    const all = ACHIEVEMENTS.map(a => a.id);
+    for (const record of [[], all, [...all, ...all], [...all, "x", "y", "z", "w"], ["x"]]) {
+        const text = paintWith(record)["arcade-achievements"].textContent;
+        const [earned, total] = text.split("/").map(Number);
+        assert.ok(earned <= total, `the card reads ${text} for ${JSON.stringify(record)}`);
+    }
 });
 
 test("the records line names every field the script fills, and no more", () => {

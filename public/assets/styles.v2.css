@@ -545,6 +545,7 @@ h3 {
   display: block;
   width: 100%;
   height: auto;
+  /* The bottom band of the tall crop: exactly the scene a phone has always shown. */
   aspect-ratio: 320 / 120;
   border-bottom: 1px solid var(--line-soft);
 }
@@ -604,16 +605,22 @@ h3 {
   .arcade-card {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 340px);
-    align-items: center;
+    align-items: stretch;
   }
 
   .arcade-copy {
     padding: var(--sp-5);
   }
 
+  /* Edge to edge down the right of the card, whatever height the copy gives it. `contain: size` stops
+     the picture's own proportions from setting the row's height — the copy decides that, and the board
+     fills it — and the tall crop in the SVG means filling it shows more board, never an empty band. */
   .arcade-board {
     order: 0;
-    align-self: center;
+    align-self: stretch;
+    height: 100%;
+    aspect-ratio: auto;
+    contain: size;
     border-bottom: 0;
     border-left: 1px solid var(--line-soft);
   }

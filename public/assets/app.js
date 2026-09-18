@@ -725,6 +725,24 @@ function syncTrackButton(button, tracked) {
     }
 }
 
+// "Earned/total" for RESET//SCOPE alone.
+//
+// Both numbers come from one list: the game's own achievement ids, which the page carries and
+// arcade-card.test.ts holds against the table the game grants from. The stored record is filtered to that
+// list rather than counted whole, because player.js deliberately keeps every valid id it is given —
+// including ids from a later version of the site, or from another game — so a raw count could read 7/6.
+// Counting each id of the list at most once means the numerator can never exceed the denominator.
+function arcadeAchievements(card, state) {
+    var ids = card ? (card.getAttribute('data-achievement-ids') || '').split(/\s+/).filter(Boolean) : [];
+    if (ids.length === 0) return '—';
+    var stored = state.load().achievements || [];
+    var earned = 0;
+    for (var i = 0; i < ids.length; i++) {
+        if (stored.indexOf(ids[i]) !== -1) earned++;
+    }
+    return earned + '/' + ids.length;
+}
+
 // The arcade card's records, from the same record the game writes.
 //
 // The whole line stays hidden until there is a run behind it. It used to show three em-dashes, which
@@ -744,16 +762,11 @@ function paintArcadeCard() {
         return;
     }
 
-    // The total comes from the page, which the build writes from the same table the game awards from;
-    // arcade-progression.test.ts holds the two together so this can never quote a goal that moved.
-    var total = card ? parseInt(card.getAttribute('data-achievement-total') || '0', 10) : 0;
-    var earned = (state.load().achievements || []).length;
-
     var cells = {
         'arcade-score': records.highScore.toLocaleString(),
         'arcade-rank': records.bestRank || '—',
         'arcade-mission': String(records.highestMission),
-        'arcade-achievements': total > 0 ? earned + '/' + total : String(earned)
+        'arcade-achievements': arcadeAchievements(card, state)
     };
     for (var id in cells) {
         var node = document.getElementById(id);
