@@ -460,6 +460,38 @@ h3 {
   height: 100%;
 }
 
+.shelf[hidden] {
+  display: none;
+}
+
+/* What the section says before anything is tracked.
+   A star with no explanation is a control nobody presses, so the feature introduces itself once and
+   then gets out of the way. It ships hidden and is revealed by script, because without JavaScript
+   tracking does nothing and explaining a feature that does not work is worse than saying nothing. */
+.shelf-empty {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--size-small);
+}
+
+.shelf-empty[hidden] {
+  display: none;
+}
+
+.shelf-empty-mark {
+  color: var(--ink-faint);
+}
+
+/* While empty the section is a single line and nothing else, so introducing the feature does not cost
+   the page the height of a card — the arcade below it has a first screen to stay inside. */
+.shelf-section.is-empty {
+  margin-bottom: var(--sp-3);
+}
+
+.section-heading[hidden] {
+  display: none;
+}
+
 /* ---------- arcade entry ---------- */
 
 /* Compact on purpose. The arcade is a reason to come back, not the product: one card, three numbers,
@@ -697,6 +729,13 @@ h3 {
   height: auto;
   clip-path: none;
   white-space: normal;
+}
+
+/* On a tracker page the control sits under the heading it belongs to, sized by its own content
+   rather than stretching across the column the way the lead block's buttons do. */
+.game-track {
+  flex: 0 0 auto;
+  margin-top: var(--sp-4);
 }
 
 /* The card control shows a star; the name it stands for is still read aloud. */

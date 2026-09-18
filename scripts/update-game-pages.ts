@@ -486,6 +486,14 @@ function generatePage(page: GamePage): string {
         <div class="game-meta">
           <span class="kicker">${page.kicker}</span>
         </div>
+        <!-- Tracking, from the page a search result actually lands on. A sibling of the heading, never
+             inside a link, and shipped hidden because without JavaScript it would do nothing. What it
+             changes is the order of the homepage grid and nothing else: no published value moves. -->
+        <button type="button" class="btn track track-wide game-track" data-track="${page.game}" aria-pressed="false" hidden>
+          <span class="track-mark" aria-hidden="true">☆</span>
+          <span class="track-label">Track</span>
+          <span class="visually-hidden">&nbsp;${page.title}</span>
+        </button>
       </div>
 
       <!-- The answer. It comes straight after the heading now: this page exists to answer one
