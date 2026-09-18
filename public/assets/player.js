@@ -378,25 +378,40 @@
         return !writable || !!(cache && cache.fromFuture);
     }
 
-    function fresh() {
+    /**
+     * Brings this page's copy in line with storage — replacing it only once a read has succeeded.
+     *
+     * The one place the cache is refreshed from storage, so a change about to be written (fresh) and a
+     * resync after another tab or a back-forward restore (refresh) cannot disagree about what a failed
+     * read means. Dropping the copy first and reading second lost everything the page held whenever
+     * that read then threw.
+     *
+     *   - read:    the stored record replaces the copy.
+     *   - cleared: the key is genuinely gone; the copy is dropped and the next read starts over.
+     *   - failed:  storage cannot be read; the copy is kept and writing stops, because this page can no
+     *              longer see what it would overwrite.
+     */
+    function reread() {
         var store = storage();
-        if (!store || memoryHoldsChanges()) return load();
+        if (!store) return 'failed';
         var stored = readRecord(store);
         if (stored === undefined) {
-            // The read failed. That is not "cleared": keep what memory holds, and stop writing, since
-            // this page can no longer see what it would overwrite.
             writable = false;
-            return load();
+            return 'failed';
         }
         if (stored === null) {
-            // Genuinely cleared elsewhere since this page loaded. The clearing is the latest change.
             cache = null;
-            return load();
+            return 'cleared';
         }
         var state = sanitise(stored);
         state.fromFuture = whole(stored.version, VERSION) > VERSION;
         cache = state;
-        return state;
+        return 'read';
+    }
+
+    function fresh() {
+        if (!memoryHoldsChanges()) reread();
+        return load();
     }
 
     /**
@@ -566,7 +581,7 @@
      * away by it. `forget()` drops the copy unconditionally, and is for tests.
      */
     function refresh() {
-        if (!memoryHoldsChanges()) cache = null;
+        if (!memoryHoldsChanges()) reread();
     }
 
     /**

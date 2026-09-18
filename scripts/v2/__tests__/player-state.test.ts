@@ -568,3 +568,34 @@ test("a record that is there but will not parse is repaired, as before", () => {
     assert.doesNotThrow(() => JSON.parse(storage.items.get(KEY)!), "the unreadable record was left in place");
 });
 
+// === Codex review of 465d6a3 ===
+
+test("a resync whose read fails keeps everything the page holds", () => {
+    // Codex P2: refresh() dropped the cache before reading, so a getItem() that threw during a
+    // back-forward or cross-tab resync left the page rebuilding from the defaults — the visitor's tracked
+    // games, XP and records gone for the rest of the visit.
+    const storage = new FakeStorage();
+    storage.items.set(KEY, JSON.stringify({
+        version: 1, profile: { xp: 320, level: 3 }, games: { tracked: ["lol", "gta"] },
+        arcade: { resetScope: { highScore: 5000, highestMission: 2, bestCombo: 4, bestRank: "C", gamesPlayed: 2 } },
+        achievements: ["first-run"]
+    }));
+    const { player } = boot({}, storage);
+    player.load();
+    storage.failReads = true;
+    (player as unknown as { refresh(): void }).refresh();
+    assert.deepEqual(player.trackedGames(), ["lol", "gta"]);
+    assert.equal(player.profile().xp, 320);
+    assert.equal(player.arcadeRecords().highScore, 5000);
+    assert.equal(player.hasAchievement("first-run"), true);
+});
+
+test("a resync that reads successfully still picks up another tab's change", () => {
+    const storage = new FakeStorage();
+    const here = boot({}, storage).player;
+    here.load();
+    boot({}, storage).player.track("warzone");
+    (here as unknown as { refresh(): void }).refresh();
+    assert.deepEqual(here.trackedGames(), ["warzone"]);
+});
+
