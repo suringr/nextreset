@@ -84,16 +84,85 @@
 
     <!-- The arcade. A compact entry card and three numbers read from local player state: the game
          itself lives on /play/ and none of its code is loaded here. -->
-    <section class="section arcade-card">
-      <p class="drop-eyebrow">NEXT//RESET Arcade</p>
-      <h2 class="arcade-name">RESET//SCOPE</h2>
-      <p class="arcade-line">Five missions. Fast, precise, and do not hit the hostage.</p>
-      <div class="arcade-stats">
-        <div class="record"><small>High score</small><b id="arcade-score">&mdash;</b></div>
-        <div class="record"><small>Missions cleared</small><b id="arcade-mission">&mdash;</b></div>
-        <div class="record"><small>Best rank</small><b id="arcade-rank">&mdash;</b></div>
+    <!-- The arcade. The board below is a crop of the real one, drawn with the shapes and the palette
+         the game's renderer uses: a hostile is a hard-edged diamond, a civilian is an open circle, a
+         hostage is the green mark on the side the hit test protects, and the scope dims the board it
+         takes away. It is inline SVG and not a canvas because none of the game's own code may load on
+         this page — a suite asserts that by name, and a picture is not worth breaking it for.
+         The records line stays hidden until there is a run behind it. -->
+    <section class="section arcade-card" data-achievement-ids="first-run all-missions combo-cap clean-hands sharpshooter perfectionist">
+      <div class="arcade-copy">
+        <p class="drop-eyebrow">NEXT//RESET Arcade</p>
+        <h2 class="arcade-name">RESET//SCOPE</h2>
+        <p class="arcade-line">A five-mission arcade shooter, free and in this page. No account, a few minutes a run.</p>
+        <ul class="arcade-records" id="arcade-records" hidden>
+          <li><small>High score</small><b id="arcade-score">0</b></li>
+          <li><small>Best rank</small><b id="arcade-rank">&mdash;</b></li>
+          <li><small>Missions</small><b id="arcade-mission">0</b></li>
+          <li><small>Achievements</small><b id="arcade-achievements">0</b></li>
+        </ul>
+        <a class="btn btn-primary arcade-play" href="/play/">Play now</a>
       </div>
-      <a class="btn btn-primary arcade-play" href="/play/">Play now</a>
+      <svg class="arcade-board" viewBox="0 0 320 230" role="img" preserveAspectRatio="xMidYMax slice" focusable="false">
+        <title>A crop of the RESET//SCOPE board: a scope circle over a hostile contact, a civilian outside it, a hostage held beside a second hostile, and higher up a third hostile taking aim.</title>
+        <!-- The board is a portrait in the game, so this is a tall crop of it. A phone shows the bottom
+             band, the same 320x120 it always has; a wide screen stretches the picture to the card's
+             full height and sees more of the board above, never an empty margin. Anchored at the
+             bottom so the floor and the skyline are always in view. -->
+        <rect width="320" height="230" fill="var(--ground)"/>
+        <g fill="var(--surface)">
+          <rect x="2" y="196" width="30" height="14"/>
+          <rect x="37" y="186" width="30" height="24"/>
+          <rect x="73" y="176" width="30" height="34"/>
+          <rect x="108" y="191" width="30" height="19"/>
+          <rect x="144" y="181" width="30" height="29"/>
+          <rect x="179" y="196" width="30" height="14"/>
+          <rect x="215" y="186" width="30" height="24"/>
+          <rect x="250" y="176" width="30" height="34"/>
+          <rect x="286" y="191" width="30" height="19"/>
+        </g>
+        <line x1="0" y1="210" x2="320" y2="210" stroke="var(--line)" stroke-width="1"/>
+
+        <!-- Higher up the board: a hostile taking aim, drawn as the game draws it — the ring closes
+             before it fires, and that is the moment to get into cover. And another civilian. -->
+        <path d="M262 57 L272.4 70 L262 83 L251.6 70 Z" stroke="var(--state-stale)" stroke-width="3"
+              fill="var(--state-stale)" fill-opacity=".25"/>
+        <circle cx="262" cy="70" r="22" fill="none" stroke="var(--state-stale)" stroke-width="1.8" opacity=".75"/>
+        <g stroke="var(--brand-bright)" stroke-width="3" fill="none">
+          <circle cx="96" cy="78" r="11"/>
+          <line x1="90.8" y1="79.3" x2="101.2" y2="79.3"/>
+        </g>
+
+        <!-- A civilian: an open circle with an open hand. Never a target. -->
+        <g stroke="var(--brand-bright)" stroke-width="3" fill="none">
+          <circle cx="58" cy="172" r="11"/>
+          <line x1="52.8" y1="173.3" x2="63.2" y2="173.3"/>
+        </g>
+
+        <!-- A hostile, with a hostage on exactly the side the hit test protects. -->
+        <path d="M150 148 L161.2 162 L150 176 L138.8 162 Z" stroke="var(--state-stale)" stroke-width="3"
+              fill="var(--state-stale)" fill-opacity=".25"/>
+        <path d="M155.8 147 A16.1 16.1 0 0 1 166.1 162" stroke="var(--state-verified)" stroke-width="2.4"
+              fill="none" opacity=".5"/>
+        <circle cx="161" cy="154.5" r="5.9" fill="var(--state-verified)"/>
+
+        <!-- The hostile under the scope. -->
+        <path d="M238 154 L249.2 168 L238 182 L226.8 168 Z" stroke="var(--state-stale)" stroke-width="3"
+              fill="var(--state-stale)" fill-opacity=".25"/>
+
+        <!-- The scope: the board outside the circle is dimmed, because that is what it costs. -->
+        <path d="M0 0 H320 V230 H0 Z M278 168 A40 40 0 1 0 198 168 A40 40 0 1 0 278 168 Z"
+              fill="var(--ground)" fill-rule="evenodd" opacity=".6"/>
+        <circle cx="238" cy="168" r="40" fill="none" stroke="var(--brand-bright)" stroke-width="2"/>
+
+        <g stroke="var(--ink)" stroke-width="1.4" fill="none">
+          <circle cx="238" cy="168" r="9"/>
+          <line x1="221.8" y1="168" x2="234.4" y2="168"/>
+          <line x1="241.6" y1="168" x2="254.2" y2="168"/>
+          <line x1="238" y1="151.8" x2="238" y2="164.4"/>
+          <line x1="238" y1="171.6" x2="238" y2="184.2"/>
+        </g>
+      </svg>
     </section>
 
     <!-- All trackers. The renderer owns everything inside this region: it writes the cards and the

@@ -494,14 +494,33 @@ h3 {
 
 /* ---------- arcade entry ---------- */
 
-/* Compact on purpose. The arcade is a reason to come back, not the product: one card, three numbers,
-   one button, and none of the game's code. */
+/* The one place on this site that is not data. It has to read as a game within a glance, which the
+   previous version did not: it used the same surface, border, radius and record tiles as the trackers,
+   and for a first-time visitor its largest element was three em-dashes.
+
+   Now it shows the board. The SVG is a crop drawn with the shapes and palette scope.js uses, inline
+   because the game's own scripts must not load on this page. The records line appears only once there
+   is a run behind it. */
 .arcade-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background:
     radial-gradient(420px 220px at 92% -30%, var(--brand-soft), transparent 70%),
     var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--brand-line);
   border-radius: var(--radius);
+  padding: 0;
+}
+
+/* The board leads on a phone. What this card failed to say was "there is a game here", and a picture
+   says it before any sentence does; the button is a short scroll below and the card reads as one thing. */
+.arcade-board {
+  order: -1;
+}
+
+.arcade-copy {
   padding: var(--sp-4);
 }
 
@@ -516,13 +535,75 @@ h3 {
   color: var(--ink-muted);
   font-size: var(--size-small);
   margin: var(--sp-1) 0 var(--sp-4);
+  max-width: 46ch;
 }
 
-.arcade-stats {
+/* The board itself. On a phone it is a band under the copy; on a wide screen it fills the right of the
+   card and bleeds to the edges, because a picture with a margin reads as an illustration and a picture
+   without one reads as a window. */
+.arcade-board {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* The bottom band of the tall crop: exactly the scene a phone has always shown. */
+  aspect-ratio: 320 / 120;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* Records. Not `.record` tiles: those are the tracker grid's, and borrowing them is what made this
+   card look like data. A quiet line of facts instead, and the numbers are not in the verified green —
+   a high score is not a verified date and must not be dressed as one. */
+.arcade-records {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--sp-2);
-  margin-bottom: var(--sp-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3) var(--sp-4);
+  list-style: none;
+  margin: 0 0 var(--sp-4);
+  padding: 0;
+}
+
+/* Four facts fit on one row once there is room for them; below that a 2x2 block reads better than
+   three across and one stranded underneath.
+
+   "Room" is the width of the copy column, not of the viewport — at 768px the card turns two-column and
+   the copy narrows to 346px, where four across need 371 and the last label is squeezed to 71px of its
+   96. A viewport breakpoint cannot see that; a container query measures the thing that matters. A
+   browser without container queries keeps the 2x2, which always fits. */
+.arcade-copy {
+  container-type: inline-size;
+}
+
+@container (min-width: 380px) {
+  .arcade-records {
+    grid-template-columns: repeat(4, minmax(0, auto));
+    justify-content: start;
+    gap: var(--sp-2) var(--sp-5);
+  }
+}
+
+.arcade-records[hidden] {
+  display: none;
+}
+
+.arcade-records li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.arcade-records small {
+  color: var(--ink-faint);
+  font-size: var(--size-label);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.arcade-records b {
+  font-family: var(--font-num);
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
 }
 
 .arcade-play {
@@ -532,31 +613,30 @@ h3 {
 @media (min-width: 768px) {
   .arcade-card {
     display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: end;
-    gap: var(--sp-4) var(--sp-5);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 340px);
+    align-items: stretch;
   }
 
-  .arcade-card .drop-eyebrow,
-  .arcade-name,
-  .arcade-line {
-    grid-column: 1;
+  .arcade-copy {
+    padding: var(--sp-5);
   }
 
-  .arcade-line {
-    margin-bottom: 0;
-  }
-
-  .arcade-stats {
-    grid-column: 1;
-    margin-bottom: 0;
+  /* Edge to edge down the right of the card, whatever height the copy gives it. `contain: size` stops
+     the picture's own proportions from setting the row's height — the copy decides that, and the board
+     fills it — and the tall crop in the SVG means filling it shows more board, never an empty band. */
+  .arcade-board {
+    order: 0;
+    align-self: stretch;
+    height: 100%;
+    aspect-ratio: auto;
+    contain: size;
+    border-bottom: 0;
+    border-left: 1px solid var(--line-soft);
   }
 
   .arcade-play {
-    grid-column: 2;
-    grid-row: 1 / -1;
     width: auto;
-    align-self: center;
+    min-width: 180px;
   }
 }
 

@@ -725,21 +725,54 @@ function syncTrackButton(button, tracked) {
     }
 }
 
-// The arcade card's three numbers, from the same record the game writes. Dashes until then, because a
-// zero would claim the visitor has played and scored nothing.
+// "Earned/total" for RESET//SCOPE alone.
+//
+// Both numbers come from one list: the game's own achievement ids, which the page carries and
+// arcade-card.test.ts holds against the table the game grants from. The stored record is filtered to that
+// list rather than counted whole, because player.js deliberately keeps every valid id it is given —
+// including ids from a later version of the site, or from another game — so a raw count could read 7/6.
+// Counting each id of the list at most once means the numerator can never exceed the denominator.
+function arcadeAchievements(card, state) {
+    var ids = card ? (card.getAttribute('data-achievement-ids') || '').split(/\s+/).filter(Boolean) : [];
+    if (ids.length === 0) return '—';
+    var stored = state.load().achievements || [];
+    var earned = 0;
+    for (var i = 0; i < ids.length; i++) {
+        if (stored.indexOf(ids[i]) !== -1) earned++;
+    }
+    return earned + '/' + ids.length;
+}
+
+// The arcade card's records, from the same record the game writes.
+//
+// The whole line stays hidden until there is a run behind it. It used to show three em-dashes, which
+// were the largest thing on the card for everyone who had not played — and painted in the verified
+// green, so they read as missing data rather than as an invitation. Nothing is claimed here until the
+// visitor has actually done something.
 function paintArcadeCard() {
     var state = player();
     if (!state || !document.getElementById) return;
+    var card = document.querySelector ? document.querySelector('.arcade-card') : null;
+    var row = document.getElementById('arcade-records');
+    if (!row) return;
+
     var records = state.arcadeRecords();
+    if (!records.gamesPlayed) {
+        row.hidden = true;
+        return;
+    }
+
     var cells = {
-        'arcade-score': records.gamesPlayed ? records.highScore.toLocaleString() : '—',
-        'arcade-mission': records.gamesPlayed ? String(records.highestMission) : '—',
-        'arcade-rank': records.bestRank || '—'
+        'arcade-score': records.highScore.toLocaleString(),
+        'arcade-rank': records.bestRank || '—',
+        'arcade-mission': String(records.highestMission),
+        'arcade-achievements': arcadeAchievements(card, state)
     };
     for (var id in cells) {
         var node = document.getElementById(id);
         if (node) node.textContent = cells[id];
     }
+    row.hidden = false;
 }
 
 // === THE LEAD BLOCK ===
