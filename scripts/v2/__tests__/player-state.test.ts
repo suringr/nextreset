@@ -343,7 +343,8 @@ test("state survives a page load", () => {
     const second = boot({}, storage).player;
     assert.deepEqual(second.trackedGames(), ["genshin"]);
     assert.deepEqual(second.arcadeRecords(), { highScore: 4242, highestMission: 3, bestCombo: 9, bestRank: "B", gamesPlayed: 1 });
-    assert.equal(second.profile().xp, 150);
+    // 150 from the run, and 20 for tracking a first game — the ledger's one award that is not a run's.
+    assert.equal(second.profile().xp, 150 + 20);
     assert.equal(second.profile().level, 2);
     assert.equal(second.hasAchievement("bullseye"), true);
 });
@@ -364,4 +365,119 @@ test("reading the state does not write on every load", () => {
     const afterFirst = storage.writes;
     boot({}, storage);
     assert.equal(storage.writes, afterFirst, "a load with nothing to migrate writes nothing");
+});
+
+// === Codex review of #48, and #53's first-track award ===
+
+test("two open tabs do not erase each other's changes", () => {
+    // Codex P1 on #48, reproduced exactly: tab B was opened before tab A tracked a game. B then records
+    // a run. B used to write its whole cached record back, and the tracked game was gone.
+    const storage = new FakeStorage();
+    const tabB = boot({}, storage).player;
+    tabB.load();
+    const tabA = boot({}, storage).player;
+
+    tabA.track("lol");
+    tabB.recordRun({ score: 9100, mission: 2, combo: 6, rank: "B" });
+
+    const later = boot({}, storage).player;
+    assert.deepEqual(later.trackedGames(), ["lol"], "tab B's run erased the game tab A tracked");
+    assert.equal(later.arcadeRecords().highScore, 9100, "and the run itself must land too");
+});
+
+test("the other direction as well: tracking in one tab keeps a run finished in another", () => {
+    const storage = new FakeStorage();
+    const home = boot({}, storage).player;
+    home.load();
+    const arcade = boot({}, storage).player;
+
+    arcade.recordRun({ score: 14303, mission: 2, combo: 8, rank: "B" });
+    arcade.addXp(175, "completed-run");
+    arcade.grantAchievement("first-run");
+    home.track("genshin");
+
+    const later = boot({}, storage).player;
+    assert.equal(later.arcadeRecords().highScore, 14303, "tracking in the stale tab wiped the high score");
+    assert.equal(later.profile().xp, 175 + 20, "and the XP");
+    assert.equal(later.hasAchievement("first-run"), true, "and the achievement");
+    assert.deepEqual(later.trackedGames(), ["genshin"]);
+});
+
+test("toggling decides from what is stored, not from a stale copy", () => {
+    const storage = new FakeStorage();
+    const stale = boot({}, storage).player;
+    stale.load();
+    boot({}, storage).player.track("cs2");
+    // This tab still believes cs2 is untracked. Toggling must untrack it, not "track" it again.
+    assert.equal(stale.toggleTracked("cs2"), false);
+    assert.deepEqual(boot({}, storage).player.trackedGames(), []);
+});
+
+test("a full quota still lets a returning visitor read their record", () => {
+    // Codex P2 on #48: the availability probe is a write, a full quota refuses it, and the page then
+    // treated storage as absent and showed the defaults for the whole visit.
+    const storage = new FakeStorage();
+    storage.items.set(KEY, JSON.stringify({
+        version: 1, profile: { xp: 320, level: 3 }, games: { tracked: ["lol", "gta"] },
+        arcade: { resetScope: { highScore: 5000, highestMission: 2, bestCombo: 4, bestRank: "C", gamesPlayed: 2 } },
+        achievements: ["first-run"]
+    }));
+    storage.failWrites = true;
+    const { player } = boot({}, storage);
+    assert.deepEqual(player.trackedGames(), ["lol", "gta"]);
+    assert.equal(player.profile().xp, 320);
+    assert.equal(player.arcadeRecords().highScore, 5000);
+    assert.equal(player.storageAvailable(), false, "reads work; persisting does not, and that is what this reports");
+});
+
+test("with writes refused, a change made on the page survives the rest of the page", () => {
+    // The multi-tab fix re-reads storage before each change. Where a write cannot land, re-reading would
+    // silently undo every change the visitor makes, so memory has to win there.
+    const storage = new FakeStorage();
+    storage.failWrites = true;
+    const { player } = boot({}, storage);
+    player.track("valorant");
+    player.track("pubg");
+    assert.deepEqual(player.trackedGames(), ["valorant", "pubg"]);
+});
+
+test("what save() keeps in memory is what it wrote, not what it was given", () => {
+    // Codex P2 on #48: the cache held the caller's object, so a rejected value stayed live and
+    // save({}) left a record with no profile until the next reload.
+    const { player } = boot();
+    player.save({});
+    assert.doesNotThrow(() => player.profile());
+    assert.equal(player.profile().xp, 0);
+
+    player.save({ version: 1, profile: { xp: -50, level: 99 }, games: { tracked: ["nope", "lol"] } });
+    assert.equal(player.profile().xp, 0, "a negative XP was rejected on disk and kept in memory");
+    assert.equal(player.profile().level, 1, "the level is derived, never trusted");
+    assert.deepEqual(player.trackedGames(), ["lol"], "an unknown game was rejected on disk and kept in memory");
+});
+
+test("tracking a first game earns the XP the ledger advertises, once", () => {
+    // Codex P2 on #53: "Tracking your first game, +20" was printed on /play/ and granted by nothing.
+    const { player } = boot();
+    player.track("lol");
+    assert.equal(player.profile().xp, 20);
+    player.untrack("lol");
+    player.track("lol");
+    player.track("gta");
+    assert.equal(player.profile().xp, 20, "untracking and tracking again must not farm it");
+});
+
+test("the first-track award is the amount the printed ledger says", () => {
+    const core = fs.readFileSync(path.join(ROOT, "public", "assets", "scope-core.js"), "utf8");
+    const entry = /\{\s*id:\s*'first-track',\s*xp:\s*(\d+)/.exec(core);
+    assert.ok(entry, "scope-core.js no longer lists first-track");
+    const { player } = boot();
+    const award = (player as unknown as { FIRST_TRACK: { id: string; xp: number } }).FIRST_TRACK;
+    assert.equal(award.id, "first-track");
+    assert.equal(award.xp, Number(entry![1]), "player.js grants a different amount than /play/ prints");
+});
+
+test("loading a page, reloading it or coming back earns nothing", () => {
+    const storage = new FakeStorage();
+    for (let i = 0; i < 5; i++) boot({}, storage).player.load();
+    assert.equal(boot({}, storage).player.profile().xp, 0);
 });

@@ -663,6 +663,15 @@ function restoreToGrid(grid, slot) {
         if (heading) grid.insertBefore(slot, heading);
         else grid.appendChild(slot);
     }
+
+    // Where the build put it is not always where it belongs now. A tracked card whose date passed while
+    // it sat on the shelf is marked unanswered but, by design, not moved; restored by its build-time
+    // group it would land under "Next up" saying "No official date announced", and no later pass would
+    // repair it because the card is already marked. So it goes where an unanswered card goes.
+    var card = slot.querySelector ? slot.querySelector('.card') : null;
+    if (card && card.dataset && card.dataset.unanswered === '1' && group !== 'unknown') {
+        regroupAsUnknown(card);
+    }
 }
 
 // A game id is [a-z0-9-], so this only has to be safe rather than complete.
@@ -706,6 +715,8 @@ function enableTracking() {
             button.addEventListener('click', function (event) {
                 event.preventDefault();
                 var nowTracked = state.toggleTracked(game);
+                // Tracking a first game earns XP, so the header's chip may have something new to say.
+                if (state.paintChip) state.paintChip();
                 // Every control for this game moves together: the card's star and the lead block's.
                 var all = document.querySelectorAll('[data-track="' + cssEscape(game) + '"]');
                 for (var k = 0; k < all.length; k++) syncTrackButton(all[k], nowTracked);
@@ -787,6 +798,10 @@ function initNextDrop() {
     var nextUtc = drop.getAttribute('data-next-utc');
     var value = drop.querySelector('.drop-value');
     if (!nextUtc || !value || drop.getAttribute('data-precision') !== 'exact') return;
+    // Only a drop that is still coming counts down. The fallback lead is the latest verified change,
+    // which is in the past by definition, so a countdown would turn its verified value into
+    // "Updating..." the moment the page loaded — losing the very value it was chosen to show.
+    if (drop.getAttribute('data-kind') !== 'upcoming') return;
 
     var checked = drop.querySelector('.drop-checked');
     var checkedUtc = drop.getAttribute('data-checked-utc');
@@ -844,7 +859,12 @@ async function initHomepage() {
     initNextDrop();
     paintArcadeCard();
 
-    const cards = grid.querySelectorAll('.card[data-game]');
+    // Collected from the shelf as well as the grid. fillMyGames() has already moved tracked cards out of
+    // the grid by now, and a card only looked for in the grid would miss its fetch and keep the build's
+    // value until the first updater tick — the visitor's own games, of all the cards, refreshed last.
+    const shelf = document.getElementById('my-games-shelf');
+    const cards = Array.from(grid.querySelectorAll('.card[data-game]'))
+        .concat(shelf ? Array.from(shelf.querySelectorAll('.card[data-game]')) : []);
 
     // Fetch all game data in parallel
     const fetchPromises = Array.from(cards).map(async (card) => {
@@ -885,8 +905,34 @@ async function init() {
     }
 }
 
+// Brings everything this page shows about the player back in line with what is stored.
+//
+// Two ways a page can be showing something stale. A page restored from the back-forward cache runs no
+// load handler: track a game on a tracker page, press Back, and the homepage comes back exactly as it
+// was left. And a page open in another tab hears about a change only through the storage event.
+function resyncPlayer() {
+    var state = player();
+    if (!state || !document.querySelectorAll) return;
+    if (state.forget) state.forget();
+    var buttons = document.querySelectorAll('[data-track]');
+    for (var i = 0; i < buttons.length; i++) {
+        syncTrackButton(buttons[i], state.isTracked(buttons[i].getAttribute('data-track')));
+    }
+    fillMyGames();
+    paintArcadeCard();
+    if (state.paintChip) state.paintChip();
+}
+
 // Guarded so the display helpers above can be loaded and tested outside a browser.
 if (typeof document !== 'undefined') {
+    if (typeof window !== 'undefined' && window.addEventListener) {
+        window.addEventListener('pageshow', function (event) {
+            if (event && event.persisted) resyncPlayer();
+        });
+        window.addEventListener('storage', function (event) {
+            if (!event || event.key === null || event.key === 'nextreset.player.v1') resyncPlayer();
+        });
+    }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
