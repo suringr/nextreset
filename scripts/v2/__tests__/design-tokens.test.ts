@@ -148,6 +148,26 @@ test("no colour is written outside the token block", () => {
     assert.deepEqual(literals, [], `colour literals outside :root — make them tokens: ${literals.join(", ")}`);
 });
 
+test("no page writes a colour into a style attribute either", () => {
+    // Codex P2 on #47. The stylesheet was clean and the homepage still painted its prose with forty
+    // inline declarations of the pre-V4 palette, which override the stylesheet and which no contrast
+    // test reads. A colour in a style attribute is a colour outside the token block, like any other.
+    for (const page of PAGES) {
+        const html = fs.readFileSync(path.join(PUBLIC, page), "utf8");
+        const body = html.slice(html.indexOf("<body"));
+        const found = [...body.matchAll(/style="([^"]*)"/g)]
+            .map(m => m[1])
+            .filter(style => /#[0-9a-fA-F]{3,8}\b|\brgba?\s*\(|\bhsla?\s*\(/.test(style));
+        assert.deepEqual(found, [], `${page} writes colours inline: ${found.join(" | ")}`);
+    }
+});
+
+test("the wordmark's dot is the brand, and green stays the colour of a verified value", () => {
+    // Codex P2 on #47: every page spent the verified green on decoration.
+    assert.ok(!/\.dot\{[^}]*--state-verified/.test(criticalCss("home")), "the critical dot is still verified-green");
+    assert.ok(!/\.dot\s*\{[^}]*--state-verified/.test(authoredCss().replace(/\/\*[\s\S]*?\*\//g, "")), "the stylesheet's dot is still verified-green");
+});
+
 test("every custom property the stylesheet reads is one the token block declares", () => {
     const declared = new Set(TOKENS.map(([name]) => name));
     const used = new Set([...authoredCss().matchAll(/var\((--[a-z0-9-]+)/g)].map(m => m[1]));

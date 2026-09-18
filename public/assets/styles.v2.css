@@ -208,8 +208,11 @@ h3 {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: var(--state-verified);
-  box-shadow: 0 0 0 4px var(--verified-soft);
+  /* The brand, not --state-verified. Green means "the source confirmed this value" everywhere else on
+     the site, and spending it on the wordmark put a verification signal on every page that verifies
+     nothing — the one collision the V4 palette was built to remove. */
+  background: var(--brand);
+  box-shadow: 0 0 0 4px var(--brand-soft);
   flex: none;
 }
 
@@ -954,6 +957,62 @@ h3 {
   font-weight: 700;
 }
 
+/* ---------- the homepage's prose ----------
+
+   It carried forty inline declarations with the pre-V4 palette written as literals (#e5e7eb, #9ca3af,
+   #111827), which overrode the stylesheet, drifted from the tokens and could not be contrast-checked.
+   The tracker pages' `.content-section` rules already say how this prose should look; the homepage now
+   uses them, plus the three things only it has. */
+
+.content-sections {
+  margin-top: var(--sp-7);
+  max-width: var(--measure);
+}
+
+.content-sections p {
+  line-height: 1.7;
+}
+
+.how-steps {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.how-step {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--sp-4);
+}
+
+.how-step p {
+  font-size: var(--size-small);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.how-icon {
+  font-size: 24px;
+  margin-bottom: var(--sp-2);
+}
+
+.how-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.games-list {
+  line-height: 2;
+}
+
+.games-list a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 2px;
+}
+
 /* ---------- tracker page ---------- */
 
 .game-page,
@@ -1284,11 +1343,11 @@ h3 {
   color: var(--ink-faint);
 }
 
-.event.is-released::before {
+.event.is-past::before {
   background: var(--state-unavailable);
 }
 
-.event.is-released .event-state {
+.event.is-past .event-state {
   color: var(--ink-faint);
 }
 
