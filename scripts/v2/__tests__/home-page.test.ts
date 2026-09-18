@@ -479,7 +479,11 @@ test("a date stays set as a date when the browser rewrites it", () => {
     app.renderCard(card, PUBLISHED["lol.next-patch"]);
     assert.equal(els[".card-countdown"].className, "card-countdown is-text", "a date keeps the styling the build gave it");
 
-    app.renderCard(card, PUBLISHED["gta.weekly-reset"]);
+    // `renderCard` reads the real clock, so the instant has to be ahead of whenever this runs. Pinning
+    // it to a calendar date made this test expire: it passed until 2026-09-17 and failed from the 18th,
+    // when the fixture's reset became a past event and the card correctly stopped being a countdown.
+    const upcoming = { ...PUBLISHED["gta.weekly-reset"], nextEventUtc: new Date(Date.now() + 3 * 86400000).toISOString() };
+    app.renderCard(card, upcoming);
     assert.equal(els[".card-countdown"].className, "card-countdown", "a countdown does not");
 });
 

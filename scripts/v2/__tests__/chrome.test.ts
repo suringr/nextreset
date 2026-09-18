@@ -184,9 +184,13 @@ test("the header a page carries is the header the source builds for it", () => {
     }
 });
 
-test("no page kept the header it had before there was a shared one", () => {
+test("no page kept the header it had before there was a shared one, or a comment describing it", () => {
+    // The markup and the words about it have to go together. The applier replaces the element it
+    // finds; it cannot know about a comment above it, and a comment naming a component that no longer
+    // exists is documentation that lies — which is how the homepage kept saying "Top Bar" above a
+    // header that had not been one since PR 1.
     for (const page of site.pages) {
         const html = read(page);
-        assert.ok(!html.includes('class="topbar"'), `${page} still carries the pre-V4 topbar`);
+        assert.ok(!/topbar|top bar/i.test(html), `${page} still mentions the pre-V4 topbar`);
     }
 });
