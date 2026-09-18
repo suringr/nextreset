@@ -159,6 +159,32 @@
         return storageProbe;
     }
 
+    /**
+     * The stored record, telling apart the two things readJson folds together: the key genuinely being
+     * absent (null — cleared, or a first visit) and the read itself failing (undefined — storage became
+     * unreachable mid-visit). The first may be acted on; the second says nothing about what is stored,
+     * and treating it as a clear threw away a good record and could write defaults over it.
+     *
+     * A record that is there but will not parse is null, as before: it is unusable, and replacing it
+     * with the defaults is a repair, not a loss.
+     */
+    function readRecord(store) {
+        if (!store) return null;
+        var raw;
+        try {
+            raw = store.getItem(KEY);
+        } catch (e) {
+            return undefined;
+        }
+        if (raw === null || raw === undefined || raw === '') return null;
+        try {
+            var parsed = JSON.parse(raw);
+            return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
     function readJson(store, key) {
         if (!store) return null;
         try {
@@ -309,7 +335,13 @@
     function load() {
         if (cache) return cache;
         var store = storage();
-        var stored = readJson(store, KEY);
+        var stored = readRecord(store);
+        if (stored === undefined) {
+            // Storage cannot be read right now. This page cannot know what it would be writing over, so
+            // it stops writing and works from memory for the rest of the visit.
+            writable = false;
+            stored = null;
+        }
         var state = sanitise(stored);
 
         // A record written by a later version of the site is left exactly where it is. Rolling a release
@@ -318,7 +350,7 @@
         var future = stored && whole(stored.version, VERSION) > VERSION;
         state.fromFuture = !!future;
 
-        if (!future) {
+        if (!future && writable) {
             var migrated = migrate(state, store);
             if (migrated || !stored) save(state);
         }
@@ -349,9 +381,15 @@
     function fresh() {
         var store = storage();
         if (!store || memoryHoldsChanges()) return load();
-        var stored = readJson(store, KEY);
-        if (!stored) {
-            // Cleared elsewhere since this page loaded. The clearing is the latest change; respect it.
+        var stored = readRecord(store);
+        if (stored === undefined) {
+            // The read failed. That is not "cleared": keep what memory holds, and stop writing, since
+            // this page can no longer see what it would overwrite.
+            writable = false;
+            return load();
+        }
+        if (stored === null) {
+            // Genuinely cleared elsewhere since this page loaded. The clearing is the latest change.
             cache = null;
             return load();
         }

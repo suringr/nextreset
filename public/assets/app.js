@@ -798,13 +798,20 @@ function initNextDrop() {
     var nextUtc = drop.getAttribute('data-next-utc');
     var value = drop.querySelector('.drop-value');
     if (!nextUtc || !value || drop.getAttribute('data-precision') !== 'exact') return;
-    // Only a drop that is still coming counts down. The fallback lead is the latest verified change,
-    // which is in the past by definition, so a countdown would turn its verified value into
-    // "Updating..." the moment the page loaded — losing the very value it was chosen to show.
-    if (drop.getAttribute('data-kind') !== 'upcoming') return;
 
     var checked = drop.querySelector('.drop-checked');
     var checkedUtc = drop.getAttribute('data-checked-utc');
+    if (checked && checkedUtc) {
+        setInterval(function () {
+            checked.textContent = 'Checked ' + formatTimeSince(checkedUtc);
+        }, 60000);
+    }
+
+    // Only a drop that is still coming counts down. The fallback lead is the latest verified change,
+    // which is in the past by definition, so a countdown would turn its verified value into
+    // "Updating..." the moment the page loaded — losing the very value it was chosen to show. Its
+    // freshness line above still updates, as it did before: only the countdown depends on this.
+    if (drop.getAttribute('data-kind') !== 'upcoming') return;
 
     function tick() {
         var diff = new Date(nextUtc).getTime() - Date.now();
@@ -822,11 +829,6 @@ function initNextDrop() {
 
     tick();
     setInterval(tick, 1000);
-    if (checked && checkedUtc) {
-        setInterval(function () {
-            checked.textContent = 'Checked ' + formatTimeSince(checkedUtc);
-        }, 60000);
-    }
 }
 
 function countdownTiles(ms) {

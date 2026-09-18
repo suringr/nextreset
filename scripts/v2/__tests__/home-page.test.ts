@@ -742,3 +742,31 @@ test("a card that is still answered goes back exactly where the build had it", (
     assert.deepEqual(layout(grid), [`# ${GROUP_HEADINGS.upcoming}`, "lol", "gta"]);
 });
 
+// === Codex review of 1fb2502 ===
+
+test("a latest-change lead keeps its value and still refreshes its freshness line", () => {
+    // The countdown is for upcoming drops only; the "Checked ..." line updates for any exact lead, as it
+    // did before the fallback lead stopped counting down.
+    const app = loadApp();
+    const timers: Array<() => void> = [];
+    app.setInterval = (fn: () => void) => { timers.push(fn); return timers.length; };
+    const value = { textContent: "September 16, 2026 at 11:23 UTC", className: "drop-value is-date", innerHTML: "" };
+    const checked = { textContent: "Checked September 16, 2026 at 12:00 UTC" };
+    const attrs: Record<string, string> = {
+        "data-next-utc": new Date(Date.now() - 2 * 86400000).toISOString(),
+        "data-precision": "exact", "data-kind": "latest",
+        "data-checked-utc": new Date(Date.now() - 3 * 3600000).toISOString()
+    };
+    const drop = {
+        getAttribute: (name: string) => (name in attrs ? attrs[name] : null),
+        querySelector: (sel: string) => (sel === ".drop-value" ? value : sel === ".drop-checked" ? checked : null)
+    };
+    app.document = { querySelector: (sel: string) => (sel === ".drop[data-next-utc]" ? drop : null) };
+    app.initNextDrop();
+
+    assert.equal(value.textContent, "September 16, 2026 at 11:23 UTC", "the verified value is kept");
+    assert.equal(timers.length, 1, "exactly one updater: the freshness line, not a countdown");
+    timers[0]();
+    assert.match(checked.textContent, /^Checked .*ago$/, `the freshness line reads "${checked.textContent}"`);
+});
+

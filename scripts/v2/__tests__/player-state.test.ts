@@ -20,9 +20,11 @@ const SOURCE = fs.readFileSync(path.join(ROOT, "public", "assets", "player.js"),
 class FakeStorage {
     items = new Map<string, string>();
     failWrites = false;
+    failReads = false;
     writes = 0;
 
     getItem(key: string): string | null {
+        if (this.failReads) throw new Error("SecurityError: storage is no longer accessible");
         return this.items.has(key) ? this.items.get(key)! : null;
     }
     setItem(key: string, value: string): void {
@@ -520,3 +522,49 @@ test("refresh() keeps changes that only this page holds", () => {
     assert.deepEqual(player.trackedGames(), ["valorant"]);
     assert.equal(player.profile().xp, 20);
 });
+
+// === Codex review of 1fb2502 ===
+
+test("a read that fails mid-visit is not taken for a clear: the record survives, in memory and on disk", () => {
+    // Codex P2: readJson returned null both for an absent key and for a getItem() that threw, so a read
+    // failure looked like another tab clearing storage. The page threw away its good copy, rebuilt from
+    // the defaults, and — if writes still worked — wrote those defaults over the visitor's record.
+    const record = {
+        version: 1, profile: { xp: 320, level: 3 }, games: { tracked: ["lol"] },
+        arcade: { resetScope: { highScore: 5000, highestMission: 2, bestCombo: 4, bestRank: "C", gamesPlayed: 2 } },
+        achievements: ["first-run"]
+    };
+    const storage = new FakeStorage();
+    storage.items.set(KEY, JSON.stringify(record));
+    const { player } = boot({}, storage);
+    player.load();
+
+    storage.failReads = true;
+    player.track("gta");
+    assert.deepEqual(player.trackedGames(), ["lol", "gta"], "the tracked game from before the failure was lost");
+    assert.equal(player.arcadeRecords().highScore, 5000, "the arcade record was reset to the defaults");
+    assert.ok(player.profile().xp >= 320, "the XP was reset to the defaults");
+
+    storage.failReads = false;
+    const onDisk = JSON.parse(storage.items.get(KEY)!);
+    assert.deepEqual(onDisk.games.tracked, ["lol"], "defaults were written over the record");
+    assert.equal(onDisk.arcade.resetScope.highScore, 5000);
+});
+
+test("a genuinely cleared record is still respected as the latest change", () => {
+    const storage = new FakeStorage();
+    const { player } = boot({}, storage);
+    player.track("cs2");
+    storage.items.delete(KEY);                  // cleared, e.g. in another tab
+    player.track("pubg");
+    assert.deepEqual(player.trackedGames(), ["pubg"], "a real clear should not be undone from memory");
+});
+
+test("a record that is there but will not parse is repaired, as before", () => {
+    const storage = new FakeStorage();
+    storage.items.set(KEY, "{not json");
+    const { player } = boot({}, storage);
+    assert.deepEqual(player.trackedGames(), []);
+    assert.doesNotThrow(() => JSON.parse(storage.items.get(KEY)!), "the unreadable record was left in place");
+});
+
