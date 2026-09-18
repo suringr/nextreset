@@ -424,11 +424,16 @@
     function createRenderer(canvas, options) {
         var ctx = canvas.getContext('2d');
         var reduced = !!(options && options.reducedMotion);
+        // Two scales, because they answer different questions. `scale` is backing-store pixels per world
+        // unit, and is what drawing needs. `cssScale` is CSS pixels per world unit, and is what anything
+        // measured against a finger needs: the 44px tap floor is 44 CSS px, not 44 device pixels. Using
+        // the first for the second made the floor 22 CSS px on every 2x phone.
         var scale = 1;
+        var cssScale = 1;
 
         function resize() {
             var box = canvas.getBoundingClientRect();
-            if (box.width === 0) return scale;
+            if (box.width === 0) return cssScale;
             // Capped at 2: beyond that a mid-range phone spends its frame budget on pixels nobody sees.
             var dpr = Math.min(global.devicePixelRatio || 1, 2);
             var width = Math.max(1, Math.round(box.width * dpr));
@@ -438,7 +443,9 @@
                 canvas.height = height;
             }
             scale = canvas.width / W;
-            return scale;
+            cssScale = box.width / W;
+            // What callers get back is the scale hit testing needs; drawing reads `scale` itself.
+            return cssScale;
         }
 
         function palette(name) {
@@ -676,7 +683,12 @@
             ctx.restore();
         }
 
-        return { resize: resize, draw: draw, scaleOf: function () { return scale; } };
+        return {
+            resize: resize,
+            draw: draw,
+            scaleOf: function () { return scale; },
+            cssScaleOf: function () { return cssScale; }
+        };
     }
 
     global.ResetScope = {

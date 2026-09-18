@@ -49,7 +49,10 @@
     var run = null;
     var frame = 0;
     var last = 0;
-    /** Touch gets toggles, a pointer gets holds. Decided per input event, not per device guess. */
+    /**
+     * Whether the last input was a finger. The on-screen controls latch for every pointer; this only
+     * decides whether moving over the board moves the aim, which a finger resting on glass must not.
+     */
     var lastInputWasTouch = false;
 
     // ─────────────────────────────── overlays ───────────────────────────────
@@ -308,7 +311,7 @@
         var dt = Math.min(0.05, (timestamp - last) / 1000) || 0;
         last = timestamp;
 
-        run.pixelsPerUnit = renderer.scaleOf();
+        run.pixelsPerUnit = renderer.cssScaleOf();
         game.update(run, dt, hud);
         renderer.draw(run);
         paint();
@@ -375,25 +378,19 @@
     }
 
     /**
-     * A hold control on a pointer, a toggle on touch.
+     * An on-screen control that latches: press once for on, again for off.
      *
-     * Holding SCOPE with one hand while tapping contacts with the other is two-handed play. On touch the
-     * same button latches, so the whole game is reachable with one thumb.
+     * For every pointer, not only touch. It used to be a hold on a mouse — but one pointer cannot hold a
+     * button and click the board at the same time: moving from SCOPE to a contact fired pointerleave and
+     * dropped the scope before the shot, so a mouse-only player could never take a scoped shot. Holding
+     * is still there for whoever wants it, on the keyboard (Shift, C), where a hand is free to aim.
      */
-    function bindHoldOrToggle(button, apply, isOn) {
+    function bindLatch(button, apply, isOn) {
         button.addEventListener('pointerdown', function (event) {
             event.preventDefault();
             lastInputWasTouch = event.pointerType === 'touch';
-            if (lastInputWasTouch) apply(!isOn());
-            else apply(true);
+            apply(!isOn());
         });
-        var release = function (event) {
-            if (event && event.pointerType === 'touch') return;
-            if (!lastInputWasTouch) apply(false);
-        };
-        button.addEventListener('pointerup', release);
-        button.addEventListener('pointercancel', release);
-        button.addEventListener('pointerleave', release);
         // Keyboard activation of the button itself toggles, since there is no hold to observe.
         button.addEventListener('keydown', function (event) {
             if (event.key === ' ' || event.key === 'Enter') {
@@ -403,8 +400,8 @@
         });
     }
 
-    bindHoldOrToggle(el.scope, setScope, function () { return run && run.scoped; });
-    bindHoldOrToggle(el.cover, setCover, function () { return run && run.inCover; });
+    bindLatch(el.scope, setScope, function () { return run && run.scoped; });
+    bindLatch(el.cover, setCover, function () { return run && run.inCover; });
 
     el.reset.addEventListener('click', function () {
         if (run) game.activateReset(run);
@@ -418,6 +415,23 @@
 
     /** Keyboard aiming, so the game is playable without a pointer at all. */
     var held = {};
+    // Whether Shift and C are holding scope and cover on right now. Kept apart from the on-screen
+    // latches, so releasing a key undoes only what the key did, and losing focus drops only key holds.
+    var keyScope = false;
+    var keyCover = false;
+
+    /**
+     * Lets go of everything the keyboard was holding.
+     *
+     * A key released while the window is not focused never sends its keyup here. Without this, a run
+     * resumed after alt-tabbing could keep drifting in the direction of a key long since released, or
+     * stay scoped, or stay in cover — where it cannot fire at all.
+     */
+    function releaseKeys() {
+        for (var key in held) delete held[key];
+        if (keyScope) { keyScope = false; setScope(false); }
+        if (keyCover) { keyCover = false; setCover(false); }
+    }
     var AIM_SPEED = 0.85;
 
     stage.addEventListener('keydown', function (event) {
@@ -428,8 +442,16 @@
             event.preventDefault();
             return;
         }
-        if (key === 'shift') { setScope(true); event.preventDefault(); return; }
-        if (key === 'c') { setCover(true); event.preventDefault(); return; }
+        if (key === 'shift') {
+            if (!run.scoped) { keyScope = true; setScope(true); }
+            event.preventDefault();
+            return;
+        }
+        if (key === 'c') {
+            if (!run.inCover) { keyCover = true; setCover(true); }
+            event.preventDefault();
+            return;
+        }
         if (key === 'f' || key === 'enter') {
             event.preventDefault();
             if (!run.paused) game.fire(run, run.aim.x, run.aim.y, hud);
@@ -450,8 +472,8 @@
     stage.addEventListener('keyup', function (event) {
         var key = event.key.toLowerCase();
         delete held[key];
-        if (key === 'shift') setScope(false);
-        if (key === 'c') setCover(false);
+        if (key === 'shift' && keyScope) { keyScope = false; setScope(false); }
+        if (key === 'c' && keyCover) { keyCover = false; setCover(false); }
     });
 
     /** The crosshair moves while a key is held, in world units per second. */
@@ -474,6 +496,7 @@
      * nothing.
      */
     function interrupt() {
+        releaseKeys();
         if (!run || run.over || run.paused) return;
         run.paused = true;
         pauseScreen();
@@ -538,7 +561,7 @@
     // A still board behind the start overlay, so the page does not open on an empty rectangle.
     var idle = game.createRun(1);
     idle.aim = { x: core.WORLD.w / 2, y: core.WORLD.h * 0.55 };
-    idle.pixelsPerUnit = renderer.scaleOf();
+    idle.pixelsPerUnit = renderer.cssScaleOf();
     renderer.draw(idle);
 
     global.ResetScopePlay = {
