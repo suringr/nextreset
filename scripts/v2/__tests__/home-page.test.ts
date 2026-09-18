@@ -314,6 +314,9 @@ class FakeElement {
     setAttribute(name: string, value: string) {
         this.attributes[name] = value;
     }
+    getAttribute(name: string): string | null {
+        return name in this.attributes ? this.attributes[name] : null;
+    }
     appendChild(node: FakeElement) {
         node.parentNode?.removeChild(node);
         node.parentNode = this;
@@ -665,3 +668,105 @@ test("the cards region is the only thing the renderer rewrites", () => {
     assert.equal($("#all-games").length, 1);
     assert.ok($(".content-section").length >= 3, "the explainer prose survives");
 });
+
+// === Codex review of #49 ===
+
+/** A lead block as the build writes it, with only what initNextDrop reads. */
+function fakeDrop(kind: string, nextUtc: string, shown: string) {
+    const value = { textContent: shown, className: "drop-value is-date", innerHTML: "" };
+    const attrs: Record<string, string> = { "data-next-utc": nextUtc, "data-precision": "exact", "data-kind": kind };
+    const drop = {
+        getAttribute: (name: string) => (name in attrs ? attrs[name] : null),
+        querySelector: (selector: string) => (selector === ".drop-value" ? value : null)
+    };
+    return { drop, value };
+}
+
+function runNextDrop(kind: string, nextUtc: string, shown: string) {
+    const app = loadApp();
+    const { drop, value } = fakeDrop(kind, nextUtc, shown);
+    app.document = { querySelector: (selector: string) => (selector === ".drop[data-next-utc]" ? drop : null) };
+    app.initNextDrop();
+    return value;
+}
+
+test("the latest-change lead keeps its verified value, even when its time is exact", () => {
+    // Codex P2 on #49: the fallback lead is the most recent verified change, so its instant is in the
+    // past by definition. Treated as a countdown it became "Updating..." the moment the page loaded.
+    const past = new Date(Date.now() - 2 * 86400000).toISOString();
+    const value = runNextDrop("latest", past, "September 16, 2026 at 11:23 UTC");
+    assert.equal(value.textContent, "September 16, 2026 at 11:23 UTC");
+    assert.notEqual(value.textContent, "Updating...");
+});
+
+test("an upcoming exact lead still becomes a live countdown, and a passed one still says so", () => {
+    const soon = runNextDrop("upcoming", new Date(Date.now() + 3 * 86400000).toISOString(), "September 22, 2026 at 06:59 UTC");
+    assert.equal(soon.className, "drop-value", "an upcoming exact instant is a countdown");
+    assert.ok(soon.innerHTML.length > 0, "and the countdown was drawn");
+    const gone = runNextDrop("upcoming", new Date(Date.now() - 60000).toISOString(), "September 18, 2026 at 10:00 UTC");
+    assert.equal(gone.textContent, "Updating...", "an upcoming drop whose moment passed is waiting for the next refresh");
+});
+
+test("a card that went unanswered on the shelf is restored among the unanswered, not under Next up", () => {
+    // Codex P2 on #49: an expired tracked card is marked unanswered but left on the shelf by design.
+    // Untracked, it went back by its build-time group and sat under "Next up" saying "No official date
+    // announced" — and no later pass moved it, because it was already marked.
+    const app = loadApp();
+    const lol = fakeCard("lol", {}, "League of Legends");
+    const gta = fakeCard("gta", {}, "GTA Online");
+    const fortnite = fakeCard("fortnite", { unanswered: "1" }, "Fortnite");
+    const grid = fakeGrid([["upcoming", [lol, gta]], ["unknown", [fortnite]]]);
+    app.markHomePositions(grid);
+
+    const slot = lol.parentNode!;
+    const shelf = new FakeElement("div");
+    shelf.appendChild(slot);          // tracked
+    lol.dataset.unanswered = "1";     // its date passed while it sat on the shelf
+    app.restoreToGrid(grid, slot);    // untracked
+
+    assert.deepEqual(layout(grid), [
+        `# ${GROUP_HEADINGS.upcoming}`, "gta",
+        `# ${GROUP_HEADINGS.unknown}`, "fortnite", "lol"
+    ]);
+});
+
+test("a card that is still answered goes back exactly where the build had it", () => {
+    const app = loadApp();
+    const lol = fakeCard("lol", {}, "League of Legends");
+    const gta = fakeCard("gta", {}, "GTA Online");
+    const grid = fakeGrid([["upcoming", [lol, gta]]]);
+    app.markHomePositions(grid);
+    const slot = lol.parentNode!;
+    new FakeElement("div").appendChild(slot);
+    app.restoreToGrid(grid, slot);
+    assert.deepEqual(layout(grid), [`# ${GROUP_HEADINGS.upcoming}`, "lol", "gta"]);
+});
+
+// === Codex review of 1fb2502 ===
+
+test("a latest-change lead keeps its value and still refreshes its freshness line", () => {
+    // The countdown is for upcoming drops only; the "Checked ..." line updates for any exact lead, as it
+    // did before the fallback lead stopped counting down.
+    const app = loadApp();
+    const timers: Array<() => void> = [];
+    app.setInterval = (fn: () => void) => { timers.push(fn); return timers.length; };
+    const value = { textContent: "September 16, 2026 at 11:23 UTC", className: "drop-value is-date", innerHTML: "" };
+    const checked = { textContent: "Checked September 16, 2026 at 12:00 UTC" };
+    const attrs: Record<string, string> = {
+        "data-next-utc": new Date(Date.now() - 2 * 86400000).toISOString(),
+        "data-precision": "exact", "data-kind": "latest",
+        "data-checked-utc": new Date(Date.now() - 3 * 3600000).toISOString()
+    };
+    const drop = {
+        getAttribute: (name: string) => (name in attrs ? attrs[name] : null),
+        querySelector: (sel: string) => (sel === ".drop-value" ? value : sel === ".drop-checked" ? checked : null)
+    };
+    app.document = { querySelector: (sel: string) => (sel === ".drop[data-next-utc]" ? drop : null) };
+    app.initNextDrop();
+
+    assert.equal(value.textContent, "September 16, 2026 at 11:23 UTC", "the verified value is kept");
+    assert.equal(timers.length, 1, "exactly one updater: the freshness line, not a countdown");
+    timers[0]();
+    assert.match(checked.textContent, /^Checked .*ago$/, `the freshness line reads "${checked.textContent}"`);
+});
+

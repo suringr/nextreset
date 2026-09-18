@@ -506,6 +506,16 @@
         if (document.hidden) interrupt();
     });
     global.addEventListener('blur', interrupt);
+
+    // The records panel is this page's view of the player record. player.js has already re-read the
+    // record by the time these run (it is loaded first), so repainting is all that is left: after a
+    // back-forward restore, and when another tab changes the record while this one is open.
+    global.addEventListener('pageshow', function (event) {
+        if (event && event.persisted) paintRecords();
+    });
+    global.addEventListener('storage', function (event) {
+        if (!event || event.key === null || (player && event.key === player.KEY)) paintRecords();
+    });
     global.addEventListener('orientationchange', function () {
         interrupt();
         global.setTimeout(function () { if (run) run.pixelsPerUnit = fitStage(); }, 250);

@@ -20,9 +20,11 @@ const SOURCE = fs.readFileSync(path.join(ROOT, "public", "assets", "player.js"),
 class FakeStorage {
     items = new Map<string, string>();
     failWrites = false;
+    failReads = false;
     writes = 0;
 
     getItem(key: string): string | null {
+        if (this.failReads) throw new Error("SecurityError: storage is no longer accessible");
         return this.items.has(key) ? this.items.get(key)! : null;
     }
     setItem(key: string, value: string): void {
@@ -343,7 +345,8 @@ test("state survives a page load", () => {
     const second = boot({}, storage).player;
     assert.deepEqual(second.trackedGames(), ["genshin"]);
     assert.deepEqual(second.arcadeRecords(), { highScore: 4242, highestMission: 3, bestCombo: 9, bestRank: "B", gamesPlayed: 1 });
-    assert.equal(second.profile().xp, 150);
+    // 150 from the run, and 20 for tracking a first game — the ledger's one award that is not a run's.
+    assert.equal(second.profile().xp, 150 + 20);
     assert.equal(second.profile().level, 2);
     assert.equal(second.hasAchievement("bullseye"), true);
 });
@@ -365,3 +368,271 @@ test("reading the state does not write on every load", () => {
     boot({}, storage);
     assert.equal(storage.writes, afterFirst, "a load with nothing to migrate writes nothing");
 });
+
+// === Codex review of #48, and #53's first-track award ===
+
+test("two open tabs do not erase each other's changes", () => {
+    // Codex P1 on #48, reproduced exactly: tab B was opened before tab A tracked a game. B then records
+    // a run. B used to write its whole cached record back, and the tracked game was gone.
+    const storage = new FakeStorage();
+    const tabB = boot({}, storage).player;
+    tabB.load();
+    const tabA = boot({}, storage).player;
+
+    tabA.track("lol");
+    tabB.recordRun({ score: 9100, mission: 2, combo: 6, rank: "B" });
+
+    const later = boot({}, storage).player;
+    assert.deepEqual(later.trackedGames(), ["lol"], "tab B's run erased the game tab A tracked");
+    assert.equal(later.arcadeRecords().highScore, 9100, "and the run itself must land too");
+});
+
+test("the other direction as well: tracking in one tab keeps a run finished in another", () => {
+    const storage = new FakeStorage();
+    const home = boot({}, storage).player;
+    home.load();
+    const arcade = boot({}, storage).player;
+
+    arcade.recordRun({ score: 14303, mission: 2, combo: 8, rank: "B" });
+    arcade.addXp(175, "completed-run");
+    arcade.grantAchievement("first-run");
+    home.track("genshin");
+
+    const later = boot({}, storage).player;
+    assert.equal(later.arcadeRecords().highScore, 14303, "tracking in the stale tab wiped the high score");
+    assert.equal(later.profile().xp, 175 + 20, "and the XP");
+    assert.equal(later.hasAchievement("first-run"), true, "and the achievement");
+    assert.deepEqual(later.trackedGames(), ["genshin"]);
+});
+
+test("toggling decides from what is stored, not from a stale copy", () => {
+    const storage = new FakeStorage();
+    const stale = boot({}, storage).player;
+    stale.load();
+    boot({}, storage).player.track("cs2");
+    // This tab still believes cs2 is untracked. Toggling must untrack it, not "track" it again.
+    assert.equal(stale.toggleTracked("cs2"), false);
+    assert.deepEqual(boot({}, storage).player.trackedGames(), []);
+});
+
+test("a full quota still lets a returning visitor read their record", () => {
+    // Codex P2 on #48: the availability probe is a write, a full quota refuses it, and the page then
+    // treated storage as absent and showed the defaults for the whole visit.
+    const storage = new FakeStorage();
+    storage.items.set(KEY, JSON.stringify({
+        version: 1, profile: { xp: 320, level: 3 }, games: { tracked: ["lol", "gta"] },
+        arcade: { resetScope: { highScore: 5000, highestMission: 2, bestCombo: 4, bestRank: "C", gamesPlayed: 2 } },
+        achievements: ["first-run"]
+    }));
+    storage.failWrites = true;
+    const { player } = boot({}, storage);
+    assert.deepEqual(player.trackedGames(), ["lol", "gta"]);
+    assert.equal(player.profile().xp, 320);
+    assert.equal(player.arcadeRecords().highScore, 5000);
+    assert.equal(player.storageAvailable(), false, "reads work; persisting does not, and that is what this reports");
+});
+
+test("with writes refused, a change made on the page survives the rest of the page", () => {
+    // The multi-tab fix re-reads storage before each change. Where a write cannot land, re-reading would
+    // silently undo every change the visitor makes, so memory has to win there.
+    const storage = new FakeStorage();
+    storage.failWrites = true;
+    const { player } = boot({}, storage);
+    player.track("valorant");
+    player.track("pubg");
+    assert.deepEqual(player.trackedGames(), ["valorant", "pubg"]);
+});
+
+test("what save() keeps in memory is what it wrote, not what it was given", () => {
+    // Codex P2 on #48: the cache held the caller's object, so a rejected value stayed live and
+    // save({}) left a record with no profile until the next reload.
+    const { player } = boot();
+    player.save({});
+    assert.doesNotThrow(() => player.profile());
+    assert.equal(player.profile().xp, 0);
+
+    player.save({ version: 1, profile: { xp: -50, level: 99 }, games: { tracked: ["nope", "lol"] } });
+    assert.equal(player.profile().xp, 0, "a negative XP was rejected on disk and kept in memory");
+    assert.equal(player.profile().level, 1, "the level is derived, never trusted");
+    assert.deepEqual(player.trackedGames(), ["lol"], "an unknown game was rejected on disk and kept in memory");
+});
+
+test("tracking a first game earns the XP the ledger advertises, once", () => {
+    // Codex P2 on #53: "Tracking your first game, +20" was printed on /play/ and granted by nothing.
+    const { player } = boot();
+    player.track("lol");
+    assert.equal(player.profile().xp, 20);
+    player.untrack("lol");
+    player.track("lol");
+    player.track("gta");
+    assert.equal(player.profile().xp, 20, "untracking and tracking again must not farm it");
+});
+
+test("the first-track award is the amount the printed ledger says", () => {
+    const core = fs.readFileSync(path.join(ROOT, "public", "assets", "scope-core.js"), "utf8");
+    const entry = /\{\s*id:\s*'first-track',\s*xp:\s*(\d+)/.exec(core);
+    assert.ok(entry, "scope-core.js no longer lists first-track");
+    const { player } = boot();
+    const award = (player as unknown as { FIRST_TRACK: { id: string; xp: number } }).FIRST_TRACK;
+    assert.equal(award.id, "first-track");
+    assert.equal(award.xp, Number(entry![1]), "player.js grants a different amount than /play/ prints");
+});
+
+test("loading a page, reloading it or coming back earns nothing", () => {
+    const storage = new FakeStorage();
+    for (let i = 0; i < 5; i++) boot({}, storage).player.load();
+    assert.equal(boot({}, storage).player.profile().xp, 0);
+});
+
+// === Codex review of #58 ===
+
+test("a record from a later version keeps this session's changes, and is never written over", () => {
+    // Codex P2 on #58: fresh() re-read the future record before every change while save() refused to
+    // write it, so track("cs2") then track("gta") lost cs2, and addXp() after a run lost the run.
+    const future = JSON.stringify({ version: 99, profile: { xp: 500 }, games: { tracked: ["lol"] }, somethingNew: true });
+    const storage = new FakeStorage();
+    storage.items.set(KEY, future);
+    const { player } = boot({}, storage);
+    player.track("cs2");
+    player.track("gta");
+    assert.deepEqual(player.trackedGames(), ["lol", "cs2", "gta"], "a change was lost to a re-read");
+    player.recordRun({ score: 7000, mission: 1, combo: 3, rank: "C" });
+    player.addXp(65, "completed-run");
+    assert.equal(player.arcadeRecords().highScore, 7000, "the run vanished when XP was added");
+    assert.equal(storage.getItem(KEY), future, "the later version's record must be left exactly as it was");
+});
+
+test("refresh() sees another tab's change where storage is authoritative", () => {
+    const storage = new FakeStorage();
+    const here = boot({}, storage).player;
+    here.load();
+    boot({}, storage).player.track("pubg");
+    (here as unknown as { refresh(): void }).refresh();
+    assert.deepEqual(here.trackedGames(), ["pubg"]);
+});
+
+test("refresh() keeps changes that only this page holds", () => {
+    // Codex P2 on #58: a back-forward restore called forget() unconditionally. With writes failing,
+    // memory held the only copy of a newly tracked game and its XP, and Back threw both away.
+    const storage = new FakeStorage();
+    storage.failWrites = true;
+    const { player } = boot({}, storage);
+    player.track("valorant");
+    (player as unknown as { refresh(): void }).refresh();
+    assert.deepEqual(player.trackedGames(), ["valorant"]);
+    assert.equal(player.profile().xp, 20);
+});
+
+// === Codex review of 1fb2502 ===
+
+test("a read that fails mid-visit is not taken for a clear: the record survives, in memory and on disk", () => {
+    // Codex P2: readJson returned null both for an absent key and for a getItem() that threw, so a read
+    // failure looked like another tab clearing storage. The page threw away its good copy, rebuilt from
+    // the defaults, and — if writes still worked — wrote those defaults over the visitor's record.
+    const record = {
+        version: 1, profile: { xp: 320, level: 3 }, games: { tracked: ["lol"] },
+        arcade: { resetScope: { highScore: 5000, highestMission: 2, bestCombo: 4, bestRank: "C", gamesPlayed: 2 } },
+        achievements: ["first-run"]
+    };
+    const storage = new FakeStorage();
+    storage.items.set(KEY, JSON.stringify(record));
+    const { player } = boot({}, storage);
+    player.load();
+
+    storage.failReads = true;
+    player.track("gta");
+    assert.deepEqual(player.trackedGames(), ["lol", "gta"], "the tracked game from before the failure was lost");
+    assert.equal(player.arcadeRecords().highScore, 5000, "the arcade record was reset to the defaults");
+    assert.ok(player.profile().xp >= 320, "the XP was reset to the defaults");
+
+    storage.failReads = false;
+    const onDisk = JSON.parse(storage.items.get(KEY)!);
+    assert.deepEqual(onDisk.games.tracked, ["lol"], "defaults were written over the record");
+    assert.equal(onDisk.arcade.resetScope.highScore, 5000);
+});
+
+test("a genuinely cleared record is still respected as the latest change", () => {
+    const storage = new FakeStorage();
+    const { player } = boot({}, storage);
+    player.track("cs2");
+    storage.items.delete(KEY);                  // cleared, e.g. in another tab
+    player.track("pubg");
+    assert.deepEqual(player.trackedGames(), ["pubg"], "a real clear should not be undone from memory");
+});
+
+test("a record that is there but will not parse is repaired, as before", () => {
+    const storage = new FakeStorage();
+    storage.items.set(KEY, "{not json");
+    const { player } = boot({}, storage);
+    assert.deepEqual(player.trackedGames(), []);
+    assert.doesNotThrow(() => JSON.parse(storage.items.get(KEY)!), "the unreadable record was left in place");
+});
+
+// === Codex review of 465d6a3 ===
+
+test("a resync whose read fails keeps everything the page holds", () => {
+    // Codex P2: refresh() dropped the cache before reading, so a getItem() that threw during a
+    // back-forward or cross-tab resync left the page rebuilding from the defaults — the visitor's tracked
+    // games, XP and records gone for the rest of the visit.
+    const storage = new FakeStorage();
+    storage.items.set(KEY, JSON.stringify({
+        version: 1, profile: { xp: 320, level: 3 }, games: { tracked: ["lol", "gta"] },
+        arcade: { resetScope: { highScore: 5000, highestMission: 2, bestCombo: 4, bestRank: "C", gamesPlayed: 2 } },
+        achievements: ["first-run"]
+    }));
+    const { player } = boot({}, storage);
+    player.load();
+    storage.failReads = true;
+    (player as unknown as { refresh(): void }).refresh();
+    assert.deepEqual(player.trackedGames(), ["lol", "gta"]);
+    assert.equal(player.profile().xp, 320);
+    assert.equal(player.arcadeRecords().highScore, 5000);
+    assert.equal(player.hasAchievement("first-run"), true);
+});
+
+test("a resync that reads successfully still picks up another tab's change", () => {
+    const storage = new FakeStorage();
+    const here = boot({}, storage).player;
+    here.load();
+    boot({}, storage).player.track("warzone");
+    (here as unknown as { refresh(): void }).refresh();
+    assert.deepEqual(here.trackedGames(), ["warzone"]);
+});
+
+// === Codex review of 1fb2502 (missed at the time) and 4731a65 ===
+
+test("with no storage at all, a resync keeps what the page holds", () => {
+    // Codex P2 on 1fb2502: storage() returned null but writable stayed true, so the predicate said
+    // storage was authoritative and a back-forward resync could clear the only copy. reread() already
+    // keeps the copy when there is no store (4731a65); this holds both the predicate and the behaviour.
+    const { player } = boot({}, null);
+    player.track("lol");
+    (player as unknown as { refresh(): void }).refresh();
+    assert.deepEqual(player.trackedGames(), ["lol"]);
+    assert.equal(player.profile().xp, 20);
+});
+
+test("player.js resyncs on a back-forward restore by itself, so pages without app.js stay current", () => {
+    // Codex P2 on 4731a65: only app.js listened for pageshow, and /play/, About, Privacy and the 404 do
+    // not load it — their header chip stayed stale after Back.
+    const storage = new FakeStorage();
+    const listeners: Record<string, (event: unknown) => void> = {};
+    const window: Record<string, unknown> = {
+        localStorage: storage,
+        addEventListener: (type: string, fn: (event: unknown) => void) => { listeners[type] = fn; }
+    };
+    // eslint-disable-next-line no-new-func
+    (new Function("window", "document", SOURCE) as (w: unknown, d: unknown) => void)(window, {});
+    const player = window.NextResetPlayer as Player;
+    assert.ok(listeners.pageshow, "player.js registers no pageshow handler");
+
+    const elsewhere = boot({}, storage).player;          // the tracker page the visitor went to
+    elsewhere.track("valorant");
+    assert.deepEqual(player.trackedGames(), [], "before the restore this page still shows its old copy");
+    listeners.pageshow({ persisted: true });            // pressing Back
+    assert.deepEqual(player.trackedGames(), ["valorant"]);
+    assert.equal(player.profile().xp, 20);
+
+    listeners.pageshow({ persisted: false });           // an ordinary load is not a restore
+});
+

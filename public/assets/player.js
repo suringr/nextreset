@@ -44,6 +44,15 @@
     var CHIP_ID = 'chrome-player';
 
     /**
+     * What tracking a first game earns: the one entry in the XP ledger that is not earned by a run.
+     *
+     * The ledger lives in scope-core.js, which does not load on the pages where tracking happens, so the
+     * amount is repeated here and player-state.test.ts holds the two copies together. It was printed on
+     * /play/ for a release before anything granted it.
+     */
+    var FIRST_TRACK = { id: 'first-track', xp: 20 };
+
+    /**
      * The twelve games the site tracks.
      *
      * This list is checked against the page registry by player-state.test.ts, so a game added to the
@@ -95,7 +104,7 @@
     function defaults() {
         return {
             version: VERSION,
-            profile: { xp: 0, level: 1 },
+            profile: { xp: 0, level: 1, awarded: [] },
             games: { tracked: [] },
             arcade: {
                 resetScope: {
@@ -111,6 +120,9 @@
     }
 
     var storageProbe;
+    // False once a write has failed. Reads carry on; writes stop being attempted, and changes are kept in
+    // memory for the rest of the page, because re-reading storage would silently undo them.
+    var writable = true;
 
     /**
      * localStorage, or null where it cannot be reached. Never throws.
@@ -127,15 +139,50 @@
         try {
             var s = global.localStorage;
             if (s) {
-                var probe = '__nr_probe__';
-                s.setItem(probe, '1');
-                s.removeItem(probe);
+                // Reading is what every page needs, and this throws where storage is blocked outright.
+                s.getItem(KEY);
                 storageProbe = s;
+                // A failed write is a different thing: a full quota, or Safari's old private mode. The
+                // record already there is still readable, and treating a refused probe as "no storage"
+                // would show a returning visitor the defaults for the whole visit.
+                try {
+                    var probe = '__nr_probe__';
+                    s.setItem(probe, '1');
+                    s.removeItem(probe);
+                } catch (e) {
+                    writable = false;
+                }
             }
         } catch (e) {
             storageProbe = null;
         }
         return storageProbe;
+    }
+
+    /**
+     * The stored record, telling apart the two things readJson folds together: the key genuinely being
+     * absent (null — cleared, or a first visit) and the read itself failing (undefined — storage became
+     * unreachable mid-visit). The first may be acted on; the second says nothing about what is stored,
+     * and treating it as a clear threw away a good record and could write defaults over it.
+     *
+     * A record that is there but will not parse is null, as before: it is unusable, and replacing it
+     * with the defaults is a repair, not a loss.
+     */
+    function readRecord(store) {
+        if (!store) return null;
+        var raw;
+        try {
+            raw = store.getItem(KEY);
+        } catch (e) {
+            return undefined;
+        }
+        if (raw === null || raw === undefined || raw === '') return null;
+        try {
+            var parsed = JSON.parse(raw);
+            return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch (e) {
+            return null;
+        }
     }
 
     function readJson(store, key) {
@@ -197,6 +244,10 @@
         // The level is derived, never trusted: a stored level that disagrees with the XP is the kind of
         // thing a console edit produces, and the XP is the fact.
         state.profile.level = levelFor(state.profile.xp);
+        state.profile.awarded = (Array.isArray(profile.awarded) ? profile.awarded : [])
+            .filter(function (id) { return typeof id === 'string' && id.length > 0 && id.length <= 64; })
+            .filter(function (id, i, all) { return all.indexOf(id) === i; })
+            .slice(0, 50);
 
         var games = stored.games && typeof stored.games === 'object' ? stored.games : {};
         state.games.tracked = uniqueIds(Array.isArray(games.tracked) ? games.tracked : []);
@@ -284,7 +335,13 @@
     function load() {
         if (cache) return cache;
         var store = storage();
-        var stored = readJson(store, KEY);
+        var stored = readRecord(store);
+        if (stored === undefined) {
+            // Storage cannot be read right now. This page cannot know what it would be writing over, so
+            // it stops writing and works from memory for the rest of the visit.
+            writable = false;
+            stored = null;
+        }
         var state = sanitise(stored);
 
         // A record written by a later version of the site is left exactly where it is. Rolling a release
@@ -293,7 +350,7 @@
         var future = stored && whole(stored.version, VERSION) > VERSION;
         state.fromFuture = !!future;
 
-        if (!future) {
+        if (!future && writable) {
             var migrated = migrate(state, store);
             if (migrated || !stored) save(state);
         }
@@ -302,18 +359,83 @@
         return state;
     }
 
-    /** Writes the state. Returns whether it reached storage. */
-    function save(state) {
+    /**
+     * The record as it stands in storage now, for a change about to be written.
+     *
+     * Another tab may have written since this page loaded. Starting a change from this page's copy and
+     * writing the whole record back would put that tab's changes out of existence — a game tracked
+     * there, a run finished there. So every change starts from what is stored, and falls back to memory
+     * only where storage could not take the write anyway.
+     */
+    /**
+     * Whether this page's copy may hold changes that storage does not.
+     *
+     * True when there is no storage at all (disabled, or its getter throws), when writes are failing (a
+     * full quota, private mode), and when the stored record belongs to a later version of the site,
+     * which this version never writes over. In each, memory holds the only copy of what the visitor did
+     * this session, and must not be replaced by what storage says.
+     */
+    function memoryHoldsChanges() {
+        return !storage() || !writable || !!(cache && cache.fromFuture);
+    }
+
+    /**
+     * Brings this page's copy in line with storage — replacing it only once a read has succeeded.
+     *
+     * The one place the cache is refreshed from storage, so a change about to be written (fresh) and a
+     * resync after another tab or a back-forward restore (refresh) cannot disagree about what a failed
+     * read means. Dropping the copy first and reading second lost everything the page held whenever
+     * that read then threw.
+     *
+     *   - read:    the stored record replaces the copy.
+     *   - cleared: the key is genuinely gone; the copy is dropped and the next read starts over.
+     *   - failed:  storage cannot be read; the copy is kept and writing stops, because this page can no
+     *              longer see what it would overwrite.
+     */
+    function reread() {
         var store = storage();
-        if (!store) return false;
+        if (!store) return 'failed';
+        var stored = readRecord(store);
+        if (stored === undefined) {
+            writable = false;
+            return 'failed';
+        }
+        if (stored === null) {
+            cache = null;
+            return 'cleared';
+        }
+        var state = sanitise(stored);
+        state.fromFuture = whole(stored.version, VERSION) > VERSION;
+        cache = state;
+        return 'read';
+    }
+
+    function fresh() {
+        if (!memoryHoldsChanges()) reread();
+        return load();
+    }
+
+    /**
+     * Writes the state. Returns whether it reached storage.
+     *
+     * Memory holds exactly what storage would, whether or not the write lands: the sanitised copy, never
+     * the object the caller passed. Caching the caller's object meant a rejected value was rejected on
+     * disk and kept in memory, and `save({})` left a record with no profile for the rest of the page.
+     */
+    function save(state) {
         if (state && state.fromFuture) return false;
+        var copy = sanitise(state);
+        var text = JSON.stringify(copy);
+        copy.fromFuture = false;
+        cache = copy;
+        var store = storage();
+        if (!store || !writable) return false;
         try {
-            var copy = sanitise(state);
-            store.setItem(KEY, JSON.stringify(copy));
-            cache = state;
+            store.setItem(KEY, text);
             return true;
         } catch (e) {
             // A full quota, or storage revoked mid-session. The site keeps working from memory.
+            writable = false;
             return false;
         }
     }
@@ -331,9 +453,16 @@
     function track(game) {
         var id = toGameId(game);
         if (!id) return false;
-        var state = load();
+        var state = fresh();
         if (state.games.tracked.indexOf(id) !== -1) return true;
         state.games.tracked.push(id);
+        // The one award tracking earns, once per visitor however many times they untrack and track
+        // again — so it cannot be farmed, and it is never granted for loading a page.
+        if (state.profile.awarded.indexOf(FIRST_TRACK.id) === -1) {
+            state.profile.awarded.push(FIRST_TRACK.id);
+            state.profile.xp = whole(state.profile.xp + FIRST_TRACK.xp, state.profile.xp, 10000000);
+            state.profile.level = levelFor(state.profile.xp);
+        }
         save(state);
         return true;
     }
@@ -341,7 +470,7 @@
     function untrack(game) {
         var id = toGameId(game);
         if (!id) return false;
-        var state = load();
+        var state = fresh();
         var at = state.games.tracked.indexOf(id);
         if (at === -1) return true;
         state.games.tracked.splice(at, 1);
@@ -353,7 +482,9 @@
     function toggleTracked(game) {
         var id = toGameId(game);
         if (!id) return false;
-        if (isTracked(id)) { untrack(id); return false; }
+        // Decided from what is stored, so a game tracked in another tab is untracked here rather than
+        // "tracked" a second time.
+        if (fresh().games.tracked.indexOf(id) !== -1) { untrack(id); return false; }
         track(id);
         return true;
     }
@@ -376,7 +507,7 @@
      * Returns which records the run broke, so the end-of-run screen can say so without asking again.
      */
     function recordRun(run) {
-        var state = load();
+        var state = fresh();
         var scope = state.arcade.resetScope;
         var result = { newHighScore: false, newMission: false, newCombo: false, newRank: false };
         var data = run && typeof run === 'object' ? run : {};
@@ -410,7 +541,7 @@
     function addXp(amount, reason) {
         var gain = whole(amount, 0, 100000);
         if (gain <= 0 || !reason) return profile();
-        var state = load();
+        var state = fresh();
         state.profile.xp = whole(state.profile.xp + gain, state.profile.xp, 10000000);
         state.profile.level = levelFor(state.profile.xp);
         save(state);
@@ -432,8 +563,9 @@
 
     /** Grants an achievement once. Returns whether this call was the one that granted it. */
     function grantAchievement(id) {
-        if (typeof id !== 'string' || !id || hasAchievement(id)) return false;
-        var state = load();
+        if (typeof id !== 'string' || !id) return false;
+        var state = fresh();
+        if (state.achievements.indexOf(id) !== -1) return false;
         state.achievements.push(id);
         save(state);
         return true;
@@ -442,6 +574,15 @@
     /** Drops the in-memory copy, so the next read comes from storage. For tests and for a fresh tab. */
     function forget() {
         cache = null;
+    }
+
+    /**
+     * Re-reads storage on the next access, so changes made in another tab (or before a back-forward
+     * restore) show up — unless this page holds changes storage could not take, which would be thrown
+     * away by it. `forget()` drops the copy unconditionally, and is for tests.
+     */
+    function refresh() {
+        if (!memoryHoldsChanges()) reread();
     }
 
     /**
@@ -489,6 +630,7 @@
         load: load,
         save: save,
         forget: forget,
+        refresh: refresh,
         toGameId: toGameId,
         trackedGames: trackedGames,
         isTracked: isTracked,
@@ -506,7 +648,10 @@
         chipText: chipText,
         paintChip: paintChip,
         CHIP_ID: CHIP_ID,
-        storageAvailable: function () { return !!storage(); }
+        FIRST_TRACK: { id: FIRST_TRACK.id, xp: FIRST_TRACK.xp },
+        // Whether a change made now will still be here on the next visit. Not the same question as whether
+        // the stored record can be read: a full quota or Safari's private mode reads fine and refuses writes.
+        storageAvailable: function () { return !!storage() && writable; }
     };
 
     // Reading once on load is what performs the migration, so a visitor who tracked games in the
@@ -516,5 +661,23 @@
     if (typeof document !== 'undefined') {
         load();
         paintChip();
+        // Another tab wrote the record. Drop this page's copy so the next read is the real one, and
+        // repaint the one view every page shares. (A null key means storage was cleared altogether.)
+        if (global.addEventListener) {
+            global.addEventListener('storage', function (event) {
+                if (event && event.key !== KEY && event.key !== null) return;
+                refresh();
+                paintChip();
+            });
+            // A page restored from the back-forward cache runs no load handler, and every page that loads
+            // this file shows the chip — including /play/, About, Privacy and the 404, which load no
+            // app.js. Resyncing here rather than in app.js reaches all of them; a page with more of the
+            // record on it (the homepage, /play/) repaints the rest itself after this has run.
+            global.addEventListener('pageshow', function (event) {
+                if (!event || !event.persisted) return;
+                refresh();
+                paintChip();
+            });
+        }
     }
 })(typeof window !== 'undefined' ? window : this);
