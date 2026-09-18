@@ -56,10 +56,10 @@ export function hasAdUnitMarkup(html: string): boolean {
  * other behavioral purposes", and a not-found page is exactly that: no publisher content, just a
  * signpost back to the site. Excluding it costs nothing, since nobody monetises an error page.
  *
- * **play/index.html** — the arcade is an interactive surface where a mis-tap costs a life. Auto ads
+ * **play/index.html** — the arcade is an interactive surface where a mis-tap costs a contract. Auto ads
  * place anchors and vignettes over the viewport at the account's discretion, and this repository can
- * neither see nor control that setting; the only way to be certain nothing lands over the board, beside
- * the fire controls, or across a mission transition is for the page not to carry the library at all.
+ * neither see nor control that setting; the only way to be certain nothing lands over the game, beside
+ * the FIRE button, or across a contract transition is for the page not to carry the library at all.
  * Ads outside the gameplay area may be worth revisiting later, and that is an account-side decision
  * taken deliberately, not something to arrive at by default because a new page inherited the rule.
  *

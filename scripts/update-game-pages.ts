@@ -532,7 +532,7 @@ function generatePage(page: GamePage): string {
       <!-- While you wait. One line and one link: this page exists to answer a question, and the
            arcade is what there is to do once it has. -->
       <aside class="waiting">
-        <p><strong>While you wait.</strong> RESET//SCOPE is a five-mission arcade run that lives on this site.</p>
+        <p><strong>While you wait.</strong> ONE SHOT // 80 CONTRACTS is a sniper arcade game that lives on this site.</p>
         <a class="btn" href="/play/">Open the arcade</a>
       </aside>
 

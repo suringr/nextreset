@@ -13,7 +13,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { ElementMatch, findElements, hasClass, spliceElement } from "./html-elements";
-import { chromeHtml, sectionOf } from "./design/chrome";
+import { chromeHtml, chromeTitleOf, sectionOf } from "./design/chrome";
 import { authoredPages } from "./update-design";
 
 const ROOT = path.join(__dirname, "..");
@@ -53,19 +53,20 @@ export function applyChrome(html: string, page: string): string {
     const eol = html.includes("\r\n") ? "\r\n" : "\n";
     const section = sectionOf(page);
     const badges = page === "index.html";
+    const title = chromeTitleOf(page);
 
     const existing = chromeOf(html) ?? topbarOf(html);
     if (existing) {
         // The document has already indented the line this element opens on, so the replacement supplies
         // indentation only for the lines it adds — which is what dropping the first line's copy does.
         const indent = existing.indent || "    ";
-        const header = chromeHtml({ section, badges, indent, eol });
+        const header = chromeHtml({ section, badges, title, indent, eol });
         return spliceElement(html, existing, header.slice(indent.length));
     }
 
     const container = containerOf(html, page);
     const indent = (container.indent || "  ") + "  ";
-    const header = chromeHtml({ section, badges, indent, eol });
+    const header = chromeHtml({ section, badges, title, indent, eol });
     const openEnd = container.start + container.openTag.length;
     return html.slice(0, openEnd) + eol + header + html.slice(openEnd);
 }

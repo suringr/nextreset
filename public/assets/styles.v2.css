@@ -501,9 +501,9 @@ h3 {
    previous version did not: it used the same surface, border, radius and record tiles as the trackers,
    and for a first-time visitor its largest element was three em-dashes.
 
-   Now it shows the board. The SVG is a crop drawn with the shapes and palette scope.js uses, inline
-   because the game's own scripts must not load on this page. The records line appears only once there
-   is a run behind it. */
+   Now it shows the game: a crop of ONE SHOT's street at dusk, drawn from one-shot.js's own geometry
+   and colours, inline because the game's own scripts must not load on this page. The records line
+   appears only once a contract has been cleared. */
 .arcade-card {
   position: relative;
   overflow: hidden;
@@ -517,7 +517,7 @@ h3 {
   padding: 0;
 }
 
-/* The board leads on a phone. What this card failed to say was "there is a game here", and a picture
+/* The picture leads on a phone. What this card failed to say was "there is a game here", and a picture
    says it before any sentence does; the button is a short scroll below and the card reads as one thing. */
 .arcade-board {
   order: -1;
@@ -541,21 +541,21 @@ h3 {
   max-width: 46ch;
 }
 
-/* The board itself. On a phone it is a band under the copy; on a wide screen it fills the right of the
+/* The picture itself. On a phone it is a band above the copy; on a wide screen it fills the right of the
    card and bleeds to the edges, because a picture with a margin reads as an illustration and a picture
    without one reads as a window. */
 .arcade-board {
   display: block;
   width: 100%;
   height: auto;
-  /* The bottom band of the tall crop: exactly the scene a phone has always shown. */
+  /* The bottom band of the tall crop: the street, the crowd and the scope. */
   aspect-ratio: 320 / 120;
   border-bottom: 1px solid var(--line-soft);
 }
 
-/* Records. Not `.record` tiles: those are the tracker grid's, and borrowing them is what made this
-   card look like data. A quiet line of facts instead, and the numbers are not in the verified green —
-   a high score is not a verified date and must not be dressed as one. */
+/* Records. Not tiles: those are the tracker grid's, and borrowing them is what made this card look like
+   data. A quiet line of facts instead, and the numbers are not in the verified green — a player's XP is
+   not a verified date and must not be dressed as one. */
 .arcade-records {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -625,8 +625,8 @@ h3 {
   }
 
   /* Edge to edge down the right of the card, whatever height the copy gives it. `contain: size` stops
-     the picture's own proportions from setting the row's height — the copy decides that, and the board
-     fills it — and the tall crop in the SVG means filling it shows more board, never an empty band. */
+     the picture's own proportions from setting the row's height — the copy decides that, and the picture
+     fills it — and the tall crop in the SVG means filling it shows more skyline, never an empty band. */
   .arcade-board {
     order: 0;
     align-self: stretch;
@@ -1526,345 +1526,10 @@ h3 {
   color: var(--ink);
 }
 
-/* ---------- the arcade ---------- */
+/* ---------- visually hidden ---------- */
 
-.play {
-  margin: 0 0 var(--sp-6);
-}
-
-/* Sized by height as well as width. On a phone in portrait the vertical space is the constraint: the
-   HUD, the board and the control bar all have to be on screen at once, because the page must not scroll
-   during a run. 0.8 is the 4:5 ratio, so a height budget becomes a width. */
-.stage {
-  position: relative;
-  width: 100%;
-  max-width: min(100%, calc((100dvh - 260px) * 0.8));
-  aspect-ratio: 4 / 5;
-  margin: 0 auto;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
-  background: var(--ground);
-  box-shadow: var(--shadow);
-}
-
-.stage:focus-visible {
-  outline: 2px solid var(--brand-bright);
-  outline-offset: 2px;
-}
-
-.stage.is-reset {
-  border-color: var(--brand-line);
-}
-
-/* A hit is felt as well as seen — and not at all when the reader has asked for less motion. */
-.stage.is-hit {
-  border-color: var(--stale-line);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .stage.is-hit {
-    animation: nr-shake .16s ease;
-  }
-}
-
-@keyframes nr-shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-3px); }
-  75% { transform: translateX(3px); }
-}
-
-/* `touch-action: none` on the board alone, never on the page: the prose below has to scroll. */
-#board {
-  display: block;
-  width: 100%;
-  height: 100%;
-  touch-action: none;
-  cursor: crosshair;
-}
-
-.hud {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--sp-1);
-  margin-bottom: var(--sp-2);
-}
-
-.hud-cell {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: var(--sp-2);
-  min-width: 0;
-}
-
-.hud-cell small {
-  display: block;
-  color: var(--ink-faint);
-  font-size: 9px;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  font-weight: 700;
-}
-
-/* Never mid-word: "confirmed" broke as "confirme/d" in a quarter-width cell. The objective is the
-   longest thing the HUD holds, so it gets two columns on a narrow screen instead of a hyphen. */
-.hud-cell b {
-  display: block;
-  font-family: var(--font-num);
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: break-word;
-  hyphens: none;
-}
-
-
-.meter {
-  height: 6px;
-  background: var(--surface-2);
-  border-radius: var(--radius-pill);
-  overflow: hidden;
-  margin-top: var(--sp-2);
-}
-
-.meter i {
-  display: block;
-  height: 100%;
-  width: 0;
-  background: var(--brand);
-  transition: width .2s ease;
-}
-
-/* The three mechanics and a pause, all thumb-sized, all on screen throughout a run. */
-.controls {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--sp-2);
-  margin-top: var(--sp-2);
-}
-
-.control {
-  min-height: var(--tap);
-  padding: 0 var(--sp-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
-  color: var(--ink);
-  font: inherit;
-  font-weight: 800;
-  letter-spacing: .06em;
-  cursor: pointer;
-  transition: border-color .12s ease, background-color .12s ease, color .12s ease;
-}
-
-.control:hover:not(:disabled) {
-  border-color: var(--brand-line);
-}
-
-.control[aria-pressed="true"] {
-  background: var(--verified-soft);
-  border-color: var(--verified-line);
-  color: var(--state-verified);
-}
-
-.control-reset:not(:disabled) {
-  background: var(--brand-soft);
-  border-color: var(--brand-line);
-  color: var(--brand-bright);
-}
-
-.control:disabled {
-  color: var(--ink-faint);
-  cursor: default;
-}
-
-.overlay {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: var(--sp-4);
-  background: var(--scrim);
-  text-align: center;
-}
-
-.overlay[hidden] {
-  display: none;
-}
-
-.overlay-panel {
-  max-width: 44ch;
-}
-
-.overlay-panel h2 {
-  font-size: var(--size-h2);
-  font-weight: 900;
-  margin: 0 0 var(--sp-3);
-}
-
-.overlay-panel p {
-  color: var(--ink-muted);
-  font-size: var(--size-small);
-  margin: 0 0 var(--sp-3);
-}
-
-.overlay-panel .btn {
-  width: 100%;
-}
-
-.records {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--sp-2);
-}
-
-.record {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: var(--sp-3);
-}
-
-.record small {
-  display: block;
-  color: var(--ink-faint);
-  font-size: var(--size-label);
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  font-weight: 700;
-  margin-bottom: var(--sp-1);
-}
-
-.record b {
-  font-family: var(--font-num);
-  font-size: 22px;
-  font-variant-numeric: tabular-nums;
-  color: var(--state-verified);
-}
-
-.missions {
-  display: grid;
-  gap: var(--sp-3);
-}
-
-.mission {
-  background: var(--surface);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-sm);
-  padding: var(--sp-4);
-}
-
-.mission-name {
-  font-size: 17px;
-  font-weight: 800;
-  margin: 0 0 var(--sp-1);
-}
-
-.mission-objective {
-  color: var(--state-verified);
-  font-family: var(--font-num);
-  font-size: var(--size-small);
-  margin: 0 0 var(--sp-2);
-}
-
-.mission p {
-  color: var(--ink-muted);
-  margin: 0;
-  font-size: var(--size-small);
-}
-
-/* The achievement list. Locked is the default, because the page has to read correctly before any run
-   has been played and with no record behind it at all. */
-.achievements {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--sp-2);
-}
-
-.achievement {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--sp-1) var(--sp-3);
-  padding: var(--sp-3);
-  background: var(--surface);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-sm);
-}
-
-.achievement-title {
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.achievement-how {
-  grid-column: 1 / -1;
-  color: var(--ink-muted);
-  font-size: var(--size-small);
-}
-
-/* A word, not only a colour. */
-.achievement-state {
-  font-size: var(--size-label);
-  font-weight: 800;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-
-.achievement[data-earned="1"] {
-  border-color: var(--verified-line);
-}
-
-.achievement[data-earned="1"] .achievement-state {
-  color: var(--state-verified);
-}
-
-@media (min-width: 768px) {
-  .achievements {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* A table is the clearest way to show three columns of controls, and the only thing on the site allowed
-   to scroll sideways — inside its own container, never taking the page with it. */
-.table-wrap {
-  overflow-x: auto;
-  margin: 0 0 var(--sp-4);
-}
-
-.controls-table {
-  border-collapse: collapse;
-  width: 100%;
-  min-width: 380px;
-  font-size: var(--size-small);
-}
-
-.controls-table th,
-.controls-table td {
-  text-align: left;
-  padding: var(--sp-2) var(--sp-3);
-  border-bottom: 1px solid var(--line-soft);
-}
-
-.controls-table thead th {
-  color: var(--ink-faint);
-  font-size: var(--size-label);
-  letter-spacing: .1em;
-  text-transform: uppercase;
-}
-
-.controls-table tbody th {
-  color: var(--ink);
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.controls-table td {
-  color: var(--ink-muted);
-}
-
+/* Read aloud, never drawn: the game name inside each tracker page's "Track" control, so a screen reader
+   hears which game it tracks. */
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -1872,26 +1537,6 @@ h3 {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
-}
-
-@media (min-width: 560px) {
-  .hud {
-    grid-template-columns: repeat(7, 1fr);
-  }
-
-  .controls {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .records {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-@media (min-width: 768px) {
-  .missions {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 /* ---------- without JavaScript ---------- */
