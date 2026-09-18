@@ -481,3 +481,42 @@ test("loading a page, reloading it or coming back earns nothing", () => {
     for (let i = 0; i < 5; i++) boot({}, storage).player.load();
     assert.equal(boot({}, storage).player.profile().xp, 0);
 });
+
+// === Codex review of #58 ===
+
+test("a record from a later version keeps this session's changes, and is never written over", () => {
+    // Codex P2 on #58: fresh() re-read the future record before every change while save() refused to
+    // write it, so track("cs2") then track("gta") lost cs2, and addXp() after a run lost the run.
+    const future = JSON.stringify({ version: 99, profile: { xp: 500 }, games: { tracked: ["lol"] }, somethingNew: true });
+    const storage = new FakeStorage();
+    storage.items.set(KEY, future);
+    const { player } = boot({}, storage);
+    player.track("cs2");
+    player.track("gta");
+    assert.deepEqual(player.trackedGames(), ["lol", "cs2", "gta"], "a change was lost to a re-read");
+    player.recordRun({ score: 7000, mission: 1, combo: 3, rank: "C" });
+    player.addXp(65, "completed-run");
+    assert.equal(player.arcadeRecords().highScore, 7000, "the run vanished when XP was added");
+    assert.equal(storage.getItem(KEY), future, "the later version's record must be left exactly as it was");
+});
+
+test("refresh() sees another tab's change where storage is authoritative", () => {
+    const storage = new FakeStorage();
+    const here = boot({}, storage).player;
+    here.load();
+    boot({}, storage).player.track("pubg");
+    (here as unknown as { refresh(): void }).refresh();
+    assert.deepEqual(here.trackedGames(), ["pubg"]);
+});
+
+test("refresh() keeps changes that only this page holds", () => {
+    // Codex P2 on #58: a back-forward restore called forget() unconditionally. With writes failing,
+    // memory held the only copy of a newly tracked game and its XP, and Back threw both away.
+    const storage = new FakeStorage();
+    storage.failWrites = true;
+    const { player } = boot({}, storage);
+    player.track("valorant");
+    (player as unknown as { refresh(): void }).refresh();
+    assert.deepEqual(player.trackedGames(), ["valorant"]);
+    assert.equal(player.profile().xp, 20);
+});

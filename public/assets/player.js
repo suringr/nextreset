@@ -335,9 +335,20 @@
      * there, a run finished there. So every change starts from what is stored, and falls back to memory
      * only where storage could not take the write anyway.
      */
+    /**
+     * Whether this page's copy may hold changes that storage does not.
+     *
+     * True when writes are failing (a full quota, private mode), and when the stored record belongs to a
+     * later version of the site, which this version never writes over. In both, memory holds the only
+     * copy of what the visitor did this session, and must not be replaced by what storage says.
+     */
+    function memoryHoldsChanges() {
+        return !writable || !!(cache && cache.fromFuture);
+    }
+
     function fresh() {
         var store = storage();
-        if (!store || !writable) return load();
+        if (!store || memoryHoldsChanges()) return load();
         var stored = readJson(store, KEY);
         if (!stored) {
             // Cleared elsewhere since this page loaded. The clearing is the latest change; respect it.
@@ -512,6 +523,15 @@
     }
 
     /**
+     * Re-reads storage on the next access, so changes made in another tab (or before a back-forward
+     * restore) show up — unless this page holds changes storage could not take, which would be thrown
+     * away by it. `forget()` drops the copy unconditionally, and is for tests.
+     */
+    function refresh() {
+        if (!memoryHoldsChanges()) cache = null;
+    }
+
+    /**
      * What the header's chip says, or null when it should say nothing.
      *
      * Pure, so the one piece of wording every page shares is written once and can be tested without a
@@ -556,6 +576,7 @@
         load: load,
         save: save,
         forget: forget,
+        refresh: refresh,
         toGameId: toGameId,
         trackedGames: trackedGames,
         isTracked: isTracked,
@@ -591,7 +612,7 @@
         if (global.addEventListener) {
             global.addEventListener('storage', function (event) {
                 if (event && event.key !== KEY && event.key !== null) return;
-                cache = null;
+                refresh();
                 paintChip();
             });
         }

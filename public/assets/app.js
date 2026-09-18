@@ -913,7 +913,9 @@ async function init() {
 function resyncPlayer() {
     var state = player();
     if (!state || !document.querySelectorAll) return;
-    if (state.forget) state.forget();
+    // refresh(), not forget(): where storage cannot take this page's changes (a full quota, or a record
+    // written by a later version of the site), memory holds the only copy, and a Back must not lose it.
+    if (state.refresh) state.refresh();
     var buttons = document.querySelectorAll('[data-track]');
     for (var i = 0; i < buttons.length; i++) {
         syncTrackButton(buttons[i], state.isTracked(buttons[i].getAttribute('data-track')));
