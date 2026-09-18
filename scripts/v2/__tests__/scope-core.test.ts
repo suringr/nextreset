@@ -522,3 +522,74 @@ test("feedback is drawn under the contacts, so it cannot hide one", () => {
     assert.ok(effects > 0 && actors > 0);
     assert.ok(effects < actors, "effects must be painted before the contacts, not over them");
 });
+
+// === Codex review of #52 ===
+
+/** The real board (scope.js) over the real rules, with a canvas that reports a CSS box and a DPR. */
+function boardAt(cssWidth: number, devicePixelRatio: number) {
+    const window: Record<string, unknown> = { devicePixelRatio };
+    // eslint-disable-next-line no-new-func
+    new Function("window", SOURCE)(window);
+    // eslint-disable-next-line no-new-func
+    new Function("window", fs.readFileSync(path.join(ROOT, "public", "assets", "scope.js"), "utf8"))(window);
+    const canvas = {
+        width: 0,
+        height: 0,
+        getContext: () => ({}),
+        getBoundingClientRect: () => ({ width: cssWidth, height: cssWidth * 1.25 })
+    };
+    const game = window.ResetScope as { createRenderer(c: unknown, o?: unknown): { resize(): number; scaleOf(): number; cssScaleOf(): number } };
+    return { renderer: game.createRenderer(canvas), canvas, core: window.ResetScopeCore as Core };
+}
+
+test("the tap floor is 44 CSS pixels on a 2x phone, not 44 device pixels", () => {
+    // Codex P1 on #52: the scale handed to hit testing was canvas.width / W — backing-store pixels,
+    // which already include the device-pixel ratio — so the promised 44 CSS px floor was 22 CSS px on
+    // every 2x phone, and the smallest Sniper contacts were far harder to hit than designed.
+    for (const dpr of [1, 2, 3]) {
+        const { renderer, core: c } = boardAt(356, dpr);
+        const cssPerUnit = renderer.resize();
+        assert.equal(cssPerUnit, 356, `at DPR ${dpr} hit testing must get CSS pixels per world unit`);
+        const tiny = actor({ r: 0.001 });
+        const diameterCss = c.hitRadius(tiny, { pixelsPerUnit: cssPerUnit }) * 2 * cssPerUnit;
+        assert.ok(Math.abs(diameterCss - 44) < 1e-9, `at DPR ${dpr} the floor is ${diameterCss.toFixed(1)} CSS px`);
+    }
+});
+
+test("drawing keeps its own scale, sharp at the device's density", () => {
+    const { renderer, canvas } = boardAt(356, 2);
+    renderer.resize();
+    assert.equal(canvas.width, 712, "the backing store is the box times the (capped) device-pixel ratio");
+    assert.equal(renderer.scaleOf(), 712, "drawing uses backing-store pixels");
+    assert.equal(renderer.cssScaleOf(), 356, "hit testing uses CSS pixels");
+});
+
+test("every place the page hands a scale to hit testing hands it the CSS one", () => {
+    const play = fs.readFileSync(path.join(ROOT, "public", "assets", "scope-play.js"), "utf8");
+    const assignments = [...play.matchAll(/pixelsPerUnit\s*=\s*([^;]+);/g)].map(m => m[1].trim());
+    assert.ok(assignments.length >= 3, "the page no longer sets pixelsPerUnit where expected");
+    for (const rhs of assignments) {
+        assert.ok(!/\.scaleOf\(\)/.test(rhs), `pixelsPerUnit is given the drawing scale: ${rhs}`);
+    }
+});
+
+test("an on-screen control latches for a mouse as well as a finger", () => {
+    // Codex P2 on #52: SCOPE was a hold for a mouse, released on pointerleave, so moving from the
+    // button to a contact dropped the scope before the shot. One pointer cannot hold and click at once.
+    const play = fs.readFileSync(path.join(ROOT, "public", "assets", "scope-play.js"), "utf8");
+    assert.ok(!/addEventListener\('pointerleave'/.test(play), "a control still releases when the pointer leaves it");
+    assert.ok(!/bindHoldOrToggle/.test(play), "the hold-on-a-mouse binding is still in use");
+    assert.match(play, /bindLatch\(el\.scope/);
+    assert.match(play, /bindLatch\(el\.cover/);
+});
+
+test("Clean hands says what it checks: a cleared mission, and no innocent hit", () => {
+    // Codex P2 on #53: the check required a cleared mission and the printed rule did not say so, so a
+    // run that cleared nothing and hit no one was told it had earned an achievement it had not.
+    const achievements = (core as unknown as { ACHIEVEMENTS: Array<{ id: string; how: string; check(s: unknown): boolean }> }).ACHIEVEMENTS;
+    const clean = achievements.find(a => a.id === "clean-hands")!;
+    assert.match(clean.how, /mission/i, "the rule does not mention the mission it requires");
+    assert.equal(clean.check({ missionsCleared: 0, hurtInnocents: false }), false);
+    assert.equal(clean.check({ missionsCleared: 1, hurtInnocents: false }), true);
+    assert.equal(clean.check({ missionsCleared: 3, hurtInnocents: true }), false);
+});

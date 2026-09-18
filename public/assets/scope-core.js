@@ -477,7 +477,7 @@
         {
             id: 'clean-hands',
             title: 'Clean hands',
-            how: 'Finish a run without hitting a civilian or a hostage.',
+            how: 'Clear at least one mission in a run without hitting a civilian or a hostage.',
             check: function (s) { return s.missionsCleared >= 1 && !s.hurtInnocents; }
         },
         {

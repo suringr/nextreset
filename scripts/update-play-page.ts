@@ -60,12 +60,12 @@ const MISSIONS: ReadonlyArray<{ name: string; objective: string; rule: string }>
 ];
 
 const CONTROLS: ReadonlyArray<{ action: string; touch: string; keyboard: string }> = [
-    { action: "Fire", touch: "Tap the contact", keyboard: "F or Enter" },
-    { action: "Aim", touch: "Tap where you want to shoot", keyboard: "Arrow keys or WASD" },
-    { action: "Scope", touch: "Tap SCOPE to latch it on", keyboard: "Hold Shift" },
-    { action: "Cover", touch: "Tap COVER to latch it on", keyboard: "Hold C" },
-    { action: "RESET MODE", touch: "Tap RESET when the meter is full", keyboard: "Space" },
-    { action: "Pause", touch: "Tap PAUSE", keyboard: "P" }
+    { action: "Fire", touch: "Tap or click the contact", keyboard: "F or Enter" },
+    { action: "Aim", touch: "Tap where you want to shoot, or move the mouse", keyboard: "Arrow keys or WASD" },
+    { action: "Scope", touch: "Tap or click SCOPE to latch it on, again to release", keyboard: "Hold Shift" },
+    { action: "Cover", touch: "Tap or click COVER to latch it on, again to release", keyboard: "Hold C" },
+    { action: "RESET MODE", touch: "Tap or click RESET when the meter is full", keyboard: "Space" },
+    { action: "Pause", touch: "Tap or click PAUSE", keyboard: "P" }
 ];
 
 function escapeHtml(value: string): string {
@@ -235,7 +235,7 @@ export function generatePlayPage(): string {
         <p>Tap or click a contact to fire at it. A target is a hard-edged diamond; a civilian is a circle with an open line. Shooting a civilian, or the hostage a target is holding, costs a life. Every mission ends when its objective is met &mdash; not when a clock runs out, which is only there to fail you.</p>
         <div class="table-wrap">
           <table class="controls-table">
-            <thead><tr><th scope="col">Action</th><th scope="col">Touch</th><th scope="col">Keyboard</th></tr></thead>
+            <thead><tr><th scope="col">Action</th><th scope="col">Touch or mouse</th><th scope="col">Keyboard</th></tr></thead>
             <tbody>
 ${controlsHtml()}
             </tbody>

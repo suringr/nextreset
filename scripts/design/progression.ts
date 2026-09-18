@@ -30,7 +30,7 @@ export const ACHIEVEMENTS: ReadonlyArray<Achievement> = [
     { id: "first-run", title: "First contact", how: "Finish a run." },
     { id: "all-missions", title: "Full rotation", how: "Clear all five missions in one run." },
     { id: "combo-cap", title: "Unbroken", how: "Reach the maximum combo of ×8." },
-    { id: "clean-hands", title: "Clean hands", how: "Finish a run without hitting a civilian or a hostage." },
+    { id: "clean-hands", title: "Clean hands", how: "Clear at least one mission in a run without hitting a civilian or a hostage." },
     { id: "sharpshooter", title: "Sharpshooter", how: "Finish a run at 80% accuracy or better, over at least 15 shots." },
     { id: "perfectionist", title: "Perfectionist", how: "Clear a mission without losing a life or missing a shot." }
 ];

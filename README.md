@@ -344,8 +344,9 @@ module importing `./engine.js` would be cached for a year at an unversioned URL.
 
 The board works in world units (1 × 1.25, a 4:5 portrait) and the canvas backing store is sized from its
 own box times `devicePixelRatio` at every change. Hit areas floor at 44 CSS px however small a contact is
-drawn, so difficulty comes from exposure, identification and timing. Scope and Cover are holds on a
-pointer and toggles on touch, so the game is playable with one thumb.
+drawn, so difficulty comes from exposure, identification and timing. On screen, Scope and Cover latch
+with a tap or a click — one pointer cannot hold a button and fire at the board at once — so the game is
+playable with one thumb or one mouse; on a keyboard they are holds (Shift, C).
 
 XP comes from a table in `scope-core.js` that the `/play/` page prints in full, and a test holds the
 printed copy and the awarded copy together. Nothing in it can be earned by loading a page, reloading one,
