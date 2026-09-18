@@ -725,21 +725,41 @@ function syncTrackButton(button, tracked) {
     }
 }
 
-// The arcade card's three numbers, from the same record the game writes. Dashes until then, because a
-// zero would claim the visitor has played and scored nothing.
+// The arcade card's records, from the same record the game writes.
+//
+// The whole line stays hidden until there is a run behind it. It used to show three em-dashes, which
+// were the largest thing on the card for everyone who had not played — and painted in the verified
+// green, so they read as missing data rather than as an invitation. Nothing is claimed here until the
+// visitor has actually done something.
 function paintArcadeCard() {
     var state = player();
     if (!state || !document.getElementById) return;
+    var card = document.querySelector ? document.querySelector('.arcade-card') : null;
+    var row = document.getElementById('arcade-records');
+    if (!row) return;
+
     var records = state.arcadeRecords();
+    if (!records.gamesPlayed) {
+        row.hidden = true;
+        return;
+    }
+
+    // The total comes from the page, which the build writes from the same table the game awards from;
+    // arcade-progression.test.ts holds the two together so this can never quote a goal that moved.
+    var total = card ? parseInt(card.getAttribute('data-achievement-total') || '0', 10) : 0;
+    var earned = (state.load().achievements || []).length;
+
     var cells = {
-        'arcade-score': records.gamesPlayed ? records.highScore.toLocaleString() : '—',
-        'arcade-mission': records.gamesPlayed ? String(records.highestMission) : '—',
-        'arcade-rank': records.bestRank || '—'
+        'arcade-score': records.highScore.toLocaleString(),
+        'arcade-rank': records.bestRank || '—',
+        'arcade-mission': String(records.highestMission),
+        'arcade-achievements': total > 0 ? earned + '/' + total : String(earned)
     };
     for (var id in cells) {
         var node = document.getElementById(id);
         if (node) node.textContent = cells[id];
     }
+    row.hidden = false;
 }
 
 // === THE LEAD BLOCK ===
