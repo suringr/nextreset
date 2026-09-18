@@ -565,7 +565,7 @@ function generatePage(page: GamePage): string {
     </div>
 
     <noscript>
-      <div style="text-align: center; padding: 20px; color: #9ca3af; background: #111827; margin-top: 20px; border-radius: 12px;">
+      <div class="noscript-note">
         This page shows the last verified values. JavaScript adds a live countdown for events known to the exact second.
       </div>
     </noscript>

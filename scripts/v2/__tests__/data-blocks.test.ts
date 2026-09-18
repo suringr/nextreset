@@ -32,10 +32,13 @@ function patch(version: string, at: string, status = "ended"): KnowledgeEvent {
 function lolKnowledge(): GameKnowledge {
     return {
         game: "lol",
+        // Past patches as the real store holds them: "observed", because their release was seen. A
+        // scheduled date that merely passes becomes "ended" instead (knowledge.ts), which is a different
+        // and weaker claim — tested on its own below.
         events: [
-            patch("26.16", "2026-08-12T00:00:00.000Z"),
-            patch("26.17", "2026-08-26T00:00:00.000Z"),
-            patch("26.18", "2026-09-09T00:00:00.000Z"),
+            patch("26.16", "2026-08-12T00:00:00.000Z", "observed"),
+            patch("26.17", "2026-08-26T00:00:00.000Z", "observed"),
+            patch("26.18", "2026-09-09T00:00:00.000Z", "observed"),
             patch("26.19", "2026-09-23T00:00:00.000Z", "scheduled"),
             patch("26.20", "2026-10-07T00:00:00.000Z", "scheduled"),
             patch("26.21", "2026-10-21T00:00:00.000Z", "scheduled")
@@ -151,7 +154,7 @@ test("a page that announces no date does not list upcoming dates underneath", ()
     assert.ok(answered.rows.some(r => r.state === "scheduled"), "an answered page shows what follows the answer");
 
     const unanswered = blocksFor(lolKnowledge(), "next-patch", { ...options, headlineAnswered: false })[0];
-    assert.ok(unanswered.rows.every(r => r.state === "released"),
+    assert.ok(unanswered.rows.every(r => r.state === "released" || r.state === "unconfirmed"),
         "no forward-looking row may contradict a headline that says no date is known");
     assert.ok(unanswered.rows.length >= MIN_HISTORY_ROWS, "what already happened is unaffected by a failed check");
 });
@@ -549,3 +552,50 @@ test("data from the store cannot inject markup into a timeline", () => {
     assert.ok(!html.includes('javascript:alert(1)"'), "the href is escaped");
     assert.ok(html.includes("&lt;script&gt;"));
 });
+
+// === Codex review of #51 ===
+
+test("a date that merely passed is not called Released", () => {
+    // Codex P2 on #51. The pipeline turns a scheduled event into "ended" when its date goes by
+    // (knowledge.ts), whether or not the patch shipped: delayed, cancelled, or a refresh that failed all
+    // look the same. Only an observed release supports the word "Released".
+    const knowledge = lolKnowledge();
+    const at = (knowledge.events ?? []).find(e => e.key === "lol/next-patch/26.18")!;
+    at.status = "ended";
+    const timeline = blocksFor(knowledge, "next-patch", { format, now: NOW, currentKey: "lol/next-patch/26.19" })[0];
+    const row = timeline.rows.find(r => r.label.includes("26.18"))!;
+    assert.equal(row.state, "unconfirmed");
+    assert.ok(timeline.rows.filter(r => r.label.includes("26.17") || r.label.includes("26.16")).every(r => r.state === "released"),
+        "the observed releases around it are still Released");
+    const html = renderBlocks([timeline]);
+    assert.match(html, /is-unconfirmed[\s\S]*Not confirmed/, "and the page says so in words");
+});
+
+test("an update feed with a release stamped slightly after now stays a list", () => {
+    // Codex P2 on #51. selectCurrentEvent deliberately lets an observed event sit a little ahead of now
+    // (source clock skew, or a change that landed mid-request). A timestamp alone must not turn that
+    // feed into a timeline and present an already-shipped release as "Next".
+    const feed: GameKnowledge = {
+        game: "pubg",
+        events: [
+            ...["2026-08-12", "2026-08-26", "2026-09-09"].map((day, i) => ({
+                key: `pubg/last-patch/${i}`, topic: "last-patch", kind: "version" as const, label: `Update ${i + 40}`,
+                status: "observed" as const, at: `${day}T02:00:00.000Z`, precision: "exact" as const, publishState: "published" as const
+            })),
+            {
+                key: "pubg/last-patch/3", topic: "last-patch", kind: "version" as const, label: "Update 43",
+                status: "observed" as const, at: new Date(NOW.getTime() + 90 * 1000).toISOString(), precision: "exact" as const, publishState: "published" as const
+            }
+        ],
+        claims: [0, 1, 2, 3].map(i => ({ eventKey: `pubg/last-patch/${i}`, field: "at", value: "x", linkUrl: `https://steam.test/${i}` })),
+        documents: []
+    } as unknown as GameKnowledge;
+    assert.equal(timelineFor(feed, "last-patch", { format, now: NOW }), undefined, "a feed became a timeline");
+});
+
+test("a real schedule is still a timeline", () => {
+    const timeline = timelineFor(lolKnowledge(), "next-patch", { format, now: NOW, currentKey: "lol/next-patch/26.19" });
+    assert.ok(timeline, "LoL's announced schedule must still read as one sequence");
+    assert.equal(timeline!.shape, "timeline");
+});
+

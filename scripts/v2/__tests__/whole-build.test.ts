@@ -22,6 +22,29 @@ import { urlPathOf } from "../../render-sitemap";
 const ROOT = path.join(__dirname, "..", "..", "..");
 const NOW = new Date("2026-09-17T12:00:00.000Z");
 
+/**
+ * Fills in any tracker file the checkout does not have from the committed last-known-good vault.
+ *
+ * `public/data/*.json` is generated and gitignored; only `public/data/_lkg/` is committed. So in CI —
+ * a clean checkout, `npm run build && npm test`, no refresh — every tracker file was missing and every
+ * value check below skipped itself and passed. The gate never checked a published value in the one
+ * place that runs on every pull request. The vault is what the site publishes when a provider fails,
+ * so it is a fair fixture; a checkout that already has fresher data keeps it.
+ */
+function seedFromLastKnownGood(data: string): string[] {
+    const vault = path.join(data, "_lkg");
+    const seeded: string[] = [];
+    if (!fs.existsSync(vault)) return seeded;
+    for (const name of fs.readdirSync(vault).filter(f => f.endsWith(".json"))) {
+        const target = path.join(data, name);
+        if (!fs.existsSync(target)) {
+            fs.copyFileSync(path.join(vault, name), target);
+            seeded.push(name);
+        }
+    }
+    return seeded;
+}
+
 /** Builds the site into a temporary directory, exactly as export:site + render:pages do. */
 function build(): { dir: string; pages: string[]; cleanup(): void } {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nextreset-whole-"));
@@ -37,6 +60,7 @@ function build(): { dir: string; pages: string[]; cleanup(): void } {
     copy(path.join(ROOT, "public"), dir);
     const debug = path.join(dir, "data", "_debug");
     if (fs.existsSync(debug)) fs.rmSync(debug, { recursive: true, force: true });
+    seedFromLastKnownGood(path.join(dir, "data"));
     renderSite(dir, NOW, ROOT);
 
     const pages: string[] = [];
@@ -65,9 +89,22 @@ test("the build produced every page the site has", () => {
     assert.ok(site.pages.includes("about/index.html") && site.pages.includes("privacy/index.html"));
 });
 
+/** How many tracker pages have data behind them in this build — the number a value check must reach. */
+const withData = () => trackerPages.filter(page => {
+    const tracker = trackerOf(read(page), page)!;
+    return fs.existsSync(path.join(site.dir, "data", `${tracker.game}.${tracker.type}.json`));
+}).length;
+
+test("the value checks below have data to check, in CI as well as locally", () => {
+    // Codex P2 on #54: without this, a clean checkout skipped every tracker and every value check passed
+    // by checking nothing. The committed vault covers nine of the twelve.
+    assert.ok(withData() >= 9, `only ${withData()} of ${trackerPages.length} trackers have data in this build`);
+});
+
 test("every tracker's published value is in the served HTML, before any script runs", () => {
     // The whole point of Publishing V2. Asked of the built page rather than of the renderer, because
     // this is the file a crawler and a reader without JavaScript actually receive.
+    let checked = 0;
     for (const page of trackerPages) {
         const tracker = trackerOf(read(page), page)!;
         const file = path.join(site.dir, "data", `${tracker.game}.${tracker.type}.json`);
@@ -77,6 +114,7 @@ test("every tracker's published value is in the served HTML, before any script r
         const headline = $(".countdown-value").first().text().trim();
         assert.ok(headline.length > 0, `${page} publishes no headline`);
         assert.ok(!headline.includes("--:--"), `${page} still shows a placeholder`);
+        checked++;
 
         if (hasVerifiedValue(data) && !isUnanswered(data, NOW)) {
             // A real value, and the year it names is in the page.
@@ -89,10 +127,12 @@ test("every tracker's published value is in the served HTML, before any script r
             );
         }
     }
+    assert.equal(checked, withData(), "a tracker with data was skipped");
 });
 
 test("a time is published only where the pipeline says the instant is exact", () => {
     // The rule the site's credibility rests on, checked across every page at once.
+    const seen = { exact: 0, day: 0 };
     for (const page of trackerPages) {
         const tracker = trackerOf(read(page), page)!;
         const file = path.join(site.dir, "data", `${tracker.game}.${tracker.type}.json`);
@@ -102,10 +142,16 @@ test("a time is published only where the pipeline says the instant is exact", ()
         const headline = cheerio.load(read(page))(".countdown-value").first().text().trim();
         if (data.precision === "exact") {
             assert.match(headline, /\d{2}:\d{2} UTC$/, `${page}: an exact instant should publish its time`);
+            seen.exact++;
         } else {
             assert.ok(!/\d{2}:\d{2}/.test(headline), `${page}: "${headline}" publishes a time the source never announced`);
+            seen.day++;
         }
     }
+    // Non-vacuous: at least one verified value went through this rule. Which half depends on the data.
+    // The committed vault predates the precision field, so in CI every value is date-only, and the exact
+    // half is proven with fixtures in render-pages.test.ts ("an exact instant is published to the minute").
+    assert.ok(seen.exact + seen.day > 0, "no tracker with a verified value was checked");
 });
 
 test("the sitemap lists exactly the pages that ask to be indexed", () => {
@@ -189,7 +235,9 @@ test("no page promises a check frequency or invents a community", () => {
         const html = read(page);
         assert.ok(!/every six hours|every 6 hours/i.test(html), `${page} promises a frequency the schedule does not keep`);
         assert.ok(!/\b\d[\d,]*\s+(players|users|members)\b/i.test(html), `${page} claims a population it cannot count`);
-        assert.ok(!/leaderboard\b(?!)/i.test(html) || /no leaderboard/i.test(html), `${page} implies a leaderboard`);
+        // Codex P2 on #54: this was /leaderboard\b(?!)/, and an empty negative lookahead never matches,
+        // so the assertion could not fail. A page may mention a leaderboard only to say there is none.
+        assert.ok(!/leaderboard/i.test(html) || /no leaderboard/i.test(html), `${page} implies a leaderboard`);
     }
 });
 

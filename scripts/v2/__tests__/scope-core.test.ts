@@ -418,9 +418,9 @@ test("the arcade page's prose is about this game, not filler", () => {
     // to show, which a naive search for "global rank" flags as the very thing it is denying.
     assert.ok(/no account, no server and no leaderboard/i.test(play), "it says plainly what it does not have");
     assert.ok(/not going to invent one/i.test(play), "and that it will not invent one");
-    assert.ok(!/\d[\d,]*\s+(players|people|users)/i.test(play), "no fabricated player count");
+    assert.ok(!/\b\d[\d,]*\s+(players|people|users)\b/i.test(play), "no fabricated player count");
     assert.ok(!/(compete|compare)\s+(with|against)\s+(other\s+)?(players|everyone)/i.test(play), "no competition it cannot host");
-    assert.ok(!/top\s+\d+/i.test(play), "no ranking table");
+    assert.ok(!/\btop\s+\d+\b/i.test(play), "no ranking table");
 });
 
 test("the five missions the page describes are the five the game runs", () => {

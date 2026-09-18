@@ -136,7 +136,7 @@ const SHARED = [
     // a second line — which matters, because everything below it is what the visitor came for.
     `.chrome{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-1) var(--sp-3);margin-bottom:var(--sp-4)}`,
     `.chrome-brand{display:inline-flex;align-items:center;gap:var(--sp-2);min-height:var(--tap);font-weight:800;font-size:19px;letter-spacing:-.01em}`,
-    `.dot{width:9px;height:9px;border-radius:50%;background:var(--state-verified);flex:none}`,
+    `.dot{width:9px;height:9px;border-radius:50%;background:var(--brand);flex:none}`,
     `.chrome-nav{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2);margin-right:auto;font-size:var(--size-small);font-weight:700}`,
     `.chrome-nav a{display:inline-flex;align-items:center;justify-content:center;min-height:var(--tap);min-width:var(--tap);padding-inline:var(--sp-2);color:var(--ink-muted)}`,
     `.chrome-nav a[aria-current]{color:var(--brand-bright)}`,

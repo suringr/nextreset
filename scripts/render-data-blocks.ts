@@ -75,7 +75,7 @@ export interface BlockRow {
  * Only a timeline needs this: a list of past updates is all one thing, but a schedule a reader is
  * trying to place themselves in has to say which entry is the one they are waiting for.
  */
-export type RowState = "released" | "next" | "scheduled";
+export type RowState = "released" | "next" | "scheduled" | "unconfirmed";
 
 export interface Block {
     title: string;
@@ -276,8 +276,13 @@ export function timelineFor(knowledge: GameKnowledge, topic: string, options: Bl
     // from PUBG, VALORANT, EA SPORTS FC and Minecraft — all of them "version" events too, and all of
     // them feeds of releases that have already happened. Drawing those on a rail with Released markers
     // would imply a cadence the publisher does not announce. They stay a list, which is what they are.
+    //
+    // "Ahead" means a *scheduled* event ahead — one the publisher announced. An update feed's observed
+    // release can carry a timestamp slightly after now (source clock skew, or a change that landed while
+    // the request was in flight; selectCurrentEvent allows for exactly that), and a timestamp alone would
+    // turn that feed into a timeline and present a release that already happened as "Next".
     const behindNow = events.some(event => (endOf(event) ?? 0) <= nowMs);
-    const aheadNow = events.some(event => (endOf(event) ?? 0) > nowMs);
+    const aheadNow = events.some(event => event.status === "scheduled" && (endOf(event) ?? 0) > nowMs);
     if (!behindNow || !aheadNow) return undefined;
 
     const ordered = [...events].sort((a, b) => Date.parse(a.at!) - Date.parse(b.at!));
@@ -296,7 +301,13 @@ export function timelineFor(knowledge: GameKnowledge, topic: string, options: Bl
 
     const rows: BlockRow[] = [...behind, ...ahead].map(event => {
         const past = (endOf(event) ?? 0) <= nowMs;
-        const state: RowState = event.key === options.currentKey && !past ? "next" : past ? "released" : "scheduled";
+        // "Released" says the patch shipped. A date passing says only that the date passed: a scheduled
+        // event can go by delayed, cancelled, or with a refresh that failed. So a past row is Released
+        // when the release was observed, and otherwise says plainly that it was not confirmed.
+        const state: RowState = event.key === options.currentKey && !past ? "next"
+            : !past ? "scheduled"
+            : event.status === "observed" ? "released"
+            : "unconfirmed";
         return { label: event.label, when: options.format(event.at!, event.precision), state, ...evidenceFor(event, knowledge) };
     });
     // The same bar every other block clears: fewer rows than this and it is a heading with a couple of
@@ -403,7 +414,8 @@ function escapeHtml(value: string): string {
 const STATE_WORDS: Record<RowState, string> = {
     released: "Released",
     next: "Next",
-    scheduled: "Scheduled"
+    scheduled: "Scheduled",
+    unconfirmed: "Not confirmed"
 };
 
 /** A row's label, linked to the official post it was verified from where there is one. */
