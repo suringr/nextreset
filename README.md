@@ -272,13 +272,26 @@ site is deliberately smaller than it could be.
 The site is a gaming command center now. The tracker data is still the product; the presentation around
 it changed, and an arcade was added as a reason to come back. None of it touches how a value is verified.
 
-### One design source
+### One design source, and it is the approved demo's
+
+The owner's demo (the NEXT//RESET Command Center homepage and its tracker page) is the visual source
+of truth. The stylesheet is its rules as written: the same sizes, radii, weights, gradients and spacing,
+under the class names the renderers already emit. Where the site has something the demo never drew (the
+tracker grid, the prose, the evidence rows, the breadcrumb), it takes the demo's nearest component. The
+departures are few, and each is named beside its rule:
+
+- every tap target stays 44px, however small the demo draws it;
+- a sentence where no value is published is set smaller than a value;
+- the primary button's blue end is the demo's `#4f65ff` scaled 3.5% darker, so white text clears AA;
+- the header links stay reachable on a phone through a small menu, where the demo hides them. The menu
+  is a native popover and needs no script; a browser without popovers shows the links inline.
 
 `scripts/design/tokens.ts` holds the palette, the type scale and the geometry. It generates three
 things, so they cannot drift from each other:
 
 - the `:root` block in `public/assets/styles.v2.css`, between generated markers,
-- the inline critical-CSS block in every page's head, per page kind,
+- the inline critical-CSS block in every page's head, per page kind, which also carries the header and
+  the page frame: they live only there, because `/play/` loads no stylesheet,
 - the `theme-color` meta on every page and the colours in `site.webmanifest`.
 
 ```bash
@@ -288,17 +301,16 @@ npm run design:apply     # after changing a token
 Colour is only ever taken from a token — there are no hex or `rgb()` literals below the generated block,
 and a test enforces it, because a colour written inline is a colour no contrast test can find. The one
 exception is ONE SHOT: its colours are the game's, not the site's, and they live in the game's own
-stylesheet (`ONE_SHOT_CSS`) and in the homepage card's picture, where a test holds each to `one-shot.js`. Every text
-token is checked against every surface it can sit on: the previous `--text-muted` was 3.98:1 on the page
-ground and set the info labels, the card meta and the countdown label at 11–13px.
+stylesheet (`ONE_SHOT_CSS`), which a test holds to the prototype. Every text token is checked against every
+surface it can sit on, and every page-kind rule inlined in a page is checked word for word against the
+stylesheet.
 
 The brand is violet and the three data states are green, amber and slate. Those three are load-bearing —
-"verified", "stale", "no verified value" — and are never spent on decoration. Before V4 the brand colour
-and the verified colour were the same green, so the site could not show the difference between its own
-identity and a verified value.
+"verified", "stale", "no verified value" — and are never spent on decoration. A state is always a word
+as well as a colour (`● LIVE`, `● STALE`), and the words are the renderer's, held by the facts diff.
 
 The stylesheet is mobile-first: the base rules are the phone and every query is `min-width`. A test
-asserts no `max-width` query exists.
+asserts no `max-width` query exists; the demo's `max-width:700px` rules are its base rules here.
 
 ### The homepage
 
@@ -369,8 +381,9 @@ Other rules of the page:
   index applies.
 - **It is full screen and does not scroll**, so it is the one page without a breadcrumb or a footer; the
   shared header's Trackers link reaches every tracker in one tap. `navigation.test.ts` names the exception.
-- **Its code loads nowhere else.** A test asserts no other page references `one-shot.js`, and the
-  homepage card's picture is inline SVG drawn from the game's own geometry and colours.
+  Its bar keeps the prototype's height and colours; only the wordmark, links and chip inside it are the
+  demo's.
+- **Its code loads nowhere else.** A test asserts no other page references `one-shot.js`.
 - It loads no `styles.v2.css`: that stylesheet would load after the game's own and override its layout.
 
 ```bash

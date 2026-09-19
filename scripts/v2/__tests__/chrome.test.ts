@@ -14,9 +14,10 @@ import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { NAV, PLAYER_CHIP_ID, chromeHtml, chromeTitleOf, sectionOf } from "../../design/chrome";
+import { FOOTER_ROW, NAV, PLAYER_CHIP_ID, SITE_NAME, SITE_NAV_ID, chromeHtml, chromeTitleOf, sectionOf } from "../../design/chrome";
 import { applyChrome, applyPlayerScript } from "../../update-chrome";
 import { renderSite } from "../../render-pages";
+import { criticalCss } from "../../design/tokens";
 
 const ROOT = path.join(__dirname, "..", "..", "..");
 const NOW = new Date("2026-09-17T12:00:00.000Z");
@@ -69,7 +70,9 @@ test("the wordmark is the way home, and is not repeated as a navigation item", (
         const brand = $("header.chrome a.chrome-brand");
         assert.equal(brand.length, 1, `${page}: no wordmark link`);
         assert.equal(brand.attr("href"), "/", `${page}: the wordmark does not lead home`);
-        assert.equal(brand.text().trim(), "NextReset");
+        // Drawn as the demo draws it, and heard as the site's name rather than "next slash slash reset".
+        assert.equal(brand.text().trim(), "NEXT//RESET");
+        assert.equal(brand.attr("aria-label"), SITE_NAME);
         const labels = $('nav[aria-label="Site"] a').map((_, a) => $(a).text().trim()).get();
         assert.ok(!labels.includes("Home"), `${page}: "Home" is in the nav as well as being the wordmark`);
     }
@@ -152,11 +155,69 @@ test("the arcade is now reachable from the header of every page, not only its fo
     }
 });
 
-test("the homepage keeps its two claims about the site, and no other page borrows them", () => {
+test("the header is the demo's: no badges in it, and the homepage's claims in its features strip", () => {
     for (const page of site.pages) {
         const $ = cheerio.load(read(page));
-        const badges = $("header.chrome .trust-badge").length;
-        assert.equal(badges, page === "index.html" ? 2 : 0, `${page}: ${badges} trust badges`);
+        assert.equal($(".trust-badge").length, 0, `${page}: the pre-demo trust badges are back`);
+    }
+    const $ = cheerio.load(read("index.html"));
+    const features = $(".features .feature").map((_, el) => `${$(el).children("div").children("b").text()}: ${$(el).children("div").children("span").text()}`).get();
+    assert.deepEqual(features, ["Verified data: Official-source facts", "My Games: No account required", "Arcade: Play while you wait"]);
+});
+
+test("the header is a full-width bar: outside the page's column, directly above it", () => {
+    // The demo's bar runs the width of the window. Inside the centred column it could not, which is why
+    // the applier moves a header it finds there.
+    for (const page of site.pages) {
+        const $ = cheerio.load(read(page));
+        const header = $("header.chrome");
+        assert.equal(header.closest(".container").length, 0, `${page}: the header is inside the page's column`);
+        if (page === "play/index.html") {
+            assert.equal(header.parent().attr("id"), "app", "the game's header is the bar above the game");
+            continue;
+        }
+        assert.ok(header.next().is(".container"), `${page}: the header is not directly above the page's column`);
+    }
+});
+
+test("a phone reaches the links through a menu that needs no script", () => {
+    // The one place the site departs from the demo, which hides the links on a phone and offers nothing.
+    // A native popover: the button names the nav it opens, and the nav is the same element a desktop
+    // shows inline, so there is one navigation, not two.
+    for (const page of site.pages) {
+        const $ = cheerio.load(read(page));
+        const nav = $(`nav#${SITE_NAV_ID}`);
+        assert.equal(nav.attr("aria-label"), "Site", `${page}: the menu is not the site navigation`);
+        assert.notEqual(nav.attr("popover"), undefined, `${page}: the navigation is not a popover`);
+        const button = $(`header.chrome button[popovertarget="${SITE_NAV_ID}"]`);
+        assert.equal(button.length, 1, `${page}: no button opens the menu`);
+        assert.equal(button.attr("type"), "button");
+        assert.ok((button.attr("aria-label") ?? "").length > 0, `${page}: the menu button has no name`);
+        assert.equal(button.closest("nav").length, 0, "the button sits outside what it opens");
+    }
+});
+
+test("a header too wide for a narrow phone wraps rather than pushing the menu out of reach", () => {
+    // Codex P2 on #63: on /play/, which does not scroll, a 320px phone with the player's chip showing had
+    // the menu button — the game's only way to the trackers — pushed past the edge of the screen. Both
+    // bars may take a second row; neither may clip.
+    assert.match(criticalCss("play"), /\.chrome\{[^}]*flex-wrap:wrap/, "the game's bar cannot wrap");
+    assert.match(criticalCss("home"), /\.nav\{[^}]*flex-wrap:wrap/, "the site's bar cannot wrap");
+});
+
+test("every page with a footer carries the demo's footer row, and keeps what the footer already said", () => {
+    const normalise = (html: string) => html.replace(/\s+/g, " ").replace(/> </g, "><").trim();
+    const wanted = normalise(FOOTER_ROW.join(""));
+    for (const page of site.pages) {
+        if (page === "play/index.html") continue; // full-screen: no footer, as navigation.test.ts records
+        const $ = cheerio.load(read(page));
+        const footer = $("footer");
+        assert.equal(footer.length, 1, `${page}: no footer`);
+        const row = normalise($.html(footer.find(".footer-row")) + $.html(footer.find(".footer-fine")));
+        assert.equal(row, wanted, `${page}: the footer row differs from scripts/design/chrome.ts`);
+        const text = footer.text();
+        assert.match(text, /Not affiliated with any game publishers/, `${page}: the affiliation notice is gone`);
+        assert.ok(footer.find('a[href="/privacy/"]').length === 1, `${page}: no link to the privacy policy`);
     }
 });
 
@@ -175,7 +236,7 @@ test("applying the header twice changes nothing the second time", () => {
 test("the header a page carries is the header the source builds for it", () => {
     for (const page of site.pages) {
         const $ = cheerio.load(read(page));
-        const built = cheerio.load(chromeHtml({ section: sectionOf(page), badges: page === "index.html", title: chromeTitleOf(page) }));
+        const built = cheerio.load(chromeHtml({ section: sectionOf(page), title: chromeTitleOf(page) }));
         assert.equal(
             $("header.chrome").html()?.replace(/\s+/g, " ").trim(),
             built("header.chrome").html()?.replace(/\s+/g, " ").trim(),

@@ -907,8 +907,23 @@ function resyncPlayer() {
     if (state.paintChip) state.paintChip();
 }
 
+// The phone's menu is a popover, and a popover stays open when a link inside it only moves the page:
+// "Trackers" on the homepage jumps to the grid and would leave the menu lying over it. Any link chosen
+// closes it. Nothing else about the menu needs script.
+function closeMenuOnChoice() {
+    if (!document.getElementById) return;
+    var menu = document.getElementById('site-nav');
+    if (!menu || !menu.addEventListener || typeof menu.hidePopover !== 'function') return;
+    menu.addEventListener('click', function (event) {
+        var target = event && event.target;
+        if (!target || !target.closest || !target.closest('a')) return;
+        try { menu.hidePopover(); } catch (e) { /* already closed, or never opened as a popover */ }
+    });
+}
+
 // Guarded so the display helpers above can be loaded and tested outside a browser.
 if (typeof document !== 'undefined') {
+    closeMenuOnChoice();
     if (typeof window !== 'undefined' && window.addEventListener) {
         window.addEventListener('pageshow', function (event) {
             if (event && event.persisted) resyncPlayer();

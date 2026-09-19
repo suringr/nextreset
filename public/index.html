@@ -20,7 +20,7 @@
 
   <!-- CRITICAL: Inline CSS for guaranteed first paint (hard paint guarantee) -->
   <style>
-    :root{--ground:#050812;--ground-2:#0a1020;--surface:#0b1325;--surface-2:#101a31;--line:#26395f;--line-soft:#1b2a47;--ink:#f5f7ff;--ink-muted:#aab7cf;--ink-faint:#93a2be;--brand:#8b5cf6;--brand-bright:#b69dff;--state-verified:#34d399;--state-stale:#fbbf24;--state-unavailable:#9fb0c9;--brand-soft:rgba(139, 92, 246, .15);--brand-line:rgba(139, 92, 246, .38);--verified-soft:rgba(52, 211, 153, .14);--verified-line:rgba(52, 211, 153, .32);--stale-soft:rgba(251, 191, 36, .14);--stale-line:rgba(251, 191, 36, .34);--unavailable-soft:rgba(159, 176, 201, .13);--unavailable-line:rgba(159, 176, 201, .30);--sheen:rgba(255, 255, 255, .035);--scrim:rgba(3, 6, 17, .72);--radius:14px;--radius-sm:10px;--radius-pill:999px;--shadow:0 10px 30px rgba(0, 0, 0, .45);--shadow-lift:0 16px 40px rgba(0, 0, 0, .55);--font:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;--font-num:ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;--size-display:clamp(34px, 9vw, 54px);--size-h1:clamp(27px, 6vw, 40px);--size-h2:clamp(19px, 3.2vw, 23px);--size-lead:clamp(15px, 2.2vw, 17px);--size-body:15px;--size-small:13px;--size-label:11px;--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;--sp-7:48px;--gutter:16px;--measure:68ch;--tap:44px}*{box-sizing:border-box}body{margin:0;background-color:var(--ground);color:var(--ink);font-family:var(--font);font-size:var(--size-body);line-height:1.55;min-height:100vh;-webkit-text-size-adjust:100%}.container{width:100%;max-width:1040px;margin:0 auto;padding-inline:var(--gutter);padding-block:var(--sp-5)}a{color:inherit;text-decoration:none}h1,h2,h3{line-height:1.15;margin:0;text-wrap:balance}.chrome{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-1) var(--sp-3);margin-bottom:var(--sp-4)}.chrome-brand{display:inline-flex;align-items:center;gap:var(--sp-2);min-height:var(--tap);font-weight:800;font-size:19px;letter-spacing:-.01em}.dot{width:9px;height:9px;border-radius:50%;background:var(--brand);flex:none}.chrome-nav{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2);margin-right:auto;font-size:var(--size-small);font-weight:700}.chrome-nav a{display:inline-flex;align-items:center;justify-content:center;min-height:var(--tap);min-width:var(--tap);padding-inline:var(--sp-2);color:var(--ink-muted)}.chrome-nav a[aria-current]{color:var(--brand-bright)}.chrome-player{margin:0 0 0 auto;padding:3px 9px;border:1px solid var(--brand-line);border-radius:var(--radius-pill);background:var(--brand-soft);color:var(--brand-bright);font-family:var(--font-num);font-size:11px;font-weight:700;white-space:nowrap}.chrome-player[hidden]{display:none}.trust-badges{display:none;gap:var(--sp-2)}.trust-badge{font-size:var(--size-label);color:var(--ink-faint);padding:4px 10px;border:1px solid var(--line-soft);border-radius:var(--radius-pill);text-transform:uppercase;letter-spacing:.06em;font-weight:700}@media(min-width:768px){.trust-badges{display:flex}}.section,.shelf-section{margin:0 0 var(--sp-6)}.section-heading{font-size:var(--size-label);font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--ink-faint);margin:0 0 var(--sp-3)}.drop{background:linear-gradient(180deg,var(--sheen),transparent 55%),var(--surface);border:1px solid var(--brand-line);border-radius:var(--radius);padding:var(--sp-5) var(--sp-4);margin:0 0 var(--sp-6)}.drop-eyebrow{font-size:var(--size-label);font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--brand-bright);margin:0 0 var(--sp-2)}.drop-game{font-size:var(--size-h1);font-weight:900;letter-spacing:-.02em;margin:0}.drop-topic{color:var(--ink-muted);margin:var(--sp-1) 0 var(--sp-4);font-size:var(--size-lead)}.drop-value{font-family:var(--font-num);font-size:var(--size-display);font-weight:700;letter-spacing:-.03em;line-height:1.05;color:var(--state-verified);font-variant-numeric:tabular-nums;overflow-wrap:break-word}.drop-value.is-date{font-family:var(--font);font-size:clamp(26px,6.5vw,40px);font-weight:800;letter-spacing:-.02em}.drop-precision{color:var(--ink-faint);font-size:var(--size-small);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:var(--sp-2) 0 0}.drop-trust{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2) var(--sp-3);margin:var(--sp-4) 0 0;color:var(--ink-faint);font-size:12px}.drop-actions{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin:var(--sp-5) 0 0}.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-2);min-height:var(--tap);padding:0 var(--sp-4);border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);color:var(--ink);font:inherit;font-weight:700;cursor:pointer;text-align:center;flex:1 1 auto}.btn-primary{border-color:transparent;background:var(--brand);color:var(--ground)}.card-slot{position:relative;display:flex}.hero{margin:0 0 var(--sp-5)}.h1{font-size:var(--size-lead);font-weight:800;letter-spacing:-.01em;margin:0 0 var(--sp-1)}.sub{color:var(--ink-muted);margin:0;font-size:var(--size-lead);max-width:var(--measure)}.grid{display:grid;gap:var(--sp-3);grid-template-columns:1fr;margin-top:var(--sp-4)}.group-heading{grid-column:1/-1;font-size:var(--size-label);font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--ink-faint);margin:var(--sp-4) 0 0}.group-heading:first-child{margin-top:0}.card{flex:1 1 auto;display:block;background:linear-gradient(180deg,var(--sheen),transparent 60%),var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:var(--sp-4);min-height:132px}.card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--sp-2);margin-bottom:var(--sp-3)}.card-title{font-size:17px;font-weight:800;margin:0}.card-topic{color:var(--ink-faint);font-size:var(--size-label);text-transform:uppercase;letter-spacing:.12em;font-weight:700;margin-bottom:var(--sp-2)}.card-countdown{font-family:var(--font-num);font-size:25px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;margin-bottom:var(--sp-3)}.card-countdown.is-text{font-family:var(--font);font-size:18px;font-weight:800;line-height:1.3}.card-meta{display:flex;gap:var(--sp-3);flex-wrap:wrap;color:var(--ink-faint);font-size:12px}.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:var(--radius-pill);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}.badge-live{background:var(--verified-soft);color:var(--state-verified);border:1px solid var(--verified-line)}.badge-stale{background:var(--stale-soft);color:var(--state-stale);border:1px solid var(--stale-line)}.badge-unavailable{background:var(--unavailable-soft);color:var(--state-unavailable);border:1px solid var(--unavailable-line)}@media(min-width:768px){.grid{grid-template-columns:repeat(2,1fr)}.h1{font-size:var(--size-h1)}}@media(min-width:1080px){.grid{grid-template-columns:repeat(3,1fr)}}
+    :root{--ground:#050812;--surface:#0b1325;--surface-2:#101a31;--line:#26395f;--ink:#f5f7ff;--ink-muted:#91a1bd;--nav-ink:#c2cce0;--eyebrow:#c2adff;--hero-sub:#b6c2d8;--meta:#aebbd0;--link:#78c3ff;--footer-ink:#8f9db6;--brand:#8b5cf6;--brand-bright:#b69dff;--state-verified:#34d399;--state-stale:#fbbf24;--state-unavailable:#9fb0c9;--bar:#050812e8;--bar-line:#17243c;--control:#0b1427;--control-line:#31466f;--cta-from:#8b3dff;--cta-to:#4c61f6;--hero-veil-from:#07101ff5;--hero-veil-to:#07101fb8;--hero-glow:#315cad;--hero-mid:#111a3a;--hero-deep:#080d18;--tile:#070d19d9;--tile-line:#2d426c;--tile-ink:#bea5ff;--tile-label:#67c9ff;--card-foot:#09111f;--star:#0a1223;--star-line:#354b76;--star-on:#ffd25c;--deep-from:#0d1730;--arcade-to:#080e1b;--arcade-line:#3a3c76;--arcade-glow:#6633aa55;--stat:#091222;--stat-line:#2b3d62;--rule:#182740;--rule-soft:#17243b;--tracker-to:#08101e;--rail:#283d63;--dot:#536784;--row-line:#203455;--arc-from:#111630;--arc-to:#09101e;--glow-blue:#19366b66;--glow-violet:#37145344;--r-hero:16px;--r-panel:15px;--r-strip:13px;--r-card:12px;--r-control:10px;--r-tile:9px;--r-star:8px;--font:system-ui, -apple-system, Segoe UI, sans-serif;--size-small:13px;--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--gutter:9px;--measure:68ch;--tap:44px}*{box-sizing:border-box}a{color:inherit;text-decoration:none}h1,h2,h3{margin:0;text-wrap:balance}.chrome-brand{display:inline-flex;align-items:center;min-height:var(--tap);font-weight:950;font-size:20px;letter-spacing:-1px;line-height:1.45;white-space:nowrap}.chrome-brand i{font-style:normal;color:var(--brand)}.chrome-nav{position:static;inset:auto;width:auto;height:auto;margin:0;padding:0;overflow:visible;border:0;background:none;display:flex;gap:18px;color:var(--nav-ink);font-size:15px}.chrome-nav a{display:inline-flex;align-items:center;min-height:var(--tap);padding-inline:4px;margin-inline:-4px}.chrome-player{margin:0;padding:8px 10px;border:1px solid var(--control-line);border-radius:var(--r-control);background:var(--control);color:var(--ink);font-size:12px;line-height:1.45;white-space:nowrap}.chrome-player::before{content:"⚡ ";content:"⚡ " / ""}.chrome-player[hidden]{display:none}.chrome-end{display:flex;align-items:center;gap:18px;margin-left:auto}.chrome-menu{display:none}@supports selector(:popover-open){.chrome-menu{position:relative;z-index:1;display:inline-flex;flex:none;align-items:center;justify-content:center;width:var(--tap);height:var(--tap);margin:0 -4px 0 -12px;padding:0;border:0;background:none;color:var(--ink);cursor:pointer}.chrome-menu::before{content:"";position:absolute;inset:4px;z-index:-1;border:1px solid var(--control-line);border-radius:var(--r-control);background:var(--control)}.chrome-nav:not(:popover-open){display:none}}.chrome-menu-icon,.chrome-menu-icon::before,.chrome-menu-icon::after{display:block;width:16px;height:2px;border-radius:1px;background:currentColor}.chrome-menu-icon{position:relative}.chrome-menu-icon::before,.chrome-menu-icon::after{content:"";position:absolute;left:0}.chrome-menu-icon::before{top:-5px}.chrome-menu-icon::after{top:5px}.chrome-nav:popover-open{position:fixed;inset:69px 9px auto auto;min-width:190px;padding:6px;flex-direction:column;gap:2px;border:1px solid var(--control-line);border-radius:var(--r-control);background:var(--surface)}.chrome-nav:popover-open a{margin:0;padding:0 12px;border-radius:var(--r-star)}.chrome-nav:popover-open a:hover{background:var(--control)}@supports (anchor-name:--a){.chrome-menu{anchor-name:--site-menu}.chrome .chrome-nav:popover-open{position-anchor:--site-menu;top:calc(anchor(bottom) + var(--menu-drop,16px));right:calc(anchor(right) + 4px);bottom:auto;left:auto}}@media(min-width:701px){.chrome-end{display:contents}.chrome-menu{display:none}.chrome-nav:not(:popover-open){display:flex}.chrome-nav:popover-open{position:static;min-width:0;padding:0;flex-direction:row;gap:18px;border:0;background:none}.chrome-nav:popover-open a{padding:0 4px;margin:0 -4px}.chrome-player{padding:10px 13px;font-size:15px}}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background-color:var(--ground);background-image:radial-gradient(circle at 75% 0,var(--glow-blue),transparent 28%),radial-gradient(circle at 10% 22%,var(--glow-violet),transparent 24%);background-size:100% 1616px;background-repeat:no-repeat;color:var(--ink);font:15px/1.45 var(--font);-webkit-text-size-adjust:100%}button{font:inherit;color:inherit}.wrap{width:min(calc(100% - 18px),620px);margin-inline:auto}.container{width:100%;max-width:calc(620px + 2 * var(--gutter));margin:0 auto;padding-inline:var(--gutter);padding-block:0}.top{position:sticky;top:0;z-index:20;background:var(--bar);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--bar-line)}.nav{min-height:62px;display:flex;flex-wrap:wrap;align-items:center;gap:0 18px}.nav .chrome-brand{margin-right:auto}@media(min-width:701px){:root{--gutter:12px}.wrap{width:min(1160px,calc(100% - 24px))}.container{max-width:calc(1160px + 2 * var(--gutter))}body{background-size:100% 1262px}}.intro{margin:14px 0 0}.h1{margin:0;font-size:15px;font-weight:700}.sub{margin:2px 0 0;font-size:13px;color:var(--ink-muted);max-width:var(--measure)}.drop{margin-top:12px;padding:22px;overflow:hidden;border:1px solid var(--line);border-radius:var(--r-hero);background:linear-gradient(90deg,var(--hero-veil-from),var(--hero-veil-to)),radial-gradient(circle at 80% 30%,var(--hero-glow),var(--hero-mid) 35%,var(--hero-deep) 70%)}.drop-eyebrow,.eyebrow{margin:0;font-size:10px;font-weight:900;letter-spacing:1.7px;color:var(--eyebrow);text-transform:uppercase}.drop-game{margin:8px 0 4px;font-size:34px;font-weight:700;letter-spacing:-1.5px;text-transform:uppercase}.drop-topic{margin:0;color:var(--hero-sub)}@media(min-width:760px){.drop{padding:34px;min-height:330px}.drop-game{font-size:46px}}
   </style>
 
   <!-- External CSS (enhancement, not required for first paint) -->
@@ -43,24 +43,25 @@
 
 
 <body>
-  <div class="container">
-    <header class="chrome">
-      <a class="chrome-brand" href="/" aria-current="page"><span class="dot" aria-hidden="true"></span>NextReset</a>
-      <nav class="chrome-nav" aria-label="Site">
+  <header class="chrome top">
+    <div class="wrap nav">
+      <a class="chrome-brand" href="/" aria-label="NextReset" aria-current="page">NEXT<i>//</i>RESET</a>
+      <nav class="chrome-nav" id="site-nav" aria-label="Site" popover>
         <a href="/#all-games">Trackers</a>
         <a href="/play/">Arcade</a>
         <a href="/about/">About</a>
       </nav>
-      <div class="trust-badges">
-        <span class="trust-badge">Official sources only</span>
-        <span class="trust-badge">Honest data</span>
+      <div class="chrome-end">
+        <p class="chrome-player" id="chrome-player" hidden></p>
+        <button type="button" class="chrome-menu" popovertarget="site-nav" aria-label="Menu"><span class="chrome-menu-icon" aria-hidden="true"></span></button>
       </div>
-      <p class="chrome-player" id="chrome-player" hidden></p>
-    </header>
+    </div>
+  </header>
 
-    <!-- The page's own heading. Compact on purpose: it names what the page is for, and the next
-         drop below it is what a visitor came to read. -->
-    <div class="hero">
+  <div class="container">
+    <!-- The page's own heading. Quiet on purpose, and above the hero it names: the demo has nothing here,
+         and the next drop below it is what a visitor came to read. -->
+    <div class="intro">
       <h1 class="h1">Game resets, patches and seasons &mdash; verified</h1>
       <p class="sub">Every date here comes from an official source, with the time it was checked. No predictions.</p>
     </div>
@@ -77,16 +78,17 @@
          The section, the line and the shelf all ship hidden: without JavaScript tracking does nothing,
          and explaining a feature that does not work would be worse than staying quiet. -->
     <section class="shelf-section" id="my-games" hidden>
-      <h2 class="section-heading">My games</h2>
+      <div class="head">
+        <h2 class="section-heading">My games</h2>
+        <span class="head-note">Your schedule, first.</span>
+        <a class="head-link" href="#all-games">All 12 →</a>
+      </div>
       <p class="shelf-empty" id="my-games-empty" hidden><span class="shelf-empty-mark" aria-hidden="true">☆</span> Track a game to keep it at the top. Stays on this device.</p>
       <div class="shelf" id="my-games-shelf"></div>
     </section>
 
-    <!-- The arcade: ONE SHOT // 80 CONTRACTS. The picture is drawn from the game's own drawing code - its
-         skyline formula, its people, the courier's red case, the armed hostile's raised gun and the scope,
-         in the game's colours - as inline SVG, because none of the game's code may load on this page.
-         arcade-card.test.ts holds its colours to the game's own script. The records line stays hidden
-         until a contract has been cleared. -->
+    <!-- The arcade: ONE SHOT // 80 CONTRACTS, in the demo's arcade card. The records line stays hidden until
+         a contract has been cleared: before that there is nothing true to put in it. -->
     <section class="section arcade-card">
       <div class="arcade-copy">
         <p class="drop-eyebrow">NEXT//RESET Arcade</p>
@@ -98,94 +100,11 @@
           <li><small>XP</small><b id="arcade-xp">0</b></li>
           <li><small>Stars</small><b id="arcade-stars">0/240</b></li>
         </ul>
-        <a class="btn btn-primary arcade-play" href="/play/">Play now</a>
       </div>
-      <svg class="arcade-board" viewBox="0 0 320 230" role="img" preserveAspectRatio="xMidYMax slice" focusable="false">
-        <title>A ONE SHOT contract at dusk: a rifle scope over a street crowd, its crosshair on the courier carrying the red case, while further along the street an armed man raises his gun.</title>
-        <!-- The game's canvas, drawn at half size and cropped from the top. A phone shows the bottom band -
-             the street, the crowd and the scope, the same 320x120 the card has always had - and a wide
-             screen stretches the picture to the card's full height and sees the skyline above it. -->
-        <defs>
-          <linearGradient id="one-shot-sky" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="280">
-            <stop offset="0" stop-color="#625e72"/>
-            <stop offset=".52" stop-color="#d28379"/>
-            <stop offset="1" stop-color="#172630"/>
-          </linearGradient>
-        </defs>
-        <rect width="320" height="230" fill="url(#one-shot-sky)"/>
-
-        <!-- The skyline, by the game's own formula for a canvas this size. -->
-        <g fill="#253744">
-          <rect x="-15" y="143.6" width="30.62" height="30"/>
-          <rect x="6.33" y="122.1" width="30.62" height="51.5"/>
-          <rect x="27.67" y="100.6" width="30.62" height="73"/>
-          <rect x="49" y="79.1" width="30.62" height="94.5"/>
-          <rect x="70.33" y="141.6" width="30.62" height="32"/>
-          <rect x="91.67" y="120.1" width="30.62" height="53.5"/>
-          <rect x="113" y="98.6" width="30.62" height="75"/>
-          <rect x="134.33" y="77.1" width="30.62" height="96.5"/>
-          <rect x="155.67" y="139.6" width="30.62" height="34"/>
-          <rect x="177" y="118.1" width="30.62" height="55.5"/>
-          <rect x="198.33" y="96.6" width="30.62" height="77"/>
-          <rect x="219.67" y="75.1" width="30.62" height="98.5"/>
-          <rect x="241" y="137.6" width="30.62" height="36"/>
-          <rect x="262.33" y="116.1" width="30.62" height="57.5"/>
-          <rect x="283.67" y="94.6" width="30.62" height="79"/>
-          <rect x="305" y="73.1" width="30.62" height="100.5"/>
-        </g>
-        <rect y="193.2" width="320" height="36.8" fill="#0e1922"/>
-        <rect y="191.8" width="320" height="4" fill="#263945"/>
-        <line x1="0" y1="173.6" x2="320" y2="173.6" stroke="#344b59" stroke-width="2"/>
-
-        <!-- The crowd, drawn as the game draws a person. The courier carries the red case; further back, the
-             armed hostile has raised his gun, which is the moment the game gives you before he fires. -->
-        <g transform="translate(24 204.6) scale(0.5)">
-          <circle cy="-58" r="10" fill="#081018"/>
-          <path d="M0 -47 L0 -13 M0 -36 L-14 -17.8 M0 -35 L15 -19.2 M0 -13 L-6 18 M0 -13 L6 18" fill="none" stroke="#081018" stroke-width="7" stroke-linecap="round"/>
-          <path d="M-14 -70 h28 v4 h-28 Z M-9 -79 h18 v10 h-18 Z" fill="#081018"/>
-        </g>
-        <g transform="translate(58 197.6) scale(0.5)">
-          <circle cy="-58" r="10" fill="#081018"/>
-          <path d="M0 -47 L0 -13 M0 -36 L-14 -20 M0 -35 L15 -17 M0 -13 L-17 18 M0 -13 L17 18" fill="none" stroke="#081018" stroke-width="7" stroke-linecap="round"/>
-          <rect x="-18" y="-28" width="5" height="9" fill="#70dcff"/>
-        </g>
-        <g transform="translate(98 205.6) scale(0.5)">
-          <circle cy="-58" r="10" fill="#081018"/>
-          <path d="M0 -47 L0 -13 M0 -36 L-14 -19 M0 -35 L17 -38 L31 -38 M0 -13 L-12 18 M0 -13 L12 18" fill="none" stroke="#081018" stroke-width="7" stroke-linecap="round"/>
-          <path d="M24 -42 h23 v6 h-23 Z M29 -36 h5 v8 h-5 Z" fill="#1b242a"/>
-          <circle cx="48" cy="-39" r="3" fill="#ef4a4f"/>
-        </g>
-        <g transform="translate(142 199.6) scale(0.5)">
-          <circle cy="-58" r="10" fill="#081018"/>
-          <path d="M0 -47 L0 -13 M0 -36 L-14 -20.4 M0 -35 L15 -16.6 M0 -13 L-19 18 M0 -13 L19 18" fill="none" stroke="#081018" stroke-width="7" stroke-linecap="round"/>
-          <path d="M-14 -70 h28 v4 h-28 Z M-9 -79 h18 v10 h-18 Z" fill="#081018"/>
-        </g>
-        <g transform="translate(196 203.6) scale(0.5)">
-          <circle cy="-58" r="10" fill="#081018"/>
-          <path d="M0 -47 L0 -13 M0 -36 L-14 -18.4 M0 -35 L15 -18.6 M0 -13 L-9 18 M0 -13 L9 18" fill="none" stroke="#081018" stroke-width="7" stroke-linecap="round"/>
-          <rect x="10" y="-9" width="21" height="17" fill="#d63737"/>
-          <rect x="15" y="-15" width="11" height="7" fill="none" stroke="#d63737" stroke-width="3"/>
-        </g>
-        <g transform="translate(238 196.6) scale(0.5)">
-          <circle cy="-58" r="10" fill="#081018"/>
-          <path d="M0 -47 L0 -13 M0 -36 L-14 -17.6 M0 -35 L15 -19.4 M0 -13 L-5 18 M0 -13 L5 18" fill="none" stroke="#081018" stroke-width="7" stroke-linecap="round"/>
-          <rect x="-18" y="-28" width="5" height="9" fill="#70dcff"/>
-        </g>
-        <g transform="translate(272 206.6) scale(0.5)">
-          <circle cy="-58" r="10" fill="#081018"/>
-          <path d="M0 -47 L0 -13 M0 -36 L-14 -19.6 M0 -35 L15 -17.4 M0 -13 L-15 18 M0 -13 L15 18" fill="none" stroke="#081018" stroke-width="7" stroke-linecap="round"/>
-          <path d="M-14 -70 h28 v4 h-28 Z M-9 -79 h18 v10 h-18 Z" fill="#081018"/>
-        </g>
-        <g transform="translate(305 201.6) scale(0.5)">
-          <circle cy="-58" r="10" fill="#081018"/>
-          <path d="M0 -47 L0 -13 M0 -36 L-14 -18 M0 -35 L15 -19 M0 -13 L-7 18 M0 -13 L7 18" fill="none" stroke="#081018" stroke-width="7" stroke-linecap="round"/>
-        </g>
-
-        <!-- The scope, on the courier: the ring, the crosshair with its ticks, and the red dot. -->
-        <circle cx="196" cy="186.1" r="75.6" fill="none" stroke="#020608" stroke-width="4.5"/>
-        <path d="M120.4 186.1 H271.6 M196 110.5 V261.7 M154 183.1 V189.1 M168 183.1 V189.1 M182 183.1 V189.1 M196 183.1 V189.1 M210 183.1 V189.1 M224 183.1 V189.1 M238 183.1 V189.1" fill="none" stroke="rgba(0,0,0,.9)" stroke-width="1.5"/>
-        <circle cx="196" cy="186.1" r="2" fill="#f0444b"/>
-      </svg>
+      <div class="arcade-cta">
+        <a class="btn btn-primary arcade-play" href="/play/">Play now</a>
+        <p class="arcade-note">Optimized for touch + desktop</p>
+      </div>
     </section>
 
     <!-- All trackers. The renderer owns everything inside this region: it writes the cards and the
@@ -354,6 +273,13 @@
 
 
 
+    <!-- What the site is, in the demo's three lines. -->
+    <section class="features" aria-label="What NextReset offers">
+      <div class="feature"><b aria-hidden="true">◎</b><div><b>Verified data</b><br><span>Official-source facts</span></div></div>
+      <div class="feature"><b aria-hidden="true">☆</b><div><b>My Games</b><br><span>No account required</span></div></div>
+      <div class="feature"><b aria-hidden="true">⚡</b><div><b>Arcade</b><br><span>Play while you wait</span></div></div>
+    </section>
+
     <!-- Content Sections -->
     <div class="content-sections">
 
@@ -423,9 +349,12 @@
 
     <!-- Footer -->
     <footer>
-      <p>Checked automatically several times a day against official sources.</p>
-      <p>Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
-      <p><a href="/about/">About</a> · <a href="/privacy/">Privacy Policy</a> · <a href="/play/">Arcade</a></p>
+      <div class="footer-row">
+        <b class="footer-mark">NEXT//RESET</b>
+        <span class="footer-line">Know what's next. Play while you wait.</span>
+        <span class="footer-links"><a href="/about/">About</a> · <a href="/privacy/">Privacy Policy</a> · <a href="/play/">Arcade</a> · © 2026</span>
+      </div>
+      <p class="footer-fine">Checked automatically several times a day against official sources. Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
     </footer>
   </div>
 

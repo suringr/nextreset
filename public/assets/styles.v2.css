@@ -1,69 +1,100 @@
 /**
- * NEXT//RESET V4 — gaming command center
+ * NEXT//RESET — the approved demo, ported.
  *
- * Mobile-first. The base rules are the phone; every media query is `min-width` and adds rather than
- * undoes. The previous stylesheet declared a three-column grid first and took columns away at 900px and
- * 600px, which meant a phone parsed and then discarded the desktop layout.
+ * The demo (its homepage and its tracker page) is the visual source of truth, and this stylesheet is its
+ * rules as it wrote them: the same sizes, radii, weights, spacing and gradients, under the class names the
+ * site's renderers already emit. Where the site has something the demo never drew — the tracker grid, the
+ * prose, the evidence rows, the breadcrumb — it takes the demo's nearest component rather than a style of
+ * its own.
  *
- * The `:root` block is GENERATED from scripts/design/tokens.ts. Do not hand-edit it: the same values are
- * inlined into every page's critical CSS, and design-tokens.test.ts asserts all of them agree. Run
- * `npm run design:apply` after changing a token.
+ * Where it departs from the demo it says so, beside the rule. There are few: every tap target stays 44px
+ * however small the demo draws it; a sentence where no value is published is set smaller than a value;
+ * and the phone keeps its navigation behind a menu (tokens.ts), where the demo hides it.
  *
- * Colour is only ever taken from a token. There are no raw hex or rgb() values below the generated
- * block, and a test enforces that — translucent fills are tokens too (--verified-soft, --sheen), because
- * a colour written inline is a colour that cannot be checked for contrast.
+ * The header and the page frame — wordmark, links, chip, menu, body, width — are not here. They are in
+ * every page's inline CSS, written from scripts/design/tokens.ts, because /play/ loads no stylesheet and
+ * one copy cannot drift from another. The page-kind rules that are also inlined (the homepage hero, the
+ * tracker hero, static prose) are repeated here word for word, and design-tokens.test.ts holds the two
+ * copies together.
+ *
+ * Mobile-first: the base rules are the phone and every query is `min-width`. The demo's `max-width:700px`
+ * rules are its base rules here, and what it did above 700px is under `min-width:701px`.
+ *
+ * The `:root` block is GENERATED from scripts/design/tokens.ts. Do not hand-edit it; run
+ * `npm run design:apply`. Colour is only ever taken from a token, and a test enforces it.
  */
 
 /* === GENERATED TOKENS: START === */
 :root {
-  --ground: #050812; /* the page itself */
-  --ground-2: #0a1020; /* the far end of the page gradient */
-  --surface: #0b1325; /* a card or panel */
-  --surface-2: #101a31; /* a panel raised above another panel */
-  --line: #26395f; /* the edge of a surface */
-  --line-soft: #1b2a47; /* a divider inside a surface */
-  --ink: #f5f7ff; /* anything a reader is meant to read */
-  --ink-muted: #aab7cf; /* supporting text: topics, notes, prose */
-  --ink-faint: #93a2be; /* labels and meta, down to 11px — the token that used to fail AA */
-  --brand: #8b5cf6; /* NextReset, and nothing else */
-  --brand-bright: #b69dff; /* the brand as text or a link, where #8b5cf6 is too dark to read */
-  --state-verified: #34d399; /* the source confirmed this value */
-  --state-stale: #fbbf24; /* the value stands but the source could not be checked */
-  --state-unavailable: #9fb0c9; /* there is no verified value, or its date has passed */
-  --brand-soft: rgba(139, 92, 246, .15); /* brand fill behind a pill */
-  --brand-line: rgba(139, 92, 246, .38); /* brand edge */
-  --verified-soft: rgba(52, 211, 153, .14); /* verified fill */
-  --verified-line: rgba(52, 211, 153, .32); /* verified edge */
-  --stale-soft: rgba(251, 191, 36, .14); /* stale fill */
-  --stale-line: rgba(251, 191, 36, .34); /* stale edge */
-  --unavailable-soft: rgba(159, 176, 201, .13); /* unavailable fill */
-  --unavailable-line: rgba(159, 176, 201, .30); /* unavailable edge */
-  --sheen: rgba(255, 255, 255, .035); /* the light on the top edge of a card */
-  --scrim: rgba(3, 6, 17, .72); /* a surface laid over the page */
-  --radius: 14px; /* a card or panel */
-  --radius-sm: 10px; /* a row or a small control */
-  --radius-pill: 999px; /* a badge */
-  --shadow: 0 10px 30px rgba(0, 0, 0, .45); /* a surface at rest */
-  --shadow-lift: 0 16px 40px rgba(0, 0, 0, .55); /* a surface under the pointer */
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; /* everything */
-  --font-num: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; /* digits that have to line up: countdowns, timestamps */
-  --size-display: clamp(34px, 9vw, 54px); /* the one value a page exists to publish */
-  --size-h1: clamp(27px, 6vw, 40px); /* the page heading */
-  --size-h2: clamp(19px, 3.2vw, 23px); /* a section heading */
-  --size-lead: clamp(15px, 2.2vw, 17px); /* introductory prose */
-  --size-body: 15px; /* running text */
-  --size-small: 13px; /* supporting text */
-  --size-label: 11px; /* an uppercase label */
+  --ground: #050812; /* the page itself (the demo's --bg) */
+  --surface: #0b1325; /* a panel, and the open menu (--panel) */
+  --surface-2: #101a31; /* the top of a game card's gradient (--panel2) */
+  --line: #26395f; /* the edge of the hero and of a game card (--line) */
+  --ink: #f5f7ff; /* anything a reader is meant to read (--text) */
+  --ink-muted: #91a1bd; /* supporting text (--muted) */
+  --nav-ink: #c2cce0; /* the header's links */
+  --eyebrow: #c2adff; /* the small violet label above a heading */
+  --hero-sub: #b6c2d8; /* the line under the hero's title */
+  --meta: #aebbd0; /* the hero's trust row, and a card's checked time */
+  --link: #78c3ff; /* a link that is not a button: "All 12 →", a source */
+  --footer-ink: #8f9db6; /* the footer */
+  --brand: #8b5cf6; /* NextReset's violet: the // in the wordmark, the next dot on a timeline (--violet) */
+  --brand-bright: #b69dff; /* the focus ring */
+  --state-verified: #34d399; /* ● LIVE, and the entry a timeline is waiting for (--green) */
+  --state-stale: #fbbf24; /* ● STALE (--amber) */
+  --state-unavailable: #9fb0c9; /* ● UNAVAILABLE: the demo has no such state, so this one is the site's */
+  --bar: #050812e8; /* the sticky header's glass */
+  --bar-line: #17243c; /* the rule under the header */
+  --control: #0b1427; /* a button, the player chip, the menu */
+  --control-line: #31466f; /* their edge */
+  --cta-from: #8b3dff; /* the primary button's gradient, violet end */
+  --cta-to: #4c61f6; /* and its blue end: the demo's #4f65ff leaves white text at 4.23:1; scaled 3.5% darker, same hue, the whole button clears 4.5:1 */
+  --hero-veil-from: #07101ff5; /* the veil across the hero, left */
+  --hero-veil-to: #07101fb8; /* and right, where the glow shows through */
+  --hero-glow: #315cad; /* the blue light behind the hero */
+  --hero-mid: #111a3a; /* its falloff */
+  --hero-deep: #080d18; /* its edge */
+  --tile: #070d19d9; /* a countdown tile */
+  --tile-line: #2d426c; /* its edge */
+  --tile-ink: #bea5ff; /* its digits */
+  --tile-label: #67c9ff; /* its unit */
+  --card-foot: #09111f; /* the bottom of a game card's gradient */
+  --star: #0a1223; /* a card's track box */
+  --star-line: #354b76; /* its edge */
+  --star-on: #ffd25c; /* a tracked star */
+  --deep-from: #0d1730; /* the dark start of the arcade card's and the tracker hero's gradients */
+  --arcade-to: #080e1b; /* the arcade card's gradient end */
+  --arcade-line: #3a3c76; /* the arcade card's edge, and the arcade strip's */
+  --arcade-glow: #6633aa55; /* the violet light in the arcade card */
+  --stat: #091222; /* an arcade record tile, and an evidence row */
+  --stat-line: #2b3d62; /* an arcade record tile's edge */
+  --rule: #182740; /* a divider between rows */
+  --rule-soft: #17243b; /* the rules around the features strip */
+  --tracker-to: #08101e; /* the tracker hero's gradient end */
+  --rail: #283d63; /* a timeline's rail */
+  --dot: #536784; /* a timeline entry that is not the next one */
+  --row-line: #203455; /* an evidence row's edge */
+  --arc-from: #111630; /* the arcade strip's gradient start */
+  --arc-to: #09101e; /* and its end */
+  --glow-blue: #19366b66; /* the blue light at the top right of every page */
+  --glow-violet: #37145344; /* the violet light at the left */
+  --r-hero: 16px; /* the homepage hero */
+  --r-panel: 15px; /* the arcade card and the tracker hero */
+  --r-strip: 13px; /* the arcade strip */
+  --r-card: 12px; /* a game card */
+  --r-control: 10px; /* a button, the chip, an evidence row */
+  --r-tile: 9px; /* a countdown tile, a record tile */
+  --r-star: 8px; /* a card's track box */
+  --font: system-ui, -apple-system, Segoe UI, sans-serif; /* everything, numbers included: the demo sets no second face */
+  --size-small: 13px; /* supporting prose the demo does not show */
   --sp-1: 4px;
   --sp-2: 8px;
   --sp-3: 12px;
   --sp-4: 16px;
   --sp-5: 24px;
-  --sp-6: 32px;
-  --sp-7: 48px;
-  --gutter: 16px; /* the smallest side margin any page keeps, at any width */
+  --gutter: 9px; /* the side margin on a phone: the demo's min(100% - 18px, 620px). 12px from 701px */
   --measure: 68ch; /* how wide running text is allowed to get */
-  --tap: 44px; /* the smallest interactive target, per WCAG 2.5.5 */
+  --tap: 44px; /* the smallest interactive target, per WCAG 2.5.5 — kept however small the demo draws it */
 }
 /* === GENERATED TOKENS: END === */
 
@@ -75,735 +106,449 @@
   box-sizing: border-box;
 }
 
-/* An explicit background colour first, then the atmosphere over it. The colour matters on its own: if a
-   gradient fails to resolve, the page is still dark rather than white with near-white text.
-   No `background-attachment: fixed` — it repaints the gradient on every scroll frame, which is felt on a
-   mid-range phone and is buggy in iOS Safari. */
-body {
-  margin: 0;
-  min-height: 100vh;
-  background-color: var(--ground);
-  background-image:
-    radial-gradient(900px 520px at 78% -8%, var(--brand-soft), transparent 58%),
-    radial-gradient(760px 460px at 8% 14%, var(--verified-soft), transparent 62%),
-    linear-gradient(180deg, var(--ground-2), transparent 55%);
-  background-repeat: no-repeat;
-  color: var(--ink);
-  font-family: var(--font);
-  font-size: var(--size-body);
-  line-height: 1.55;
-  -webkit-text-size-adjust: 100%;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-h1,
-h2,
-h3 {
-  margin: 0;
-  line-height: 1.15;
-  text-wrap: balance;
-}
-
-/* A visible focus ring on everything focusable. There was none: keyboard users had to guess. */
 :focus-visible {
   outline: 2px solid var(--brand-bright);
   outline-offset: 2px;
-  border-radius: var(--sp-1);
+  border-radius: 4px;
 }
 
-/* The side gutter is set once, here, as side padding — never as a shorthand that could zero it. */
-.container {
-  width: 100%;
-  max-width: 1040px;
-  margin: 0 auto;
-  padding-inline: var(--gutter);
-  padding-block: var(--sp-5);
-}
-
-/* ---------- the shared header ----------
-
-   One header on all seventeen pages, written by scripts/update-chrome.ts from scripts/design/chrome.ts.
-   Before it, only the homepage had any chrome at all, so a visitor who arrived on a tracker page from a
-   search result could reach nothing else except through the footer.
-
-   It wraps rather than shrinking: at 360px and up the whole thing is one row the height of one tap
-   target, and only the narrowest phone takes a second line. The height matters because everything a
-   visitor came for is underneath it. */
-
-.chrome {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-1) var(--sp-3);
-  margin-bottom: var(--sp-4);
-}
-
-.chrome-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-  min-height: var(--tap);
-  font-weight: 800;
-  font-size: 19px;
-  letter-spacing: -.01em;
-}
-
-/* The nav takes the free space, so the player chip is pushed to the far edge. */
-.chrome-nav {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-2);
-  margin-right: auto;
-  font-size: var(--size-small);
-  font-weight: 700;
-}
-
-/* A full tap target in both directions, not only in height. "About" is 38px of text, and a 38px-wide
-   target with a gap either side is how a thumb lands on the wrong link. The padding buys the width and
-   the gap is narrowed to pay for it, so the nav is no wider than it was. */
-.chrome-nav a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--tap);
-  min-width: var(--tap);
-  padding-inline: var(--sp-2);
-  color: var(--ink-muted);
-}
-
-.chrome-nav a:hover {
-  color: var(--ink);
-}
-
-/* "page" where the link is this page, "true" on a tracker, which belongs to Trackers without being it. */
-.chrome-nav a[aria-current] {
-  color: var(--brand-bright);
-}
-
-/* Empty and hidden until player.js finds something true to put in it. A visitor who has never played
-   is told nothing about a player, the same way a card says nothing about a date nobody announced. */
-.chrome-player {
-  margin: 0 0 0 auto;
-  padding: 3px 9px;
-  border: 1px solid var(--brand-line);
-  border-radius: var(--radius-pill);
-  background: var(--brand-soft);
-  color: var(--brand-bright);
-  font-family: var(--font-num);
-  font-size: 11px;
-  font-weight: 700;
+/* Read aloud, never drawn. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
   white-space: nowrap;
 }
 
-.chrome-player[hidden] {
-  display: none;
-}
-
-.dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  /* The brand, not --state-verified. Green means "the source confirmed this value" everywhere else on
-     the site, and spending it on the wordmark put a verification signal on every page that verifies
-     nothing — the one collision the V4 palette was built to remove. */
-  background: var(--brand);
-  box-shadow: 0 0 0 4px var(--brand-soft);
-  flex: none;
-}
-
-/* Hidden on a phone, where the wordmark and the next drop matter more than a claim about the site. */
-.trust-badges {
-  display: none;
-  gap: var(--sp-2);
-}
-
-.trust-badge {
-  font-size: var(--size-label);
-  color: var(--ink-faint);
-  padding: 4px 10px;
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-pill);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  font-weight: 700;
-}
-
-/* ---------- hero ---------- */
-
-.hero {
-  margin: 0 0 var(--sp-5);
-}
-
-/* The page heading is deliberately modest. It names what the page is for — which a crawler and a
-   screen-reader outline both need — while the next drop below it is what a visitor came to read. */
-.h1 {
-  font-size: var(--size-lead);
-  font-weight: 800;
-  letter-spacing: -.01em;
-  margin: 0 0 var(--sp-1);
-}
-
-.sub {
-  color: var(--ink-muted);
-  margin: 0;
-  font-size: var(--size-lead);
-  max-width: var(--measure);
-}
-
-/* ---------- sections ---------- */
-
+/* The demo's section rhythm: 24px between blocks, nothing more. */
 .section,
 .shelf-section {
-  margin: 0 0 var(--sp-6);
+  margin: 24px 0;
 }
 
-.section-heading {
-  font-size: var(--size-label);
-  font-weight: 800;
+/* The demo's small violet label above a heading. */
+.drop-eyebrow,
+.eyebrow {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.7px;
+  color: var(--eyebrow);
   text-transform: uppercase;
-  letter-spacing: .14em;
-  color: var(--ink-faint);
-  margin: 0 0 var(--sp-3);
 }
 
-/* ---------- buttons ---------- */
+/* ---------- buttons (the demo's .btn and .btn.primary) ---------- */
 
+/* The demo's button is 43.75px tall; the 44px floor adds a quarter of a pixel and keeps the site's target. */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--sp-2);
+  gap: 4px;
   min-height: var(--tap);
-  padding: 0 var(--sp-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
+  padding: 10px 13px;
+  border: 1px solid var(--control-line);
+  border-radius: var(--r-control);
+  background: var(--control);
   color: var(--ink);
   font: inherit;
-  font-weight: 700;
-  cursor: pointer;
   text-align: center;
-  transition: border-color .12s ease, background-color .12s ease;
+  cursor: pointer;
 }
 
-.btn:hover {
-  border-color: var(--brand-line);
-}
-
- /* Near-black on violet, not near-white: #f5f7ff on #8b5cf6 is 3.96:1, which fails AA at this size.
-   The hover state already did this; the resting state did not, and only a rendered check found it. */
 .btn-primary {
-  border-color: transparent;
-  background: var(--brand);
-  color: var(--ground);
+  border: 0;
+  background: linear-gradient(100deg, var(--cta-from), var(--cta-to));
+  font-weight: 850;
 }
 
-.btn-primary:hover {
-  background: var(--brand-bright);
-  color: var(--ground);
-}
+/* ---------- status (the demo's .ok and .wait) ---------- */
 
-/* ---------- next drop ---------- */
-
-/* The lead block. Violet marks it as NextReset's own framing; the value inside stays in the state
-   colours, because what the value IS remains the data's business and not the brand's. */
-.drop {
-  background:
-    radial-gradient(520px 260px at 88% -20%, var(--brand-soft), transparent 70%),
-    linear-gradient(180deg, var(--sheen), transparent 55%),
-    var(--surface);
-  border: 1px solid var(--brand-line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: var(--sp-5) var(--sp-4);
-  margin: 0 0 var(--sp-6);
-}
-
-.drop-eyebrow {
-  font-size: var(--size-label);
+/* The demo has no pills: a state is a coloured word behind a bullet. The words are the renderer's, and
+   the bullet is drawn, not written, so it is neither a published fact nor read aloud. */
+.badge {
   font-weight: 800;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-  color: var(--brand-bright);
-  margin: 0 0 var(--sp-2);
+  white-space: nowrap;
 }
 
-.drop-game {
-  font-size: var(--size-h1);
-  font-weight: 900;
-  letter-spacing: -.02em;
-  margin: 0;
+.badge::before {
+  content: "● ";
+  content: "● " / "";
 }
 
-.drop-topic {
-  color: var(--ink-muted);
-  margin: var(--sp-1) 0 var(--sp-4);
-  font-size: var(--size-lead);
-}
-
-.drop-value {
-  font-family: var(--font-num);
-  font-size: var(--size-display);
-  font-weight: 700;
-  letter-spacing: -.03em;
-  line-height: 1.05;
+.badge-live {
   color: var(--state-verified);
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: break-word;
 }
 
-/* A date is a sentence, not a readout, and it is longer. */
-.drop-value.is-date {
-  font-family: var(--font);
-  font-size: clamp(26px, 6.5vw, 40px);
-  font-weight: 800;
-  letter-spacing: -.02em;
-}
-
-.drop[data-status="stale"] .drop-value {
+.badge-stale {
   color: var(--state-stale);
 }
 
-/* The live countdown app.js builds in place of the absolute value. The build never writes these: a
-   page built six hours ago would be counting from the wrong moment. */
+.badge-unavailable {
+  color: var(--state-unavailable);
+}
+
+/* ---------- homepage intro ---------- */
+
+/* The page's h1. The demo has nothing here; it is kept, quiet, above the hero it names. */
+.intro {
+  margin: 14px 0 0;
+}
+
+.h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.sub {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--ink-muted);
+  max-width: var(--measure);
+}
+
+/* ---------- hero: the next drop (the demo's .hero) ---------- */
+
+.drop {
+  margin-top: 12px;
+  padding: 22px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-hero);
+  background: linear-gradient(90deg, var(--hero-veil-from), var(--hero-veil-to)), radial-gradient(circle at 80% 30%, var(--hero-glow), var(--hero-mid) 35%, var(--hero-deep) 70%);
+}
+
+.drop-game {
+  margin: 8px 0 4px;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  text-transform: uppercase;
+}
+
+.drop-topic {
+  margin: 0;
+  color: var(--hero-sub);
+}
+
+/* A date, an instant before script has turned it into tiles, or "Updating...": the demo's tracker date. */
+.drop-value {
+  margin: 12px 0;
+  font-size: 31px;
+  font-weight: 950;
+  text-transform: uppercase;
+  overflow-wrap: break-word;
+}
+
+/* The live countdown app.js builds in place of an exact instant — the demo's .count and .tm. */
 .drop-count {
   display: flex;
-  gap: var(--sp-2);
-  margin: 0;
-  list-style: none;
+  gap: 5px;
+  margin: 18px 0;
   padding: 0;
+  list-style: none;
+  font-size: 15px;
+  font-weight: 400;
+  text-transform: none;
 }
 
 .drop-count li {
-  flex: 1 1 0;
-  max-width: 96px;
-  text-align: center;
-  border: 1px solid var(--line);
-  background: var(--ground);
-  border-radius: var(--radius-sm);
-  padding: var(--sp-2) var(--sp-1);
+  flex: 1;
+  max-width: 90px;
   margin: 0;
+  padding: 8px 4px;
+  text-align: center;
+  border: 1px solid var(--tile-line);
+  border-radius: var(--r-tile);
+  background: var(--tile);
 }
 
+/* Tabular figures so a ticking digit does not shift its neighbours; Segoe UI's are tabular already. */
 .drop-count b {
   display: block;
-  font-family: var(--font-num);
-  font-size: clamp(22px, 7vw, 34px);
+  font-size: 22px;
   font-weight: 700;
+  color: var(--tile-ink);
   font-variant-numeric: tabular-nums;
-  color: var(--state-verified);
-  line-height: 1.1;
 }
 
 .drop-count small {
-  font-size: 9px;
-  letter-spacing: .12em;
+  font-size: 8px;
+  color: var(--tile-label);
   text-transform: uppercase;
-  color: var(--ink-faint);
-  font-weight: 700;
 }
 
+/* The demo's tracker line under a date: "Time not announced — date-only precision". */
 .drop-precision {
-  color: var(--ink-faint);
-  font-size: var(--size-small);
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  margin: var(--sp-2) 0 0;
+  margin: 0;
+  color: var(--ink-muted);
 }
 
 .drop-trust {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-2) var(--sp-3);
-  margin: var(--sp-4) 0 0;
-  color: var(--ink-faint);
-  font-size: 12px;
+  gap: 9px;
+  margin: 0 0 16px;
+  font-size: 11px;
+  color: var(--meta);
 }
 
 .drop-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
-  margin: var(--sp-5) 0 0;
+  gap: 8px;
 }
 
 .drop-actions .btn {
-  flex: 1 1 auto;
+  flex: 1;
+  text-transform: uppercase;
 }
 
-/* ---------- my games shelf ---------- */
+.drop-actions .btn-primary::after {
+  content: " →";
+  content: " →" / "";
+}
 
-/* Horizontal, snapping, with the next card peeking past the edge — the peek is what tells a thumb
-   there is more. `contain` so a fast swipe cannot hand the gesture to the browser's back navigation. */
-.shelf {
+@media (min-width: 760px) {
+  .drop {
+    padding: 34px;
+    min-height: 330px;
+  }
+
+  .drop-game {
+    font-size: 46px;
+  }
+}
+
+/* ---------- section headings (the demo's .head) ---------- */
+
+.head {
   display: flex;
-  gap: var(--sp-3);
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-padding-inline: var(--gutter);
-  overscroll-behavior-x: contain;
-  padding-bottom: var(--sp-2);
-  -webkit-overflow-scrolling: touch;
+  align-items: end;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
-.shelf .card-slot {
-  flex: 0 0 auto;
-  width: min(78%, 280px);
-  scroll-snap-align: start;
-}
-
-.shelf .card {
-  height: 100%;
-}
-
-.shelf[hidden] {
-  display: none;
-}
-
-/* What the section says before anything is tracked.
-   A star with no explanation is a control nobody presses, so the feature introduces itself once and
-   then gets out of the way. It ships hidden and is revealed by script, because without JavaScript
-   tracking does nothing and explaining a feature that does not work is worse than saying nothing. */
-.shelf-empty {
+.section-heading {
   margin: 0;
-  color: var(--ink-muted);
-  font-size: var(--size-small);
-}
-
-.shelf-empty[hidden] {
-  display: none;
-}
-
-.shelf-empty-mark {
-  color: var(--ink-faint);
-}
-
-/* While empty the section is a single line and nothing else, so introducing the feature does not cost
-   the page the height of a card — the arcade below it has a first screen to stay inside. */
-.shelf-section.is-empty {
-  margin-bottom: var(--sp-3);
+  font-size: 19px;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .section-heading[hidden] {
   display: none;
 }
 
-/* ---------- arcade entry ---------- */
-
-/* The one place on this site that is not data. It has to read as a game within a glance, which the
-   previous version did not: it used the same surface, border, radius and record tiles as the trackers,
-   and for a first-time visitor its largest element was three em-dashes.
-
-   Now it shows the game: a crop of ONE SHOT's street at dusk, drawn from one-shot.js's own geometry
-   and colours, inline because the game's own scripts must not load on this page. The records line
-   appears only once a contract has been cleared. */
-.arcade-card {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background:
-    radial-gradient(420px 220px at 92% -30%, var(--brand-soft), transparent 70%),
-    var(--surface);
-  border: 1px solid var(--brand-line);
-  border-radius: var(--radius);
-  padding: 0;
+#my-games .section-heading::before {
+  content: "🎮 ";
+  content: "🎮 " / "";
 }
 
-/* The picture leads on a phone. What this card failed to say was "there is a game here", and a picture
-   says it before any sentence does; the button is a short scroll below and the card reads as one thing. */
-.arcade-board {
-  order: -1;
-}
-
-.arcade-copy {
-  padding: var(--sp-4);
-}
-
-.arcade-name {
-  font-size: var(--size-h2);
-  font-weight: 900;
-  letter-spacing: -.01em;
-  margin: 0;
-}
-
-.arcade-line {
+/* Hidden on a phone, as the demo hides it. */
+.head-note {
+  display: none;
   color: var(--ink-muted);
-  font-size: var(--size-small);
-  margin: var(--sp-1) 0 var(--sp-4);
-  max-width: 46ch;
+  font-size: 12px;
 }
 
-/* The picture itself. On a phone it is a band above the copy; on a wide screen it fills the right of the
-   card and bleeds to the edges, because a picture with a margin reads as an illustration and a picture
-   without one reads as a window. */
-.arcade-board {
-  display: block;
-  width: 100%;
-  height: auto;
-  /* The bottom band of the tall crop: the street, the crowd and the scope. */
-  aspect-ratio: 320 / 120;
-  border-bottom: 1px solid var(--line-soft);
+.head-link {
+  margin-left: auto;
+  color: var(--link);
+  font-size: 12px;
 }
 
-/* Records. Not tiles: those are the tracker grid's, and borrowing them is what made this card look like
-   data. A quiet line of facts instead, and the numbers are not in the verified green — a player's XP is
-   not a verified date and must not be dressed as one. */
-.arcade-records {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--sp-3) var(--sp-4);
-  list-style: none;
-  margin: 0 0 var(--sp-4);
-  padding: 0;
-}
-
-/* Four facts fit on one row once there is room for them; below that a 2x2 block reads better than
-   three across and one stranded underneath.
-
-   "Room" is the width of the copy column, not of the viewport — at 768px the card turns two-column and
-   the copy narrows to 346px, where four across need 371 and the last label is squeezed to 71px of its
-   96. A viewport breakpoint cannot see that; a container query measures the thing that matters. A
-   browser without container queries keeps the 2x2, which always fits. */
-.arcade-copy {
-  container-type: inline-size;
-}
-
-@container (min-width: 380px) {
-  .arcade-records {
-    grid-template-columns: repeat(4, minmax(0, auto));
-    justify-content: start;
-    gap: var(--sp-2) var(--sp-5);
+@media (min-width: 701px) {
+  .head-note {
+    display: inline;
   }
 }
 
-.arcade-records[hidden] {
+/* ---------- my games (the demo's .games) ---------- */
+
+.shelf {
+  display: flex;
+  gap: 9px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  padding-bottom: 5px;
+}
+
+.shelf[hidden] {
   display: none;
 }
 
-.arcade-records li {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.shelf .card-slot {
+  min-width: 175px;
+  scroll-snap-align: start;
 }
 
-.arcade-records small {
-  color: var(--ink-faint);
-  font-size: var(--size-label);
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  font-weight: 700;
+/* Before anything is tracked: the demo's one muted line, and nothing else. */
+.shelf-empty {
+  margin: 0;
+  color: var(--ink-muted);
 }
 
-.arcade-records b {
-  font-family: var(--font-num);
-  font-size: 19px;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
+.shelf-empty[hidden] {
+  display: none;
 }
 
-.arcade-play {
-  width: 100%;
+.shelf-section.is-empty .head {
+  display: none;
 }
 
-@media (min-width: 768px) {
-  .arcade-card {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 340px);
-    align-items: stretch;
-  }
+/* ---------- a game card (the demo's .game) ---------- */
 
-  .arcade-copy {
-    padding: var(--sp-5);
-  }
-
-  /* Edge to edge down the right of the card, whatever height the copy gives it. `contain: size` stops
-     the picture's own proportions from setting the row's height — the copy decides that, and the picture
-     fills it — and the tall crop in the SVG means filling it shows more skyline, never an empty band. */
-  .arcade-board {
-    order: 0;
-    align-self: stretch;
-    height: 100%;
-    aspect-ratio: auto;
-    contain: size;
-    border-bottom: 0;
-    border-left: 1px solid var(--line-soft);
-  }
-
-  .arcade-play {
-    width: auto;
-    min-width: 180px;
-  }
-}
-
-/* ---------- card grid ---------- */
-
-.grid {
-  display: grid;
-  gap: var(--sp-3);
-  grid-template-columns: 1fr;
-  margin-top: var(--sp-4);
-}
-
-.group-heading {
-  grid-column: 1 / -1;
-  font-size: var(--size-label);
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: .14em;
-  color: var(--ink-faint);
-  margin: var(--sp-4) 0 0;
-}
-
-.group-heading:first-child {
-  margin-top: 0;
-}
-
-/* A card and its track control are siblings, never nested: a button inside an anchor is invalid, and
-   on a phone it gives one tap two possible meanings. The slot positions them against each other. */
+/* A card and its track control are siblings, never nested: a button inside an anchor is invalid, and on
+   a phone it gives one tap two meanings. The slot positions them against each other. */
 .card-slot {
   position: relative;
   display: flex;
 }
 
+/* The demo's card is a column: name, topic, value, state. The renderer writes the name and the state in
+   one header row, so the header steps aside and each takes its place in the column. */
 .card {
   flex: 1 1 auto;
-  display: block;
-  background: linear-gradient(180deg, var(--sheen), transparent 60%), var(--surface);
+  display: flex;
+  flex-direction: column;
+  padding: 13px;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: var(--sp-4);
-  min-height: 132px;
-  box-shadow: var(--shadow);
-  transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
-}
-
-.card:hover {
-  transform: translateY(-2px);
-  border-color: var(--brand-line);
-  box-shadow: var(--shadow-lift);
+  border-radius: var(--r-card);
+  background: linear-gradient(var(--surface-2), var(--card-foot));
 }
 
 .card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--sp-2);
-  margin-bottom: var(--sp-3);
+  display: contents;
 }
 
+/* 25px down, clear of the track box in the corner. */
 .card-title {
-  font-size: 17px;
-  font-weight: 800;
-  margin: 0;
+  order: 1;
+  margin: 25px 0 2px;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .card-topic {
-  color: var(--ink-faint);
-  font-size: var(--size-label);
-  text-transform: uppercase;
-  letter-spacing: .12em;
-  font-weight: 700;
-  margin-bottom: var(--sp-2);
+  order: 2;
+  color: var(--ink-muted);
 }
 
-/* A countdown is digits, so it is set in the numeric stack and in tabular figures: the value must not
-   jitter sideways every second. */
 .card-countdown {
-  font-family: var(--font-num);
-  font-size: 25px;
-  font-weight: 700;
+  order: 3;
+  margin: 3px 0;
+  font-size: 22px;
+  font-weight: 900;
+  text-transform: uppercase;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -.02em;
-  margin-bottom: var(--sp-3);
+  overflow-wrap: break-word;
 }
 
-/* A date or a sentence is prose, not a readout, and is longer — so it is set smaller and in the text
-   face rather than being allowed to overflow. */
+/* A date the build wrote reads the same as the demo's "SEP 23". */
 .card-countdown.is-text {
-  font-family: var(--font);
-  font-size: 18px;
-  font-weight: 800;
-  line-height: 1.3;
+  font-weight: 900;
 }
 
 .card-countdown .unit {
-  font-size: .62em;
-  color: var(--ink-faint);
-  font-weight: 500;
-  margin-left: 1px;
-  margin-right: 5px;
+  font-size: inherit;
 }
 
+.card .badge {
+  order: 4;
+}
+
+/* When the source was last checked: the site's, not the demo's, so it takes the demo's trust-row type. */
 .card-meta {
+  order: 5;
   display: flex;
-  gap: var(--sp-3);
   flex-wrap: wrap;
-  color: var(--ink-faint);
-  font-size: 12px;
+  gap: 9px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--meta);
 }
 
+/* "No official date announced" is a sentence where the demo only ever shows a value. Set at the value's
+   size it would take three lines of a 175px card; it takes the state's own type instead. */
 .card[data-state="unavailable"] .card-countdown {
+  font-size: 15px;
+  font-weight: 800;
+  text-transform: none;
   color: var(--state-unavailable);
 }
 
-.card[data-state="stale"] .card-countdown {
-  color: var(--state-stale);
-}
+/* ---------- track controls ---------- */
 
-.card[data-state="live"] .card-countdown {
-  color: var(--state-verified);
-}
-
-/* ---------- track control ---------- */
-
-/* Sits over the card's top-right corner, which is why the card's own header leaves room for it. Its
-   own 44px target, clear of the card's link area. */
+/* The demo's .star: a 34px box 9px from the corner. The button itself is 44px, from 4px, so the target is
+   the site's and the drawing is the demo's. */
 .track {
   position: absolute;
-  top: var(--sp-2);
-  right: var(--sp-2);
-  width: var(--tap);
-  height: var(--tap);
-  display: inline-flex;
+  top: 4px;
+  right: 4px;
+  z-index: 1;
+  display: flex;
   align-items: center;
   justify-content: center;
+  width: var(--tap);
+  height: var(--tap);
   padding: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
-  color: var(--ink-faint);
-  font: inherit;
-  font-size: 19px;
-  line-height: 1;
-  cursor: pointer;
-  transition: color .12s ease, border-color .12s ease;
-}
-
-.track:hover {
+  border: 0;
+  background: none;
   color: var(--ink);
-  border-color: var(--brand-line);
+  font: inherit;
+  cursor: pointer;
 }
 
+.track::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  z-index: -1;
+  border: 1px solid var(--star-line);
+  border-radius: var(--r-star);
+  background: var(--star);
+}
+
+/* The demo's .star.on. */
 .track[aria-pressed="true"] {
-  color: var(--state-stale);
-  border-color: var(--stale-line);
-  background: var(--stale-soft);
+  color: var(--star-on);
 }
 
-/* In the lead block the control sits in the row of buttons rather than over a corner. */
+/* In the hero and on a tracker page the control is a button with its word, the demo's "☆ TRACK". */
 .track-wide {
   position: static;
+  z-index: auto;
   width: auto;
   height: auto;
-  font-size: inherit;
+  padding: 10px 13px;
+  border: 1px solid var(--control-line);
+  background: var(--control);
+  color: var(--ink);
+}
+
+.track-wide::before {
+  content: none;
+}
+
+.track-wide[aria-pressed="true"] {
+  color: var(--ink);
+}
+
+.track-wide[aria-pressed="true"] .track-mark {
+  color: var(--star-on);
+}
+
+.track-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .track-wide .track-label {
@@ -814,103 +559,726 @@ h3 {
   white-space: normal;
 }
 
-/* On a tracker page the control sits under the heading it belongs to, sized by its own content
-   rather than stretching across the column the way the lead block's buttons do. */
-.game-track {
-  flex: 0 0 auto;
-  margin-top: var(--sp-4);
+/* ---------- the tracker grid ---------- */
+
+/* Not in the demo: its cards, at its card width, as many to a row as fit. */
+.grid {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
 }
 
-/* The card control shows a star; the name it stands for is still read aloud. */
-.track-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-/* The card's header keeps its badge clear of the control. */
-.card-slot .card-header {
-  padding-right: var(--sp-6);
-}
-
-/* ---------- badges ---------- */
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 9px;
-  border-radius: var(--radius-pill);
+/* "All trackers" reads as the demo's eyebrow, so the group headings under it can be its headings. */
+#all-games > .section-heading {
+  margin: 0 0 8px;
   font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.7px;
+  color: var(--eyebrow);
+}
+
+.group-heading {
+  grid-column: 1 / -1;
+  margin: 15px 0 3px;
+  font-size: 19px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.group-heading:first-child {
+  margin-top: 0;
+}
+
+.group-heading[data-group="recent"]::before {
+  content: "⚡ ";
+  content: "⚡ " / "";
+}
+
+/* A group whose every card a visitor has moved into My Games leaves its heading with nothing under it.
+   It is hidden until a card comes back. */
+.group-heading:has(+ .group-heading),
+.group-heading:last-child {
+  display: none;
+}
+
+/* ---------- arcade card (the demo's .arcade) ---------- */
+
+.arcade-card {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--arcade-line);
+  border-radius: var(--r-panel);
+  background: radial-gradient(circle at 85% 30%, var(--arcade-glow), transparent 35%), linear-gradient(135deg, var(--deep-from), var(--arcade-to));
+}
+
+.arcade-name {
+  margin: 5px 0;
+  font-size: 27px;
+  font-weight: 700;
+}
+
+.arcade-name::before {
+  content: "🎯 ";
+  content: "🎯 " / "";
+}
+
+.arcade-line {
+  margin: 15px 0;
+  color: var(--ink-muted);
+}
+
+/* The demo's .stats and .miniStat. Shown only once a contract has been cleared: before that there is
+   nothing true to put in them. */
+.arcade-records {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.arcade-records[hidden] {
+  display: none;
+}
+
+.arcade-records li {
+  padding: 8px 10px;
+  border: 1px solid var(--stat-line);
+  border-radius: var(--r-tile);
+  background: var(--stat);
+}
+
+.arcade-records small {
+  display: block;
+  font-size: 9px;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+}
+
+.arcade-records b {
+  font-variant-numeric: tabular-nums;
+}
+
+.arcade-play {
+  display: flex;
+  width: 100%;
+  padding: 14px;
+  text-transform: uppercase;
+}
+
+.arcade-play::before {
+  content: "▶ ";
+  content: "▶ " / "";
+  white-space: pre;
+}
+
+.arcade-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+@media (min-width: 760px) {
+  .arcade-card {
+    grid-template-columns: 1.2fr .8fr;
+    align-items: center;
+  }
+}
+
+/* ---------- features strip (the demo's .features) ---------- */
+
+.features {
+  display: grid;
+  gap: 10px;
+  padding: 18px 0;
+  border-block: 1px solid var(--rule-soft);
+}
+
+.feature {
+  display: flex;
+  gap: 10px;
+}
+
+.feature span {
+  color: var(--ink-muted);
+}
+
+@media (min-width: 760px) {
+  .features {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ---------- the homepage's prose ---------- */
+
+.content-sections {
+  max-width: var(--measure);
+}
+
+.how-steps {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: 1fr;
+}
+
+.how-step {
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: linear-gradient(var(--surface-2), var(--card-foot));
+}
+
+.how-step p {
+  margin: 0;
+  font-size: var(--size-small);
+}
+
+.how-icon {
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+
+.how-title {
+  font-weight: 700;
+}
+
+.games-list a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 2px;
+}
+
+@media (min-width: 701px) {
+  .how-steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ---------- tracker page ---------- */
+
+/* The demo's page is the full 1160px; only running text keeps a reading width. */
+.game-page > .content-section {
+  max-width: var(--measure);
+}
+
+/* The demo's tracker .hero, holding the page's own heading and answer. */
+.tracker-hero {
+  margin-top: 12px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+  background: linear-gradient(135deg, var(--deep-from), var(--tracker-to));
+}
+
+/* Where the demo has "LEAGUE OF LEGENDS · NEXT PATCH": where this page sits, and what kind of game it is. */
+.hero-eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 6px;
+}
+
+.tracker-hero .breadcrumbs {
+  margin: 0;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.7px;
+  color: var(--eyebrow);
+  text-transform: uppercase;
+}
+
+.tracker-hero .breadcrumbs a,
+.tracker-hero .breadcrumbs [aria-current="page"] {
+  min-height: 0;
+  color: var(--eyebrow);
+}
+
+/* A 44px target around a 15px line: the padding is the target, and the margin gives the room back, so
+   the line does not move. */
+.tracker-hero .breadcrumbs a {
+  min-width: 0;
+  padding: 15px 6px;
+  margin: -15px -6px;
+}
+
+.game-meta {
+  display: flex;
+}
+
+.kicker {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.7px;
+  color: var(--eyebrow);
+  text-transform: uppercase;
+}
+
+.kicker::before {
+  content: "· ";
+  content: "· " / "";
+}
+
+.game-title {
+  margin: 7px 0;
+  font-size: 30px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* The answer is not a box inside the hero: the date is the hero's, as the demo draws it, with its label
+   beneath it where the demo says what kind of date it is. */
+.countdown-box {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.countdown-value {
+  order: 1;
+  margin: 12px 0;
+  font-size: 31px;
+  font-weight: 950;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: break-word;
+}
+
+.countdown-label {
+  order: 2;
+  color: var(--ink-muted);
+}
+
+.countdown-value .unit {
+  font-size: inherit;
+}
+
+.countdown-value.elapsed {
+  color: var(--ink-muted);
+}
+
+/* "No official date announced" is a sentence, not a readout, and the longest thing this line ever holds. */
+.countdown-value.unavailable {
+  font-size: clamp(21px, 5vw, 30px);
+  font-weight: 800;
+  color: var(--state-unavailable);
+  text-transform: none;
+}
+
+.countdown-value.stale {
+  color: var(--state-stale);
+}
+
+.countdown-value.stale::after {
+  content: ' \26A0';
+  font-size: .5em;
+}
+
+.game-track {
+  margin-top: 16px;
+  text-transform: uppercase;
+}
+
+/* The demo's .layout: the timeline and the evidence side by side. The evidence comes first in the page,
+   straight after the answer, and is read first on a phone; from 760px the columns are the demo's, with
+   the published data on the left. */
+.layout {
+  display: grid;
+}
+
+.layout > .evidence,
+#verified-data > .content-section {
+  margin: 24px 0;
+}
+
+#verified-data:empty {
+  display: none;
+}
+
+@media (min-width: 760px) {
+  .layout {
+    grid-template-columns: 1.1fr .9fr;
+    gap: 18px;
+    align-items: start;
+  }
+
+  .layout > #verified-data {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .layout > .evidence {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  /* A tracker with nothing to list gives its evidence the width. */
+  .layout:has(> #verified-data:empty) {
+    grid-template-columns: 1fr;
+  }
+
+  .layout:has(> #verified-data:empty) > .evidence {
+    grid-column: 1;
+  }
+}
+
+/* "How we know", and every heading in the page's own content: the demo's .head h2. */
+.evidence .section-heading,
+.content-section h2 {
+  margin: 0 0 12px;
+  font-size: 19px;
+  font-weight: 700;
+  text-transform: none;
+}
+
+/* The demo's .evidence and .row: each fact its own box, its name over its value. */
+.info-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.info-row {
+  padding: 11px;
+  border: 1px solid var(--row-line);
+  border-radius: var(--r-control);
+  background: var(--stat);
+}
+
+.info-label {
+  display: block;
+  font-weight: 700;
+}
+
+.info-value {
+  display: block;
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+
+.info-value a {
+  color: var(--link);
+}
+
+.info-value a:hover {
+  text-decoration: underline;
+}
+
+.confidence {
+  display: block;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: .08em;
-  white-space: nowrap;
 }
 
-.badge-live {
-  background: var(--verified-soft);
+.confidence-high {
   color: var(--state-verified);
-  border: 1px solid var(--verified-line);
 }
 
-.badge-live::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--state-verified);
-  animation: nr-pulse 2s infinite;
-}
-
-.badge-stale {
-  background: var(--stale-soft);
+.confidence-medium {
   color: var(--state-stale);
-  border: 1px solid var(--stale-line);
 }
 
-.badge-unavailable {
-  background: var(--unavailable-soft);
+.confidence-none {
   color: var(--state-unavailable);
-  border: 1px solid var(--unavailable-line);
 }
 
-@keyframes nr-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: .45;
-  }
+.notes {
+  margin-top: 8px;
+  padding: 11px;
+  border: 1px solid var(--row-line);
+  border-radius: var(--r-control);
+  background: var(--stat);
+  color: var(--ink-muted);
 }
 
-/* ---------- navigation ---------- */
+/* ---------- timeline (the demo's .timeline and .event) ---------- */
 
+.timeline {
+  list-style: none;
+  margin: 0 0 0 8px;
+  padding: 0 0 0 18px;
+  border-left: 2px solid var(--rail);
+}
+
+.event {
+  position: relative;
+  padding: 9px 0;
+}
+
+.event::before {
+  content: "";
+  position: absolute;
+  left: -24px;
+  top: 16px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--dot);
+}
+
+.event.is-next::before {
+  background: var(--brand);
+}
+
+/* "26.18 · Sep 10": the version and its date, one bold line. The dot between them is drawn. */
+.event-label,
+.event-when {
+  font-weight: 700;
+}
+
+/* Some versions link to the official evidence and some do not. The demo's label is white and bold, and so
+   is a link — but underlined at rest, in the link colour, so a reader on a phone, who has nothing to
+   hover with, can see which entries open their source (Codex, #63). */
+.event-label a,
+.data-label a {
+  text-decoration: underline;
+  text-decoration-color: var(--link);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.event-label a:hover,
+.data-label a:hover {
+  color: var(--link);
+}
+
+.event-when::before {
+  content: " · ";
+  content: " · " / "";
+}
+
+.event-state {
+  display: block;
+  color: var(--ink-muted);
+}
+
+.event.is-next .event-state {
+  color: var(--state-verified);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+/* ---------- lists of past releases ---------- */
+
+/* Not in the demo: its evidence row, one per release. */
+.data-note {
+  margin: -6px 0 12px;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.data-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.data-row {
+  padding: 11px;
+  border: 1px solid var(--row-line);
+  border-radius: var(--r-control);
+  background: var(--stat);
+}
+
+.data-label {
+  display: block;
+  font-weight: 700;
+}
+
+.data-when {
+  display: block;
+  color: var(--ink-muted);
+}
+
+.data-quote {
+  margin-top: 4px;
+  font-size: var(--size-small);
+  font-style: italic;
+  color: var(--ink-muted);
+}
+
+/* ---------- the arcade strip (the demo's .arc) ---------- */
+
+.arc {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin: 24px 0;
+  padding: 16px;
+  border: 1px solid var(--arcade-line);
+  border-radius: var(--r-strip);
+  background: linear-gradient(135deg, var(--arc-from), var(--arc-to));
+}
+
+.arc p {
+  margin: 0;
+}
+
+.arc-line {
+  color: var(--ink-muted);
+}
+
+.arc .btn {
+  margin-left: auto;
+  text-transform: uppercase;
+}
+
+.arc .btn::before {
+  content: "▶ ";
+  content: "▶ " / "";
+  white-space: pre;
+}
+
+/* ---------- prose ---------- */
+
+.content-section {
+  margin: 24px 0;
+}
+
+.content-section p {
+  margin: 0 0 12px;
+  color: var(--ink-muted);
+}
+
+/* Prose lists only: the timeline and the release lists are lists too, and have their own rules. */
+.content-section ul:not([class]) {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  color: var(--ink-muted);
+}
+
+.content-section ul:not([class]) li {
+  margin-bottom: 4px;
+}
+
+/* A question: the demo's evidence row, opening. */
+.faq-item {
+  margin-bottom: 8px;
+  overflow: hidden;
+  border: 1px solid var(--row-line);
+  border-radius: var(--r-control);
+  background: var(--stat);
+}
+
+.faq-item summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tap);
+  padding: 11px;
+  font-weight: 700;
+  list-style: none;
+  cursor: pointer;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item summary::before {
+  content: '\25B8';
+  flex: none;
+  color: var(--eyebrow);
+  transition: transform .2s ease;
+}
+
+.faq-item[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.faq-item p {
+  margin: 0;
+  padding: 0 11px 11px;
+  color: var(--ink-muted);
+}
+
+/* ---------- static pages ---------- */
+
+.page {
+  max-width: var(--measure);
+}
+
+.page h1 {
+  margin: 12px 0;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.page h2 {
+  margin: 24px 0 12px;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.page p {
+  margin: 0 0 12px;
+  color: var(--ink-muted);
+}
+
+.page ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  color: var(--ink-muted);
+}
+
+.page li {
+  margin-bottom: 4px;
+}
+
+.page strong {
+  color: var(--ink);
+}
+
+/* A link inside a sentence is underlined as well as coloured: colour alone does not mark it. */
+.page a {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.page .code {
+  margin: 24px 0 0;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.7px;
+  color: var(--eyebrow);
+  text-transform: uppercase;
+}
+
+.last-updated {
+  color: var(--ink-muted);
+  font-size: var(--size-small);
+}
+
+/* ---------- breadcrumbs ---------- */
+
+/* On a tracker page the breadcrumb is the hero's eyebrow (above). On About, Privacy and the 404 it is a
+   quiet line, each crumb a full target. */
 .breadcrumbs {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--sp-2);
-  color: var(--ink-faint);
+  gap: 8px;
+  margin: 12px 0 0;
   font-size: var(--size-small);
-  font-weight: 600;
-  margin-bottom: var(--sp-5);
+  color: var(--ink-muted);
 }
 
-/* A breadcrumb is a navigation control, not a word in a sentence, so it does not get the inline
-   exception from WCAG 2.5.8 — at 13px it was a 20px-tall target. The padding takes it to 44. */
 .breadcrumbs a,
 .breadcrumbs [aria-current="page"] {
   display: inline-flex;
   align-items: center;
   min-height: var(--tap);
-  color: var(--ink-faint);
-  transition: color .15s ease;
+}
+
+.breadcrumbs a {
+  min-width: var(--tap);
 }
 
 .breadcrumbs a:hover {
@@ -922,19 +1290,54 @@ h3 {
 }
 
 .crumb-sep {
-  color: var(--ink-faint);
+  color: var(--ink-muted);
 }
 
-/* Every tracker, reachable from every page. A stacked list on a phone: twelve links at 13px in a
-   wrapping row produced rows well under the 44px minimum. */
+/* ---------- footer (the demo's footer) ---------- */
+
+footer {
+  padding: 22px 0 35px;
+  color: var(--footer-ink);
+}
+
+.footer-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.footer-line {
+  text-transform: uppercase;
+}
+
+.footer-links {
+  margin-left: auto;
+}
+
+/* The two sentences the demo has no place for. */
+.footer-fine {
+  margin: 12px 0 0;
+  font-size: 12px;
+}
+
+/* The footer's links sit in a line with words that are not links ("© 2026", the separators), so they are
+   underlined as well as the colour they share. */
+.footer-links a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+footer a:hover {
+  color: var(--ink);
+}
+
+/* Every tracker, from every page but the homepage and the game. A stacked list of full-height rows on a
+   phone, where twelve 13px links in a wrapping row were targets well under 44px. */
 .footer-nav {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  max-width: 820px;
-  margin: 0 auto var(--sp-5);
+  margin: 0 0 22px;
   font-size: var(--size-small);
-  text-align: left;
 }
 
 .footer-nav a,
@@ -942,14 +1345,8 @@ h3 {
   display: flex;
   align-items: center;
   min-height: var(--tap);
-  padding: 0 var(--sp-2);
-  border-bottom: 1px solid var(--line-soft);
-  color: var(--ink-faint);
-  transition: color .15s ease;
-}
-
-.footer-nav a:hover {
-  color: var(--ink);
+  padding: 0 2px;
+  border-bottom: 1px solid var(--rule);
 }
 
 .footer-nav [aria-current="page"] {
@@ -957,668 +1354,63 @@ h3 {
   font-weight: 700;
 }
 
-/* ---------- the homepage's prose ----------
-
-   It carried forty inline declarations with the pre-V4 palette written as literals (#e5e7eb, #9ca3af,
-   #111827), which overrode the stylesheet, drifted from the tokens and could not be contrast-checked.
-   The tracker pages' `.content-section` rules already say how this prose should look; the homepage now
-   uses them, plus the three things only it has. */
-
-.content-sections {
-  margin-top: var(--sp-7);
-  max-width: var(--measure);
-}
-
-.content-sections p {
-  line-height: 1.7;
-}
-
-.how-steps {
-  display: grid;
-  gap: var(--sp-4);
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-}
-
-.how-step {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: var(--sp-4);
-}
-
-.how-step p {
-  font-size: var(--size-small);
-  line-height: 1.6;
-  margin: 0;
-}
-
-.how-icon {
-  font-size: 24px;
-  margin-bottom: var(--sp-2);
-}
-
-.how-title {
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.games-list {
-  line-height: 2;
-}
-
-.games-list a {
-  color: var(--ink);
-  text-decoration: underline;
-  text-decoration-color: var(--line);
-  text-underline-offset: 2px;
-}
-
-/* ---------- tracker page ---------- */
-
-.game-page,
-.page {
-  max-width: var(--measure);
-  margin: 0 auto;
-}
-
-.game-header {
-  margin-bottom: var(--sp-5);
-}
-
-.game-title {
-  font-size: var(--size-h1);
-  font-weight: 900;
-  letter-spacing: -.02em;
-  margin: 0 0 var(--sp-3);
-}
-
-.game-meta {
-  display: flex;
-  gap: var(--sp-3);
-  flex-wrap: wrap;
-  color: var(--ink-faint);
-  font-size: var(--size-small);
-}
-
-.kicker {
-  color: var(--ink-faint);
-  font-size: var(--size-label);
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  font-weight: 800;
-}
-
-.countdown-box {
-  background: linear-gradient(180deg, var(--sheen), transparent 70%), var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: var(--sp-6) var(--sp-4);
-  box-shadow: var(--shadow);
-  text-align: center;
-  margin: var(--sp-6) 0;
-}
-
-.countdown-label {
-  color: var(--ink-faint);
-  font-size: var(--size-label);
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  font-weight: 800;
-  margin-bottom: var(--sp-4);
-}
-
-.countdown-value {
-  font-family: var(--font-num);
-  font-size: var(--size-display);
-  font-weight: 700;
-  letter-spacing: -.03em;
-  color: var(--state-verified);
-  font-variant-numeric: tabular-nums;
-  line-height: 1.08;
-  overflow-wrap: break-word;
-}
-
-.countdown-value .unit {
-  font-size: .56em;
-  color: var(--ink-faint);
-  font-weight: 500;
-  margin-left: 2px;
-  margin-right: var(--sp-2);
-}
-
-.countdown-value.elapsed {
-  color: var(--ink-muted);
-}
-
-/* "No official date announced" is a sentence, not a readout — and it is the longest string this box
-   ever holds, so it is the case the box is sized for. */
-.countdown-value.unavailable {
-  font-family: var(--font);
-  font-size: clamp(21px, 5vw, 30px);
-  font-weight: 800;
-  color: var(--state-unavailable);
-  letter-spacing: -.01em;
-  line-height: 1.2;
-}
-
-.countdown-value.stale {
-  color: var(--state-stale);
-}
-
-.countdown-value.stale::after {
-  content: ' \26A0';
-  font-size: .5em;
-  color: var(--state-stale);
-}
-
-.info-panel {
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: var(--sp-3) var(--sp-4);
-  margin: var(--sp-5) 0;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--sp-4);
-  padding: var(--sp-3) 0;
-  border-bottom: 1px solid var(--line-soft);
-}
-
-.info-row:last-child {
-  border-bottom: none;
-}
-
-.info-label {
-  color: var(--ink-faint);
-  font-size: var(--size-label);
-  text-transform: uppercase;
-  letter-spacing: .1em;
-  font-weight: 700;
-  flex: none;
-}
-
-.info-value {
-  font-weight: 700;
-  color: var(--ink);
-  text-align: right;
-  overflow-wrap: anywhere;
-}
-
-.info-value a {
-  color: var(--brand-bright);
-  text-decoration: underline;
-  text-decoration-color: var(--brand-line);
-}
-
-.info-value a:hover {
-  text-decoration-color: var(--brand-bright);
-}
-
-/* ---------- confidence ---------- */
-
-.confidence {
-  padding: 4px 9px;
-  border-radius: 6px;
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  white-space: nowrap;
-}
-
-.confidence-high {
-  background: var(--verified-soft);
-  color: var(--state-verified);
-  border: 1px solid var(--verified-line);
-}
-
-/* Medium is a qualification, not an alarm. It was rendered in the danger pink, which read as an error
-   on a value the pipeline stands behind. */
-.confidence-medium {
-  background: var(--stale-soft);
-  color: var(--state-stale);
-  border: 1px solid var(--stale-line);
-}
-
-.confidence-none {
-  background: var(--unavailable-soft);
-  color: var(--state-unavailable);
-  border: 1px solid var(--unavailable-line);
-}
-
-/* ---------- notes, prose, data blocks ---------- */
-
-.notes {
-  color: var(--ink-muted);
-  font-size: var(--size-small);
-  margin-top: var(--sp-4);
-  padding: var(--sp-3) var(--sp-4);
-  background: var(--surface);
-  border-left: 3px solid var(--brand-line);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-}
-
-.content-section {
-  margin: var(--sp-6) 0;
-}
-
-.content-section h2 {
-  font-size: var(--size-h2);
-  font-weight: 800;
-  margin: 0 0 var(--sp-3);
-}
-
-.content-section p {
-  color: var(--ink-muted);
-  margin: 0 0 var(--sp-4);
-  max-width: var(--measure);
-}
-
-.content-section ul {
-  color: var(--ink-muted);
-  line-height: 1.75;
-  padding-left: var(--sp-5);
-  margin: 0 0 var(--sp-4);
-}
-
-.content-section li {
-  margin-bottom: var(--sp-1);
-}
-
-.faq-item {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  margin-bottom: var(--sp-2);
-  overflow: hidden;
-}
-
-.faq-item summary {
-  padding: var(--sp-3) var(--sp-4);
-  min-height: var(--tap);
-  cursor: pointer;
-  font-weight: 700;
-  list-style: none;
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-}
-
-.faq-item summary::before {
-  content: '\25B8';
-  color: var(--brand-bright);
-  transition: transform .2s ease;
-  flex: none;
-}
-
-.faq-item[open] summary::before {
-  transform: rotate(90deg);
-}
-
-.faq-item summary::-webkit-details-marker {
-  display: none;
-}
-
-.faq-item p {
-  padding: 0 var(--sp-4) var(--sp-3);
-  color: var(--ink-muted);
-  margin: 0;
-  font-size: 14px;
-}
-
-.data-note {
-  color: var(--ink-muted);
-  font-size: 14px;
-  margin: 0 0 var(--sp-3);
-}
-
-/* ---------- timeline ---------- */
-
-/* A published schedule read as one sequence, oldest to newest, with the entry the page is about
-   marked. As two lists — past newest-first, upcoming soonest-first — a reader could not see where the
-   thing they are waiting for sits, and the two halves ran in opposite directions. */
-.timeline {
-  list-style: none;
-  margin: 0;
-  padding: 0 0 0 var(--sp-5);
-  border-left: 2px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-4);
-}
-
-.event {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--sp-1) var(--sp-3);
-  align-items: baseline;
-}
-
-/* The marker sits on the rail, not in the flow, so a wrapping row cannot drag it out of line. */
-.event::before {
-  content: '';
-  position: absolute;
-  left: calc(var(--sp-5) * -1 - 6px);
-  top: .55em;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--line);
-  border: 2px solid var(--ground);
-}
-
-.event-label {
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.event-label a {
-  color: var(--brand-bright);
-}
-
-.event-label a:hover {
-  text-decoration: underline;
-}
-
-.event-when {
-  color: var(--ink-muted);
-  font-size: var(--size-small);
-  font-family: var(--font-num);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-/* The state is a word, so colour is never the only thing carrying it. */
-.event-state {
-  grid-column: 1 / -1;
-  font-size: var(--size-label);
-  font-weight: 800;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-
-.event.is-past::before {
-  background: var(--state-unavailable);
-}
-
-.event.is-past .event-state {
-  color: var(--ink-faint);
-}
-
-/* The one a reader came for. */
-.event.is-next::before {
-  background: var(--state-verified);
-  box-shadow: 0 0 0 4px var(--verified-soft);
-}
-
-.event.is-next .event-label {
-  font-size: var(--size-h2);
-}
-
-.event.is-next .event-state {
-  color: var(--state-verified);
-}
-
-.event.is-scheduled::before {
-  background: var(--brand);
-}
-
-.event.is-scheduled .event-state {
-  color: var(--brand-bright);
-}
-
-.event .data-quote {
-  grid-column: 1 / -1;
-}
-
-@media (min-width: 560px) {
-  .event-state {
-    grid-column: auto;
-    grid-row: 1;
-    order: -1;
-    min-width: 88px;
+@media (min-width: 701px) {
+  .footer-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0 16px;
   }
 
-  .event {
-    grid-template-columns: 88px 1fr auto;
+  .footer-nav a,
+  .footer-nav [aria-current="page"] {
+    border-bottom: 0;
   }
-
-  .event .data-quote {
-    grid-column: 2 / -1;
-  }
-}
-
-.data-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-}
-
-.data-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2) var(--sp-4);
-  align-items: baseline;
-  padding: var(--sp-3);
-  background: var(--surface);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-sm);
-}
-
-.data-label {
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.data-label a {
-  color: var(--brand-bright);
-}
-
-.data-label a:hover {
-  text-decoration: underline;
-}
-
-.data-when {
-  color: var(--ink-muted);
-  font-size: var(--size-small);
-  font-family: var(--font-num);
-  font-variant-numeric: tabular-nums;
-}
-
-.data-quote {
-  flex-basis: 100%;
-  color: var(--ink-faint);
-  font-size: var(--size-small);
-  font-style: italic;
-  margin-top: var(--sp-1);
-}
-
-/* ---------- static pages ---------- */
-
-.page h1 {
-  font-size: var(--size-h1);
-  font-weight: 900;
-  letter-spacing: -.02em;
-  margin: 0 0 var(--sp-4);
-}
-
-.page h2 {
-  font-size: var(--size-h2);
-  font-weight: 800;
-  margin: var(--sp-6) 0 var(--sp-3);
-}
-
-.page p,
-.page li {
-  color: var(--ink-muted);
-}
-
-.page p {
-  margin: 0 0 var(--sp-4);
-  max-width: var(--measure);
-}
-
-.page ul {
-  padding-left: var(--sp-5);
-  margin: 0 0 var(--sp-4);
-  line-height: 1.75;
-}
-
-.page a {
-  color: var(--brand-bright);
-  text-decoration: underline;
-  text-decoration-color: var(--brand-line);
-}
-
-.page strong {
-  color: var(--ink);
-}
-
-.page .code {
-  color: var(--ink-faint);
-  font-family: var(--font-num);
-  font-size: var(--size-small);
-  font-weight: 700;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  margin: var(--sp-7) 0 var(--sp-3);
-}
-
-.last-updated {
-  color: var(--ink-faint);
-  font-size: var(--size-small);
-}
-
-/* ---------- while you wait ---------- */
-
-/* One line and one link on a tracker page. The tracker is what the page is for; this is what there is
-   to do once it has answered, and it is sized accordingly. */
-.waiting {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-3);
-  margin: var(--sp-6) 0;
-  padding: var(--sp-3) var(--sp-4);
-  background: var(--surface);
-  border: 1px solid var(--line-soft);
-  border-left: 3px solid var(--brand-line);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-}
-
-.waiting p {
-  flex: 1 1 14ch;
-  margin: 0;
-  color: var(--ink-muted);
-  font-size: var(--size-small);
-}
-
-.waiting strong {
-  color: var(--ink);
-}
-
-/* ---------- visually hidden ---------- */
-
-/* Read aloud, never drawn: the game name inside each tracker page's "Track" control, so a screen reader
-   hears which game it tracks. */
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 
 /* ---------- without JavaScript ---------- */
 
-/* This used to grey every countdown and hide every badge, from a time when the values arrived in the
-   browser. The build writes them now, so a reader without JavaScript sees the same verified value and
-   the same LIVE or STALE badge as everyone else — hiding them was hiding accurate content. What is left
-   is the one thing that is genuinely different: a date does not tick. */
 .noscript-note {
-  text-align: center;
-  padding: var(--sp-4);
-  margin: var(--sp-5) 0;
+  margin: 24px 0;
+  padding: 11px;
+  border: 1px solid var(--row-line);
+  border-radius: var(--r-control);
+  background: var(--stat);
   color: var(--ink-muted);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
   font-size: var(--size-small);
+  text-align: center;
 }
 
 /* ---------- error state ---------- */
 
 .error {
-  background: var(--surface);
-  border: 1px solid var(--stale-line);
-  border-radius: var(--radius);
-  padding: var(--sp-6) var(--sp-4);
+  margin: 24px 0;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
   text-align: center;
-  margin: var(--sp-6) 0;
 }
 
 .error h2 {
+  margin-bottom: 12px;
+  font-size: 19px;
   color: var(--state-stale);
-  margin-bottom: var(--sp-4);
-  font-size: var(--size-h2);
 }
 
 .error p {
+  margin: 8px 0;
   color: var(--ink-muted);
-  margin: var(--sp-2) 0;
 }
 
 .error a {
-  color: var(--brand-bright);
+  color: var(--link);
   font-weight: 700;
-}
-
-/* ---------- footer ---------- */
-
-footer {
-  text-align: center;
-  padding: var(--sp-7) var(--gutter) var(--sp-6);
-  color: var(--ink-faint);
-  font-size: var(--size-small);
-  border-top: 1px solid var(--line-soft);
-  margin-top: var(--sp-7);
-}
-
-footer p {
-  margin: var(--sp-1) 0;
-  max-width: var(--measure);
-  margin-inline: auto;
-}
-
-/* "About · Privacy Policy" sit in a sentence, so WCAG exempts them — but a 17px-tall target is still a
-   17px-tall target. Inline-block padding clears the 24px minimum without taking them out of the line. */
-footer a {
-  display: inline-block;
-  padding-block: var(--sp-1);
-  color: var(--ink-faint);
-  text-decoration: underline;
-  text-decoration-color: var(--line);
-}
-
-footer a:hover {
-  color: var(--ink);
 }
 
 /* ---------- loading ---------- */
 
 .countdown-skeleton,
 .card[data-state="loading"] .card-countdown {
-  background: linear-gradient(90deg, var(--ink-faint) 25%, var(--ink) 50%, var(--ink-faint) 75%);
+  background: linear-gradient(90deg, var(--ink-muted) 25%, var(--ink) 50%, var(--ink-muted) 75%);
   background-size: 200% 100%;
   animation: nr-skeleton 1.5s ease-in-out infinite;
   -webkit-background-clip: text;
@@ -1636,51 +1428,10 @@ footer a:hover {
   }
 }
 
-/* ---------- wider screens ---------- */
-
-@media (min-width: 768px) {
-  .container {
-    padding-block: var(--sp-6);
-  }
-
-  .trust-badges {
-    display: flex;
-  }
-
-  .grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .countdown-box {
-    padding: var(--sp-7) var(--sp-6);
-  }
-
-  /* Room for a wrapping row again, with targets that stay comfortable. */
-  .footer-nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: var(--sp-1) var(--sp-4);
-  }
-
-  .footer-nav a,
-  .footer-nav [aria-current="page"] {
-    min-height: 0;
-    padding: var(--sp-2);
-    border-bottom: 0;
-  }
-}
-
-@media (min-width: 1080px) {
-  .grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
 /* ---------- motion ---------- */
 
-/* The live dot pulses and the skeleton sweeps. Neither carries information that the colour and the text
-   do not already carry, so both stop when the reader has asked for less motion. */
+/* The skeleton sweep carries nothing the text does not, so it stops when the reader has asked for less
+   motion; so does the smooth scroll to #all-games. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1691,10 +1442,14 @@ footer a:hover {
     scroll-behavior: auto !important;
   }
 
+  html {
+    scroll-behavior: auto;
+  }
+
   .countdown-skeleton,
   .card[data-state="loading"] .card-countdown {
     background: none;
-    -webkit-text-fill-color: var(--ink-faint);
-    color: var(--ink-faint);
+    -webkit-text-fill-color: var(--ink-muted);
+    color: var(--ink-muted);
   }
 }
