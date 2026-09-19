@@ -70,18 +70,24 @@ test("the prototype's own storage keys are gone: every read and write goes throu
     }
 });
 
-test("every approved edit says why, and the gameplay change is the reload fix alone", () => {
+test("every approved edit says why, and each is one of the kinds the owner approved", () => {
     for (const edit of [...SCRIPT_EDITS, ...CSS_EDITS, HINT_EDIT]) {
         assert.ok(edit.why.length > 30, `an edit without a reason: ${edit.from.slice(0, 60)}`);
     }
-    // Sorted by what they touch: the five storage touchpoints, two reload edits, one reduced-motion edit.
+    // Sorted by what they touch. The gameplay changes are exactly three, each approved by name: the
+    // reload fix (with the replacement), and the hidden page and the resize (after Codex's review of #61).
     const storage = SCRIPT_EDITS.filter(edit => /localStorage/.test(edit.from));
     const reload = SCRIPT_EDITS.filter(edit => /msgUntil|RELOADING|reloading/.test(edit.from));
+    const hidden = SCRIPT_EDITS.filter(edit => /visibilitychange/.test(edit.to));
+    const resize = SCRIPT_EDITS.filter(edit => /r\.width|spawn\(false\)/.test(edit.from));
     const motion = SCRIPT_EDITS.filter(edit => /shake/.test(edit.from));
     assert.equal(storage.length, 5);
     assert.equal(reload.length, 2);
+    assert.equal(hidden.length, 1);
+    assert.equal(resize.length, 2);
     assert.equal(motion.length, 1);
-    assert.equal(SCRIPT_EDITS.length, storage.length + reload.length + motion.length, "an edit that is none of the approved kinds");
+    assert.equal(SCRIPT_EDITS.length, storage.length + reload.length + hidden.length + resize.length + motion.length,
+        "an edit that is none of the approved kinds");
 });
 
 test("the stylesheet is the prototype's, with the approved header edits, and the site's additions are named", () => {
@@ -176,7 +182,7 @@ interface Frame { people: Person[]; texts: string[]; shook: boolean }
  * reached into; everything is read from what it draws and what it stores.
  */
 function play(options: { record?: unknown; reducedMotion?: boolean; prompt?: string | null } = {}) {
-    const width = 1440, height = 848;
+    let width = 1440, height = 848;
     const storage = new FakeStorage();
     if (options.record) storage.items.set(KEY, JSON.stringify(options.record));
 
@@ -205,7 +211,7 @@ function play(options: { record?: unknown; reducedMotion?: boolean; prompt?: str
         fillRect(x: number, y: number) { if (ctx.fillStyle === "#d63737" && x === 10 && y === -9 && person) person.courier = true; },
         fillText(text: string) { drawing.texts.push(String(text)); }
     };
-    const on: Record<string, Record<string, Array<(e: unknown) => void>>> = { canvas: {}, fire: {}, window: {} };
+    const on: Record<string, Record<string, Array<(e: unknown) => void>>> = { canvas: {}, fire: {}, window: {}, document: {} };
     const listen = (target: string) => (type: string, fn: (e: unknown) => void) => { (on[target][type] ??= []).push(fn); };
     const canvas = { width: 0, height: 0, getContext: () => ctx, getBoundingClientRect: () => ({ left: 0, top: 0, width, height }), addEventListener: listen("canvas") };
     const fire = { textContent: "FIRE", addEventListener: listen("fire") };
@@ -213,9 +219,14 @@ function play(options: { record?: unknown; reducedMotion?: boolean; prompt?: str
     const chip = { textContent: "", hidden: true };
     const elements: Record<string, unknown> = { "#game": canvas, "#fire": fire, "#best": best };
 
+    const document = {
+        hidden: false,
+        querySelector: (s: string) => elements[s] ?? null,
+        getElementById: (id: string) => (id === "chrome-player" ? chip : null),
+        addEventListener: listen("document")
+    };
     const context: Record<string, any> = {
-        console, localStorage: storage, devicePixelRatio: 1,
-        document: { querySelector: (s: string) => elements[s] ?? null, getElementById: (id: string) => (id === "chrome-player" ? chip : null) },
+        console, localStorage: storage, devicePixelRatio: 1, document,
         performance: { now: () => now },
         requestAnimationFrame: (fn: (t: number) => void) => { frames.push(fn); return frames.length; },
         setTimeout: (fn: () => void, ms = 0) => { timers.push({ at: now + ms, fn }); return timers.length; },
@@ -228,13 +239,14 @@ function play(options: { record?: unknown; reducedMotion?: boolean; prompt?: str
     vm.runInContext(PLAYER, context, { filename: "player.js" });
     vm.runInContext(GAME, context, { filename: "one-shot.js" });
 
-    const step = (ms: number) => {
+    const step = (ms: number, visible = true) => {
         const until = now + ms;
         while (now < until) {
             now = Math.min(until, now + 16);
             const due = timers.filter(timer => timer.at <= now);
             timers = timers.filter(timer => timer.at > now);
             for (const timer of due) timer.fn();
+            if (!visible) continue;             // a hidden page runs its timers but draws no frames
             const queue = frames;
             frames = [];
             for (const fn of queue) {
@@ -253,6 +265,7 @@ function play(options: { record?: unknown; reducedMotion?: boolean; prompt?: str
         get best() { return best.textContent; },
         get chip() { return chip.hidden ? null : chip.textContent; },
         contract: () => Number(text(/^LEVEL (\d+) \/ 80/)![1]),
+        firesIn: () => Number(text(/^HOSTILE FIRES IN ([\d.]+)s/)![1]),
         ammo: () => text(/Ammo (\d+)\/(\d+)/)!.slice(1, 3).map(Number),
         clock: () => Number(text(/^⏱ ([\d.]+)/)![1]),
         says: (words: string) => last.texts.includes(words),
@@ -262,7 +275,20 @@ function play(options: { record?: unknown; reducedMotion?: boolean; prompt?: str
         /** A click on the body of someone in the last frame drawn — where the game's hit test centres. */
         shootAt: (target: Person) => game.click(target.x, target.y - 35),
         key: (key: string) => { for (const fn of on.window.keydown ?? []) fn({ key, code: key === " " ? "Space" : `Key${key.toUpperCase()}`, preventDefault() {} }); },
-        pressFire: () => { for (const fn of on.fire.pointerdown ?? []) fn({ preventDefault() {} }); }
+        pressFire: () => { for (const fn of on.fire.pointerdown ?? []) fn({ preventDefault() {} }); },
+        /** The page is hidden for `ms` — another tab, a locked phone — and then shown again. */
+        away: (ms: number) => {
+            document.hidden = true;
+            for (const fn of on.document.visibilitychange ?? []) fn({});
+            step(ms, false);
+            document.hidden = false;
+            for (const fn of on.document.visibilitychange ?? []) fn({});
+        },
+        /** The canvas takes a new size, as a rotation or a window resize gives it. */
+        resize: (w: number, h: number) => {
+            width = w; height = h;
+            for (const fn of on.window.resize ?? []) fn({});
+        }
     };
     game.step(32);
     return game;
@@ -412,4 +438,103 @@ test("clearing contract 80 keeps the run's score as the best, and the campaign s
     assert.equal(game.contract(), 1, "after the eightieth the prototype starts over at the first");
     assert.equal(game.record().arcade.oneShot.bestScore, points, "the run's score is the first clear's points");
     assert.equal(game.record().arcade.oneShot.unlocked, 80, "and what is unlocked stays unlocked");
+});
+
+// --- a hidden page, and a resize: approved after Codex's review of #61 ---
+
+test("a hidden page freezes the contract: coming back resumes exactly where it stopped", () => {
+    // Codex P2 on ca1a070: frames stop in a hidden tab but performance.now() does not, so coming back
+    // after the contract's time was an automatic TIME UP.
+    const game = play();                                // contract 1: twenty seconds
+    game.step(1000);
+    const clock = game.clock();
+    game.away(30000);                                   // longer than the whole contract
+    game.step(32);
+    assert.ok(!game.says("TIME UP"), "the contract was lost while the page was hidden");
+    assert.ok(Math.abs(game.clock() - clock) <= 0.15, `the clock read ${clock} before and ${game.clock()} after`);
+    assert.equal(game.contract(), 1);
+    // And the time that is left still runs out as it always did.
+    game.step(Math.ceil(clock * 1000) + 100);
+    assert.ok(game.says("TIME UP"), "the clock stopped for good");
+});
+
+test("the armed hostile's shot waits while the page is hidden", () => {
+    const game = play({ record: { version: 2, arcade: { oneShot: { unlocked: 80 } } } });
+    game.step(500);                                     // contract 80 fires no sooner than 3.4 s in
+    const before = game.firesIn();
+    game.away(10000);
+    game.step(32);
+    assert.ok(!game.says("YOU WERE SHOT"), "the hostile fired at a hidden page");
+    assert.ok(Math.abs(game.firesIn() - before) <= 0.15, `HOSTILE FIRES IN read ${before} before and ${game.firesIn()} after`);
+});
+
+test("a reload, and a result on screen, wait for the page too", () => {
+    const reload = play({ record: CONTRACT_12 });
+    reload.step(500);
+    reload.click(4, 4);
+    reload.key("r");
+    reload.step(100);
+    reload.away(5000);
+    reload.step(32);
+    assert.equal(reload.fire, "LOAD", "the reload finished while nobody was looking");
+    reload.step(1700);
+    assert.equal(reload.fire, "FIRE");
+
+    const cleared = play();
+    cleared.step(300);
+    cleared.shootAt(cleared.frame.people.find(p => p.courier)!);
+    cleared.step(16);
+    cleared.away(5000);
+    cleared.step(32);
+    assert.ok(cleared.says("MISSION CLEAR"), "the result was skipped while hidden");
+    cleared.step(1200);
+    assert.equal(cleared.contract(), 2);
+});
+
+test("a resize keeps the crowd, the magazine and the clock, carried to the new size", () => {
+    // Codex P2 on ca1a070: resize() called spawn(false) — a new crowd and a full magazine on the old clock.
+    const game = play({ record: CONTRACT_12 });
+    game.step(500);
+    game.click(4, 4);
+    game.step(32);
+    assert.deepEqual(game.ammo(), [2, 3]);
+    const before = game.frame.people.map(p => ({ x: p.x, y: p.y, courier: p.courier }));
+    const clock = game.clock();
+
+    game.resize(1000, 590);                             // a window made smaller; wide enough for the desktop HUD
+    game.step(16);
+    const after = game.frame.people;
+    assert.equal(after.length, before.length, "the crowd was replaced");
+    before.forEach((p, i) => {
+        assert.ok(Math.abs(after[i].x - p.x * 1000 / 1440) < 3, `person ${i} was not carried: ${p.x} -> ${after[i].x}`);
+        assert.ok(Math.abs(after[i].y - p.y * 590 / 848) < 3, `person ${i} was not carried: ${p.y} -> ${after[i].y}`);
+        assert.equal(after[i].courier, p.courier, "the courier changed");
+    });
+    assert.deepEqual(game.ammo(), [2, 3], "a resize refilled the magazine");
+    assert.ok(game.clock() <= clock && game.clock() > clock - 0.2, `the clock went from ${clock} to ${game.clock()}`);
+});
+
+test("rotating late in a gunman contract does not fire a new hostile", () => {
+    // Codex P2 on ca1a070, reproduced on the prototype: the respawned hostile's shot was timed from the
+    // contract's start, so a rotation after a few seconds often meant YOU WERE SHOT in the same frame.
+    const game = play({ record: { version: 2, arcade: { oneShot: { unlocked: 31 } } } });
+    game.step(5000);                                    // contract 31's hostile fires no sooner than 5.6 s in
+    assert.ok(!game.says("YOU WERE SHOT"));
+    const before = game.firesIn();
+    game.resize(390, 844);                              // turned to portrait
+    game.step(32);
+    assert.ok(!game.says("YOU WERE SHOT"), "the rotation fired a new hostile");
+    assert.ok(Math.abs(game.firesIn() - before) <= 0.15, `the same hostile, on the same timer: ${before} -> ${game.firesIn()}`);
+});
+
+test("a resize during a reload does not cut it short", () => {
+    const game = play({ record: CONTRACT_12 });
+    game.step(500);
+    game.click(4, 4);
+    game.key("r");
+    game.step(100);
+    game.resize(1200, 700);
+    game.step(32);
+    assert.equal(game.fire, "LOAD", "the resize finished the reload");
+    assert.deepEqual(game.ammo(), [2, 3]);
 });

@@ -8,6 +8,7 @@
  *
  *   - progress is kept in `nextreset.player.v1` — the five places the prototype used its own keys;
  *   - RELOAD takes its contract's reload time and keeps the crowd and the clock;
+ *   - the contract is frozen while the page is hidden, and kept whole across a resize or a rotation;
  *   - no screen shake for a visitor who has asked for reduced motion.
  *
  * Above the first marker is the small adapter those edits call. It is the only code here that the
@@ -50,10 +51,11 @@ let aim={x:500,y:300}, enemies=[], civilians=[];
 const chapters=['ROOKIE','RELOAD','HUNTER','UNDER FIRE','PRECISION','PRESSURE','ELITE','MASTER'];
 const missions=Array.from({length:80},(_,i)=>{let L=i+1,ch=Math.floor(i/10);return {title:`${chapters[ch]} • CONTRACT ${L}`,desc:L<11?'Find the red-case courier.':L<31?'Track the moving target. Reload when empty.':L<41?'Find the armed hostile before he fires.':L<61?'Precision under pressure.':L<71?'Elite contract: faster targets.':'Master contract: survive and clear the threat.',time:Math.max(11,20-Math.floor(L/12)),n:Math.min(11,5+Math.floor(L/10)),type:L<31?'courier':'gunman',level:L,ammo:L<11?1:(L<41?3:4),reload:L<11?0:Math.max(900,1800-L*10),reaction:Math.max(2600,7000-L*45)};});
 function resize(){
- const r=c.getBoundingClientRect(); D=Math.min(devicePixelRatio||1,2); W=r.width;H=r.height;c.width=W*D;c.height=H*D;ctx.setTransform(D,0,0,D,0,0);
- if(!aim.x||aim.x>W) aim={x:W*.55,y:H*.5}; if(state==='play') spawn(false);
+ const r=c.getBoundingClientRect(); D=Math.min(devicePixelRatio||1,2); const sx=W?r.width/W:1,sy=H?r.height/H:1;W=r.width;H=r.height;c.width=W*D;c.height=H*D;ctx.setTransform(D,0,0,D,0,0);
+ if(!aim.x||aim.x>W) aim={x:W*.55,y:H*.5}; for(const p of civilians){p.x*=sx;p.y*=sy}
 }
 addEventListener('resize',resize);
+let hiddenAt=document.hidden?performance.now():0;document.addEventListener('visibilitychange',()=>{if(document.hidden){hiddenAt=performance.now();return}if(!hiddenAt)return;const away=performance.now()-hiddenAt;hiddenAt=0;started+=away;msgUntil+=away;reloadEnd+=away;for(const p of civilians)if(p.fireAt)p.fireAt+=away});
 function spawn(resetClock=true){enemies=[];civilians=[];shot=false;state='play';message='';levelScore=0;let m=missions[mission];maxAmmo=m.ammo;ammo=maxAmmo;reloading=false;if(resetClock)started=performance.now();let ground=H*.72;for(let i=0;i<m.n;i++){let p={x:W*(.12+Math.random()*.76),y:ground+(Math.random()-.5)*34,vx:(Math.random()<.5?-1:1)*(26+m.level*.8+Math.random()*30),phase:Math.random()*10,hat:Math.random()<.25,phone:Math.random()<.3,case:false,armed:false,hostile:false,aiming:false,fireAt:0,dead:false};civilians.push(p)}let t=civilians[Math.floor(Math.random()*civilians.length)];t.hostile=true;if(m.type==='courier')t.case=true;else{t.armed=true;t.fireAt=started+m.reaction+Math.random()*2500}enemies=[t]}
 function panel(x,y,w,h){ctx.fillStyle='rgba(5,14,22,.88)';ctx.beginPath();ctx.roundRect(x,y,w,h,11);ctx.fill()}
 function background(){

@@ -346,7 +346,13 @@ difference fails the build. The edits are:
   wrote them;
 - **RELOAD fixed**: the prototype's overlay ended the attempt on the RELOADING message, so a reload
   respawned the crowd, restarted the clock and refilled at once. It now takes the contract's reload time
-  and keeps both. This is the one gameplay change;
+  and keeps both;
+- **a hidden page freezes the contract**: frames stop in a background tab but the clock did not, so
+  coming back after the contract's time was an automatic TIME UP. Every deadline now moves on by the time
+  the page was away;
+- **a resize or a rotation keeps the contract**: it used to respawn it on the old clock, often with a new
+  hostile who fired in the same frame. The same crowd is now carried to the new size;
+- these three are the only gameplay changes, each approved by the owner by name;
 - **no screen shake** under `prefers-reduced-motion`;
 - **the shared header** in place of the prototype's own bar, with the game's name as the page's h1 where
   its subtitle was, and the detailed status line moved over the game;

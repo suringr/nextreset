@@ -10,6 +10,8 @@
  * Every edit is one of the deviations the owner signed off:
  *   - progress kept in `nextreset.player.v1` instead of the prototype's own localStorage keys;
  *   - RELOAD fixed to take its contract's reload time and keep the crowd and the clock;
+ *   - the contract frozen while the page is hidden, and kept whole across a resize or a rotation
+ *     (Codex review of #61, approved by the owner after it);
  *   - no screen shake for a visitor who has asked for reduced motion;
  *   - the shared NextReset header in place of the prototype's own, and the accessibility adaptations.
  */
@@ -91,7 +93,7 @@ export const SCRIPT_EDITS: ReadonlyArray<ApprovedEdit> = [
         to: "let u=+progress.unlocked()||1",
         why: "N's contract picker offers the contracts unlocked, from the player record."
     },
-    // --- RELOAD: the one gameplay change the owner approved ---
+    // --- RELOAD: approved with the replacement ---
     {
         from: "if(now>msgUntil){if(state==='won')",
         to: "if(state!=='play'&&now>msgUntil){if(state==='won')",
@@ -101,6 +103,22 @@ export const SCRIPT_EDITS: ReadonlyArray<ApprovedEdit> = [
         from: "setTimeout(()=>{if(reloading)message=''},500)",
         to: "setTimeout(()=>{if(reloading&&message==='RELOADING')message=''},500)",
         why: "With the reload now taking its time, the contract can be lost during it. Clearing whatever message was up would erase TIME UP or YOU WERE SHOT and leave the game stuck; this clears only its own."
+    },
+    // --- a hidden page, and a resize: approved after Codex's review of #61 ---
+    {
+        from: "addEventListener('resize',resize);",
+        to: "addEventListener('resize',resize);\nlet hiddenAt=document.hidden?performance.now():0;document.addEventListener('visibilitychange',()=>{if(document.hidden){hiddenAt=performance.now();return}if(!hiddenAt)return;const away=performance.now()-hiddenAt;hiddenAt=0;started+=away;msgUntil+=away;reloadEnd+=away;for(const p of civilians)if(p.fireAt)p.fireAt+=away});",
+        why: "A hidden page draws no frames but performance.now() keeps running, so coming back after the contract's time showed TIME UP or YOU WERE SHOT — an attempt lost while nobody could act. Every deadline the game keeps (the contract clock, the hostile's shot, a reload, an overlay) now moves on by the time the page was away, so play resumes exactly where it stopped."
+    },
+    {
+        from: "W=r.width;H=r.height;",
+        to: "const sx=W?r.width/W:1,sy=H?r.height/H:1;W=r.width;H=r.height;",
+        why: "How much the canvas changed, so the people already on it can follow it rather than be replaced."
+    },
+    {
+        from: "if(state==='play') spawn(false);",
+        to: "for(const p of civilians){p.x*=sx;p.y*=sy}",
+        why: "A resize or a rotation respawned the contract on the old clock: a new crowd, a full magazine, a reload cut short, and a new hostile whose shot was timed from the old start — on a gunman contract, often a shot in the same frame. The same crowd is now carried to the new size, with the same hostile, the same magazine and the same clock."
     },
     // --- reduced motion ---
     {
