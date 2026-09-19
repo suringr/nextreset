@@ -233,6 +233,14 @@ test("every page-kind rule a page inlines is, word for word, a rule of the style
     }
 });
 
+test("a link is identifiable at rest, not only under a pointer", () => {
+    // Codex P2 on #63: the demo draws a timeline label white and bold, and a label that links to its
+    // evidence looked exactly like one that does not until hovered — which a phone never does.
+    const css = authoredCss().replace(/\/\*[\s\S]*?\*\//g, "");
+    assert.match(css, /\.event-label a,\s*\.data-label a\s*\{[^}]*text-decoration:\s*underline/, "evidence links are not underlined at rest");
+    assert.match(css, /\.footer-links a\s*\{[^}]*text-decoration:\s*underline/, "the footer's links are not underlined at rest");
+});
+
 test("keyboard focus is visible", () => {
     assert.match(authoredCss(), /:focus-visible\s*\{[^}]*outline:/);
 });

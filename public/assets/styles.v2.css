@@ -1029,8 +1029,20 @@
   font-weight: 700;
 }
 
-.event-label a:hover {
+/* Some versions link to the official evidence and some do not. The demo's label is white and bold, and so
+   is a link — but underlined at rest, in the link colour, so a reader on a phone, who has nothing to
+   hover with, can see which entries open their source (Codex, #63). */
+.event-label a,
+.data-label a {
   text-decoration: underline;
+  text-decoration-color: var(--link);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.event-label a:hover,
+.data-label a:hover {
+  color: var(--link);
 }
 
 .event-when::before {
@@ -1076,10 +1088,6 @@
 .data-label {
   display: block;
   font-weight: 700;
-}
-
-.data-label a:hover {
-  text-decoration: underline;
 }
 
 .data-when {
@@ -1310,6 +1318,13 @@ footer {
 .footer-fine {
   margin: 12px 0 0;
   font-size: 12px;
+}
+
+/* The footer's links sit in a line with words that are not links ("© 2026", the separators), so they are
+   underlined as well as the colour they share. */
+.footer-links a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 footer a:hover {
