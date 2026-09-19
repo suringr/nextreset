@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "minecraft",
-  "updatedAt": "2026-09-19T02:15:46.034Z",
+  "updatedAt": "2026-09-19T08:08:36.956Z",
   "events": [
     {
       "key": "minecraft/last-release/26.3",
@@ -14,7 +14,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:01:55.174Z",
-      "lastVerified": "2026-09-19T02:15:46.034Z",
+      "lastVerified": "2026-09-19T08:08:36.956Z",
       "publishState": "published"
     }
   ],
@@ -59,7 +59,7 @@
       "url": "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
       "lastModified": "Tue, 15 Sep 2026 15:03:18 GMT",
       "textHash": "b62da92edd237708855a26d3f84da09123f53eb02a62f2119c3f90493e4b6476",
-      "lastFetchedAt": "2026-09-19T02:15:46.034Z",
+      "lastFetchedAt": "2026-09-19T08:08:36.956Z",
       "lastUsableAt": "2026-09-15T22:01:55.174Z",
       "lastVerdict": "usable",
       "lastMode": "http",
