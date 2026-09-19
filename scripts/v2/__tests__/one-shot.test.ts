@@ -6,7 +6,8 @@
  * from the approved prototype and the named list of edits in `one-shot-approved.ts`, and any other
  * difference fails. The second half plays the real script, in a small simulated browser, through the
  * places where it now meets the site: resuming at the unlocked contract, a clear landing in
- * `nextreset.player.v1`, the RELOAD fix, and reduced motion.
+ * `nextreset.player.v1`, the RELOAD fix, a hidden page and N's prompt, a resize, reduced motion, and FIRE
+ * for a keyboard and assistive tech.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -82,12 +83,14 @@ test("every approved edit says why, and each is one of the kinds the owner appro
     const hidden = SCRIPT_EDITS.filter(edit => /resumeFrom/.test(edit.to));
     const resize = SCRIPT_EDITS.filter(edit => /r\.width|spawn\(false\)/.test(edit.from));
     const motion = SCRIPT_EDITS.filter(edit => /shake/.test(edit.from));
+    const access = SCRIPT_EDITS.filter(edit => /fireBtn\.addEventListener\('pointerdown'/.test(edit.from));
     assert.equal(storage.length, 5);
     assert.equal(reload.length, 2);
     assert.equal(hidden.length, 2, "the hidden page and N's prompt");
     assert.equal(resize.length, 2);
     assert.equal(motion.length, 1);
-    assert.equal(SCRIPT_EDITS.length, storage.length + reload.length + hidden.length + resize.length + motion.length,
+    assert.equal(access.length, 1, "FIRE for a keyboard and assistive tech");
+    assert.equal(SCRIPT_EDITS.length, storage.length + reload.length + hidden.length + resize.length + motion.length + access.length,
         "an edit that is none of the approved kinds");
 });
 
@@ -276,8 +279,11 @@ function play(options: { record?: unknown; reducedMotion?: boolean; prompt?: str
         click: (x: number, y: number) => { for (const fn of on.canvas.pointerdown ?? []) fn({ clientX: x, clientY: y, pointerType: "mouse", button: 0 }); },
         /** A click on the body of someone in the last frame drawn — where the game's hit test centres. */
         shootAt: (target: Person) => game.click(target.x, target.y - 35),
-        key: (key: string) => { for (const fn of on.window.keydown ?? []) fn({ key, code: key === " " ? "Space" : `Key${key.toUpperCase()}`, preventDefault() {} }); },
+        key: (key: string) => { for (const fn of on.window.keydown ?? []) fn({ key, code: key === " " ? "Space" : key === "Enter" ? "Enter" : `Key${key.toUpperCase()}`, preventDefault() {} }); },
+        keyUp: (key: string) => { for (const fn of on.window.keyup ?? []) fn({ key, code: key === " " ? "Space" : key === "Enter" ? "Enter" : `Key${key.toUpperCase()}` }); },
         pressFire: () => { for (const fn of on.fire.pointerdown ?? []) fn({ preventDefault() {} }); },
+        /** A click on FIRE — what a pointer's release, Enter, voice control or a screen reader sends. */
+        clickFire: () => { for (const fn of on.fire.click ?? []) fn({ detail: 0 }); },
         /** The page is hidden for `ms` — another tab, a locked phone — and then shown again. */
         away: (ms: number) => {
             document.hidden = true;
@@ -569,4 +575,32 @@ test("choosing a contract in the prompt still starts it fresh", () => {
     game.step(32);
     assert.equal(game.contract(), 3);
     assert.ok(game.clock() > 19.5, `contract 3 did not start on a full clock: ${game.clock()}`);
+});
+
+// --- FIRE for a keyboard and assistive tech ---
+
+test("FIRE works from Enter, voice control, a switch or a screen reader: a click alone fires", () => {
+    // Codex P2 on 48f788e: FIRE listened only for pointerdown, and these all send a plain click.
+    const game = play({ record: CONTRACT_12 });         // three rounds; the default aim is empty sky
+    game.step(300);
+    game.clickFire();                                   // voice control or a screen reader: a click, nothing before it
+    game.step(32);
+    assert.deepEqual(game.ammo(), [2, 3]);
+    game.key("Enter"); game.clickFire(); game.keyUp("Enter");
+    game.step(32);
+    assert.deepEqual(game.ammo(), [1, 3], "Enter on the focused button did not fire");
+});
+
+test("nothing fires twice: a pointer press, or Space, is not fired again by the click that follows it", () => {
+    const game = play({ record: CONTRACT_12 });
+    game.step(300);
+    game.pressFire(); game.clickFire();                 // a tap or a mouse press, then the click it ends in
+    game.step(32);
+    assert.deepEqual(game.ammo(), [2, 3], "a tap fired twice");
+    game.key(" "); game.clickFire(); game.keyUp(" ");   // Space on the focused button, where a browser also clicks
+    game.step(32);
+    assert.deepEqual(game.ammo(), [1, 3], "Space fired twice");
+    game.clickFire();                                   // and after both, a click alone still fires
+    game.step(32);
+    assert.deepEqual(game.ammo(), [0, 3]);
 });

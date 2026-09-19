@@ -12,7 +12,8 @@
  *   - RELOAD fixed to take its contract's reload time and keep the crowd and the clock;
  *   - the contract frozen while the page is hidden or N's prompt is open, and kept whole across a
  *     resize or a rotation (Codex review of #61, approved by the owner after it);
- *   - no screen shake for a visitor who has asked for reduced motion;
+ *   - no screen shake for a visitor who has asked for reduced motion, and FIRE that works from a
+ *     keyboard, voice control, a switch or a screen reader;
  *   - the shared NextReset header in place of the prototype's own, and the accessibility adaptations.
  */
 import * as fs from "fs";
@@ -124,6 +125,12 @@ export const SCRIPT_EDITS: ReadonlyArray<ApprovedEdit> = [
         from: "v=+prompt('Choose unlocked level 1-'+u,mission+1);if(v>=1&&v<=u){mission=v-1;attempt=1;spawn()}",
         to: "asked=performance.now(),v=+prompt('Choose unlocked level 1-'+u,mission+1);if(v>=1&&v<=u){mission=v-1;attempt=1;spawn()}else resumeFrom(asked)",
         why: "N's prompt blocks the page, like a hidden tab: no frames, while the clock and the hostile's shot ran on. Cancelling it after the deadline was an automatic TIME UP or YOU WERE SHOT. Cancelled, it now resumes the contract where it stopped; a contract chosen starts fresh, as before. (Codex's review of 700acb3; the same fix as the hidden page.)"
+    },
+    // --- accessibility ---
+    {
+        from: "fireBtn.addEventListener('pointerdown',e=>{e.preventDefault();ammo?shoot():reload()});",
+        to: "fireBtn.addEventListener('pointerdown',e=>{e.preventDefault();ammo?shoot():reload()});let handled=false;fireBtn.addEventListener('pointerdown',()=>{handled=true});addEventListener('keydown',e=>{handled=e.code==='Space'},true);addEventListener('keyup',()=>setTimeout(()=>{handled=false}),true);fireBtn.addEventListener('click',()=>{if(handled){handled=false;return}ammo?shoot():reload()});",
+        why: "FIRE only listened for pointerdown, so Enter on the focused button, voice control, a switch or a screen reader — which all send a plain click — could not fire or reload. A click now does, unless the press it ends was already handled: a pointer press on FIRE (the prototype's own handler shot) or Space (the prototype's own Space handler shot). So nothing ever fires twice. (Codex's review of 48f788e.)"
     },
     // --- reduced motion ---
     {

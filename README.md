@@ -356,7 +356,8 @@ difference fails the build. The edits are:
 - **no screen shake** under `prefers-reduced-motion`;
 - **the shared header** in place of the prototype's own bar, with the game's name as the page's h1 where
   its subtitle was, and the detailed status line moved over the game;
-- zoom allowed, FIRE named by its visible text, and the canvas labelled.
+- zoom allowed, FIRE named by its visible text and working from Enter, voice control, a switch or a
+  screen reader (never firing twice), and the canvas labelled.
 
 Other rules of the page:
 
