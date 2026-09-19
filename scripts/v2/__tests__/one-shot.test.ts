@@ -81,13 +81,13 @@ test("every approved edit says why, and each is one of the kinds the owner appro
     const storage = SCRIPT_EDITS.filter(edit => /localStorage/.test(edit.from));
     const reload = SCRIPT_EDITS.filter(edit => /msgUntil|RELOADING|reloading/.test(edit.from));
     const hidden = SCRIPT_EDITS.filter(edit => /resumeFrom/.test(edit.to));
-    const resize = SCRIPT_EDITS.filter(edit => /r\.width|spawn\(false\)/.test(edit.from));
+    const resize = SCRIPT_EDITS.filter(edit => /r\.width|spawn\(false\)/.test(edit.from) || /ResizeObserver/.test(edit.to));
     const motion = SCRIPT_EDITS.filter(edit => /shake/.test(edit.from));
     const access = SCRIPT_EDITS.filter(edit => /fireBtn\.addEventListener\('pointerdown'/.test(edit.from));
     assert.equal(storage.length, 5);
     assert.equal(reload.length, 2);
     assert.equal(hidden.length, 2, "the hidden page and N's prompt");
-    assert.equal(resize.length, 2);
+    assert.equal(resize.length, 3, "the crowd carried across a resize, and the canvas following its own box");
     assert.equal(motion.length, 1);
     assert.equal(access.length, 1, "FIRE for a keyboard and assistive tech");
     assert.equal(SCRIPT_EDITS.length, storage.length + reload.length + hidden.length + resize.length + motion.length + access.length,
@@ -218,6 +218,7 @@ function play(options: { record?: unknown; reducedMotion?: boolean; prompt?: str
     const on: Record<string, Record<string, Array<(e: unknown) => void>>> = { canvas: {}, fire: {}, window: {}, document: {} };
     const listen = (target: string) => (type: string, fn: (e: unknown) => void) => { (on[target][type] ??= []).push(fn); };
     const canvas = { width: 0, height: 0, getContext: () => ctx, getBoundingClientRect: () => ({ left: 0, top: 0, width, height }), addEventListener: listen("canvas") };
+    const observers: Array<() => void> = [];
     const fire = { textContent: "FIRE", addEventListener: listen("fire") };
     const best = { textContent: "" };
     const chip = { textContent: "", hidden: true };
@@ -237,7 +238,9 @@ function play(options: { record?: unknown; reducedMotion?: boolean; prompt?: str
         matchMedia: () => ({ matches: !!options.reducedMotion }),
         // A native prompt blocks the page: no frames and no timers, while the clock runs on.
         prompt: () => { now += options.promptMs ?? 0; return options.prompt ?? null; },
-        addEventListener: listen("window")
+        addEventListener: listen("window"),
+        // Records what is observed; `relayout` below delivers a change of the canvas's own box.
+        ResizeObserver: class { constructor(fn: () => void) { observers.push(fn); } observe() {} }
     };
     context.window = context;
     vm.createContext(context);
@@ -296,7 +299,13 @@ function play(options: { record?: unknown; reducedMotion?: boolean; prompt?: str
         resize: (w: number, h: number) => {
             width = w; height = h;
             for (const fn of on.window.resize ?? []) fn({});
-        }
+        },
+        /** The canvas's own box changes with the window left alone — the header growing a row, say. */
+        relayout: (w: number, h: number) => {
+            width = w; height = h;
+            for (const fn of observers) fn();
+        },
+        get backing() { return [canvas.width, canvas.height]; }
     };
     game.step(32);
     return game;
@@ -603,4 +612,30 @@ test("nothing fires twice: a pointer press, or Space, is not fired again by the 
     game.clickFire();                                   // and after both, a click alone still fires
     game.step(32);
     assert.deepEqual(game.ammo(), [0, 3]);
+});
+
+test("the canvas follows its own box when the header grows, not only when the window resizes", () => {
+    // Codex P1 on 9c679b4: on a phone the first clear shows the header's chip, the header wraps to a
+    // second row and the canvas loses 25px with no window resize. The game kept drawing at the old size
+    // into the smaller box, so taps landed off what was drawn.
+    const game = play();
+    game.relayout(390, 800);                            // a phone's canvas under the one-row header
+    game.step(400);
+    const courier = game.frame.people.find(p => p.courier)!;
+    game.shootAt(courier);
+    game.step(16);
+    assert.ok(game.says("MISSION CLEAR"));
+    assert.ok(game.chip, "the chip appeared with the first XP");
+
+    const before = game.frame.people.map(p => p.y);
+    game.relayout(390, 775);                            // ...and the header took a second row
+    game.step(16);
+    assert.deepEqual(game.backing, [390, 775], "the drawing was left at the old size");
+    game.frame.people.forEach((p, i) => assert.ok(Math.abs(p.y - before[i] * 775 / 800) < 3, `person ${i} was not carried to the new box`));
+
+    game.step(1200);                                    // the next contract, played on the new box
+    assert.equal(game.contract(), 2);
+    game.shootAt(game.frame.people.find(p => p.courier)!);
+    game.step(16);
+    assert.ok(game.says("MISSION CLEAR"), "a tap on the drawn courier missed after the header grew");
 });

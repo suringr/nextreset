@@ -126,6 +126,11 @@ export const SCRIPT_EDITS: ReadonlyArray<ApprovedEdit> = [
         to: "asked=performance.now(),v=+prompt('Choose unlocked level 1-'+u,mission+1);if(v>=1&&v<=u){mission=v-1;attempt=1;spawn()}else resumeFrom(asked)",
         why: "N's prompt blocks the page, like a hidden tab: no frames, while the clock and the hostile's shot ran on. Cancelling it after the deadline was an automatic TIME UP or YOU WERE SHOT. Cancelled, it now resumes the contract where it stopped; a contract chosen starts fresh, as before. (Codex's review of 700acb3; the same fix as the hidden page.)"
     },
+    {
+        from: "resize();spawn();requestAnimationFrame(frame);",
+        to: "resize();spawn();requestAnimationFrame(frame);if(window.ResizeObserver)new ResizeObserver(()=>resize()).observe(c);",
+        why: "The prototype's canvas only ever changed size with the window. Here it sits under the shared header, which grows a row on a phone when the player chip first appears — after the first clear — and shrinks the canvas with no window resize. The drawing was then squeezed into the smaller box and taps landed off their targets. The canvas now follows its own box, whatever changes it. (Codex's review of 9c679b4.)"
+    },
     // --- accessibility ---
     {
         from: "fireBtn.addEventListener('pointerdown',e=>{e.preventDefault();ammo?shoot():reload()});",

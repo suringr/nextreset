@@ -351,7 +351,8 @@ difference fails the build. The edits are:
   browser's prompt but the clock did not, so coming back after the contract's time was an automatic TIME
   UP. Every deadline now moves on by the time the player could not act;
 - **a resize or a rotation keeps the contract**: it used to respawn it on the old clock, often with a new
-  hostile who fired in the same frame. The same crowd is now carried to the new size;
+  hostile who fired in the same frame. The same crowd is now carried to the new size, and the canvas
+  follows its own box — the shared header grows a row on a phone when the chip first appears;
 - these three are the only gameplay changes, each approved by the owner by name;
 - **no screen shake** under `prefers-reduced-motion`;
 - **the shared header** in place of the prototype's own bar, with the game's name as the page's h1 where

@@ -9,7 +9,7 @@
  *   - progress is kept in `nextreset.player.v1` — the five places the prototype used its own keys;
  *   - RELOAD takes its contract's reload time and keeps the crowd and the clock;
  *   - the contract is held while the page is hidden or N's prompt is open, and kept whole across a
- *     resize or a rotation;
+ *     resize or a rotation, with the canvas following its own box under the shared header;
  *   - no screen shake for a visitor who has asked for reduced motion;
  *   - FIRE works from a keyboard, voice control, a switch or a screen reader, never firing twice.
  *
@@ -114,6 +114,6 @@ function pointer(e){const r=c.getBoundingClientRect(),q=e.touches?e.touches[0]:e
 c.addEventListener('pointermove',pointer);c.addEventListener('pointerdown',e=>{pointer(e);if(e.pointerType==='mouse'&&e.button===0)shoot()});
 c.addEventListener('touchstart',e=>{pointer(e);e.preventDefault()},{passive:false});c.addEventListener('touchmove',e=>{pointer(e);e.preventDefault()},{passive:false});
 fireBtn.addEventListener('pointerdown',e=>{e.preventDefault();ammo?shoot():reload()});let handled=false;fireBtn.addEventListener('pointerdown',()=>{handled=true});addEventListener('keydown',e=>{handled=e.code==='Space'},true);addEventListener('keyup',()=>setTimeout(()=>{handled=false}),true);fireBtn.addEventListener('click',()=>{if(handled){handled=false;return}ammo?shoot():reload()});addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();shoot()}if(e.key.toLowerCase()==='r')reload();if(e.key.toLowerCase()==='n'){let u=+progress.unlocked()||1,asked=performance.now(),v=+prompt('Choose unlocked level 1-'+u,mission+1);if(v>=1&&v<=u){mission=v-1;attempt=1;spawn()}else resumeFrom(asked)}});
-resize();spawn();requestAnimationFrame(frame);
+resize();spawn();requestAnimationFrame(frame);if(window.ResizeObserver)new ResizeObserver(()=>resize()).observe(c);
 // ---- end of the approved prototype ----
 })();
