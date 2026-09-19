@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Live tracking of official game resets and updates — no predictions. Track Fortnite, League of Legends, CS2, VALORANT, and more.">
+  <meta property="og:title" content="NextReset - Live Game Reset Tracker">
+  <meta property="og:description" content="Live tracking of official game resets and updates — no predictions">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://nextreset.co">
+  <meta property="og:image" content="https://nextreset.co/og.png">
+  <title>NextReset - Live Game Reset Tracker</title>
+  <link rel="canonical" href="https://nextreset.co/">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#050812">
+
+  <!-- CRITICAL: Inline CSS for guaranteed first paint (hard paint guarantee) -->
+  <style>
+    :root{--ground:#050812;--surface:#0b1325;--surface-2:#101a31;--line:#26395f;--ink:#f5f7ff;--ink-muted:#91a1bd;--nav-ink:#c2cce0;--eyebrow:#c2adff;--hero-sub:#b6c2d8;--meta:#aebbd0;--link:#78c3ff;--footer-ink:#8f9db6;--brand:#8b5cf6;--brand-bright:#b69dff;--state-verified:#34d399;--state-stale:#fbbf24;--state-unavailable:#9fb0c9;--bar:#050812e8;--bar-line:#17243c;--control:#0b1427;--control-line:#31466f;--cta-from:#8b3dff;--cta-to:#4c61f6;--hero-veil-from:#07101ff5;--hero-veil-to:#07101fb8;--hero-glow:#315cad;--hero-mid:#111a3a;--hero-deep:#080d18;--tile:#070d19d9;--tile-line:#2d426c;--tile-ink:#bea5ff;--tile-label:#67c9ff;--card-foot:#09111f;--star:#0a1223;--star-line:#354b76;--star-on:#ffd25c;--deep-from:#0d1730;--arcade-to:#080e1b;--arcade-line:#3a3c76;--arcade-glow:#6633aa55;--stat:#091222;--stat-line:#2b3d62;--rule:#182740;--rule-soft:#17243b;--tracker-to:#08101e;--rail:#283d63;--dot:#536784;--row-line:#203455;--arc-from:#111630;--arc-to:#09101e;--glow-blue:#19366b66;--glow-violet:#37145344;--r-hero:16px;--r-panel:15px;--r-strip:13px;--r-card:12px;--r-control:10px;--r-tile:9px;--r-star:8px;--font:system-ui, -apple-system, Segoe UI, sans-serif;--size-small:13px;--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--gutter:9px;--measure:68ch;--tap:44px}*{box-sizing:border-box}a{color:inherit;text-decoration:none}h1,h2,h3{margin:0;text-wrap:balance}.chrome-brand{display:inline-flex;align-items:center;min-height:var(--tap);font-weight:950;font-size:20px;letter-spacing:-1px;line-height:1.45;white-space:nowrap}.chrome-brand i{font-style:normal;color:var(--brand)}.chrome-nav{position:static;inset:auto;width:auto;height:auto;margin:0;padding:0;overflow:visible;border:0;background:none;display:flex;gap:18px;color:var(--nav-ink);font-size:15px}.chrome-nav a{display:inline-flex;align-items:center;min-height:var(--tap);padding-inline:4px;margin-inline:-4px}.chrome-player{margin:0;padding:8px 10px;border:1px solid var(--control-line);border-radius:var(--r-control);background:var(--control);color:var(--ink);font-size:12px;line-height:1.45;white-space:nowrap}.chrome-player::before{content:"⚡ ";content:"⚡ " / ""}.chrome-player[hidden]{display:none}.chrome-end{display:flex;align-items:center;gap:18px;margin-left:auto}.chrome-menu{display:none}@supports selector(:popover-open){.chrome-menu{position:relative;z-index:1;display:inline-flex;flex:none;align-items:center;justify-content:center;width:var(--tap);height:var(--tap);margin:0 -4px 0 -12px;padding:0;border:0;background:none;color:var(--ink);cursor:pointer}.chrome-menu::before{content:"";position:absolute;inset:4px;z-index:-1;border:1px solid var(--control-line);border-radius:var(--r-control);background:var(--control)}.chrome-nav:not(:popover-open){display:none}}.chrome-menu-icon,.chrome-menu-icon::before,.chrome-menu-icon::after{display:block;width:16px;height:2px;border-radius:1px;background:currentColor}.chrome-menu-icon{position:relative}.chrome-menu-icon::before,.chrome-menu-icon::after{content:"";position:absolute;left:0}.chrome-menu-icon::before{top:-5px}.chrome-menu-icon::after{top:5px}.chrome-nav:popover-open{position:fixed;inset:69px 9px auto auto;min-width:190px;padding:6px;flex-direction:column;gap:2px;border:1px solid var(--control-line);border-radius:var(--r-control);background:var(--surface)}.chrome-nav:popover-open a{margin:0;padding:0 12px;border-radius:var(--r-star)}.chrome-nav:popover-open a:hover{background:var(--control)}@supports (anchor-name:--a){.chrome-menu{anchor-name:--site-menu}.chrome .chrome-nav:popover-open{position-anchor:--site-menu;top:calc(anchor(bottom) + var(--menu-drop,16px));right:calc(anchor(right) + 4px);bottom:auto;left:auto}}@media(min-width:701px){.chrome-end{display:contents}.chrome-menu{display:none}.chrome-nav:not(:popover-open){display:flex}.chrome-nav:popover-open{position:static;min-width:0;padding:0;flex-direction:row;gap:18px;border:0;background:none}.chrome-nav:popover-open a{padding:0 4px;margin:0 -4px}.chrome-player{padding:10px 13px;font-size:15px}}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background-color:var(--ground);background-image:radial-gradient(circle at 75% 0,var(--glow-blue),transparent 28%),radial-gradient(circle at 10% 22%,var(--glow-violet),transparent 24%);background-size:100% 1616px;background-repeat:no-repeat;color:var(--ink);font:15px/1.45 var(--font);-webkit-text-size-adjust:100%}button{font:inherit;color:inherit}.wrap{width:min(calc(100% - 18px),620px);margin-inline:auto}.container{width:100%;max-width:calc(620px + 2 * var(--gutter));margin:0 auto;padding-inline:var(--gutter);padding-block:0}.top{position:sticky;top:0;z-index:20;background:var(--bar);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--bar-line)}.nav{min-height:62px;display:flex;flex-wrap:wrap;align-items:center;gap:0 18px}.nav .chrome-brand{margin-right:auto}@media(min-width:701px){:root{--gutter:12px}.wrap{width:min(1160px,calc(100% - 24px))}.container{max-width:calc(1160px + 2 * var(--gutter))}body{background-size:100% 1262px}}.intro{margin:14px 0 0}.h1{margin:0;font-size:15px;font-weight:700}.sub{margin:2px 0 0;font-size:13px;color:var(--ink-muted);max-width:var(--measure)}.drop{margin-top:12px;padding:22px;overflow:hidden;border:1px solid var(--line);border-radius:var(--r-hero);background:linear-gradient(90deg,var(--hero-veil-from),var(--hero-veil-to)),radial-gradient(circle at 80% 30%,var(--hero-glow),var(--hero-mid) 35%,var(--hero-deep) 70%)}.drop-eyebrow,.eyebrow{margin:0;font-size:10px;font-weight:900;letter-spacing:1.7px;color:var(--eyebrow);text-transform:uppercase}.drop-game{margin:8px 0 4px;font-size:34px;font-weight:700;letter-spacing:-1.5px;text-transform:uppercase}.drop-topic{margin:0;color:var(--hero-sub)}@media(min-width:760px){.drop{padding:34px;min-height:330px}.drop-game{font-size:46px}}
+  </style>
+
+  <!-- External CSS (enhancement, not required for first paint) -->
+  <link rel="stylesheet" href="/assets/styles.v2.css?v=d01ae7bb">
+
+  <!-- Google Analytics (moved after CSS to not block parsing) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-YY6V5SR1DN');
+  </script>
+
+  <!-- Google AdSense site code -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8986430839492258" crossorigin="anonymous"></script>
+
+
+</head>
+
+
+<body>
+  <header class="chrome top">
+    <div class="wrap nav">
+      <a class="chrome-brand" href="/" aria-label="NextReset" aria-current="page">NEXT<i>//</i>RESET</a>
+      <nav class="chrome-nav" id="site-nav" aria-label="Site" popover>
+        <a href="/#all-games">Trackers</a>
+        <a href="/play/">Arcade</a>
+        <a href="/about/">About</a>
+      </nav>
+      <div class="chrome-end">
+        <p class="chrome-player" id="chrome-player" hidden></p>
+        <button type="button" class="chrome-menu" popovertarget="site-nav" aria-label="Menu"><span class="chrome-menu-icon" aria-hidden="true"></span></button>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- The page's own heading. Quiet on purpose, and above the hero it names: the demo has nothing here,
+         and the next drop below it is what a visitor came to read. -->
+    <div class="intro">
+      <h1 class="h1">Game resets, patches and seasons &mdash; verified</h1>
+      <p class="sub">Every date here comes from an official source, with the time it was checked. No predictions.</p>
+    </div>
+
+    <!-- Next drop: the build writes this from the soonest verified upcoming event. -->
+    <section class="drop" data-nr-slot="next-drop" data-game="genshin" data-type="next-banner"
+        data-next-utc="2026-09-22T06:59:59.000Z" data-precision="exact"
+        data-status="fresh" data-kind="upcoming" data-checked-utc="2026-09-19T19:46:02.424Z">
+        <p class="drop-eyebrow">Next drop</p>
+        <h2 class="drop-game">Genshin Impact</h2>
+        <p class="drop-topic">Banner end</p>
+        <div class="drop-value">September 22, 2026 at 06:59 UTC</div>
+        <div class="drop-trust">
+          <span class="badge badge-live">LIVE</span>
+          <span class="drop-source">HoYoverse</span>
+          <span class="drop-checked">Checked September 19, 2026 at 19:46 UTC</span>
+        </div>
+        <div class="drop-actions">
+          <a class="btn btn-primary" href="/genshin/next-banner/">View Genshin Impact</a>
+          <button type="button" class="btn track track-wide" data-track="genshin" aria-pressed="false" hidden>
+            <span class="track-mark" aria-hidden="true">☆</span>
+            <span class="track-label">Track</span>
+          </button>
+        </div>
+      </section>
+
+    <!-- My games. app.js moves tracked cards into the shelf; until there are any, the section is the
+         one line below and nothing else — not even its heading — because a star nobody has explained
+         is a control nobody presses, and every pixel here pushes the arcade out of the first screen.
+         The section, the line and the shelf all ship hidden: without JavaScript tracking does nothing,
+         and explaining a feature that does not work would be worse than staying quiet. -->
+    <section class="shelf-section" id="my-games" hidden>
+      <div class="head">
+        <h2 class="section-heading">My games</h2>
+        <span class="head-note">Your schedule, first.</span>
+        <a class="head-link" href="#all-games">All 12 →</a>
+      </div>
+      <p class="shelf-empty" id="my-games-empty" hidden><span class="shelf-empty-mark" aria-hidden="true">☆</span> Track a game to keep it at the top. Stays on this device.</p>
+      <div class="shelf" id="my-games-shelf"></div>
+    </section>
+
+    <!-- The arcade: ONE SHOT // 80 CONTRACTS, in the demo's arcade card. The records line stays hidden until
+         a contract has been cleared: before that there is nothing true to put in it. -->
+    <section class="section arcade-card">
+      <div class="arcade-copy">
+        <p class="drop-eyebrow">NEXT//RESET Arcade</p>
+        <h2 class="arcade-name">ONE SHOT // 80 CONTRACTS</h2>
+        <p class="arcade-line">Find the courier. Stop the armed threat. 80 contracts, free in your browser, no account.</p>
+        <ul class="arcade-records" id="arcade-records" hidden>
+          <li><small>Contract</small><b id="arcade-contract">1/80</b></li>
+          <li><small>Rank</small><b id="arcade-rank">&mdash;</b></li>
+          <li><small>XP</small><b id="arcade-xp">0</b></li>
+          <li><small>Stars</small><b id="arcade-stars">0/240</b></li>
+        </ul>
+      </div>
+      <div class="arcade-cta">
+        <a class="btn btn-primary arcade-play" href="/play/">Play now</a>
+        <p class="arcade-note">Optimized for touch + desktop</p>
+      </div>
+    </section>
+
+    <!-- All trackers. The renderer owns everything inside this region: it writes the cards and the
+         group headings the data decides on. -->
+    <section class="section" id="all-games">
+      <h2 class="section-heading">All trackers</h2>
+      <div class="grid" id="game-grid" data-nr-region="cards">
+      <h2 class="group-heading" data-group="upcoming">Next up</h2>
+
+      <div class="card-slot" data-game="genshin">
+        <a href="/genshin/next-banner/" class="card" id="card-genshin" data-game="genshin" data-type="next-banner"
+          data-state="live" data-next-utc="2026-09-22T06:59:59.000Z" data-precision="exact"
+          data-status="fresh" data-checked-utc="2026-09-19T19:46:02.424Z" data-unanswered="">
+          <div class="card-header">
+            <h3 class="card-title">Genshin Impact</h3>
+            <span class="badge badge-live">LIVE</span>
+          </div>
+          <div class="card-topic">Banner end</div>
+          <div class="card-countdown is-text">September 22, 2026 at 06:59 UTC</div>
+          <div class="card-meta">
+            <span class="last-checked">Checked September 19, 2026 at 19:46 UTC</span>
+          </div>
+        </a>
+        <button type="button" class="track" data-track="genshin" aria-pressed="false" hidden>
+          <span class="track-mark" aria-hidden="true">☆</span>
+          <span class="track-label">Track Genshin Impact</span>
+        </button>
+      </div>
+
+      <div class="card-slot" data-game="lol">
+        <a href="/lol/next-patch/" class="card" id="card-lol" data-game="lol" data-type="next-patch"
+          data-state="live" data-next-utc="2026-09-23T00:00:00.000Z" data-precision="day"
+          data-status="fresh" data-checked-utc="2026-09-19T19:46:00.596Z" data-unanswered="">
+          <div class="card-header">
+            <h3 class="card-title">League of Legends</h3>
+            <span class="badge badge-live">LIVE</span>
+          </div>
+          <div class="card-topic">Next patch</div>
+          <div class="card-countdown is-text">September 23, 2026</div>
+          <div class="card-meta">
+            <span class="last-checked">Checked September 19, 2026 at 19:46 UTC</span>
+          </div>
+        </a>
+        <button type="button" class="track" data-track="lol" aria-pressed="false" hidden>
+          <span class="track-mark" aria-hidden="true">☆</span>
+          <span class="track-label">Track League of Legends</span>
+        </button>
+      </div>
+
+      <div class="card-slot" data-game="gta">
+        <a href="/gta/weekly-reset/" class="card" id="card-gta" data-game="gta" data-type="weekly-reset"
+          data-state="live" data-next-utc="2026-09-24T10:00:00.000Z" data-precision="exact"
+          data-status="fresh" data-checked-utc="2026-09-19T19:46:02.289Z" data-unanswered="">
+          <div class="card-header">
+            <h3 class="card-title">GTA Online</h3>
+            <span class="badge badge-live">LIVE</span>
+          </div>
+          <div class="card-topic">Weekly reset</div>
+          <div class="card-countdown is-text">September 24, 2026 at 10:00 UTC</div>
+          <div class="card-meta">
+            <span class="last-checked">Checked September 19, 2026 at 19:46 UTC</span>
+          </div>
+        </a>
+        <button type="button" class="track" data-track="gta" aria-pressed="false" hidden>
+          <span class="track-mark" aria-hidden="true">☆</span>
+          <span class="track-label">Track GTA Online</span>
+        </button>
+      </div>
+
+      <h2 class="group-heading" data-group="recent">Recently updated</h2>
+
+      <div class="card-slot" data-game="warzone">
+        <a href="/warzone/last-patch/" class="card" id="card-warzone" data-game="warzone" data-type="last-patch"
+          data-state="live" data-next-utc="2026-09-16T00:00:00.000Z" data-precision="day"
+          data-status="fresh" data-checked-utc="2026-09-19T19:46:02.290Z" data-unanswered="">
+          <div class="card-header">
+            <h3 class="card-title">Warzone</h3>
+            <span class="badge badge-live">LIVE</span>
+          </div>
+          <div class="card-topic">Last patch</div>
+          <div class="card-countdown is-text">September 16, 2026</div>
+          <div class="card-meta">
+            <span class="last-checked">Checked September 19, 2026 at 19:46 UTC</span>
+          </div>
+        </a>
+        <button type="button" class="track" data-track="warzone" aria-pressed="false" hidden>
+          <span class="track-mark" aria-hidden="true">☆</span>
+          <span class="track-label">Track Warzone</span>
+        </button>
+      </div>
+
+      <div class="card-slot" data-game="minecraft">
+        <a href="/minecraft/last-release/" class="card" id="card-minecraft" data-game="minecraft" data-type="last-release"
+          data-state="live" data-next-utc="2026-09-15T11:23:02.000Z" data-precision="exact"
+          data-status="fresh" data-checked-utc="2026-09-19T19:46:02.087Z" data-unanswered="">
+          <div class="card-header">
+            <h3 class="card-title">Minecraft</h3>
+            <span class="badge badge-live">LIVE</span>
+          </div>
+          <div class="card-topic">Latest release</div>
+          <div class="card-countdown is-text">September 15, 2026 at 11:23 UTC</div>
+          <div class="card-meta">
+            <span class="last-checked">Checked September 19, 2026 at 19:46 UTC</span>
+          </div>
+        </a>
+        <button type="button" class="track" data-track="minecraft" aria-pressed="false" hidden>
+          <span class="track-mark" aria-hidden="true">☆</span>
+          <span class="track-label">Track Minecraft</span>
+        </button>
+      </div>
+
+      <div class="card-slot" data-game="cs2">
+        <a href="/cs2/last-update/" class="card" id="card-cs2" data-game="cs2" data-type="last-update"
+          data-state="live" data-next-utc="2026-09-09T22:51:08.000Z" data-precision="exact"
+          data-status="fresh" data-checked-utc="2026-09-19T19:46:01.792Z" data-unanswered="">
+          <div class="card-header">
+            <h3 class="card-title">Counter-Strike 2</h3>
+            <span class="badge badge-live">LIVE</span>
+          </div>
+          <div class="card-topic">Last update</div>
+          <div class="card-countdown is-text">September 9, 2026 at 22:51 UTC</div>
+          <div class="card-meta">
+            <span class="last-checked">Checked September 19, 2026 at 19:46 UTC</span>
+          </div>
+        </a>
+        <button type="button" class="track" data-track="cs2" aria-pressed="false" hidden>
+          <span class="track-mark" aria-hidden="true">☆</span>
+          <span class="track-label">Track Counter-Strike 2</span>
+        </button>
+      </div>
+
+      <div class="card-slot" data-game="pubg">
+        <a href="/pubg/last-patch/" class="card" id="card-pubg" data-game="pubg" data-type="last-patch"
+          data-state="live" data-next-utc="2026-09-09T06:00:17.000Z" data-precision="exact"
+          data-status="fresh" data-checked-utc="2026-09-19T19:46:03.649Z" data-unanswered="">
+          <div class="card-header">
+            <h3 class="card-title">PUBG</h3>
+            <span class="badge badge-live">LIVE</span>
+          </div>
+          <div class="card-topic">Last patch</div>
+          <div class="card-countdown is-text">September 9, 2026 at 06:00 UTC</div>
+          <div class="card-meta">
+            <span class="last-checked">Checked September 19, 2026 at 19:46 UTC</span>
+          </div>
+        </a>
+        <button type="button" class="track" data-track="pubg" aria-pressed="false" hidden>
+          <span class="track-mark" aria-hidden="true">☆</span>
+          <span class="track-label">Track PUBG</span>
+        </button>
+      </div>
+
+      <div class="card-slot" data-game="valorant">
+        <a href="/valorant/last-patch/" class="card" id="card-valorant" data-game="valorant" data-type="last-patch"
+          data-state="live" data-next-utc="2026-09-01T13:00:00.000Z" data-precision="exact"
+          data-status="fresh" data-checked-utc="2026-09-19T19:46:01.468Z" data-unanswered="">
+          <div class="card-header">
+            <h3 class="card-title">VALORANT</h3>
+            <span class="badge badge-live">LIVE</span>
+          </div>
+          <div class="card-topic">Last patch</div>
+          <div class="card-countdown is-text">September 1, 2026 at 13:00 UTC</div>
+          <div class="card-meta">
+            <span class="last-checked">Checked September 19, 2026 at 19:46 UTC</span>
+          </div>
+        </a>
+        <button type="button" class="track" data-track="valorant" aria-pressed="false" hidden>
+          <span class="track-mark" aria-hidden="true">☆</span>
+          <span class="track-label">Track VALORANT</span>
+        </button>
+      </div>
+
+      <div class="card-slot" data-game="red-dead-redemption-2">
+        <a href="/red-dead-redemption-2/last-update/" class="card" id="card-red-dead-redemption-2" data-game="red-dead-redemption-2" data-type="last-update"
+          data-state="live" data-next-utc="2026-09-01T00:00:00.000Z" data-precision=""
+          data-status="fresh" data-checked-utc="2026-09-19T19:46:07.214Z" data-unanswered="">
+          <div class="card-header">
+            <h3 class="card-title">Red Dead Redemption 2</h3>
+            <span class="badge badge-live">LIVE</span>
+          </div>
+          <div class="card-topic">Last update</div>
+          <div class="card-countdown is-text">September 1, 2026</div>
+          <div class="card-meta">
+            <span class="last-checked">Checked September 19, 2026 at 19:46 UTC</span>
+          </div>
+        </a>
+        <button type="button" class="track" data-track="red-dead-redemption-2" aria-pressed="false" hidden>
+          <span class="track-mark" aria-hidden="true">☆</span>
+          <span class="track-label">Track Red Dead Redemption 2</span>
+        </button>
+      </div>
+
+      <div class="card-slot" data-game="roblox">
+        <a href="/roblox/status/" class="card" id="card-roblox" data-game="roblox" data-type="status"
+          data-state="live" data-next-utc="2026-08-07T04:48:28.252Z" data-precision="exact"
+          data-status="fresh" data-checked-utc="2026-09-19T19:46:02.181Z" data-unanswered="">
+          <div class="card-header">
+            <h3 class="card-title">Roblox</h3>
+            <span class="badge badge-live">LIVE</span>
+          </div>
+          <div class="card-topic">Service status</div>
+          <div class="card-countdown is-text">August 7, 2026 at 04:48 UTC</div>
+          <div class="card-meta">
+            <span class="last-checked">Checked September 19, 2026 at 19:46 UTC</span>
+          </div>
+        </a>
+        <button type="button" class="track" data-track="roblox" aria-pressed="false" hidden>
+          <span class="track-mark" aria-hidden="true">☆</span>
+          <span class="track-label">Track Roblox</span>
+        </button>
+      </div>
+
+      <div class="card-slot" data-game="ea-sports-fc">
+        <a href="/ea-sports-fc/last-title-update/" class="card" id="card-ea-sports-fc" data-game="ea-sports-fc" data-type="last-title-update"
+          data-state="live" data-next-utc="2026-07-22T14:00:01.000Z" data-precision="exact"
+          data-status="fresh" data-checked-utc="2026-09-19T19:46:07.248Z" data-unanswered="">
+          <div class="card-header">
+            <h3 class="card-title">EA SPORTS FC</h3>
+            <span class="badge badge-live">LIVE</span>
+          </div>
+          <div class="card-topic">Last title update</div>
+          <div class="card-countdown is-text">July 22, 2026 at 14:00 UTC</div>
+          <div class="card-meta">
+            <span class="last-checked">Checked September 19, 2026 at 19:46 UTC</span>
+          </div>
+        </a>
+        <button type="button" class="track" data-track="ea-sports-fc" aria-pressed="false" hidden>
+          <span class="track-mark" aria-hidden="true">☆</span>
+          <span class="track-label">Track EA SPORTS FC</span>
+        </button>
+      </div>
+
+      <h2 class="group-heading" data-group="unknown">Waiting on an official source</h2>
+
+      <div class="card-slot" data-game="fortnite">
+        <a href="/fortnite/next-season/" class="card" id="card-fortnite" data-game="fortnite" data-type="next-season"
+          data-state="unavailable" data-next-utc="2026-06-06T00:00:00.000Z" data-precision=""
+          data-status="stale" data-checked-utc="2026-09-19T19:46:00.595Z" data-unanswered="1">
+          <div class="card-header">
+            <h3 class="card-title">Fortnite</h3>
+            <span class="badge badge-unavailable">NO DATE</span>
+          </div>
+          <div class="card-topic">Season end</div>
+          <div class="card-countdown is-text">No official date announced</div>
+          <div class="card-meta">
+            <span class="last-checked">Checked September 19, 2026 at 19:46 UTC</span>
+          </div>
+        </a>
+        <button type="button" class="track" data-track="fortnite" aria-pressed="false" hidden>
+          <span class="track-mark" aria-hidden="true">☆</span>
+          <span class="track-label">Track Fortnite</span>
+        </button>
+      </div>
+      </div>
+    </section>
+
+
+
+
+    <!-- What the site is, in the demo's three lines. -->
+    <section class="features" aria-label="What NextReset offers">
+      <div class="feature"><b aria-hidden="true">◎</b><div><b>Verified data</b><br><span>Official-source facts</span></div></div>
+      <div class="feature"><b aria-hidden="true">☆</b><div><b>My Games</b><br><span>No account required</span></div></div>
+      <div class="feature"><b aria-hidden="true">⚡</b><div><b>Arcade</b><br><span>Play while you wait</span></div></div>
+    </section>
+
+    <!-- Content Sections -->
+    <div class="content-sections">
+
+      <div class="content-section">
+        <h2>What is NextReset?</h2>
+        <p>
+          NextReset is a free, automated tracker that monitors official game publisher sources to show you exactly when your favorite games reset, update, or patch. Unlike community predictions or Reddit rumors, every date on NextReset comes directly from official sources — patch schedules, publisher APIs, and official announcements.
+        </p>
+        <p>
+          We currently track 12 of the most popular games including Fortnite, League of Legends, VALORANT, Counter-Strike 2, Minecraft, Roblox, GTA Online, Warzone, Genshin Impact, PUBG, Red Dead Redemption 2, and EA SPORTS FC. Each game has a dedicated page with a live countdown, source attribution, and confidence rating.
+        </p>
+      </div>
+
+      <div class="content-section">
+        <h2>How It Works</h2>
+        <div class="how-steps">
+          <div class="how-step">
+            <div class="how-icon" aria-hidden="true">🔍</div>
+            <div class="how-title">Monitor</div>
+            <p>Our system checks official game publisher pages several times a day — patch schedules, news feeds, and status APIs.</p>
+          </div>
+          <div class="how-step">
+            <div class="how-icon" aria-hidden="true">✅</div>
+            <div class="how-title">Verify</div>
+            <p>Extracted dates are validated against known patterns and sanity-checked to prevent false data from reaching you.</p>
+          </div>
+          <div class="how-step">
+            <div class="how-icon" aria-hidden="true">⏱️</div>
+            <div class="how-title">Display</div>
+            <p>Live countdowns update in real-time on your screen. If a source becomes unavailable, cached data is shown instead.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-section">
+        <h2>Why Trust NextReset?</h2>
+        <p>
+          Every piece of data on NextReset comes from official sources. We never guess, predict, or speculate about upcoming dates. If a game publisher hasn't announced a date, we show "Data Unavailable" instead of making something up. Each tracker shows its source URL, confidence level, and when it was last checked so you can verify the data yourself.
+        </p>
+        <p>
+          Our system is designed to fail gracefully. If a publisher's website goes down or blocks our checks, we preserve the last known good data instead of showing errors. You'll see a "Stale" badge when this happens, so you always know the freshness of what you're looking at.
+        </p>
+      </div>
+
+      <div class="content-section">
+        <h2>Games We Track</h2>
+        <p>
+          NextReset currently monitors the following games and events:
+        </p>
+        <ul class="games-list">
+          <li><a href="/fortnite/next-season/">Fortnite</a> — Season end date from the official Battle Pass page</li>
+          <li><a href="/lol/next-patch/">League of Legends</a> — Next patch from Riot's official schedule</li>
+          <li><a href="/valorant/last-patch/">VALORANT</a> — Latest patch from official game updates</li>
+          <li><a href="/cs2/last-update/">Counter-Strike 2</a> — Latest update from Valve's official page</li>
+          <li><a href="/minecraft/last-release/">Minecraft</a> — Latest release from Mojang's changelog</li>
+          <li><a href="/roblox/status/">Roblox</a> — Platform service status from official API</li>
+          <li><a href="/gta/weekly-reset/">GTA Online</a> — Weekly reset countdown (Thursdays 10:00 UTC)</li>
+          <li><a href="/warzone/last-patch/">Warzone</a> — Latest patch from CoD patch notes</li>
+          <li><a href="/genshin/next-banner/">Genshin Impact</a> — Banner end date from HoYoverse news</li>
+          <li><a href="/pubg/last-patch/">PUBG</a> — Latest patch from official patch notes</li>
+          <li><a href="/red-dead-redemption-2/last-update/">Red Dead Redemption 2</a> — Latest news from Rockstar Newswire</li>
+          <li><a href="/ea-sports-fc/last-title-update/">EA SPORTS FC</a> — Latest title update from EA Forums</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <div class="footer-row">
+        <b class="footer-mark">NEXT//RESET</b>
+        <span class="footer-line">Know what's next. Play while you wait.</span>
+        <span class="footer-links"><a href="/about/">About</a> · <a href="/privacy/">Privacy Policy</a> · <a href="/play/">Arcade</a> · © 2026</span>
+      </div>
+      <p class="footer-fine">Checked automatically several times a day against official sources. Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
+    </footer>
+  </div>
+
+  <!-- Fallback for users with JavaScript disabled -->
+  <noscript>
+    <div class="noscript-note">
+      Every value below is in this page already. JavaScript only turns the dates into live countdowns.
+    </div>
+  </noscript>
+
+  <!-- Global error handlers - catch crashes before they blank the page -->
+  <script>
+    window.onerror = function (msg, url, line, col, error) {
+      console.error('[NextReset] Uncaught error:', msg, 'at', url, line);
+      if (typeof gtag === 'function') {
+        gtag('event', 'exception', { description: String(msg).slice(0, 100), fatal: false });
+      }
+      return false;
+    };
+    window.addEventListener('unhandledrejection', function (event) {
+      console.error('[NextReset] Unhandled promise rejection:', event.reason);
+      if (typeof gtag === 'function') {
+        gtag('event', 'exception', { description: 'Promise: ' + String(event.reason).slice(0, 100), fatal: false });
+      }
+    });
+  </script>
+
+  <!-- Local player state. Loaded before app.js, which will read it; on its own it only migrates the
+       prototype's keys into nextreset.player.v1 so nothing is lost before the UI asks for it. -->
+  <script src="/assets/player.js?v=7f8ff0b2" defer></script>
+  <script src="/assets/app.js?v=a8212383" defer></script>
+</body>
+
+</html>

@@ -1,0 +1,16 @@
+{
+  "provider_id": "warzone",
+  "game": "warzone",
+  "type": "last-patch",
+  "title": "Call of Duty Warzone Last Patch",
+  "status": "fresh",
+  "nextEventUtc": "2026-09-16T00:00:00.000Z",
+  "fetched_at_utc": "2026-09-19T19:46:02.290Z",
+  "last_success_at_utc": "2026-09-19T19:46:02.290Z",
+  "source_url": "https://www.callofduty.com/patchnotes/2026/09/call-of-duty-bo7-warzone-season-06-patch-notes",
+  "confidence": "high",
+  "http_status": 304,
+  "fetch_mode": "http",
+  "notes": "Call of Duty: Warzone Season 06 Patch Notes",
+  "precision": "day"
+}

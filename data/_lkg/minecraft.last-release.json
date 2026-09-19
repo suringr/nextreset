@@ -1,0 +1,16 @@
+{
+  "provider_id": "minecraft",
+  "game": "minecraft",
+  "type": "last-release",
+  "title": "Minecraft Last Release",
+  "status": "fresh",
+  "nextEventUtc": "2026-09-15T11:23:02.000Z",
+  "fetched_at_utc": "2026-09-19T19:46:02.087Z",
+  "last_success_at_utc": "2026-09-19T19:46:02.087Z",
+  "source_url": "https://feedback.minecraft.net/hc/en-us/sections/360001186971-Release-Changelogs",
+  "confidence": "high",
+  "http_status": 304,
+  "fetch_mode": "http",
+  "notes": "Java Edition 26.3",
+  "precision": "exact"
+}
