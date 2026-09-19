@@ -17,7 +17,7 @@
 
   <!-- CRITICAL: Inline CSS for guaranteed first paint -->
   <style>
-    :root{--ground:#050812;--ground-2:#0a1020;--surface:#0b1325;--surface-2:#101a31;--line:#26395f;--line-soft:#1b2a47;--ink:#f5f7ff;--ink-muted:#aab7cf;--ink-faint:#93a2be;--brand:#8b5cf6;--brand-bright:#b69dff;--state-verified:#34d399;--state-stale:#fbbf24;--state-unavailable:#9fb0c9;--brand-soft:rgba(139, 92, 246, .15);--brand-line:rgba(139, 92, 246, .38);--verified-soft:rgba(52, 211, 153, .14);--verified-line:rgba(52, 211, 153, .32);--stale-soft:rgba(251, 191, 36, .14);--stale-line:rgba(251, 191, 36, .34);--unavailable-soft:rgba(159, 176, 201, .13);--unavailable-line:rgba(159, 176, 201, .30);--sheen:rgba(255, 255, 255, .035);--scrim:rgba(3, 6, 17, .72);--radius:14px;--radius-sm:10px;--radius-pill:999px;--shadow:0 10px 30px rgba(0, 0, 0, .45);--shadow-lift:0 16px 40px rgba(0, 0, 0, .55);--font:system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;--font-num:ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;--size-display:clamp(34px, 9vw, 54px);--size-h1:clamp(27px, 6vw, 40px);--size-h2:clamp(19px, 3.2vw, 23px);--size-lead:clamp(15px, 2.2vw, 17px);--size-body:15px;--size-small:13px;--size-label:11px;--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;--sp-7:48px;--gutter:16px;--measure:68ch;--tap:44px}*{box-sizing:border-box}body{margin:0;background-color:var(--ground);color:var(--ink);font-family:var(--font);font-size:var(--size-body);line-height:1.55;min-height:100vh;-webkit-text-size-adjust:100%}.container{width:100%;max-width:1040px;margin:0 auto;padding-inline:var(--gutter);padding-block:var(--sp-5)}a{color:inherit;text-decoration:none}h1,h2,h3{line-height:1.15;margin:0;text-wrap:balance}.chrome{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-1) var(--sp-3);margin-bottom:var(--sp-4)}.chrome-brand{display:inline-flex;align-items:center;gap:var(--sp-2);min-height:var(--tap);font-weight:800;font-size:19px;letter-spacing:-.01em}.dot{width:9px;height:9px;border-radius:50%;background:var(--brand);flex:none}.chrome-nav{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2);margin-right:auto;font-size:var(--size-small);font-weight:700}.chrome-nav a{display:inline-flex;align-items:center;justify-content:center;min-height:var(--tap);min-width:var(--tap);padding-inline:var(--sp-2);color:var(--ink-muted)}.chrome-nav a[aria-current]{color:var(--brand-bright)}.chrome-player{margin:0 0 0 auto;padding:3px 9px;border:1px solid var(--brand-line);border-radius:var(--radius-pill);background:var(--brand-soft);color:var(--brand-bright);font-family:var(--font-num);font-size:11px;font-weight:700;white-space:nowrap}.chrome-player[hidden]{display:none}.trust-badges{display:none;gap:var(--sp-2)}.trust-badge{font-size:var(--size-label);color:var(--ink-faint);padding:4px 10px;border:1px solid var(--line-soft);border-radius:var(--radius-pill);text-transform:uppercase;letter-spacing:.06em;font-weight:700}@media(min-width:768px){.trust-badges{display:flex}}.game-page{max-width:var(--measure);margin:0 auto}.breadcrumbs{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2);color:var(--ink-faint);font-size:var(--size-small);font-weight:600;margin-bottom:var(--sp-5)}.breadcrumbs a,.breadcrumbs [aria-current="page"]{display:inline-flex;align-items:center;min-height:var(--tap)}.game-header{margin-bottom:var(--sp-5)}.game-title{font-size:var(--size-h1);font-weight:900;letter-spacing:-.02em;margin:0 0 var(--sp-3)}.game-meta{display:flex;gap:var(--sp-3);flex-wrap:wrap;color:var(--ink-faint);font-size:var(--size-small)}.kicker{font-size:var(--size-label);letter-spacing:.14em;text-transform:uppercase;font-weight:800}.countdown-box{background:linear-gradient(180deg,var(--sheen),transparent 70%),var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:var(--sp-6) var(--sp-4);text-align:center;margin:var(--sp-6) 0}.countdown-label{color:var(--ink-faint);font-size:var(--size-label);letter-spacing:.14em;text-transform:uppercase;font-weight:800;margin-bottom:var(--sp-4)}.countdown-value{font-family:var(--font-num);font-size:var(--size-display);font-weight:700;letter-spacing:-.03em;color:var(--state-verified);font-variant-numeric:tabular-nums;line-height:1.08;overflow-wrap:break-word}.countdown-value.unavailable{font-family:var(--font);font-size:clamp(21px,5vw,30px);font-weight:800;color:var(--state-unavailable);letter-spacing:-.01em;line-height:1.2}.countdown-value.stale{color:var(--state-stale)}.info-panel{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);padding:var(--sp-3) var(--sp-4);margin:var(--sp-5) 0}.info-row{display:flex;justify-content:space-between;align-items:baseline;gap:var(--sp-4);padding:var(--sp-3) 0;border-bottom:1px solid var(--line-soft)}.info-row:last-child{border-bottom:none}.info-label{color:var(--ink-faint);font-size:var(--size-label);text-transform:uppercase;letter-spacing:.1em;font-weight:700;flex:none}.info-value{font-weight:700;color:var(--ink);text-align:right;overflow-wrap:anywhere}.content-section{margin:var(--sp-6) 0}.content-section h2{font-size:var(--size-h2);font-weight:800;margin:0 0 var(--sp-3)}.content-section p{color:var(--ink-muted);margin:0 0 var(--sp-4)}@media(min-width:768px){.countdown-box{padding:var(--sp-7) var(--sp-6)}}
+    :root{--ground:#050812;--surface:#0b1325;--surface-2:#101a31;--line:#26395f;--ink:#f5f7ff;--ink-muted:#91a1bd;--nav-ink:#c2cce0;--eyebrow:#c2adff;--hero-sub:#b6c2d8;--meta:#aebbd0;--link:#78c3ff;--footer-ink:#8f9db6;--brand:#8b5cf6;--brand-bright:#b69dff;--state-verified:#34d399;--state-stale:#fbbf24;--state-unavailable:#9fb0c9;--bar:#050812e8;--bar-line:#17243c;--control:#0b1427;--control-line:#31466f;--cta-from:#8b3dff;--cta-to:#4c61f6;--hero-veil-from:#07101ff5;--hero-veil-to:#07101fb8;--hero-glow:#315cad;--hero-mid:#111a3a;--hero-deep:#080d18;--tile:#070d19d9;--tile-line:#2d426c;--tile-ink:#bea5ff;--tile-label:#67c9ff;--card-foot:#09111f;--star:#0a1223;--star-line:#354b76;--star-on:#ffd25c;--deep-from:#0d1730;--arcade-to:#080e1b;--arcade-line:#3a3c76;--arcade-glow:#6633aa55;--stat:#091222;--stat-line:#2b3d62;--rule:#182740;--rule-soft:#17243b;--tracker-to:#08101e;--rail:#283d63;--dot:#536784;--row-line:#203455;--arc-from:#111630;--arc-to:#09101e;--glow-blue:#19366b66;--glow-violet:#37145344;--r-hero:16px;--r-panel:15px;--r-strip:13px;--r-card:12px;--r-control:10px;--r-tile:9px;--r-star:8px;--font:system-ui, -apple-system, Segoe UI, sans-serif;--size-small:13px;--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--gutter:9px;--measure:68ch;--tap:44px}*{box-sizing:border-box}a{color:inherit;text-decoration:none}h1,h2,h3{margin:0;text-wrap:balance}.chrome-brand{display:inline-flex;align-items:center;min-height:var(--tap);font-weight:950;font-size:20px;letter-spacing:-1px;line-height:1.45;white-space:nowrap}.chrome-brand i{font-style:normal;color:var(--brand)}.chrome-nav{position:static;inset:auto;width:auto;height:auto;margin:0;padding:0;overflow:visible;border:0;background:none;display:flex;gap:18px;color:var(--nav-ink);font-size:15px}.chrome-nav a{display:inline-flex;align-items:center;min-height:var(--tap);padding-inline:4px;margin-inline:-4px}.chrome-player{margin:0;padding:8px 10px;border:1px solid var(--control-line);border-radius:var(--r-control);background:var(--control);color:var(--ink);font-size:12px;line-height:1.45;white-space:nowrap}.chrome-player::before{content:"⚡ ";content:"⚡ " / ""}.chrome-player[hidden]{display:none}.chrome-menu{display:none}@supports selector(:popover-open){.chrome-menu{position:relative;z-index:1;display:inline-flex;flex:none;align-items:center;justify-content:center;width:var(--tap);height:var(--tap);margin:0 -4px 0 -12px;padding:0;border:0;background:none;color:var(--ink);cursor:pointer}.chrome-menu::before{content:"";position:absolute;inset:4px;z-index:-1;border:1px solid var(--control-line);border-radius:var(--r-control);background:var(--control)}.chrome-nav:not(:popover-open){display:none}}.chrome-menu-icon,.chrome-menu-icon::before,.chrome-menu-icon::after{display:block;width:16px;height:2px;border-radius:1px;background:currentColor}.chrome-menu-icon{position:relative}.chrome-menu-icon::before,.chrome-menu-icon::after{content:"";position:absolute;left:0}.chrome-menu-icon::before{top:-5px}.chrome-menu-icon::after{top:5px}.chrome-nav:popover-open{position:fixed;inset:69px 9px auto auto;min-width:190px;padding:6px;flex-direction:column;gap:2px;border:1px solid var(--control-line);border-radius:var(--r-control);background:var(--surface)}.chrome-nav:popover-open a{margin:0;padding:0 12px;border-radius:var(--r-star)}.chrome-nav:popover-open a:hover{background:var(--control)}@media(min-width:701px){.chrome-menu{display:none}.chrome-nav:not(:popover-open){display:flex}.chrome-nav:popover-open{position:static;min-width:0;padding:0;flex-direction:row;gap:18px;border:0;background:none}.chrome-nav:popover-open a{padding:0 4px;margin:0 -4px}.chrome-player{padding:10px 13px;font-size:15px}}html{scroll-behavior:smooth}body{margin:0;min-height:100vh;background-color:var(--ground);background-image:radial-gradient(circle at 75% 0,var(--glow-blue),transparent 28%),radial-gradient(circle at 10% 22%,var(--glow-violet),transparent 24%);background-size:100% 1616px;background-repeat:no-repeat;color:var(--ink);font:15px/1.45 var(--font);-webkit-text-size-adjust:100%}button{font:inherit;color:inherit}.wrap{width:min(calc(100% - 18px),620px);margin-inline:auto}.container{width:100%;max-width:calc(620px + 2 * var(--gutter));margin:0 auto;padding-inline:var(--gutter);padding-block:0}.top{position:sticky;top:0;z-index:20;background:var(--bar);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--bar-line)}.nav{min-height:62px;display:flex;flex-wrap:wrap;align-items:center;gap:0 18px}.nav .chrome-brand{margin-right:auto}@media(min-width:701px){:root{--gutter:12px}.wrap{width:min(1160px,calc(100% - 24px))}.container{max-width:calc(1160px + 2 * var(--gutter))}body{background-size:100% 1262px}}.tracker-hero{margin-top:12px;padding:20px;border:1px solid var(--line);border-radius:var(--r-panel);background:linear-gradient(135deg,var(--deep-from),var(--tracker-to))}.game-title{margin:7px 0;font-size:30px;font-weight:700;text-transform:uppercase}.countdown-box{display:flex;flex-direction:column;margin:0}.countdown-value{order:1;margin:12px 0;font-size:31px;font-weight:950;text-transform:uppercase;font-variant-numeric:tabular-nums;overflow-wrap:break-word}.countdown-label{order:2;color:var(--ink-muted)}
   </style>
 
   <link rel="stylesheet" href="/assets/styles.v2.css">
@@ -86,28 +86,38 @@
     </script>
 </head>
 <body>
-  <div class="container">
-    <header class="chrome">
-      <a class="chrome-brand" href="/"><span class="dot" aria-hidden="true"></span>NextReset</a>
-      <nav class="chrome-nav" aria-label="Site">
+  <header class="chrome top">
+    <div class="wrap nav">
+      <a class="chrome-brand" href="/" aria-label="NextReset">NEXT<i>//</i>RESET</a>
+      <nav class="chrome-nav" id="site-nav" aria-label="Site" popover>
         <a href="/#all-games" aria-current="true">Trackers</a>
         <a href="/play/">Arcade</a>
         <a href="/about/">About</a>
       </nav>
       <p class="chrome-player" id="chrome-player" hidden></p>
-    </header>
+      <button type="button" class="chrome-menu" popovertarget="site-nav" aria-label="Menu"><span class="chrome-menu-icon" aria-hidden="true"></span></button>
+    </div>
+  </header>
+
+  <div class="container">
     <div class="game-page">
-      <nav class="breadcrumbs" aria-label="Breadcrumb">
+      <!-- The demo's tracker hero: where the page sits, its heading, and the answer, in one card. The
+           answer comes straight after the heading: this page exists to answer one question. -->
+      <section class="tracker-hero">
+        <div class="hero-eyebrow">
+          <nav class="breadcrumbs" aria-label="Breadcrumb">
         <a href="/">Home</a>
         <span class="crumb-sep" aria-hidden="true">›</span>
         <span aria-current="page">Counter-Strike 2: Last Update</span>
       </nav>
-
-      <!-- Game Header -->
-      <div class="game-header">
+          <div class="game-meta">
+            <span class="kicker">Tactical Shooter</span>
+          </div>
+        </div>
         <h1 class="game-title" id="event-title">Counter-Strike 2 Last Update</h1>
-        <div class="game-meta">
-          <span class="kicker">Tactical Shooter</span>
+        <div class="countdown-box" id="countdown">
+          <div class="countdown-label" data-nr-slot="answer-label">Checking official sources...</div>
+          <div class="countdown-value countdown-skeleton" data-nr-slot="answer-value">--:--:--</div>
         </div>
         <!-- Tracking, from the page a search result actually lands on. A sibling of the heading, never
              inside a link, and shipped hidden because without JavaScript it would do nothing. What it
@@ -117,15 +127,12 @@
           <span class="track-label">Track</span>
           <span class="visually-hidden">&nbsp;Counter-Strike 2</span>
         </button>
-      </div>
+      </section>
 
-      <!-- The answer. It comes straight after the heading now: this page exists to answer one
-           question, and it used to open with a paragraph about how the tracker works. -->
-      <div class="countdown-box" id="countdown">
-        <div class="countdown-label" data-nr-slot="answer-label">Checking official sources...</div>
-        <div class="countdown-value countdown-skeleton" data-nr-slot="answer-value">--:--:--</div>
-      </div>
-
+      <!-- The demo's two columns: what the source has published, and how we know it. In the document
+           the evidence comes first, straight after the answer it supports; the demo's columns put the
+           published data on the left, and the stylesheet places them so. -->
+      <div class="layout">
       <!-- How we know: the source, how sure the pipeline is, and the two times that are not the same
            question — when the source last confirmed the value, and when we last tried. -->
       <section class="evidence">
@@ -151,12 +158,17 @@
 
       <!-- Verified data, rendered at build time from the knowledge store -->
       <div id="verified-data" data-nr-slot="verified-data"></div>
+      </div>
 
-      <!-- While you wait. One line and one link: this page exists to answer a question, and the
+      <!-- While you wait: the demo's arcade strip. This page exists to answer a question, and the
            arcade is what there is to do once it has. -->
-      <aside class="waiting">
-        <p><strong>While you wait.</strong> ONE SHOT // 80 CONTRACTS is a sniper arcade game that lives on this site.</p>
-        <a class="btn" href="/play/">Open the arcade</a>
+      <aside class="arc">
+        <div>
+          <p class="eyebrow">NEXT//RESET Arcade</p>
+          <p><strong>While you wait.</strong></p>
+          <p class="arc-line">ONE SHOT // 80 CONTRACTS is a sniper arcade game that lives on this site.</p>
+        </div>
+        <a class="btn btn-primary" href="/play/">Play<span class="visually-hidden"> ONE SHOT</span></a>
       </aside>
 
       <!-- About -->
@@ -224,9 +236,12 @@
         <a href="/red-dead-redemption-2/last-update/">Red Dead Redemption 2 — last update</a>
         <a href="/ea-sports-fc/last-title-update/">EA SPORTS FC — last title update</a>
       </nav>
-      <p>Checked automatically several times a day against official sources.</p>
-      <p>Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
-      <p><a href="/about/">About</a> · <a href="/privacy/">Privacy Policy</a> · <a href="/play/">Arcade</a></p>
+      <div class="footer-row">
+        <b class="footer-mark">NEXT//RESET</b>
+        <span class="footer-line">Know what's next. Play while you wait.</span>
+        <span class="footer-links"><a href="/about/">About</a> · <a href="/privacy/">Privacy Policy</a> · <a href="/play/">Arcade</a> · © 2026</span>
+      </div>
+      <p class="footer-fine">Checked automatically several times a day against official sources. Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
     </footer>
   </div>
 

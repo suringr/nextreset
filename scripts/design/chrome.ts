@@ -1,19 +1,22 @@
 /**
- * The header every page shares, written once.
+ * The header every page shares, and the footer row under every page but the game — written once.
  *
- * Before this there was no shared chrome at all. The homepage carried a `.topbar` with a wordmark and
- * two badges; the other sixteen pages carried a breadcrumb and nothing else. So a visitor who landed on
- * a tracker page from a search result had no way to reach any other part of the site except the
- * footer — and no way to learn the arcade existed at all, because the only real link to it was one card
- * on a page they had never seen.
+ * Before the header there was no shared chrome at all. The homepage carried a `.topbar` with a wordmark
+ * and two badges; the other sixteen pages carried a breadcrumb and nothing else. So a visitor who landed
+ * on a tracker page from a search result had no way to reach any other part of the site except the
+ * footer — and no way to learn the arcade existed at all.
  *
- * One function builds it and one applier writes it into every page, so the header cannot drift between
- * page kinds the way the critical CSS did before `tokens.ts`.
+ * Its look is the approved demo's: a full-width sticky bar, the NEXT//RESET wordmark, the links, and the
+ * player chip as a pill. It sits outside the page's column, as the demo's does, so the bar can run the
+ * full width of the window while its contents keep the column's edges.
+ *
+ * On a phone the demo hides the links and offers nothing in their place. That is the one deliberate
+ * departure from it: the links stay reachable through a small menu button, a native popover that needs
+ * no script. Desktop is the demo's, unchanged.
  *
  * What it deliberately does NOT do: repeat the tracker list. Every page but /play/ already ends with a
- * `nav.footer-nav` naming all twelve trackers. A header that repeated them would double this site's
- * internal linking to say nothing new, so the header carries one link to the grid instead — which is
- * also how /play/, a full-screen game with no footer, reaches every tracker in one tap.
+ * `nav.footer-nav` naming all twelve trackers, so the header carries one link to the grid instead —
+ * which is also how /play/, a full-screen game with no footer, reaches every tracker in one tap.
  */
 import { PageKind, pageKind } from "./tokens";
 import { ONE_SHOT_NAME } from "./one-shot";
@@ -42,11 +45,15 @@ export const NAV: ReadonlyArray<NavItem> = [
 /** The id the player chip is found by. Named here because two files have to agree on it. */
 export const PLAYER_CHIP_ID = "chrome-player";
 
+/** The id the phone's menu button opens. Named here because the button and the nav have to agree on it. */
+export const SITE_NAV_ID = "site-nav";
+
+/** The site's name, which the wordmark draws as NEXT//RESET and a screen reader hears as a word. */
+export const SITE_NAME = "NextReset";
+
 export interface ChromeOptions {
     /** The nav item this page belongs to, or "none" where it belongs to no section. */
     section: ChromeSection;
-    /** The two claims about the site. The homepage only: it is the one page that is a front door. */
-    badges?: boolean;
     /** The page's h1, where the header is the only place it can sit. See `chromeTitleOf`. */
     title?: string;
     /** Indentation for the element's own line. */
@@ -99,30 +106,49 @@ function escapeHtml(value: string): string {
 
 /** The shared header, as HTML. */
 export function chromeHtml(options: ChromeOptions): string {
-    const indent = options.indent ?? "    ";
+    const indent = options.indent ?? "  ";
     const eol = options.eol ?? "\n";
     const pad = (depth: number) => indent + "  ".repeat(depth);
 
     const home = options.section === "home" ? ' aria-current="page"' : "";
     const lines: string[] = [];
-    lines.push(`${indent}<header class="chrome">`);
-    lines.push(`${pad(1)}<a class="chrome-brand" href="/"${home}><span class="dot" aria-hidden="true"></span>NextReset</a>`);
-    if (options.title) lines.push(`${pad(1)}<h1 class="chrome-title">${escapeHtml(options.title)}</h1>`);
-    lines.push(`${pad(1)}<nav class="chrome-nav" aria-label="Site">`);
+    lines.push(`${indent}<header class="chrome top">`);
+    lines.push(`${pad(1)}<div class="wrap nav">`);
+    lines.push(`${pad(2)}<a class="chrome-brand" href="/" aria-label="${SITE_NAME}"${home}>NEXT<i>//</i>RESET</a>`);
+    if (options.title) lines.push(`${pad(2)}<h1 class="chrome-title">${escapeHtml(options.title)}</h1>`);
+    lines.push(`${pad(2)}<nav class="chrome-nav" id="${SITE_NAV_ID}" aria-label="Site" popover>`);
     for (const item of NAV) {
-        lines.push(`${pad(2)}<a href="${item.href}"${currentAttribute(item, options.section)}>${item.label}</a>`);
+        lines.push(`${pad(3)}<a href="${item.href}"${currentAttribute(item, options.section)}>${item.label}</a>`);
     }
-    lines.push(`${pad(1)}</nav>`);
-    if (options.badges) {
-        lines.push(`${pad(1)}<div class="trust-badges">`);
-        lines.push(`${pad(2)}<span class="trust-badge">Official sources only</span>`);
-        lines.push(`${pad(2)}<span class="trust-badge">Honest data</span>`);
-        lines.push(`${pad(1)}</div>`);
-    }
+    lines.push(`${pad(2)}</nav>`);
     // Empty and hidden in the served HTML, and filled by player.js where there is something to say.
     // A crawler, and a visitor who has never played, must be told nothing about a player who does not
     // exist — the same rule the track control follows.
-    lines.push(`${pad(1)}<p class="chrome-player" id="${PLAYER_CHIP_ID}" hidden></p>`);
+    lines.push(`${pad(2)}<p class="chrome-player" id="${PLAYER_CHIP_ID}" hidden></p>`);
+    lines.push(`${pad(2)}<button type="button" class="chrome-menu" popovertarget="${SITE_NAV_ID}" aria-label="Menu"><span class="chrome-menu-icon" aria-hidden="true"></span></button>`);
+    lines.push(`${pad(1)}</div>`);
     lines.push(`${indent}</header>`);
     return lines.join(eol);
+}
+
+/**
+ * The demo's footer row: the wordmark, the line, and the site's links — the same on every page that has
+ * a footer, which is every page but the full-screen game.
+ *
+ * The two sentences the footer already carried — how often the sources are checked, and that the site is
+ * not affiliated with any publisher — stay beneath it: the demo has no place for them, and they are not
+ * the kind of thing a redesign gets to drop.
+ */
+export const FOOTER_ROW = [
+    `<div class="footer-row">`,
+    `  <b class="footer-mark">NEXT//RESET</b>`,
+    `  <span class="footer-line">Know what's next. Play while you wait.</span>`,
+    `  <span class="footer-links"><a href="/about/">About</a> · <a href="/privacy/">Privacy Policy</a> · <a href="/play/">Arcade</a> · © 2026</span>`,
+    `</div>`,
+    `<p class="footer-fine">Checked automatically several times a day against official sources. Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>`
+];
+
+/** The footer row, indented for the page it goes into. */
+export function footerRowHtml(indent: string, eol = "\n"): string {
+    return FOOTER_ROW.map(line => indent + line).join(eol);
 }

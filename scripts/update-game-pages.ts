@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ADSENSE_LOADER } from './adsense';
+import { footerRowHtml } from './design/chrome';
 
 /**
  * Generate all game pages with rich content for AdSense compliance.
@@ -478,13 +479,19 @@ function generatePage(page: GamePage): string {
 <body>
   <div class="container">
     <div class="game-page">
-      ${breadcrumbHtml(page)}
-
-      <!-- Game Header -->
-      <div class="game-header">
+      <!-- The demo's tracker hero: where the page sits, its heading, and the answer, in one card. The
+           answer comes straight after the heading: this page exists to answer one question. -->
+      <section class="tracker-hero">
+        <div class="hero-eyebrow">
+          ${breadcrumbHtml(page)}
+          <div class="game-meta">
+            <span class="kicker">${page.kicker}</span>
+          </div>
+        </div>
         <h1 class="game-title" id="event-title">${page.title} ${page.typeTitle}</h1>
-        <div class="game-meta">
-          <span class="kicker">${page.kicker}</span>
+        <div class="countdown-box" id="countdown">
+          <div class="countdown-label" data-nr-slot="answer-label">Checking official sources...</div>
+          <div class="countdown-value countdown-skeleton" data-nr-slot="answer-value">--:--:--</div>
         </div>
         <!-- Tracking, from the page a search result actually lands on. A sibling of the heading, never
              inside a link, and shipped hidden because without JavaScript it would do nothing. What it
@@ -494,15 +501,12 @@ function generatePage(page: GamePage): string {
           <span class="track-label">Track</span>
           <span class="visually-hidden">&nbsp;${page.title}</span>
         </button>
-      </div>
+      </section>
 
-      <!-- The answer. It comes straight after the heading now: this page exists to answer one
-           question, and it used to open with a paragraph about how the tracker works. -->
-      <div class="countdown-box" id="countdown">
-        <div class="countdown-label" data-nr-slot="answer-label">Checking official sources...</div>
-        <div class="countdown-value countdown-skeleton" data-nr-slot="answer-value">--:--:--</div>
-      </div>
-
+      <!-- The demo's two columns: what the source has published, and how we know it. In the document
+           the evidence comes first, straight after the answer it supports; the demo's columns put the
+           published data on the left, and the stylesheet places them so. -->
+      <div class="layout">
       <!-- How we know: the source, how sure the pipeline is, and the two times that are not the same
            question — when the source last confirmed the value, and when we last tried. -->
       <section class="evidence">
@@ -528,12 +532,17 @@ function generatePage(page: GamePage): string {
 
       <!-- Verified data, rendered at build time from the knowledge store -->
       <div id="verified-data" data-nr-slot="verified-data"></div>
+      </div>
 
-      <!-- While you wait. One line and one link: this page exists to answer a question, and the
+      <!-- While you wait: the demo's arcade strip. This page exists to answer a question, and the
            arcade is what there is to do once it has. -->
-      <aside class="waiting">
-        <p><strong>While you wait.</strong> ONE SHOT // 80 CONTRACTS is a sniper arcade game that lives on this site.</p>
-        <a class="btn" href="/play/">Open the arcade</a>
+      <aside class="arc">
+        <div>
+          <p class="eyebrow">NEXT//RESET Arcade</p>
+          <p><strong>While you wait.</strong></p>
+          <p class="arc-line">ONE SHOT // 80 CONTRACTS is a sniper arcade game that lives on this site.</p>
+        </div>
+        <a class="btn btn-primary" href="/play/">Play<span class="visually-hidden"> ONE SHOT</span></a>
       </aside>
 
       <!-- About -->
@@ -572,9 +581,7 @@ function generatePage(page: GamePage): string {
 
     <footer>
       ${footerNavHtml(gamePages, page)}
-      <p>Checked automatically several times a day against official sources.</p>
-      <p>Not affiliated with any game publishers. All trademarks belong to their respective owners.</p>
-      <p><a href="/about/">About</a> · <a href="/privacy/">Privacy Policy</a> · <a href="/play/">Arcade</a></p>
+${footerRowHtml('      ')}
     </footer>
   </div>
 

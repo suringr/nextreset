@@ -7,6 +7,10 @@
  * than by matching the markup that happens to be there today, and idempotent — running it twice
  * produces the same file, so it can run after any of the page generators without them knowing about it.
  *
+ * The header sits immediately before the page's `.container`, not inside it: it is the approved demo's
+ * full-width bar, and a bar inside a centred column cannot reach the edges of the window. A header this
+ * applier finds inside the container — where it lived before the demo was ported — is moved out.
+ *
  * `chrome.test.ts` asserts every built page carries the header this produces, so a generator re-run
  * without this applier fails the build rather than quietly publishing a page with no way out of it.
  */
@@ -21,11 +25,11 @@ const PUBLIC = path.join(ROOT, "public");
 
 const PLAYER_SCRIPT = `<script src="/assets/player.js" defer></script>`;
 
-/** The one element in a page that everything visible sits inside. */
-function containerOf(html: string, page: string): ElementMatch {
+/** The one element in a page that everything visible sits inside, where the page has one. */
+function containerOf(html: string, page: string): ElementMatch | undefined {
     const found = findElements(html, (name, attributes) => name === "div" && hasClass(attributes, "container"));
-    if (found.length !== 1) {
-        throw new Error(`${page}: expected exactly one <div class="container">, found ${found.length}`);
+    if (found.length > 1) {
+        throw new Error(`${page}: expected at most one <div class="container">, found ${found.length}`);
     }
     return found[0];
 }
@@ -42,33 +46,52 @@ function topbarOf(html: string): ElementMatch | undefined {
     return findElements(html, (name, attributes) => name === "div" && hasClass(attributes, "topbar"))[0];
 }
 
+/** Removes an element together with the line it stands on, and one blank line after it if there is one. */
+function removeLines(html: string, element: ElementMatch, eol: string): string {
+    const lineStart = html.lastIndexOf("\n", element.start - 1) + 1;
+    let end = element.end;
+    if (html.startsWith(eol, end)) end += eol.length;
+    if (html.startsWith(eol, end)) end += eol.length;
+    return html.slice(0, lineStart) + html.slice(end);
+}
+
 /**
  * Puts the shared header into one page.
  *
- * Three cases, in order: replace the header this applier wrote last time; replace the homepage's old
- * topbar; otherwise insert it as the container's first child, which is where every page kind has its
- * first visible element.
+ * A page with a `.container` gets the header as that container's previous sibling, replacing one already
+ * there, and taking the place of one found inside it. A page without one — /play/, whose header is the
+ * bar above the game — has its header replaced where it stands.
  */
 export function applyChrome(html: string, page: string): string {
     const eol = html.includes("\r\n") ? "\r\n" : "\n";
     const section = sectionOf(page);
-    const badges = page === "index.html";
     const title = chromeTitleOf(page);
 
     const existing = chromeOf(html) ?? topbarOf(html);
-    if (existing) {
+    const container = containerOf(html, page);
+
+    if (!container) {
+        if (!existing) throw new Error(`${page}: no <div class="container"> and no header to replace`);
         // The document has already indented the line this element opens on, so the replacement supplies
         // indentation only for the lines it adds — which is what dropping the first line's copy does.
-        const indent = existing.indent || "    ";
-        const header = chromeHtml({ section, badges, title, indent, eol });
+        const indent = existing.indent || "  ";
+        const header = chromeHtml({ section, title, indent, eol });
         return spliceElement(html, existing, header.slice(indent.length));
     }
 
-    const container = containerOf(html, page);
-    const indent = (container.indent || "  ") + "  ";
-    const header = chromeHtml({ section, badges, title, indent, eol });
-    const openEnd = container.start + container.openTag.length;
-    return html.slice(0, openEnd) + eol + header + html.slice(openEnd);
+    if (existing && existing.end <= container.start) {
+        const indent = existing.indent || container.indent || "  ";
+        const header = chromeHtml({ section, title, indent, eol });
+        return spliceElement(html, existing, header.slice(indent.length));
+    }
+
+    // Either there is no header yet, or it is still inside the container from before the demo: take it
+    // out, then write the header in front of the container.
+    const without = existing ? removeLines(html, existing, eol) : html;
+    const target = containerOf(without, page)!;
+    const indent = target.indent || "  ";
+    const header = chromeHtml({ section, title, indent, eol });
+    return without.slice(0, target.start) + header.slice(indent.length) + eol + eol + indent + without.slice(target.start);
 }
 
 /**

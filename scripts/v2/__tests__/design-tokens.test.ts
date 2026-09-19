@@ -16,7 +16,7 @@ import assert from "node:assert/strict";
 import * as fs from "fs";
 import * as path from "path";
 import { AA_LARGE, AA_NORMAL, contrast, hueDistance, parseHex, ratio } from "../../design/contrast";
-import { TEXT_ON_SURFACE, TOKEN, TOKENS, criticalCss, pageKind, rootBlock } from "../../design/tokens";
+import { CRITICAL_PAGE_RULES, TEXT_ON_SURFACE, TOKEN, TOKENS, criticalCss, pageKind, rootBlock } from "../../design/tokens";
 import { minifyCss, tokenize } from "../../minify-css";
 import { TOKENS_END, TOKENS_START, applyCriticalCss, applyManifest, applyTokensToStylesheet, authoredPages, criticalStyleOf } from "../../update-design";
 
@@ -162,10 +162,13 @@ test("no page writes a colour into a style attribute either", () => {
     }
 });
 
-test("the wordmark's dot is the brand, and green stays the colour of a verified value", () => {
-    // Codex P2 on #47: every page spent the verified green on decoration.
-    assert.ok(!/\.dot\{[^}]*--state-verified/.test(criticalCss("home")), "the critical dot is still verified-green");
-    assert.ok(!/\.dot\s*\{[^}]*--state-verified/.test(authoredCss().replace(/\/\*[\s\S]*?\*\//g, "")), "the stylesheet's dot is still verified-green");
+test("the wordmark's accent is the brand, and green stays the colour of a verified value", () => {
+    // Codex P2 on #47: every page spent the verified green on decoration. The demo's wordmark draws its
+    // "//" in the brand violet, and nothing in the header may borrow the verified green.
+    assert.match(criticalCss("home"), /\.chrome-brand i\{[^}]*color:var\(--brand\)/);
+    const header = criticalCss("home").match(/\.chrome[^{]*\{[^}]*\}/g) ?? [];
+    assert.ok(header.length > 5, "the header's rules are in the critical CSS");
+    for (const rule of header) assert.ok(!rule.includes("--state-verified"), `the header spends the verified green: ${rule}`);
 });
 
 test("every custom property the stylesheet reads is one the token block declares", () => {
@@ -188,8 +191,10 @@ test("the cascade is mobile-first: nothing is undone at a smaller width", () => 
 });
 
 test("the side gutter is set once, and never by a shorthand that could zero it", () => {
-    const container = authoredCss().match(/\.container\s*\{[^}]*\}/)!;
+    // The page frame is inline, in every page's critical CSS, beside the header it lines up with.
+    const container = criticalCss("home").match(/\.container\s*\{[^}]*\}/)!;
     assert.ok(container, ".container is defined");
+    assert.ok(!/\.container\s*\{/.test(authoredCss()), "a second .container in the stylesheet would be a second place to set the gutter");
     assert.match(container[0], /padding-inline:\s*var\(--gutter\)/);
     assert.ok(!/\bpadding:\s/.test(container[0]), ".container must not use the padding shorthand");
     assert.match(container[0], /padding-block:/);
@@ -201,13 +206,31 @@ test("reduced motion is honoured, and every animation the site has is one it sto
     // Named rather than counted, so adding one is a decision about whether it stops, not a number to
     // bump. Every one of these is decorative: the colour and the text carry the meaning without them.
     const animations = [...css.matchAll(/@keyframes\s+([a-z-]+)/g)].map(m => m[1]).sort();
-    assert.deepEqual(animations, ["nr-pulse", "nr-skeleton"]);
+    // The demo's status is a still bullet, so the live dot no longer pulses; only the skeleton sweeps.
+    assert.deepEqual(animations, ["nr-skeleton"]);
 
     const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
     assert.match(reduced, /animation-duration:\s*\.001ms\s*!important/,
         "the blanket rule stops every animation, including any added later");
     // ONE SHOT's screen shake is drawn on its canvas, not animated here; one-shot.test.ts holds it to the
     // same preference.
+});
+
+test("every page-kind rule a page inlines is, word for word, a rule of the stylesheet", () => {
+    // The critical CSS paints the first frame and the stylesheet paints the rest; a rule that said one
+    // thing inline and another in the stylesheet would make the page change under the reader.
+    const squash = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\s+/g, " ")
+        .replace(/\s*([{};:,>])\s*/g, "$1").replace(/;\}/g, "}").replace(/@media \(/g, "@media(").trim();
+    const sheet = squash(authoredCss());
+    for (const [kind, block] of Object.entries(CRITICAL_PAGE_RULES)) {
+        // A media block is compared rule by rule: the stylesheet may hold more under the same query.
+        const flat = squash(block).replace(/@media\([^)]*\)\{((?:[^{}]*\{[^}]*\})*)\}/g, "$1");
+        const rules = flat.match(/[^{}]+\{[^}]*\}/g) ?? [];
+        assert.ok(rules.length > 3, `${kind}: expected rules to compare`);
+        for (const rule of rules) {
+            assert.ok(sheet.includes(rule), `${kind}: the stylesheet does not carry the inlined rule ${rule}`);
+        }
+    }
 });
 
 test("keyboard focus is visible", () => {

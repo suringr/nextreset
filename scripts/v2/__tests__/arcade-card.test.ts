@@ -1,15 +1,13 @@
 /**
- * The homepage's arcade card: it has to read as the game it opens.
+ * The homepage's arcade card: it has to read as the game it opens, and it is the approved demo's card.
  *
- * V4's correction round found a card that said nothing about being playable, and gave it a picture of
- * the board. The game is now ONE SHOT // 80 CONTRACTS, so the picture is ONE SHOT's street: its skyline,
- * its crowd, the courier's red case, the armed hostile's raised gun and the scope. The tests that matter
- * keep it *that* game — a picture that drifts from what it depicts teaches a player the wrong thing
- * before the first contract.
+ * V4's correction round found a card that said nothing about being playable and gave it a picture of the
+ * board. The demo — the visual source of truth since — has no picture: its arcade card is a violet-lit
+ * panel with the game's name, one line, the player's records as small tiles, and a large PLAY NOW. That
+ * is the card now, with ONE SHOT's name and words in it.
  *
- * Its colours are written as literals, unlike the rest of the site, and deliberately: they are the game's
- * colours, not the site's palette, and the rule this suite enforces is that each one is a colour
- * `one-shot.js` actually draws with.
+ * What did not change is what the card may claim. The records are shown only once a contract has been
+ * cleared — the demo shows a score of 0 to a visitor who has never played, and the site does not.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -21,58 +19,27 @@ import { ONE_SHOT_NAME } from "../../design/one-shot";
 
 const ROOT = path.join(__dirname, "..", "..", "..");
 const homepage = fs.readFileSync(path.join(ROOT, "public", "index.html"), "utf8");
-const game = fs.readFileSync(path.join(ROOT, "public", "assets", "one-shot.js"), "utf8");
 const $ = cheerio.load(homepage);
 const card = $(".arcade-card");
-const svg = card.find("svg.arcade-board");
 
-test("the card carries a picture of the game, drawn in the page rather than fetched", () => {
-    assert.equal(svg.length, 1, `expected one illustration, found ${svg.length}`);
-    assert.equal(card.find("img").length, 0, "the card fetches an image");
-    assert.equal(svg.find("image").length, 0, "the illustration embeds a bitmap");
-    assert.equal(svg.find("script").length, 0, "the illustration carries script");
-    // Nothing in it may reach the network: an external reference in an SVG is a request this page
-    // does not make today and a tracking vector it has never had.
-    assert.ok(!/(?:href|src)\s*=\s*"(?:https?:)?\/\//i.test(svg.toString()), "the illustration references something off-page");
+test("the card is the demo's: copy on one side, one call to play on the other, and no picture", () => {
+    assert.equal(card.length, 1);
+    assert.equal(card.children(".arcade-copy").length, 1, "the copy column is missing");
+    assert.equal(card.children(".arcade-cta").length, 1, "the play column is missing");
+    assert.equal(card.find("svg, img, canvas").length, 0, "the card carries a picture the demo does not have");
+    const play = card.find("a.arcade-play");
+    assert.equal(play.length, 1);
+    assert.ok(play.hasClass("btn") && play.hasClass("btn-primary"), "PLAY NOW is not the demo's primary button");
+    assert.equal(card.find(".arcade-note").text().trim(), "Optimized for touch + desktop");
 });
 
-test("the picture is named, for a reader who cannot see it", () => {
-    const title = svg.find("title").first().text().trim();
-    assert.equal(svg.attr("role"), "img");
-    assert.ok(title.length > 20, `the illustration's title is "${title}"`);
-    assert.match(title, /scope/i, "the title does not say it is seen through the scope");
-    assert.match(title, /courier/i, "the title does not name the courier");
-    assert.match(title, /armed|gun/i, "the title does not name the armed threat");
-});
-
-test("every colour in the picture is one the game draws with", () => {
-    const markup = svg.toString();
-    const colours = [...new Set([...markup.matchAll(/#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)/g)].map(m => m[0]))];
-    assert.ok(colours.length >= 10, `expected the game's palette, found ${colours.join(", ")}`);
-    for (const colour of colours) {
-        assert.ok(game.includes(`'${colour}'`), `the picture uses ${colour}, which one-shot.js never draws with`);
-    }
-    assert.ok(!/var\(--/.test(markup), "the picture borrows the site's palette instead of the game's");
-});
-
-test("the picture shows what the game is about: the courier's case, the armed man, the scope", () => {
-    const markup = svg.toString();
-    // The colour each is drawn in by one-shot.js, so a recolour there fails here until the card follows.
-    const roles: Array<[string, string, RegExp]> = [
-        ["the courier's red case", "#d63737", /fillStyle='#d63737';ctx\.fillRect\(10,-9,21,17\)/],
-        ["the crowd", "#081018", /ctx\.fillStyle='#081018';ctx\.strokeStyle='#081018'/],
-        ["the armed hostile's laser", "#ef4a4f", /ctx\.fillStyle='#ef4a4f'/],
-        ["the scope's ring", "#020608", /ctx\.strokeStyle='#020608'/],
-        ["the reticle's dot", "#f0444b", /ctx\.fillStyle='#f0444b'/]
-    ];
-    for (const [role, colour, drawn] of roles) {
-        assert.match(game, drawn, `one-shot.js no longer draws ${role} in ${colour}`);
-        assert.ok(markup.includes(`"${colour}"`), `the picture has no ${role}`);
-    }
-    // One courier and one gun: the game has exactly one hostile per contract.
-    assert.equal(svg.find('rect[fill="#d63737"][width="21"]').length, 1, "the picture needs exactly one courier");
-    assert.equal(svg.find('circle[fill="#ef4a4f"]').length, 1, "the picture needs exactly one raised gun");
-    assert.ok(svg.find('g[transform*="scale"]').length >= 6, "a crowd is more than a few people");
+test("the records are the demo's tiles, one fact to a tile", () => {
+    const tiles = $("#arcade-records > li");
+    assert.equal(tiles.length, 4);
+    tiles.each((_, li) => {
+        assert.equal($(li).children("small").length, 1, "a tile has no label");
+        assert.equal($(li).children("b").length, 1, "a tile has no value");
+    });
 });
 
 test("the homepage still loads none of the game's code", () => {
