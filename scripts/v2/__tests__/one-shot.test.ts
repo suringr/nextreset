@@ -74,16 +74,17 @@ test("every approved edit says why, and each is one of the kinds the owner appro
     for (const edit of [...SCRIPT_EDITS, ...CSS_EDITS, HINT_EDIT]) {
         assert.ok(edit.why.length > 30, `an edit without a reason: ${edit.from.slice(0, 60)}`);
     }
-    // Sorted by what they touch. The gameplay changes are exactly three, each approved by name: the
-    // reload fix (with the replacement), and the hidden page and the resize (after Codex's review of #61).
+    // Sorted by what they touch. The gameplay changes are three kinds, each approved by name: the reload
+    // fix (with the replacement); the contract held while the player cannot act — a hidden page, N's
+    // prompt — and the resize (after Codex's review of #61).
     const storage = SCRIPT_EDITS.filter(edit => /localStorage/.test(edit.from));
     const reload = SCRIPT_EDITS.filter(edit => /msgUntil|RELOADING|reloading/.test(edit.from));
-    const hidden = SCRIPT_EDITS.filter(edit => /visibilitychange/.test(edit.to));
+    const hidden = SCRIPT_EDITS.filter(edit => /resumeFrom/.test(edit.to));
     const resize = SCRIPT_EDITS.filter(edit => /r\.width|spawn\(false\)/.test(edit.from));
     const motion = SCRIPT_EDITS.filter(edit => /shake/.test(edit.from));
     assert.equal(storage.length, 5);
     assert.equal(reload.length, 2);
-    assert.equal(hidden.length, 1);
+    assert.equal(hidden.length, 2, "the hidden page and N's prompt");
     assert.equal(resize.length, 2);
     assert.equal(motion.length, 1);
     assert.equal(SCRIPT_EDITS.length, storage.length + reload.length + hidden.length + resize.length + motion.length,
@@ -181,7 +182,7 @@ interface Frame { people: Person[]; texts: string[]; shook: boolean }
  * and timers this test advances, and the three elements the game looks up. Nothing in the game is
  * reached into; everything is read from what it draws and what it stores.
  */
-function play(options: { record?: unknown; reducedMotion?: boolean; prompt?: string | null } = {}) {
+function play(options: { record?: unknown; reducedMotion?: boolean; prompt?: string | null; promptMs?: number } = {}) {
     let width = 1440, height = 848;
     const storage = new FakeStorage();
     if (options.record) storage.items.set(KEY, JSON.stringify(options.record));
@@ -231,7 +232,8 @@ function play(options: { record?: unknown; reducedMotion?: boolean; prompt?: str
         requestAnimationFrame: (fn: (t: number) => void) => { frames.push(fn); return frames.length; },
         setTimeout: (fn: () => void, ms = 0) => { timers.push({ at: now + ms, fn }); return timers.length; },
         matchMedia: () => ({ matches: !!options.reducedMotion }),
-        prompt: () => options.prompt ?? null,
+        // A native prompt blocks the page: no frames and no timers, while the clock runs on.
+        prompt: () => { now += options.promptMs ?? 0; return options.prompt ?? null; },
         addEventListener: listen("window")
     };
     context.window = context;
@@ -537,4 +539,34 @@ test("a resize during a reload does not cut it short", () => {
     game.step(32);
     assert.equal(game.fire, "LOAD", "the resize finished the reload");
     assert.deepEqual(game.ammo(), [2, 3]);
+});
+
+test("N's prompt holds the contract: cancelling it resumes where it stopped", () => {
+    // Codex P2 on 700acb3: the prompt blocks frames while the clock runs, so cancelling it after the
+    // deadline was an automatic TIME UP, with nothing the player could have done.
+    const game = play({ promptMs: 30000 });
+    game.step(1000);
+    const clock = game.clock();
+    game.key("n");                                      // thirty seconds deciding, then cancel
+    game.step(32);
+    assert.ok(!game.says("TIME UP"), "cancelling the prompt lost the contract");
+    assert.ok(Math.abs(game.clock() - clock) <= 0.15, `the clock read ${clock} before and ${game.clock()} after`);
+    assert.equal(game.contract(), 1);
+
+    const gunman = play({ record: { version: 2, arcade: { oneShot: { unlocked: 80 } } }, promptMs: 10000 });
+    gunman.step(500);
+    const before = gunman.firesIn();
+    gunman.key("n");
+    gunman.step(32);
+    assert.ok(!gunman.says("YOU WERE SHOT"), "the hostile fired while the prompt was open");
+    assert.ok(Math.abs(gunman.firesIn() - before) <= 0.15, `HOSTILE FIRES IN read ${before} before and ${gunman.firesIn()} after`);
+});
+
+test("choosing a contract in the prompt still starts it fresh", () => {
+    const game = play({ record: { version: 2, arcade: { oneShot: { unlocked: 12 } } }, prompt: "3", promptMs: 30000 });
+    game.step(500);
+    game.key("n");
+    game.step(32);
+    assert.equal(game.contract(), 3);
+    assert.ok(game.clock() > 19.5, `contract 3 did not start on a full clock: ${game.clock()}`);
 });

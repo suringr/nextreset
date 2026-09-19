@@ -10,8 +10,8 @@
  * Every edit is one of the deviations the owner signed off:
  *   - progress kept in `nextreset.player.v1` instead of the prototype's own localStorage keys;
  *   - RELOAD fixed to take its contract's reload time and keep the crowd and the clock;
- *   - the contract frozen while the page is hidden, and kept whole across a resize or a rotation
- *     (Codex review of #61, approved by the owner after it);
+ *   - the contract frozen while the page is hidden or N's prompt is open, and kept whole across a
+ *     resize or a rotation (Codex review of #61, approved by the owner after it);
  *   - no screen shake for a visitor who has asked for reduced motion;
  *   - the shared NextReset header in place of the prototype's own, and the accessibility adaptations.
  */
@@ -107,7 +107,7 @@ export const SCRIPT_EDITS: ReadonlyArray<ApprovedEdit> = [
     // --- a hidden page, and a resize: approved after Codex's review of #61 ---
     {
         from: "addEventListener('resize',resize);",
-        to: "addEventListener('resize',resize);\nlet hiddenAt=document.hidden?performance.now():0;document.addEventListener('visibilitychange',()=>{if(document.hidden){hiddenAt=performance.now();return}if(!hiddenAt)return;const away=performance.now()-hiddenAt;hiddenAt=0;started+=away;msgUntil+=away;reloadEnd+=away;for(const p of civilians)if(p.fireAt)p.fireAt+=away});",
+        to: "addEventListener('resize',resize);\nfunction resumeFrom(since){const away=performance.now()-since;started+=away;msgUntil+=away;reloadEnd+=away;for(const p of civilians)if(p.fireAt)p.fireAt+=away}let hiddenAt=document.hidden?performance.now():0;document.addEventListener('visibilitychange',()=>{if(document.hidden){hiddenAt=performance.now();return}if(!hiddenAt)return;resumeFrom(hiddenAt);hiddenAt=0});",
         why: "A hidden page draws no frames but performance.now() keeps running, so coming back after the contract's time showed TIME UP or YOU WERE SHOT — an attempt lost while nobody could act. Every deadline the game keeps (the contract clock, the hostile's shot, a reload, an overlay) now moves on by the time the page was away, so play resumes exactly where it stopped."
     },
     {
@@ -119,6 +119,11 @@ export const SCRIPT_EDITS: ReadonlyArray<ApprovedEdit> = [
         from: "if(state==='play') spawn(false);",
         to: "for(const p of civilians){p.x*=sx;p.y*=sy}",
         why: "A resize or a rotation respawned the contract on the old clock: a new crowd, a full magazine, a reload cut short, and a new hostile whose shot was timed from the old start — on a gunman contract, often a shot in the same frame. The same crowd is now carried to the new size, with the same hostile, the same magazine and the same clock."
+    },
+    {
+        from: "v=+prompt('Choose unlocked level 1-'+u,mission+1);if(v>=1&&v<=u){mission=v-1;attempt=1;spawn()}",
+        to: "asked=performance.now(),v=+prompt('Choose unlocked level 1-'+u,mission+1);if(v>=1&&v<=u){mission=v-1;attempt=1;spawn()}else resumeFrom(asked)",
+        why: "N's prompt blocks the page, like a hidden tab: no frames, while the clock and the hostile's shot ran on. Cancelling it after the deadline was an automatic TIME UP or YOU WERE SHOT. Cancelled, it now resumes the contract where it stopped; a contract chosen starts fresh, as before. (Codex's review of 700acb3; the same fix as the hidden page.)"
     },
     // --- reduced motion ---
     {

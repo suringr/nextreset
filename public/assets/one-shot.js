@@ -8,7 +8,8 @@
  *
  *   - progress is kept in `nextreset.player.v1` — the five places the prototype used its own keys;
  *   - RELOAD takes its contract's reload time and keeps the crowd and the clock;
- *   - the contract is frozen while the page is hidden, and kept whole across a resize or a rotation;
+ *   - the contract is held while the page is hidden or N's prompt is open, and kept whole across a
+ *     resize or a rotation;
  *   - no screen shake for a visitor who has asked for reduced motion.
  *
  * Above the first marker is the small adapter those edits call. It is the only code here that the
@@ -55,7 +56,7 @@ function resize(){
  if(!aim.x||aim.x>W) aim={x:W*.55,y:H*.5}; for(const p of civilians){p.x*=sx;p.y*=sy}
 }
 addEventListener('resize',resize);
-let hiddenAt=document.hidden?performance.now():0;document.addEventListener('visibilitychange',()=>{if(document.hidden){hiddenAt=performance.now();return}if(!hiddenAt)return;const away=performance.now()-hiddenAt;hiddenAt=0;started+=away;msgUntil+=away;reloadEnd+=away;for(const p of civilians)if(p.fireAt)p.fireAt+=away});
+function resumeFrom(since){const away=performance.now()-since;started+=away;msgUntil+=away;reloadEnd+=away;for(const p of civilians)if(p.fireAt)p.fireAt+=away}let hiddenAt=document.hidden?performance.now():0;document.addEventListener('visibilitychange',()=>{if(document.hidden){hiddenAt=performance.now();return}if(!hiddenAt)return;resumeFrom(hiddenAt);hiddenAt=0});
 function spawn(resetClock=true){enemies=[];civilians=[];shot=false;state='play';message='';levelScore=0;let m=missions[mission];maxAmmo=m.ammo;ammo=maxAmmo;reloading=false;if(resetClock)started=performance.now();let ground=H*.72;for(let i=0;i<m.n;i++){let p={x:W*(.12+Math.random()*.76),y:ground+(Math.random()-.5)*34,vx:(Math.random()<.5?-1:1)*(26+m.level*.8+Math.random()*30),phase:Math.random()*10,hat:Math.random()<.25,phone:Math.random()<.3,case:false,armed:false,hostile:false,aiming:false,fireAt:0,dead:false};civilians.push(p)}let t=civilians[Math.floor(Math.random()*civilians.length)];t.hostile=true;if(m.type==='courier')t.case=true;else{t.armed=true;t.fireAt=started+m.reaction+Math.random()*2500}enemies=[t]}
 function panel(x,y,w,h){ctx.fillStyle='rgba(5,14,22,.88)';ctx.beginPath();ctx.roundRect(x,y,w,h,11);ctx.fill()}
 function background(){
@@ -111,7 +112,7 @@ function shoot(){if(state!=='play'||reloading)return;if(ammo<=0){reload();return
 function pointer(e){const r=c.getBoundingClientRect(),q=e.touches?e.touches[0]:e;aim.x=Math.max(0,Math.min(W,q.clientX-r.left));aim.y=Math.max(0,Math.min(H,q.clientY-r.top))}
 c.addEventListener('pointermove',pointer);c.addEventListener('pointerdown',e=>{pointer(e);if(e.pointerType==='mouse'&&e.button===0)shoot()});
 c.addEventListener('touchstart',e=>{pointer(e);e.preventDefault()},{passive:false});c.addEventListener('touchmove',e=>{pointer(e);e.preventDefault()},{passive:false});
-fireBtn.addEventListener('pointerdown',e=>{e.preventDefault();ammo?shoot():reload()});addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();shoot()}if(e.key.toLowerCase()==='r')reload();if(e.key.toLowerCase()==='n'){let u=+progress.unlocked()||1,v=+prompt('Choose unlocked level 1-'+u,mission+1);if(v>=1&&v<=u){mission=v-1;attempt=1;spawn()}}});
+fireBtn.addEventListener('pointerdown',e=>{e.preventDefault();ammo?shoot():reload()});addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();shoot()}if(e.key.toLowerCase()==='r')reload();if(e.key.toLowerCase()==='n'){let u=+progress.unlocked()||1,asked=performance.now(),v=+prompt('Choose unlocked level 1-'+u,mission+1);if(v>=1&&v<=u){mission=v-1;attempt=1;spawn()}else resumeFrom(asked)}});
 resize();spawn();requestAnimationFrame(frame);
 // ---- end of the approved prototype ----
 })();
