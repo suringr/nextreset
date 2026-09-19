@@ -146,6 +146,23 @@ test("every page in the sitemap is a page that exists, at the URL it calls canon
     }
 });
 
+/**
+ * /play/ is the one page with neither a breadcrumb nor a footer, and it is named rather than matched.
+ *
+ * It is ONE SHOT, a full-screen game that does not scroll — the owner approved it that way — so there is
+ * nowhere below the game to put either. It is `noindex`, and its shared header's "Trackers" link reaches
+ * every tracker in one tap. A second page without them would have to be added here, on purpose.
+ */
+const FULL_SCREEN = "play/index.html";
+
+test("the full-screen game is the only page excused, and it still reaches the trackers", () => {
+    const $ = load(FULL_SCREEN);
+    assert.equal($(".breadcrumbs").length, 0);
+    assert.equal($(".footer-nav").length, 0);
+    assert.equal($('header.chrome a[href="/#all-games"]').length, 1, "no way from the game to the trackers");
+    assert.equal($('meta[name="robots"]').attr("content"), "noindex, follow");
+});
+
 test("every page says where it sits, and its markup says the same thing", () => {
     for (const page of PAGES) {
         const $ = load(page);
@@ -154,6 +171,7 @@ test("every page says where it sits, and its markup says the same thing", () => 
             assert.equal(crumbs.length, 0, "the homepage is the root; it has nowhere to point back to");
             continue;
         }
+        if (page === FULL_SCREEN) continue;
         assert.equal(crumbs.length, 1, `${page} has no breadcrumb`);
         assert.equal(crumbs.find("a").attr("href"), "/", `${page}: the first crumb goes home`);
         const here = crumbs.find(`[aria-current="page"]`).text().trim();
@@ -177,6 +195,7 @@ test("every tracker is reachable from every page", () => {
 
     for (const page of PAGES) {
         if (page === "index.html") continue; // the homepage lists them in its own words
+        if (page === FULL_SCREEN) continue;  // see FULL_SCREEN: one tap away through the header
         const $ = load(page);
         const nav = $(".footer-nav");
         assert.equal(nav.length, 1, `${page} has no tracker navigation`);

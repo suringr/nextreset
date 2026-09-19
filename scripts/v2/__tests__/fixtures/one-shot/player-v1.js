@@ -2,8 +2,8 @@
  * NextReset — local player state.
  *
  * One versioned record under one key, `nextreset.player.v1`, holding everything the site remembers
- * about a visitor: which games they track, and their ONE SHOT progress — XP, the contracts unlocked, the
- * stars on each. There is no account and no server; this is deliberately all of it.
+ * about a visitor: which games they track, their arcade records, XP and achievements. There is no
+ * account and no server; this is deliberately all of it.
  *
  * Why one record. The V4 prototype kept two unrelated keys, `nrTracked` and `nrScopeV3`, and they had
  * already drifted apart: the homepage read `a.rank` from the arcade record and the game never wrote it,
@@ -28,25 +28,29 @@
     'use strict';
 
     var KEY = 'nextreset.player.v1';
-    /**
-     * The record's format, not the key's name. 2 since ONE SHOT: version 1 of this file rebuilt the whole
-     * record from its own defaults on every write, so a tab left open across the release — or a rollback —
-     * would have deleted `arcade.oneShot` the first time it saved. A version-1 page treats a version-2
-     * record as one from the future: it reads what it understands and never writes over it.
-     */
-    var VERSION = 2;
+    var VERSION = 1;
 
     /**
-     * The tracked-games key written by the V4 prototype, read once and then left alone.
+     * Keys written by the V4 prototype, read once and then left alone.
      *
-     * Never deleted. A visitor who has the prototype open in another tab would otherwise lose their list
-     * to whichever tab wrote last, and a rollback of this release would land on empty storage. Migration
-     * is therefore additive and repeatable: reading it twice produces the same result.
+     * Never deleted. A visitor who has the prototype open in another tab would otherwise lose their
+     * records to whichever tab wrote last, and a rollback of this release would land on empty storage.
+     * Migration is therefore additive and repeatable: reading these twice produces the same result.
      */
     var LEGACY_TRACKED = 'nrTracked';
+    var LEGACY_ARCADE = 'nrScopeV3';
 
     /** The element the shared header gives this file to fill. Kept in step by chrome.test.ts. */
     var CHIP_ID = 'chrome-player';
+
+    /**
+     * What tracking a first game earns: the one entry in the XP ledger that is not earned by a run.
+     *
+     * The ledger lives in scope-core.js, which does not load on the pages where tracking happens, so the
+     * amount is repeated here and player-state.test.ts holds the two copies together. It was printed on
+     * /play/ for a release before anything granted it.
+     */
+    var FIRST_TRACK = { id: 'first-track', xp: 20 };
 
     /**
      * The twelve games the site tracks.
@@ -85,43 +89,33 @@
         'easportsfc': 'ea-sports-fc'
     };
 
-    /** ONE SHOT has eighty contracts; the game resumes at the highest one unlocked. */
-    var CONTRACTS = 80;
-
     /**
-     * ONE SHOT's ranks, one every 8,000 XP, exactly as the game names them.
+     * XP needed to reach each level, lowest first.
      *
-     * one-shot.js keeps its own copy — it is the approved prototype, word for word — and one-shot.test.ts
-     * holds the two together, so the header can never call a player something the game would not.
+     * Explicit rather than a formula, so the curve can be read. Level 1 is where everyone starts; the
+     * gaps widen so that early progress is quick and later progress means something. What earns XP is
+     * decided elsewhere — this file only knows how much of it makes a level.
      */
-    var RANKS = ['Recruit', 'Rookie', 'Marksman', 'Sharpshooter', 'Hunter', 'Operative', 'Elite', 'Ghost', 'Master Sniper'];
-    var RANK_XP = 8000;
+    var LEVEL_THRESHOLDS = [0, 100, 300, 700, 1400, 2600, 4500, 7200, 11000, 16000];
 
-    /**
-     * Ceilings for stored numbers. High enough that no real play reaches them — a streak clear at contract
-     * 80 is worth about 100,000 XP and a perfect run of all eighty about four million — and low enough that
-     * every value stays an exact integer.
-     */
-    var MAX_XP = 1e12;
-    var MAX_SCORE = 1e12;
-
-    /** RESET//SCOPE's ranks, only to validate a carried record: see `sanitise`. */
-    var RESET_SCOPE_RANKS = ['D', 'C', 'B', 'A', 'S'];
-
-    function noStars() {
-        var stars = [];
-        for (var i = 0; i < CONTRACTS; i++) stars.push(0);
-        return stars;
-    }
+    /** Arcade ranks, worst to best, so "is this a new best" is a comparison rather than a guess. */
+    var RANKS = ['D', 'C', 'B', 'A', 'S'];
 
     function defaults() {
         return {
             version: VERSION,
-            profile: { xp: 0 },
+            profile: { xp: 0, level: 1, awarded: [] },
             games: { tracked: [] },
             arcade: {
-                oneShot: { unlocked: 1, stars: noStars(), bestScore: 0 }
-            }
+                resetScope: {
+                    highScore: 0,
+                    highestMission: 0,
+                    bestCombo: 0,
+                    bestRank: null,
+                    gamesPlayed: 0
+                }
+            },
+            achievements: []
         };
     }
 
@@ -223,25 +217,21 @@
         return mapped || null;
     }
 
-    /** The rank a given amount of XP has reached — the game's own rule, `ranks[min(8, floor(xp / 8000))]`. */
-    function rankFor(xp) {
-        return RANKS[Math.min(RANKS.length - 1, Math.floor(whole(xp, 0, MAX_XP) / RANK_XP))];
+    /** The level a given amount of XP has reached. */
+    function levelFor(xp) {
+        var level = 1;
+        for (var i = 0; i < LEVEL_THRESHOLDS.length; i++) {
+            if (xp >= LEVEL_THRESHOLDS[i]) level = i + 1;
+        }
+        return level;
     }
 
-    /** A stored list of ids, kept only where each is a short non-empty string, once. */
-    function idList(value, limit) {
-        return (Array.isArray(value) ? value : [])
-            .filter(function (id) { return typeof id === 'string' && id.length > 0 && id.length <= 64; })
-            .filter(function (id, i, all) { return all.indexOf(id) === i; })
-            .slice(0, limit);
-    }
-
-    /** Eighty star counts, each 0 to 3, from whatever was stored. */
-    function starsFrom(value) {
-        var stars = noStars();
-        if (!Array.isArray(value)) return stars;
-        for (var i = 0; i < CONTRACTS; i++) stars[i] = whole(value[i], 0, 3);
-        return stars;
+    /** XP still to go before the next level, or null at the top of the curve. */
+    function xpToNextLevel(xp) {
+        for (var i = 0; i < LEVEL_THRESHOLDS.length; i++) {
+            if (xp < LEVEL_THRESHOLDS[i]) return LEVEL_THRESHOLDS[i] - xp;
+        }
+        return null;
     }
 
     /** Whatever was stored, made into a state this code is willing to use. */
@@ -250,38 +240,32 @@
         if (!stored || typeof stored !== 'object') return state;
 
         var profile = stored.profile && typeof stored.profile === 'object' ? stored.profile : {};
-        // XP a visitor already has stays theirs, wherever it was earned. The rank is derived from it and
-        // never stored, so a console edit cannot make the two disagree.
-        state.profile.xp = whole(profile.xp, 0, MAX_XP);
+        state.profile.xp = whole(profile.xp, 0, 10000000);
+        // The level is derived, never trusted: a stored level that disagrees with the XP is the kind of
+        // thing a console edit produces, and the XP is the fact.
+        state.profile.level = levelFor(state.profile.xp);
+        state.profile.awarded = (Array.isArray(profile.awarded) ? profile.awarded : [])
+            .filter(function (id) { return typeof id === 'string' && id.length > 0 && id.length <= 64; })
+            .filter(function (id, i, all) { return all.indexOf(id) === i; })
+            .slice(0, 50);
 
         var games = stored.games && typeof stored.games === 'object' ? stored.games : {};
         state.games.tracked = uniqueIds(Array.isArray(games.tracked) ? games.tracked : []);
 
         var arcade = stored.arcade && typeof stored.arcade === 'object' ? stored.arcade : {};
-        var shot = arcade.oneShot && typeof arcade.oneShot === 'object' ? arcade.oneShot : {};
-        state.arcade.oneShot = {
-            unlocked: Math.max(1, whole(shot.unlocked, 1, CONTRACTS)),
-            stars: starsFrom(shot.stars),
-            bestScore: whole(shot.bestScore, 0, MAX_SCORE)
+        var scope = arcade.resetScope && typeof arcade.resetScope === 'object' ? arcade.resetScope : {};
+        state.arcade.resetScope = {
+            highScore: whole(scope.highScore, 0, 100000000),
+            highestMission: whole(scope.highestMission, 0, 99),
+            bestCombo: whole(scope.bestCombo, 0, 9999),
+            bestRank: RANKS.indexOf(scope.bestRank) !== -1 ? scope.bestRank : null,
+            gamesPlayed: whole(scope.gamesPlayed, 0, 1000000)
         };
 
-        // Carried, never read. RESET//SCOPE's records, its achievements and the one-off awards are the
-        // visitor's data from before ONE SHOT: nothing shows them any more, but a rollback of this release
-        // has to find them where they were. Validated as before, and only kept where they exist.
-        var scope = arcade.resetScope && typeof arcade.resetScope === 'object' ? arcade.resetScope : null;
-        if (scope) {
-            state.arcade.resetScope = {
-                highScore: whole(scope.highScore, 0, 100000000),
-                highestMission: whole(scope.highestMission, 0, 99),
-                bestCombo: whole(scope.bestCombo, 0, 9999),
-                bestRank: RESET_SCOPE_RANKS.indexOf(scope.bestRank) !== -1 ? scope.bestRank : null,
-                gamesPlayed: whole(scope.gamesPlayed, 0, 1000000)
-            };
-        }
-        var awarded = idList(profile.awarded, 50);
-        if (awarded.length) state.profile.awarded = awarded;
-        var achievements = idList(stored.achievements, 200);
-        if (achievements.length) state.achievements = achievements;
+        state.achievements = (Array.isArray(stored.achievements) ? stored.achievements : [])
+            .filter(function (id) { return typeof id === 'string' && id.length > 0 && id.length <= 64; })
+            .filter(function (id, i, all) { return all.indexOf(id) === i; })
+            .slice(0, 200);
 
         return state;
     }
@@ -296,10 +280,11 @@
     }
 
     /**
-     * Folds the prototype's tracked-games key into a state that does not have them yet.
+     * Folds the prototype's two keys into a state that does not have them yet.
      *
-     * Only ever adds: a tracked game from the old key joins the list. So running this twice, or running
-     * it after the visitor has tracked under the new key, cannot lose anything.
+     * Only ever adds. A tracked game from the old key joins the list; an arcade record is taken only
+     * where it beats what is already stored. So running this twice, or running it after the visitor has
+     * played once under the new key, cannot lose anything.
      */
     function migrate(state, store) {
         var changed = false;
@@ -323,6 +308,21 @@
                     state.games.tracked.push(id);
                     changed = true;
                 }
+            }
+        }
+
+        var legacyArcade = readJson(store, LEGACY_ARCADE);
+        if (legacyArcade) {
+            var scope = state.arcade.resetScope;
+            var best = whole(legacyArcade.best, 0, 100000000);
+            if (best > scope.highScore) { scope.highScore = best; changed = true; }
+            var mission = whole(legacyArcade.mission, 0, 99);
+            if (mission > scope.highestMission) { scope.highestMission = mission; changed = true; }
+            // The prototype read a rank it never wrote. If one is there, it is taken; if not, nothing is
+            // invented — a rank is earned by a run, and this state has never seen one.
+            if (RANKS.indexOf(legacyArcade.rank) > RANKS.indexOf(scope.bestRank)) {
+                scope.bestRank = legacyArcade.rank;
+                changed = true;
             }
         }
 
@@ -364,7 +364,7 @@
      *
      * Another tab may have written since this page loaded. Starting a change from this page's copy and
      * writing the whole record back would put that tab's changes out of existence — a game tracked
-     * there, a contract cleared there. So every change starts from what is stored, and falls back to memory
+     * there, a run finished there. So every change starts from what is stored, and falls back to memory
      * only where storage could not take the write anyway.
      */
     /**
@@ -455,9 +455,14 @@
         if (!id) return false;
         var state = fresh();
         if (state.games.tracked.indexOf(id) !== -1) return true;
-        // Tracking earns no XP. It did, once, for a ledger RESET//SCOPE printed; ONE SHOT is where XP comes
-        // from now, and XP already granted for it stays.
         state.games.tracked.push(id);
+        // The one award tracking earns, once per visitor however many times they untrack and track
+        // again — so it cannot be farmed, and it is never granted for loading a page.
+        if (state.profile.awarded.indexOf(FIRST_TRACK.id) === -1) {
+            state.profile.awarded.push(FIRST_TRACK.id);
+            state.profile.xp = whole(state.profile.xp + FIRST_TRACK.xp, state.profile.xp, 10000000);
+            state.profile.level = levelFor(state.profile.xp);
+        }
         save(state);
         return true;
     }
@@ -484,68 +489,86 @@
         return true;
     }
 
-    /**
-     * ONE SHOT's progress, as the game, the homepage card and the header read it. A copy: changing it
-     * changes nothing stored.
-     */
-    function oneShot() {
-        var state = load();
-        var shot = state.arcade.oneShot;
-        var stars = shot.stars.slice();
-        var starsTotal = 0;
-        var cleared = 0;
-        for (var i = 0; i < stars.length; i++) {
-            starsTotal += stars[i];
-            if (stars[i] > 0) cleared++;
-        }
+    /** The arcade records, as the homepage card and the end-of-run screen read them. */
+    function arcadeRecords() {
+        var scope = load().arcade.resetScope;
         return {
-            contracts: CONTRACTS,
-            unlocked: shot.unlocked,
-            stars: stars,
-            starsTotal: starsTotal,
-            cleared: cleared,
-            bestScore: shot.bestScore,
-            xp: state.profile.xp,
-            rank: rankFor(state.profile.xp)
+            highScore: scope.highScore,
+            highestMission: scope.highestMission,
+            bestCombo: scope.bestCombo,
+            bestRank: scope.bestRank,
+            gamesPlayed: scope.gamesPlayed
         };
     }
 
     /**
-     * A contract cleared: the prototype's three writes, as one.
+     * Records a finished run, keeping only what beats what is already there.
      *
-     * The approved game wrote `nrStar<n>`, `nrXP` and `nrUnlocked` in that order on every clear; this is
-     * the same arithmetic — the best stars kept, the points added to XP, the next contract unlocked, never
-     * past the eightieth — landing in one record in one write, so another tab can never see two of the
-     * three. `contract` counts from 1, as the game's LEVEL line does.
+     * Returns which records the run broke, so the end-of-run screen can say so without asking again.
      */
-    function recordContract(contract, points, stars) {
-        var n = whole(contract, 0, CONTRACTS);
-        if (n < 1) return false;
+    function recordRun(run) {
         var state = fresh();
-        var shot = state.arcade.oneShot;
-        shot.stars[n - 1] = Math.max(shot.stars[n - 1], whole(stars, 0, 3));
-        state.profile.xp = whole(state.profile.xp + whole(points, 0, MAX_XP), state.profile.xp, MAX_XP);
-        shot.unlocked = Math.max(shot.unlocked, Math.min(CONTRACTS, n + 1));
+        var scope = state.arcade.resetScope;
+        var result = { newHighScore: false, newMission: false, newCombo: false, newRank: false };
+        var data = run && typeof run === 'object' ? run : {};
+
+        var score = whole(data.score, 0, 100000000);
+        if (score > scope.highScore) { scope.highScore = score; result.newHighScore = true; }
+
+        var mission = whole(data.mission, 0, 99);
+        if (mission > scope.highestMission) { scope.highestMission = mission; result.newMission = true; }
+
+        var combo = whole(data.combo, 0, 9999);
+        if (combo > scope.bestCombo) { scope.bestCombo = combo; result.newCombo = true; }
+
+        if (RANKS.indexOf(data.rank) > RANKS.indexOf(scope.bestRank)) {
+            scope.bestRank = data.rank;
+            result.newRank = true;
+        }
+
+        scope.gamesPlayed = whole(scope.gamesPlayed + 1, 1, 1000000);
         save(state);
-        return true;
+        return result;
     }
 
     /**
-     * All eighty cleared in one sitting: the run's score, kept where it beats the best. The prototype's
-     * `nrSniperBest`, written at the same moment and never shown by the game itself.
+     * Adds XP.
+     *
+     * Takes a reason, and refuses anything that is not a positive whole number, so "XP for loading the
+     * page" cannot be written accidentally: what earns XP is a list decided in one place, not a number
+     * any caller may pass. Returns the new profile.
      */
-    function recordFinish(score) {
+    function addXp(amount, reason) {
+        var gain = whole(amount, 0, 100000);
+        if (gain <= 0 || !reason) return profile();
         var state = fresh();
-        var value = whole(score, 0, MAX_SCORE);
-        if (value <= state.arcade.oneShot.bestScore) return false;
-        state.arcade.oneShot.bestScore = value;
+        state.profile.xp = whole(state.profile.xp + gain, state.profile.xp, 10000000);
+        state.profile.level = levelFor(state.profile.xp);
         save(state);
-        return true;
+        return profile();
     }
 
     function profile() {
         var state = load();
-        return { xp: state.profile.xp, rank: rankFor(state.profile.xp) };
+        return {
+            xp: state.profile.xp,
+            level: state.profile.level,
+            xpToNext: xpToNextLevel(state.profile.xp)
+        };
+    }
+
+    function hasAchievement(id) {
+        return load().achievements.indexOf(id) !== -1;
+    }
+
+    /** Grants an achievement once. Returns whether this call was the one that granted it. */
+    function grantAchievement(id) {
+        if (typeof id !== 'string' || !id) return false;
+        var state = fresh();
+        if (state.achievements.indexOf(id) !== -1) return false;
+        state.achievements.push(id);
+        save(state);
+        return true;
     }
 
     /** Drops the in-memory copy, so the next read comes from storage. For tests and for a fresh tab. */
@@ -565,22 +588,21 @@
     /**
      * What the header's chip says, or null when it should say nothing.
      *
-     * A compact identity — rank and XP, `MARKSMAN · 18,240 XP` — and nothing more. The contract, the
-     * stars and the score are the game's detail, and they live on the homepage card and on /play/, not in
-     * the navigation every page shares. Null until there is XP: a visitor who has never played is not a
-     * Recruit with nothing to show for it, they are someone this site knows nothing about.
+     * Pure, so the one piece of wording every page shares is written once and can be tested without a
+     * DOM. Null until there is XP: a visitor who has never played is not "Level 1" with nothing to show
+     * for it, they are someone this site knows nothing about, and saying so is the honest state.
      */
     function chipText() {
         var state = load();
         if (!state.profile.xp) return null;
-        return rankFor(state.profile.xp).toUpperCase() + ' · ' + state.profile.xp.toLocaleString() + ' XP';
+        return 'LVL ' + state.profile.level + ' · ' + state.profile.xp.toLocaleString() + ' XP';
     }
 
     /**
      * Fills the header's chip, where the page has one.
      *
      * The only DOM this file touches, and deliberately: the chip is the one view of this record that
-     * all seventeen pages share, and duplicating it into app.js and one-shot.js would be the same
+     * all seventeen pages share, and duplicating it into app.js and scope-play.js would be the same
      * wording in two places waiting to disagree. Every other view stays with the page that owns it.
      */
     function paintChip() {
@@ -601,10 +623,9 @@
         KEY: KEY,
         VERSION: VERSION,
         GAME_IDS: GAME_IDS.slice(),
-        CONTRACTS: CONTRACTS,
+        LEVEL_THRESHOLDS: LEVEL_THRESHOLDS.slice(),
         RANKS: RANKS.slice(),
-        RANK_XP: RANK_XP,
-        LEGACY_KEYS: { tracked: LEGACY_TRACKED },
+        LEGACY_KEYS: { tracked: LEGACY_TRACKED, arcade: LEGACY_ARCADE },
         defaults: defaults,
         load: load,
         save: save,
@@ -616,14 +637,18 @@
         track: track,
         untrack: untrack,
         toggleTracked: toggleTracked,
-        oneShot: oneShot,
-        recordContract: recordContract,
-        recordFinish: recordFinish,
-        rankFor: rankFor,
+        arcadeRecords: arcadeRecords,
+        recordRun: recordRun,
         profile: profile,
+        addXp: addXp,
+        levelFor: levelFor,
+        xpToNextLevel: xpToNextLevel,
+        hasAchievement: hasAchievement,
+        grantAchievement: grantAchievement,
         chipText: chipText,
         paintChip: paintChip,
         CHIP_ID: CHIP_ID,
+        FIRST_TRACK: { id: FIRST_TRACK.id, xp: FIRST_TRACK.xp },
         // Whether a change made now will still be here on the next visit. Not the same question as whether
         // the stored record can be read: a full quota or Safari's private mode reads fine and refuses writes.
         storageAvailable: function () { return !!storage() && writable; }

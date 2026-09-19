@@ -14,7 +14,7 @@ import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { NAV, PLAYER_CHIP_ID, chromeHtml, sectionOf } from "../../design/chrome";
+import { NAV, PLAYER_CHIP_ID, chromeHtml, chromeTitleOf, sectionOf } from "../../design/chrome";
 import { applyChrome, applyPlayerScript } from "../../update-chrome";
 import { renderSite } from "../../render-pages";
 
@@ -175,7 +175,7 @@ test("applying the header twice changes nothing the second time", () => {
 test("the header a page carries is the header the source builds for it", () => {
     for (const page of site.pages) {
         const $ = cheerio.load(read(page));
-        const built = cheerio.load(chromeHtml({ section: sectionOf(page), badges: page === "index.html" }));
+        const built = cheerio.load(chromeHtml({ section: sectionOf(page), badges: page === "index.html", title: chromeTitleOf(page) }));
         assert.equal(
             $("header.chrome").html()?.replace(/\s+/g, " ").trim(),
             built("header.chrome").html()?.replace(/\s+/g, " ").trim(),

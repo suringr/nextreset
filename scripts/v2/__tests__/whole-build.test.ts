@@ -201,9 +201,7 @@ test("the arcade is reachable from every page, and the game loads on none of the
         const html = read(page);
         assert.ok(html.includes('href="/play/"') || page === "play/index.html", `${page} does not reach the arcade`);
         if (page === "play/index.html") continue;
-        for (const asset of ["scope-core.js", "scope.js", "scope-play.js"]) {
-            assert.ok(!html.includes(asset), `${page} loads ${asset}`);
-        }
+        assert.ok(!html.includes("one-shot.js"), `${page} loads the game`);
     }
 });
 

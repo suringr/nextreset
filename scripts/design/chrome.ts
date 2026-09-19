@@ -10,11 +10,13 @@
  * One function builds it and one applier writes it into every page, so the header cannot drift between
  * page kinds the way the critical CSS did before `tokens.ts`.
  *
- * What it deliberately does NOT do: repeat the tracker list. Every page already ends with a
+ * What it deliberately does NOT do: repeat the tracker list. Every page but /play/ already ends with a
  * `nav.footer-nav` naming all twelve trackers. A header that repeated them would double this site's
- * internal linking to say nothing new, so the header carries one link to the grid instead.
+ * internal linking to say nothing new, so the header carries one link to the grid instead — which is
+ * also how /play/, a full-screen game with no footer, reaches every tracker in one tap.
  */
 import { PageKind, pageKind } from "./tokens";
+import { ONE_SHOT_NAME } from "./one-shot";
 
 /** Which navigation item a page belongs to. */
 export type ChromeSection = "home" | "trackers" | "arcade" | "about" | "none";
@@ -45,6 +47,8 @@ export interface ChromeOptions {
     section: ChromeSection;
     /** The two claims about the site. The homepage only: it is the one page that is a front door. */
     badges?: boolean;
+    /** The page's h1, where the header is the only place it can sit. See `chromeTitleOf`. */
+    title?: string;
     /** Indentation for the element's own line. */
     indent?: string;
     /** Line ending to emit. */
@@ -67,6 +71,17 @@ export function sectionOf(page: string): ChromeSection {
 }
 
 /**
+ * The h1 a page carries inside its header, if any.
+ *
+ * Only /play/. The game fills the screen below the header, as the approved prototype does, so the game's
+ * name sits where the prototype put it: beside the wordmark, in the bar. Every other page has its h1 in
+ * its own content, and the header stays navigation.
+ */
+export function chromeTitleOf(page: string): string | undefined {
+    return pageKind(page) === "play" ? ONE_SHOT_NAME : undefined;
+}
+
+/**
  * How a nav item says it is the page you are on.
  *
  * `page` where the link really does point at this page, and `true` — "the current item in this set" —
@@ -76,6 +91,10 @@ export function sectionOf(page: string): ChromeSection {
 function currentAttribute(item: NavItem, section: ChromeSection): string {
     if (item.section !== section) return "";
     return item.section === "trackers" ? ' aria-current="true"' : ' aria-current="page"';
+}
+
+function escapeHtml(value: string): string {
+    return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 /** The shared header, as HTML. */
@@ -88,6 +107,7 @@ export function chromeHtml(options: ChromeOptions): string {
     const lines: string[] = [];
     lines.push(`${indent}<header class="chrome">`);
     lines.push(`${pad(1)}<a class="chrome-brand" href="/"${home}><span class="dot" aria-hidden="true"></span>NextReset</a>`);
+    if (options.title) lines.push(`${pad(1)}<h1 class="chrome-title">${escapeHtml(options.title)}</h1>`);
     lines.push(`${pad(1)}<nav class="chrome-nav" aria-label="Site">`);
     for (const item of NAV) {
         lines.push(`${pad(2)}<a href="${item.href}"${currentAttribute(item, options.section)}>${item.label}</a>`);

@@ -210,36 +210,36 @@ const TRACKER = [
 ].join("");
 
 /**
- * The arcade. Only what decides the board's size and the controls' reach.
+ * The arcade: ONE SHOT's own stylesheet, as the approved prototype wrote it.
  *
- * Sized by height as well as width, because on a phone in portrait the limit is vertical: the HUD, the
- * board and the control bar all have to be on screen at once without the page scrolling during a run.
+ * `ONE_SHOT_CSS` is the prototype's `<style>` block with the approved edits in `one-shot-approved.ts`
+ * applied — the shared header in place of its own, the detailed status line over the game rather than
+ * in the header — and `one-shot.test.ts` rebuilds it from the prototype and fails on any other
+ * difference. Its colours are the game's and stay literal: they are the prototype's, not the site's
+ * palette, and the canvas draws with the same values.
+ *
+ * /play/ loads no `styles.v2.css`. It would load after this block and override the game's own `body`
+ * and layout rules, and the page needs nothing else from it; the few site rules it does need are
+ * `PLAY_ADDITIONS`, listed on their own so they cannot be mistaken for the game's.
  */
-const PLAY = [
-    `.page{max-width:var(--measure);margin:0 auto}`,
-    `.breadcrumbs{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2);color:var(--ink-faint);font-size:var(--size-small);font-weight:600;margin-bottom:var(--sp-5)}`,
-    `.breadcrumbs a,.breadcrumbs [aria-current="page"]{display:inline-flex;align-items:center;min-height:var(--tap)}`,
-    `.game-header{margin-bottom:var(--sp-3)}`,
-    `.game-title{font-size:var(--size-h1);font-weight:900;letter-spacing:-.02em;margin:0 0 var(--sp-2)}`,
-    `.game-meta{display:flex;gap:var(--sp-3);color:var(--ink-faint);font-size:var(--size-small)}`,
-    `.kicker{color:var(--ink-faint);font-size:var(--size-label);letter-spacing:.14em;text-transform:uppercase;font-weight:800}`,
-    `.sub{color:var(--ink-muted);margin:0 0 var(--sp-5);font-size:var(--size-lead);max-width:var(--measure)}`,
-    `.play{margin:0 0 var(--sp-6)}`,
-    `.stage{position:relative;width:100%;max-width:min(100%,calc((100dvh - 260px) * 0.8));aspect-ratio:4 / 5;margin:0 auto;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--ground)}`,
-    `#board{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}`,
-    `.hud{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-1);margin-bottom:var(--sp-2)}`,
-    `.hud-cell{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:var(--sp-2)}`,
-    `.hud-cell small{display:block;color:var(--ink-faint);font-size:9px;letter-spacing:.1em;text-transform:uppercase;font-weight:700}`,
-    `.hud-cell b{font-family:var(--font-num);font-size:14px;font-variant-numeric:tabular-nums}`,
-    `.controls{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-2);margin-top:var(--sp-2)}`,
-    `.control{min-height:var(--tap);border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);color:var(--ink);font:inherit;font-weight:800;letter-spacing:.06em;cursor:pointer}`,
-    `.meter{height:6px;background:var(--surface-2);border-radius:var(--radius-pill);overflow:hidden;margin-top:var(--sp-2)}`,
-    `.meter i{display:block;height:100%;width:0;background:var(--brand)}`,
-    `.overlay{position:absolute;inset:0;display:grid;place-items:center;padding:var(--sp-4);background:var(--scrim);text-align:center}`,
-    `.overlay[hidden]{display:none}`,
-    `.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}`,
-    `@media(min-width:560px){.hud{grid-template-columns:repeat(7,1fr)}.controls{grid-template-columns:repeat(4,1fr)}}`
+export const ONE_SHOT_CSS = `*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#071019;color:#fff;font-family:system-ui,Segoe UI,Arial}#app{height:100dvh;display:flex;flex-direction:column}header{min-height:52px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:#07121b;border-bottom:1px solid #243441}.chrome-title{font-size:12px;font-weight:850;color:#38cfff}#best{position:fixed;left:14px;bottom:34px;font-size:12px;color:#9babb8;pointer-events:none}canvas{display:block;flex:1;width:100%;min-height:0;touch-action:none;cursor:none}#fire{position:fixed;right:20px;bottom:22px;width:106px;height:106px;border-radius:50%;border:7px solid rgba(255,255,255,.16);background:#c93037;color:#fff;font-weight:900;font-size:22px;box-shadow:0 0 0 4px rgba(201,48,55,.35),0 8px 30px #0008;touch-action:manipulation}#fire:active{transform:scale(.96)}#hint{position:fixed;left:14px;bottom:12px;color:#b7c4ce;font-size:12px;pointer-events:none}@media(max-width:700px){header{min-height:44px}.chrome-title{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}#best{bottom:14px}#fire{width:82px;height:82px;right:14px;bottom:14px;font-size:18px;border-width:5px}#hint{display:none}}`;
+
+export const PLAY_ADDITIONS = [
+    // The shared header's spacing below it is for pages that scroll; here the game starts at its edge.
+    `.chrome{margin-bottom:0}`,
+    // The site's line height is 1.55; the prototype ran on the browser's default, and its fixed lines of
+    // text (the hint, the status line) sit where they did only at that height.
+    `html,body{line-height:normal}`,
+    // The site's focus ring, which every other page gets from styles.v2.css.
+    `:focus-visible{outline:2px solid var(--brand-bright);outline-offset:2px}`,
+    // Without JavaScript there is no game: the note covers the empty board and the FIRE button under the
+    // header, rather than leaving a button that does nothing.
+    `.noscript-note{position:fixed;top:52px;right:0;bottom:0;left:0;z-index:1;display:grid;place-content:center;padding:var(--sp-5);text-align:center;background:#071019;color:var(--ink-muted);font-size:var(--size-small)}`,
+    `.noscript-note a{color:var(--brand-bright)}`,
+    `@media(max-width:700px){.noscript-note{top:44px}}`
 ].join("");
+
+const PLAY = ONE_SHOT_CSS + PLAY_ADDITIONS;
 
 /** About, Privacy, 404: prose and a way back. */
 const STATIC = [
