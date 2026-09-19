@@ -174,6 +174,9 @@ export const CHROME = [
     `.chrome-player{margin:0;padding:8px 10px;border:1px solid var(--control-line);border-radius:var(--r-control);background:var(--control);color:var(--ink);font-size:12px;line-height:1.45;white-space:nowrap}`,
     `.chrome-player::before{content:"⚡ ";content:"⚡ " / ""}`,
     `.chrome-player[hidden]{display:none}`,
+    // On a phone the chip and the menu button are one group at the right edge; above 700px the group
+    // dissolves and they are the demo's header items again.
+    `.chrome-end{display:flex;align-items:center;gap:18px;margin-left:auto}`,
     `.chrome-menu{display:none}`,
     `@supports selector(:popover-open){.chrome-menu{position:relative;z-index:1;display:inline-flex;flex:none;align-items:center;justify-content:center;width:var(--tap);height:var(--tap);margin:0 -4px 0 -12px;padding:0;border:0;background:none;color:var(--ink);cursor:pointer}.chrome-menu::before{content:"";position:absolute;inset:4px;z-index:-1;border:1px solid var(--control-line);border-radius:var(--r-control);background:var(--control)}.chrome-nav:not(:popover-open){display:none}}`,
     `.chrome-menu-icon,.chrome-menu-icon::before,.chrome-menu-icon::after{display:block;width:16px;height:2px;border-radius:1px;background:currentColor}`,
@@ -184,7 +187,11 @@ export const CHROME = [
     `.chrome-nav:popover-open{position:fixed;inset:69px 9px auto auto;min-width:190px;padding:6px;flex-direction:column;gap:2px;border:1px solid var(--control-line);border-radius:var(--r-control);background:var(--surface)}`,
     `.chrome-nav:popover-open a{margin:0;padding:0 12px;border-radius:var(--r-star)}`,
     `.chrome-nav:popover-open a:hover{background:var(--control)}`,
-    `@media(min-width:701px){.chrome-menu{display:none}.chrome-nav:not(:popover-open){display:flex}.chrome-nav:popover-open{position:static;min-width:0;padding:0;flex-direction:row;gap:18px;border:0;background:none}.chrome-nav:popover-open a{padding:0 4px;margin:0 -4px}.chrome-player{padding:10px 13px;font-size:15px}}`
+    // Where the browser can anchor it, the menu opens under its button, wherever the button is — including
+    // on the second row of a bar that wrapped — the same distance below the bar as the fixed position. Elsewhere the fixed position above holds, which is
+    // right whenever the bar is one row.
+    `@supports (anchor-name:--a){.chrome-menu{anchor-name:--site-menu}.chrome .chrome-nav:popover-open{position-anchor:--site-menu;top:calc(anchor(bottom) + var(--menu-drop,16px));right:calc(anchor(right) + 4px);bottom:auto;left:auto}}`,
+    `@media(min-width:701px){.chrome-end{display:contents}.chrome-menu{display:none}.chrome-nav:not(:popover-open){display:flex}.chrome-nav:popover-open{position:static;min-width:0;padding:0;flex-direction:row;gap:18px;border:0;background:none}.chrome-nav:popover-open a{padding:0 4px;margin:0 -4px}.chrome-player{padding:10px 13px;font-size:15px}}`
 ].join("");
 
 /**
@@ -250,7 +257,10 @@ export const PLAY_ADDITIONS = [
     // wordmark, the game's name, the links and the chip itself, exactly as it laid out its own.
     `.chrome .nav{display:contents}`,
     // The prototype's bar held two things and spaced them apart; it now holds four, at the demo's gap.
-    `.chrome{column-gap:18px}`,
+    // It wraps rather than clip: on a 320px phone the wordmark, a player's chip and the menu are wider than
+    // the bar, and the page does not scroll, so a menu pushed past the edge would be out of reach
+    // (Codex, #63). From 390px they fit, and the bar stays the prototype's single row.
+    `.chrome{flex-wrap:wrap;column-gap:18px;--menu-drop:8px}`,
     `.chrome-nav{margin-right:auto}`,
     `.chrome-player{margin-left:auto}`,
     // The wordmark's and the menu's 44px targets overhang the phone's 44px bar by its 1px rule rather

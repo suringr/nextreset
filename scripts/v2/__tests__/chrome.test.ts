@@ -17,6 +17,7 @@ import * as path from "path";
 import { FOOTER_ROW, NAV, PLAYER_CHIP_ID, SITE_NAME, SITE_NAV_ID, chromeHtml, chromeTitleOf, sectionOf } from "../../design/chrome";
 import { applyChrome, applyPlayerScript } from "../../update-chrome";
 import { renderSite } from "../../render-pages";
+import { criticalCss } from "../../design/tokens";
 
 const ROOT = path.join(__dirname, "..", "..", "..");
 const NOW = new Date("2026-09-17T12:00:00.000Z");
@@ -194,6 +195,14 @@ test("a phone reaches the links through a menu that needs no script", () => {
         assert.ok((button.attr("aria-label") ?? "").length > 0, `${page}: the menu button has no name`);
         assert.equal(button.closest("nav").length, 0, "the button sits outside what it opens");
     }
+});
+
+test("a header too wide for a narrow phone wraps rather than pushing the menu out of reach", () => {
+    // Codex P2 on #63: on /play/, which does not scroll, a 320px phone with the player's chip showing had
+    // the menu button — the game's only way to the trackers — pushed past the edge of the screen. Both
+    // bars may take a second row; neither may clip.
+    assert.match(criticalCss("play"), /\.chrome\{[^}]*flex-wrap:wrap/, "the game's bar cannot wrap");
+    assert.match(criticalCss("home"), /\.nav\{[^}]*flex-wrap:wrap/, "the site's bar cannot wrap");
 });
 
 test("every page with a footer carries the demo's footer row, and keeps what the footer already said", () => {

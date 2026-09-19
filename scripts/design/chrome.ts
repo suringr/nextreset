@@ -121,11 +121,15 @@ export function chromeHtml(options: ChromeOptions): string {
         lines.push(`${pad(3)}<a href="${item.href}"${currentAttribute(item, options.section)}>${item.label}</a>`);
     }
     lines.push(`${pad(2)}</nav>`);
+    // The chip and the phone's menu button stay together at the right edge: on a narrow phone with a long
+    // chip the bar wraps, and the pair moves to the next row as one, rather than the menu alone.
+    lines.push(`${pad(2)}<div class="chrome-end">`);
     // Empty and hidden in the served HTML, and filled by player.js where there is something to say.
     // A crawler, and a visitor who has never played, must be told nothing about a player who does not
     // exist — the same rule the track control follows.
-    lines.push(`${pad(2)}<p class="chrome-player" id="${PLAYER_CHIP_ID}" hidden></p>`);
-    lines.push(`${pad(2)}<button type="button" class="chrome-menu" popovertarget="${SITE_NAV_ID}" aria-label="Menu"><span class="chrome-menu-icon" aria-hidden="true"></span></button>`);
+    lines.push(`${pad(3)}<p class="chrome-player" id="${PLAYER_CHIP_ID}" hidden></p>`);
+    lines.push(`${pad(3)}<button type="button" class="chrome-menu" popovertarget="${SITE_NAV_ID}" aria-label="Menu"><span class="chrome-menu-icon" aria-hidden="true"></span></button>`);
+    lines.push(`${pad(2)}</div>`);
     lines.push(`${pad(1)}</div>`);
     lines.push(`${indent}</header>`);
     return lines.join(eol);
