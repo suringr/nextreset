@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "genshin",
-  "updatedAt": "2026-09-21T02:22:25.589Z",
+  "updatedAt": "2026-09-21T11:26:49.461Z",
   "events": [
     {
       "key": "genshin/next-banner/event-wishes-2026-09-22-14-59-59",
@@ -14,7 +14,21 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:03:18.671Z",
-      "lastVerified": "2026-09-21T02:22:25.589Z",
+      "lastVerified": "2026-09-21T11:26:49.461Z",
+      "publishState": "published"
+    },
+    {
+      "key": "genshin/next-banner/event-wishes-2026-10-13-17-59-00",
+      "game": "genshin",
+      "topic": "next-banner",
+      "kind": "occurrence",
+      "label": "When Warm Winds Cavort / Surging Ballad / Epitome Invocation: ends 2026-10-13 17:59 server time (Asia 09:59 UTC, Europe 16:59 UTC, America 22:59 UTC)",
+      "status": "scheduled",
+      "at": "2026-10-13T09:59:00.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-21T11:26:49.461Z",
+      "lastVerified": "2026-09-21T11:26:49.461Z",
       "publishState": "published"
     }
   ],
@@ -27,6 +41,15 @@
       "at": "2026-09-15T23:03:18.671Z",
       "reason": "observed by genshin-announcements-os_asia",
       "decision": "applied"
+    },
+    {
+      "entityKey": "genshin/next-banner/event-wishes-2026-10-13-17-59-00",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "When Warm Winds Cavort / Surging Ballad / Epitome Invocation: ends 2026-10-13 17:59 server time (Asia 09:59 UTC, Europe 16:59 UTC, America 22:59 UTC) @ 2026-10-13T09:59:00.000Z",
+      "at": "2026-09-21T11:26:49.461Z",
+      "reason": "observed by genshin-announcements-os_asia",
+      "decision": "applied"
     }
   ],
   "overrides": [],
@@ -36,6 +59,15 @@
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_asia",
       "sourceId": "genshin-announcements-os_asia",
       "fetchedAt": "2026-09-15T23:03:18.671Z",
+      "title": "Genshin Impact announcements (Asia server)",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "b929a77c0aacc46939d2175e0ac92ddfb6f3ed507b358b3f82747206ce9a9def",
+      "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_asia",
+      "sourceId": "genshin-announcements-os_asia",
+      "fetchedAt": "2026-09-21T11:26:49.461Z",
       "title": "Genshin Impact announcements (Asia server)",
       "fetchMode": "http",
       "confidence": "high"
@@ -51,15 +83,25 @@
       "method": "deterministic",
       "quote": "{\"ann_id\":21805,\"title\":\"Event Wish \\\"The Lone Light Knocks at Night\\\" - Boosted Drop Rate for \\\"Shadowy Lights, Stranger Wights\\\" Flins (Electro)!\",\"subtitle\":\"Event Wish \\\"The Lone Light Knocks at Night\\\"\",\"banner\":\"https://sdk.hoyoverse.com/upload/ann/2026/08/18/c8020ea30bb4b123ddf732556676af01_6926918958511625014_transformed.jpg\",\"content\":\"\",\"type_label\":\"Event\",\"tag_label\":\"2\",\"tag_icon\":\"https://sdk.hoyoverse.com/upload/announcement/2020/03/05/2cf7327b5fb2c050872ead29e338e368_7400353291716098710.png\",\"login_alert\":1,\"lang\":\"en-us\",\"start_time\":\"2026-08-27 16:00:00\",\"end_time\":\"2026-09-22 14:59:59\",\"type\":1,\"remind\":1,\"alert\":0,\"tag_start_time\":\"2000-01-02 08:04:05\",\"tag_end_time\":\"2030-01-02 15:04:05\",\"remind_ver\":1,\"has_content\":true,\"extra_remind\":0,\"tag_icon_hover\":\"\",\"logout_remind\":0,\"logout_remind_ver\":1,\"country\":\"\",\"need_remind_text\":0,\"remind_text\":\"\",\"weak_remind\":1,\"remind_consumption_type\":0}",
       "extractedAt": "2026-09-15T23:03:18.671Z"
+    },
+    {
+      "id": "be5a583fe2ae48ba136c5de3",
+      "documentId": "b929a77c0aacc46939d2175e0ac92ddfb6f3ed507b358b3f82747206ce9a9def",
+      "eventKey": "genshin/next-banner/event-wishes-2026-10-13-17-59-00",
+      "field": "at",
+      "value": "2026-10-13T09:59:00.000Z",
+      "method": "deterministic",
+      "quote": "{\"ann_id\":21876,\"title\":\"Event Wish \\\"When Warm Winds Cavort\\\" - Boosted Drop Rate for \\\"Snowy Banquet's Sharp Blade\\\" Vesna (Anemo)!\",\"subtitle\":\"Event Wish \\\"When Warm Winds Cavort\\\"\",\"banner\":\"https://sdk.hoyoverse.com/upload/ann/2026/09/11/0280fb4b14ec01bb37bb3ee0253a108a_8262450589619702638_transformed.jpg\",\"content\":\"\",\"type_label\":\"Event\",\"tag_label\":\"2\",\"tag_icon\":\"https://sdk.hoyoverse.com/upload/announcement/2020/03/05/2cf7327b5fb2c050872ead29e338e368_7400353291716098710.png\",\"login_alert\":1,\"lang\":\"en-us\",\"start_time\":\"2026-09-21 05:00:00\",\"end_time\":\"2026-10-13 17:59:00\",\"type\":1,\"remind\":1,\"alert\":0,\"tag_start_time\":\"2000-01-02 08:04:05\",\"tag_end_time\":\"2030-01-02 15:04:05\",\"remind_ver\":1,\"has_content\":true,\"extra_remind\":0,\"tag_icon_hover\":\"\",\"logout_remind\":0,\"logout_remind_ver\":1,\"country\":\"\",\"need_remind_text\":0,\"remind_text\":\"\",\"weak_remind\":1,\"remind_consumption_type\":0}",
+      "extractedAt": "2026-09-21T11:26:49.461Z"
     }
   ],
   "sources": [
     {
       "id": "genshin-announcements-os_asia",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_asia",
-      "textHash": "bba53fc109e1ddd881219f1a06c8da245053251c6610c44f0d805bc861e531c9",
-      "lastFetchedAt": "2026-09-21T02:22:25.589Z",
-      "lastUsableAt": "2026-09-21T02:22:25.589Z",
+      "textHash": "b929a77c0aacc46939d2175e0ac92ddfb6f3ed507b358b3f82747206ce9a9def",
+      "lastFetchedAt": "2026-09-21T11:26:49.461Z",
+      "lastUsableAt": "2026-09-21T11:26:49.461Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -67,9 +109,9 @@
     {
       "id": "genshin-announcements-os_euro",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_euro",
-      "textHash": "2e7a6231123c828359526613dc6a05507f6ec16fae5661a846a659d81e890a75",
-      "lastFetchedAt": "2026-09-21T02:22:25.589Z",
-      "lastUsableAt": "2026-09-21T02:22:25.589Z",
+      "textHash": "806f9535cdde7aa83c30420355c719addea9e51efeaaa39a54959b91cba5f343",
+      "lastFetchedAt": "2026-09-21T11:26:49.461Z",
+      "lastUsableAt": "2026-09-21T11:26:49.461Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -77,9 +119,9 @@
     {
       "id": "genshin-announcements-os_usa",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_usa",
-      "textHash": "b8bbfd2d26acd79b3f735f97a6b06079e6d496930c8eea3aaa5a44d54da8346d",
-      "lastFetchedAt": "2026-09-21T02:22:25.589Z",
-      "lastUsableAt": "2026-09-21T02:22:25.589Z",
+      "textHash": "d3bef64254c74ed4ba9a415f25ec62d9700e93483d5b42d1ec7a043a40617292",
+      "lastFetchedAt": "2026-09-21T11:26:49.461Z",
+      "lastUsableAt": "2026-09-21T11:26:49.461Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
