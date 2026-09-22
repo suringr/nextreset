@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "genshin",
-  "updatedAt": "2026-09-22T02:25:50.527Z",
+  "updatedAt": "2026-09-22T10:34:58.246Z",
   "events": [
     {
       "key": "genshin/next-banner/event-wishes-2026-09-22-14-59-59",
@@ -9,12 +9,12 @@
       "topic": "next-banner",
       "kind": "occurrence",
       "label": "The Lone Light Knocks at Night / Astral Actuation / Epitome Invocation: ends 2026-09-22 14:59 server time (Asia 06:59 UTC, Europe 13:59 UTC, America 19:59 UTC)",
-      "status": "scheduled",
+      "status": "ended",
       "at": "2026-09-22T06:59:59.000Z",
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:03:18.671Z",
-      "lastVerified": "2026-09-22T02:25:50.527Z",
+      "lastVerified": "2026-09-22T10:34:58.246Z",
       "publishState": "published"
     },
     {
@@ -28,7 +28,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-21T11:26:49.461Z",
-      "lastVerified": "2026-09-22T02:25:50.527Z",
+      "lastVerified": "2026-09-22T10:34:58.246Z",
       "publishState": "published"
     }
   ],
@@ -49,6 +49,15 @@
       "newValue": "When Warm Winds Cavort / Surging Ballad / Epitome Invocation: ends 2026-10-13 17:59 server time (Asia 09:59 UTC, Europe 16:59 UTC, America 22:59 UTC) @ 2026-10-13T09:59:00.000Z",
       "at": "2026-09-21T11:26:49.461Z",
       "reason": "observed by genshin-announcements-os_asia",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "genshin/next-banner/event-wishes-2026-09-22-14-59-59",
+      "field": "status",
+      "oldValue": "scheduled",
+      "newValue": "ended",
+      "at": "2026-09-22T10:34:58.246Z",
+      "reason": "scheduled instant has passed",
       "decision": "applied"
     }
   ],
@@ -99,9 +108,9 @@
     {
       "id": "genshin-announcements-os_asia",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_asia",
-      "textHash": "3711db3483050e9e7200fb66684cef500c2d0afe279cdc1d9a6f177f45f817a6",
-      "lastFetchedAt": "2026-09-22T02:25:50.527Z",
-      "lastUsableAt": "2026-09-22T02:25:50.527Z",
+      "textHash": "0b4d645e4fae899872a1068ae5c30dcc3fe443a351c0b21c9b6f3a6758b7dc9b",
+      "lastFetchedAt": "2026-09-22T10:34:58.246Z",
+      "lastUsableAt": "2026-09-22T10:34:58.246Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -109,9 +118,9 @@
     {
       "id": "genshin-announcements-os_euro",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_euro",
-      "textHash": "b7052a959827c9023d772f2ee320672258be2e5c3acffca0b25aedd70b6bcb06",
-      "lastFetchedAt": "2026-09-22T02:25:50.527Z",
-      "lastUsableAt": "2026-09-22T02:25:50.527Z",
+      "textHash": "8101517bfb7c250205d48c7c7da71fdcc8d4facc049bfb47130f052f6ade889f",
+      "lastFetchedAt": "2026-09-22T10:34:58.246Z",
+      "lastUsableAt": "2026-09-22T10:34:58.246Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -119,9 +128,9 @@
     {
       "id": "genshin-announcements-os_usa",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_usa",
-      "textHash": "fdfb818a7ae422fc37ebbf085844612ccb677183a79bb5a5d0cfdc68bf733b66",
-      "lastFetchedAt": "2026-09-22T02:25:50.527Z",
-      "lastUsableAt": "2026-09-22T02:25:50.527Z",
+      "textHash": "4b030311f062832b38085dafd2b74a7a88e3af41a8cd7cbdb78628a6bf86b590",
+      "lastFetchedAt": "2026-09-22T10:34:58.246Z",
+      "lastUsableAt": "2026-09-22T10:34:58.246Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
