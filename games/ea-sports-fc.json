@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "ea-sports-fc",
-  "updatedAt": "2026-09-23T10:28:29.317Z",
+  "updatedAt": "2026-09-23T15:46:56.333Z",
   "events": [
     {
       "key": "ea-sports-fc/last-title-update/fc26-1.0.2",
@@ -14,7 +14,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -28,7 +28,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -42,7 +42,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -56,7 +56,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -70,7 +70,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -84,7 +84,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -98,7 +98,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -112,7 +112,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -126,7 +126,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -140,7 +140,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -154,7 +154,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -168,7 +168,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -182,7 +182,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -196,7 +196,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -210,7 +210,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -224,7 +224,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -238,7 +238,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -252,7 +252,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-22T15:57:19.428Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     },
     {
@@ -266,7 +266,21 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-09-23T10:28:29.317Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
+      "publishState": "published"
+    },
+    {
+      "key": "ea-sports-fc/last-title-update/fc27-1.0.1",
+      "game": "ea-sports-fc",
+      "topic": "last-title-update",
+      "kind": "version",
+      "label": "EA SPORTS FC 27 Version 1.0.1",
+      "status": "observed",
+      "at": "2026-09-23T12:15:45.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-23T15:46:56.333Z",
+      "lastVerified": "2026-09-23T15:46:56.333Z",
       "publishState": "published"
     }
   ],
@@ -441,6 +455,15 @@
       "at": "2026-09-15T23:23:52.031Z",
       "reason": "observed by eafc-steam-fc27",
       "decision": "applied"
+    },
+    {
+      "entityKey": "ea-sports-fc/last-title-update/fc27-1.0.1",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "EA SPORTS FC 27 Version 1.0.1 @ 2026-09-23T12:15:45.000Z",
+      "at": "2026-09-23T15:46:56.333Z",
+      "reason": "observed by eafc-steam-fc27",
+      "decision": "applied"
     }
   ],
   "overrides": [],
@@ -450,6 +473,15 @@
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=3405690&count=100&maxlength=240&feeds=steam_community_announcements",
       "sourceId": "eafc-steam-fc26",
       "fetchedAt": "2026-09-15T23:23:52.031Z",
+      "title": "Steam news API response",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "30b4db29298a22e115247ab932543157bd59d1a146e9f02067607d7e831eb155",
+      "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=4080220&count=100&maxlength=240&feeds=steam_community_announcements",
+      "sourceId": "eafc-steam-fc27",
+      "fetchedAt": "2026-09-23T15:46:56.333Z",
       "title": "Steam news API response",
       "fetchMode": "http",
       "confidence": "high"
@@ -664,6 +696,17 @@
       "quote": "{\"gid\":\"1811772772222238\",\"title\":\"EA SPORTS FC 26 - Version 1.0.2 Update Notes\",\"url\":\"https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1811772772222238\",\"is_external_url\":true,\"author\":\"FC | Jaws\",\"contents\":\"EA SPORTS FC 26 version 1.0.2 is now available for all platforms and includes updates to gameplay based on the feedback you gave us throughout the EA SPORTS FC 26 Closed Beta.This TU includes:Tuning changes to Low Driven Shots.Improvements ...\",\"feedlabel\":\"Community Announcements\",\"date\":1758747630,\"feedname\":\"steam_community_announcements\",\"feed_type\":1,\"appid\":3405690}",
       "linkUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1811772772222238",
       "extractedAt": "2026-09-15T23:23:52.031Z"
+    },
+    {
+      "id": "1349a99430aa29588f2a45d8",
+      "documentId": "30b4db29298a22e115247ab932543157bd59d1a146e9f02067607d7e831eb155",
+      "eventKey": "ea-sports-fc/last-title-update/fc27-1.0.1",
+      "field": "at",
+      "value": "2026-09-23T12:15:45.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1844751498218269\",\"title\":\"EA SPORTS FC 27 Version 1.0.1\",\"url\":\"https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1844751498218269\",\"is_external_url\":true,\"author\":\"Hecka9\",\"contents\":\"EA SPORTS FC 27 version 1.0.1 is now live and includes a small number of issues addressed and other updates listed below. Ultimate Team Addressed the following issue: - When selecting a Player Item that did not meet the requirements of the ...\",\"feedlabel\":\"Community Announcements\",\"date\":1790165745,\"feedname\":\"steam_community_announcements\",\"feed_type\":1,\"appid\":4080220,\"tags\":[\"patchnotes\"]}",
+      "linkUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1844751498218269",
+      "extractedAt": "2026-09-23T15:46:56.333Z"
     }
   ],
   "sources": [
@@ -671,8 +714,8 @@
       "id": "eafc-steam-fc26",
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=3405690&count=100&maxlength=240&feeds=steam_community_announcements",
       "textHash": "5b5f63705168e9b4e25cfaf5a78c045b478f0c5635936ec3a3e2336b49e45c26",
-      "lastFetchedAt": "2026-09-23T10:28:29.317Z",
-      "lastUsableAt": "2026-09-23T10:28:29.317Z",
+      "lastFetchedAt": "2026-09-23T15:46:56.333Z",
+      "lastUsableAt": "2026-09-23T15:46:56.333Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -680,9 +723,9 @@
     {
       "id": "eafc-steam-fc27",
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=4080220&count=100&maxlength=240&feeds=steam_community_announcements",
-      "textHash": "c3b559440086207a12a9216a7eb169a008b0760a208d818608f2bb57547abc4a",
-      "lastFetchedAt": "2026-09-23T10:28:29.317Z",
-      "lastUsableAt": "2026-09-23T10:28:29.317Z",
+      "textHash": "30b4db29298a22e115247ab932543157bd59d1a146e9f02067607d7e831eb155",
+      "lastFetchedAt": "2026-09-23T15:46:56.333Z",
+      "lastUsableAt": "2026-09-23T15:46:56.333Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
