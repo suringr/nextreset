@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "valorant",
-  "updatedAt": "2026-09-22T20:39:49.901Z",
+  "updatedAt": "2026-09-23T02:26:10.930Z",
   "events": [
     {
       "key": "valorant/last-patch/12.07",
@@ -28,7 +28,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:27:17.654Z",
-      "lastVerified": "2026-09-22T15:57:11.252Z",
+      "lastVerified": "2026-09-23T02:26:10.930Z",
       "publishState": "published"
     },
     {
@@ -42,7 +42,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:27:17.654Z",
-      "lastVerified": "2026-09-22T15:57:11.252Z",
+      "lastVerified": "2026-09-23T02:26:10.930Z",
       "publishState": "published"
     },
     {
@@ -56,7 +56,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:27:17.654Z",
-      "lastVerified": "2026-09-22T15:57:11.252Z",
+      "lastVerified": "2026-09-23T02:26:10.930Z",
       "publishState": "published"
     },
     {
@@ -70,7 +70,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:27:17.654Z",
-      "lastVerified": "2026-09-22T15:57:11.252Z",
+      "lastVerified": "2026-09-23T02:26:10.930Z",
       "publishState": "published"
     },
     {
@@ -84,7 +84,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:27:17.654Z",
-      "lastVerified": "2026-09-22T15:57:11.252Z",
+      "lastVerified": "2026-09-23T02:26:10.930Z",
       "publishState": "published"
     },
     {
@@ -98,7 +98,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:27:17.654Z",
-      "lastVerified": "2026-09-22T15:57:11.252Z",
+      "lastVerified": "2026-09-23T02:26:10.930Z",
       "publishState": "published"
     },
     {
@@ -112,7 +112,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:27:17.654Z",
-      "lastVerified": "2026-09-22T15:57:11.252Z",
+      "lastVerified": "2026-09-23T02:26:10.930Z",
       "publishState": "published"
     },
     {
@@ -126,7 +126,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:27:17.654Z",
-      "lastVerified": "2026-09-22T15:57:11.252Z",
+      "lastVerified": "2026-09-23T02:26:10.930Z",
       "publishState": "published"
     },
     {
@@ -140,7 +140,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:27:17.654Z",
-      "lastVerified": "2026-09-22T15:57:11.252Z",
+      "lastVerified": "2026-09-23T02:26:10.930Z",
       "publishState": "published"
     },
     {
@@ -154,7 +154,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-22T15:57:11.252Z",
-      "lastVerified": "2026-09-22T20:39:49.901Z",
+      "lastVerified": "2026-09-23T02:26:10.930Z",
       "publishState": "published"
     }
   ],
@@ -407,10 +407,10 @@
     {
       "id": "valorant-patch-notes-page",
       "url": "https://playvalorant.com/en-us/news/tags/patch-notes/",
-      "etag": "W/\"nk1w5wfpes9d4e-df\"",
-      "textHash": "25fd1206d3467c3406c657c4b6baa77b94e91b0780e09fd9ca87d6615b010e48",
-      "lastFetchedAt": "2026-09-22T20:39:49.901Z",
-      "lastUsableAt": "2026-09-22T20:39:49.901Z",
+      "etag": "W/\"gieeo64efh9d4c-df\"",
+      "textHash": "2e85b88f33f277f36f00eae29a7e702d8edc234f3a6db7cfb2619f7fd1148e81",
+      "lastFetchedAt": "2026-09-23T02:26:10.930Z",
+      "lastUsableAt": "2026-09-23T02:26:10.930Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
