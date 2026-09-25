@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "cs2",
-  "updatedAt": "2026-09-24T20:56:14.518Z",
+  "updatedAt": "2026-09-25T02:31:16.126Z",
   "events": [
     {
       "key": "cs2/last-update/1831432155569878",
@@ -56,7 +56,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-24T02:14:52.820Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     },
     {
@@ -70,7 +70,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-24T02:14:52.820Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     },
     {
@@ -84,7 +84,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-24T02:14:52.820Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     },
     {
@@ -98,7 +98,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-24T02:14:52.820Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     },
     {
@@ -112,7 +112,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-24T02:14:52.820Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     },
     {
@@ -126,7 +126,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-24T02:14:52.820Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     },
     {
@@ -140,7 +140,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-24T02:14:52.820Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     },
     {
@@ -154,7 +154,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-24T02:14:52.820Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     },
     {
@@ -168,7 +168,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-24T02:14:52.820Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     },
     {
@@ -182,7 +182,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-24T02:14:52.820Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     },
     {
@@ -196,7 +196,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-24T02:14:52.820Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     },
     {
@@ -210,7 +210,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-24T02:14:52.820Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     },
     {
@@ -224,7 +224,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-24T02:14:52.820Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     },
     {
@@ -238,7 +238,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-24T02:14:52.820Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     },
     {
@@ -252,7 +252,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-24T02:14:52.820Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     },
     {
@@ -266,7 +266,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-24T02:14:52.820Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     },
     {
@@ -280,7 +280,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-23T02:26:11.344Z",
-      "lastVerified": "2026-09-24T02:14:52.820Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     },
     {
@@ -294,7 +294,21 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-24T02:14:52.820Z",
-      "lastVerified": "2026-09-24T20:56:14.518Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1844751498222773",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-09-24T21:51:38.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-25T02:31:16.126Z",
+      "lastVerified": "2026-09-25T02:31:16.126Z",
       "publishState": "published"
     }
   ],
@@ -487,6 +501,15 @@
       "at": "2026-09-24T02:14:52.820Z",
       "reason": "observed by cs2-steam-patchnotes",
       "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1844751498222773",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-09-24T21:51:38.000Z",
+      "at": "2026-09-25T02:31:16.126Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
     }
   ],
   "overrides": [],
@@ -676,6 +699,15 @@
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=730&count=20&maxlength=240&feeds=steam_community_announcements&tags=patchnotes",
       "sourceId": "cs2-steam-patchnotes",
       "fetchedAt": "2026-09-24T02:14:52.820Z",
+      "title": "Steam news API response",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "92341ff7c0989b63ebfe8c2ebb1dd4335b6ff4e525fd9c2201a3bc6838781adc",
+      "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=730&count=20&maxlength=240&feeds=steam_community_announcements&tags=patchnotes",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-25T02:31:16.126Z",
       "title": "Steam news API response",
       "fetchMode": "http",
       "confidence": "high"
@@ -893,15 +925,26 @@
       "quote": "{\"gid\":\"1844751498219795\",\"title\":\"Counter-Strike 2 Update\",\"url\":\"https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1844751498219795\",\"is_external_url\":true,\"author\":\"jo\",\"contents\":\"\\\\Increased the maximum countdown-after-elimination time from 7 seconds to 14 seconds on end rooms and Convoy.The countdown-after-elimination time does not activate in cases where an entire team dies to suicides, team kills, and/or disconnec...\",\"feedlabel\":\"Community Announcements\",\"date\":1790204844,\"feedname\":\"steam_community_announcements\",\"feed_type\":1,\"appid\":730,\"tags\":[\"patchnotes\"]}",
       "linkUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1844751498219795",
       "extractedAt": "2026-09-24T02:14:52.820Z"
+    },
+    {
+      "id": "07cb05c51f1872a33f1e146d",
+      "documentId": "92341ff7c0989b63ebfe8c2ebb1dd4335b6ff4e525fd9c2201a3bc6838781adc",
+      "eventKey": "cs2/last-update/1844751498222773",
+      "field": "at",
+      "value": "2026-09-24T21:51:38.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1844751498222773\",\"title\":\"Counter-Strike 2 Update\",\"url\":\"https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1844751498222773\",\"is_external_url\":true,\"author\":\"jo\",\"contents\":\"\\\\Added a better description of the rules to the loading screen.Adjusted rules for determining when to kick players due to team damage.Various clipping adjustments.\\\\Fixed a case where it was possible to get a slightly faster silent reload by...\",\"feedlabel\":\"Community Announcements\",\"date\":1790286698,\"feedname\":\"steam_community_announcements\",\"feed_type\":1,\"appid\":730,\"tags\":[\"patchnotes\"]}",
+      "linkUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1844751498222773",
+      "extractedAt": "2026-09-25T02:31:16.126Z"
     }
   ],
   "sources": [
     {
       "id": "cs2-steam-patchnotes",
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=730&count=20&maxlength=240&feeds=steam_community_announcements&tags=patchnotes",
-      "textHash": "68850978544d4541ac7dbcf4de295a8d06945da8f5e367511f438247b32e0dd6",
-      "lastFetchedAt": "2026-09-24T20:56:14.518Z",
-      "lastUsableAt": "2026-09-24T20:56:14.518Z",
+      "textHash": "92341ff7c0989b63ebfe8c2ebb1dd4335b6ff4e525fd9c2201a3bc6838781adc",
+      "lastFetchedAt": "2026-09-25T02:31:16.126Z",
+      "lastUsableAt": "2026-09-25T02:31:16.126Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
