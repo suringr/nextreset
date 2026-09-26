@@ -1,0 +1,16 @@
+{
+  "provider_id": "valorant",
+  "game": "valorant",
+  "type": "last-patch",
+  "title": "VALORANT Last Patch",
+  "status": "fresh",
+  "nextEventUtc": "2026-09-22T13:00:00.000Z",
+  "fetched_at_utc": "2026-09-26T20:22:14.175Z",
+  "last_success_at_utc": "2026-09-26T20:22:14.175Z",
+  "source_url": "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-13-06",
+  "confidence": "high",
+  "http_status": 200,
+  "fetch_mode": "http",
+  "notes": "VALORANT Patch Notes 13.06",
+  "precision": "exact"
+}
