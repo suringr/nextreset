@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "cs2",
-  "updatedAt": "2026-09-28T12:21:51.727Z",
+  "updatedAt": "2026-09-28T22:45:31.546Z",
   "events": [
     {
       "key": "cs2/last-update/1831432155569878",
@@ -84,7 +84,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-26T02:34:45.835Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     },
     {
@@ -98,7 +98,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-26T02:34:45.835Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     },
     {
@@ -112,7 +112,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-26T02:34:45.835Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     },
     {
@@ -126,7 +126,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-26T02:34:45.835Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     },
     {
@@ -140,7 +140,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-26T02:34:45.835Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     },
     {
@@ -154,7 +154,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-26T02:34:45.835Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     },
     {
@@ -168,7 +168,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-26T02:34:45.835Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     },
     {
@@ -182,7 +182,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-26T02:34:45.835Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     },
     {
@@ -196,7 +196,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-26T02:34:45.835Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     },
     {
@@ -210,7 +210,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-26T02:34:45.835Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     },
     {
@@ -224,7 +224,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-26T02:34:45.835Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     },
     {
@@ -238,7 +238,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-26T02:34:45.835Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     },
     {
@@ -252,7 +252,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-26T02:34:45.835Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     },
     {
@@ -266,7 +266,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-09-26T02:34:45.835Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     },
     {
@@ -280,7 +280,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-23T02:26:11.344Z",
-      "lastVerified": "2026-09-26T02:34:45.835Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     },
     {
@@ -294,7 +294,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-24T02:14:52.820Z",
-      "lastVerified": "2026-09-26T02:34:45.835Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     },
     {
@@ -308,7 +308,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-25T02:31:16.126Z",
-      "lastVerified": "2026-09-26T02:34:45.835Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     },
     {
@@ -322,7 +322,21 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-26T02:34:45.835Z",
-      "lastVerified": "2026-09-28T12:21:51.727Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1844751498232642",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-09-28T22:38:25.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-28T22:45:31.546Z",
+      "lastVerified": "2026-09-28T22:45:31.546Z",
       "publishState": "published"
     }
   ],
@@ -533,6 +547,15 @@
       "at": "2026-09-26T02:34:45.835Z",
       "reason": "observed by cs2-steam-patchnotes",
       "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1844751498232642",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-09-28T22:38:25.000Z",
+      "at": "2026-09-28T22:45:31.546Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
     }
   ],
   "overrides": [],
@@ -740,6 +763,15 @@
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=730&count=20&maxlength=240&feeds=steam_community_announcements&tags=patchnotes",
       "sourceId": "cs2-steam-patchnotes",
       "fetchedAt": "2026-09-26T02:34:45.835Z",
+      "title": "Steam news API response",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "99b3c2f0c1f51eb777a98421f7cf2d242a2e057188cfcce945388cad09933b9a",
+      "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=730&count=20&maxlength=240&feeds=steam_community_announcements&tags=patchnotes",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-09-28T22:45:31.546Z",
       "title": "Steam news API response",
       "fetchMode": "http",
       "confidence": "high"
@@ -979,15 +1011,26 @@
       "quote": "{\"gid\":\"1844751498226015\",\"title\":\"Counter-Strike 2 Update\",\"url\":\"https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1844751498226015\",\"is_external_url\":true,\"author\":\"jo\",\"contents\":\"\\\\Various gap fixes and clipping adjustments.\\\\Fixed some cases where loud reloads would persist while trying to stealth reload.\\\\Added sv_clantags_enabled option so custom servers can disable clan tags.The eggs of background players in main m...\",\"feedlabel\":\"Community Announcements\",\"date\":1790373294,\"feedname\":\"steam_community_announcements\",\"feed_type\":1,\"appid\":730,\"tags\":[\"patchnotes\"]}",
       "linkUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1844751498226015",
       "extractedAt": "2026-09-26T02:34:45.835Z"
+    },
+    {
+      "id": "fc51a397356dc1d890611eae",
+      "documentId": "99b3c2f0c1f51eb777a98421f7cf2d242a2e057188cfcce945388cad09933b9a",
+      "eventKey": "cs2/last-update/1844751498232642",
+      "field": "at",
+      "value": "2026-09-28T22:38:25.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1844751498232642\",\"title\":\"Counter-Strike 2 Update\",\"url\":\"https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1844751498232642\",\"is_external_url\":true,\"author\":\"Vitaliy\",\"contents\":\"\\\\Fixed pixel-gaps in various Rush rooms.Clipping adjustments in T/CT Castle rooms.\",\"feedlabel\":\"Community Announcements\",\"date\":1790635105,\"feedname\":\"steam_community_announcements\",\"feed_type\":1,\"appid\":730,\"tags\":[\"patchnotes\"]}",
+      "linkUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1844751498232642",
+      "extractedAt": "2026-09-28T22:45:31.546Z"
     }
   ],
   "sources": [
     {
       "id": "cs2-steam-patchnotes",
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=730&count=20&maxlength=240&feeds=steam_community_announcements&tags=patchnotes",
-      "textHash": "4641c1bb58b501f50e9385fd6d958388b1e726380cf1d63a2ec3308cc96d847b",
-      "lastFetchedAt": "2026-09-28T12:21:51.727Z",
-      "lastUsableAt": "2026-09-28T12:21:51.727Z",
+      "textHash": "99b3c2f0c1f51eb777a98421f7cf2d242a2e057188cfcce945388cad09933b9a",
+      "lastFetchedAt": "2026-09-28T22:45:31.546Z",
+      "lastUsableAt": "2026-09-28T22:45:31.546Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0

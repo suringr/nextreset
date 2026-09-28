@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "pubg",
-  "updatedAt": "2026-09-28T12:21:53.880Z",
+  "updatedAt": "2026-09-28T22:45:32.775Z",
   "events": [
     {
       "key": "pubg/last-patch/42.1",
@@ -14,7 +14,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:18:26.934Z",
-      "lastVerified": "2026-09-27T20:36:19.539Z",
+      "lastVerified": "2026-09-28T22:45:32.775Z",
       "publishState": "published"
     },
     {
@@ -28,7 +28,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:18:26.934Z",
-      "lastVerified": "2026-09-27T20:36:19.539Z",
+      "lastVerified": "2026-09-28T22:45:32.775Z",
       "publishState": "published"
     },
     {
@@ -42,7 +42,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:18:26.934Z",
-      "lastVerified": "2026-09-27T20:36:19.539Z",
+      "lastVerified": "2026-09-28T22:45:32.775Z",
       "publishState": "published"
     },
     {
@@ -56,7 +56,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:18:26.934Z",
-      "lastVerified": "2026-09-28T12:21:53.880Z",
+      "lastVerified": "2026-09-28T22:45:32.775Z",
       "publishState": "published"
     }
   ],
@@ -160,9 +160,9 @@
     {
       "id": "pubg-steam-announcements",
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=578080&count=100&maxlength=240&feeds=steam_community_announcements",
-      "textHash": "df2ad4b5e0f4095e85438d1e8d6e7c4f6d413189078475b2a914e2e9fd1f7b93",
-      "lastFetchedAt": "2026-09-28T12:21:53.880Z",
-      "lastUsableAt": "2026-09-28T12:21:53.880Z",
+      "textHash": "f41e41631d02f53525c10dbd0e99fcd9e32339680b98b6ae689aefde4b5ec3d8",
+      "lastFetchedAt": "2026-09-28T22:45:32.775Z",
+      "lastUsableAt": "2026-09-28T22:45:32.775Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
