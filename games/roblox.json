@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "roblox",
-  "updatedAt": "2026-09-29T11:48:26.357Z",
+  "updatedAt": "2026-09-29T17:16:17.163Z",
   "events": [
     {
       "key": "roblox/status/2026-08-07t04-48-28z",
@@ -16,6 +16,20 @@
       "firstSeen": "2026-09-14T20:19:35.926Z",
       "lastVerified": "2026-09-29T11:48:26.357Z",
       "publishState": "published"
+    },
+    {
+      "key": "roblox/status/2026-09-29t02-18-42z",
+      "game": "roblox",
+      "topic": "status",
+      "kind": "occurrence",
+      "label": "Operational",
+      "status": "observed",
+      "at": "2026-09-29T02:18:42.170Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-09-29T17:16:17.163Z",
+      "lastVerified": "2026-09-29T17:16:17.163Z",
+      "publishState": "published"
     }
   ],
   "changes": [
@@ -27,6 +41,15 @@
       "at": "2026-09-14T20:19:35.926Z",
       "reason": "observed by roblox-hostedstatus",
       "decision": "applied"
+    },
+    {
+      "entityKey": "roblox/status/2026-09-29t02-18-42z",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Operational @ 2026-09-29T02:18:42.170Z",
+      "at": "2026-09-29T17:16:17.163Z",
+      "reason": "observed by roblox-hostedstatus",
+      "decision": "applied"
     }
   ],
   "overrides": [],
@@ -36,10 +59,10 @@
     {
       "id": "roblox-hostedstatus",
       "url": "http://hostedstatus.com/1.0/status/59db90dbcdeb2f04dadcf16d",
-      "etag": "W/\"15e3-utLe3UNUAMm2S6ZZXxwjMntGePk\"",
-      "textHash": "4e0917ed7dc5d07de8d91b53e25647d2bcb275bfe90adb10fc4fd82f1e6195f9",
-      "lastFetchedAt": "2026-09-29T11:48:26.357Z",
-      "lastUsableAt": "2026-09-14T21:20:33.942Z",
+      "etag": "W/\"15e3-TNbLActWPELMbbkHO6l9hIDqc7U\"",
+      "textHash": "537b9ab96174b561f535de95d9d67ad1b2bf22736df4e62f81ab18197d6f776a",
+      "lastFetchedAt": "2026-09-29T17:16:17.163Z",
+      "lastUsableAt": "2026-09-29T17:16:17.163Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0

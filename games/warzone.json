@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "warzone",
-  "updatedAt": "2026-09-29T11:48:26.564Z",
+  "updatedAt": "2026-09-29T17:16:17.289Z",
   "events": [
     {
       "key": "warzone/last-patch/call-of-duty-bo7-warzone-season-05-reloaded-patch-notes-2026-08-28",
@@ -28,6 +28,19 @@
       "firstSeen": "2026-09-16T20:25:17.231Z",
       "lastVerified": "2026-09-29T11:48:26.564Z",
       "publishState": "published"
+    },
+    {
+      "key": "warzone/last-patch/call-of-duty-bo7-warzone-season-06-patch-notes-2026-09-24",
+      "game": "warzone",
+      "topic": "last-patch",
+      "kind": "occurrence",
+      "label": "Call of Duty: Warzone Season 06 Patch Notes",
+      "status": "observed",
+      "at": "2026-09-24T00:00:00.000Z",
+      "precision": "day",
+      "firstSeen": "2026-09-29T17:16:17.289Z",
+      "lastVerified": "2026-09-29T17:16:17.289Z",
+      "publishState": "published"
     }
   ],
   "changes": [
@@ -48,6 +61,15 @@
       "at": "2026-09-16T20:25:17.231Z",
       "reason": "observed by warzone-patch-notes-page",
       "decision": "applied"
+    },
+    {
+      "entityKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-06-patch-notes-2026-09-24",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Call of Duty: Warzone Season 06 Patch Notes @ 2026-09-24T00:00:00.000Z",
+      "at": "2026-09-29T17:16:17.289Z",
+      "reason": "observed by warzone-patch-notes-page",
+      "decision": "applied"
     }
   ],
   "overrides": [],
@@ -66,6 +88,15 @@
       "url": "https://www.callofduty.com/patchnotes",
       "sourceId": "warzone-patch-notes-page",
       "fetchedAt": "2026-09-16T20:25:17.231Z",
+      "title": "Call of Duty patch notes",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "063dafa1076cbbb9cacfb5237e82bce45b14a393f79eb94267a2e09a612102ad",
+      "url": "https://www.callofduty.com/patchnotes",
+      "sourceId": "warzone-patch-notes-page",
+      "fetchedAt": "2026-09-29T17:16:17.289Z",
       "title": "Call of Duty patch notes",
       "fetchMode": "http",
       "confidence": "high"
@@ -93,17 +124,28 @@
       "quote": "<li class=\"game-tile warzone\">\n\n\t\t\t\n            \n\n            \n            \n\n            \n            <a href=\"https://www.callofduty.com/blog/warzone\">WZ</a>\n\n            \n            \n\n            \n            \n\n            \n            \n\n            \n            \n    \n            \n            \n    \n            \n            \n    \n            \n            \n\n            \n            \n\n            \n            \n    \n            \n            \n    \n            \n            \n    \n        </li>\n    </ul>\n\n\n                \t\t\n\n    <ul class=\"tag-list\">\n        <li class=\"tag-item\" data-value=\"patch-notes\">\n            \n            Patch Notes\n        </li>\n    \n        <li class=\"tag-item\" data-value=\"season-six\">\n            \n            Season 06\n        </li>\n    </ul>\n\n\n\t\t\t\t\t</div>\n\t\t\t\t\t\n\n    \n         \n    \n        \n\n        <div data-month=\"09\" data-date=\"September 16, 2026\" class=\"news-published\">",
       "linkUrl": "https://www.callofduty.com/patchnotes/2026/09/call-of-duty-bo7-warzone-season-06-patch-notes",
       "extractedAt": "2026-09-16T20:25:17.231Z"
+    },
+    {
+      "id": "8baad07f57d882d0f332b5a4",
+      "documentId": "063dafa1076cbbb9cacfb5237e82bce45b14a393f79eb94267a2e09a612102ad",
+      "eventKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-06-patch-notes-2026-09-24",
+      "field": "at",
+      "value": "2026-09-24T00:00:00.000Z",
+      "method": "deterministic",
+      "quote": "<li class=\"game-tile warzone\">\n\n\t\t\t\n            \n\n            \n            \n\n            \n            <a href=\"https://www.callofduty.com/blog/warzone\">WZ</a>\n\n            \n            \n\n            \n            \n\n            \n            \n\n            \n            \n    \n            \n            \n    \n            \n            \n    \n            \n            \n\n            \n            \n\n            \n            \n    \n            \n            \n    \n            \n            \n    \n        </li>\n    </ul>\n\n\n                \t\t\n\n    <ul class=\"tag-list\">\n        <li class=\"tag-item\" data-value=\"patch-notes\">\n            \n            Patch Notes\n        </li>\n    \n        <li class=\"tag-item\" data-value=\"season-six\">\n            \n            Season 06\n        </li>\n    </ul>\n\n\n\t\t\t\t\t</div>\n\t\t\t\t\t\n\n    \n         \n    \n        \n\n        <div data-month=\"09\" data-date=\"September 24, 2026\" class=\"news-published\">",
+      "linkUrl": "https://www.callofduty.com/patchnotes/2026/09/call-of-duty-bo7-warzone-season-06-patch-notes",
+      "extractedAt": "2026-09-29T17:16:17.289Z"
     }
   ],
   "sources": [
     {
       "id": "warzone-patch-notes-page",
       "url": "https://www.callofduty.com/patchnotes",
-      "etag": "\"27b5a-65ba08272b21f-gzip\"",
-      "lastModified": "Wed, 16 Sep 2026 21:40:01 GMT",
-      "textHash": "af5300f91de38c0a60119f96cec7262184c46e1b89479ffa921777a690de5c66",
-      "lastFetchedAt": "2026-09-29T11:48:26.564Z",
-      "lastUsableAt": "2026-09-23T10:28:23.427Z",
+      "etag": "\"27b5a-65c42cc3e3e63-gzip\"",
+      "lastModified": "Thu, 24 Sep 2026 23:17:04 GMT",
+      "textHash": "063dafa1076cbbb9cacfb5237e82bce45b14a393f79eb94267a2e09a612102ad",
+      "lastFetchedAt": "2026-09-29T17:16:17.289Z",
+      "lastUsableAt": "2026-09-29T17:16:17.289Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
