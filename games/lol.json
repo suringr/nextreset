@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "lol",
-  "updatedAt": "2026-09-29T21:39:18.517Z",
+  "updatedAt": "2026-09-30T03:00:49.401Z",
   "events": [
     {
       "key": "lol/next-patch/26.01",
@@ -14,7 +14,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -28,7 +28,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -42,7 +42,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -56,7 +56,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -70,7 +70,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -84,7 +84,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -98,7 +98,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -112,7 +112,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -126,7 +126,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -140,7 +140,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -154,7 +154,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -168,7 +168,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -182,7 +182,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -196,7 +196,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -210,7 +210,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -224,7 +224,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -238,7 +238,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -252,7 +252,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -261,12 +261,12 @@
       "topic": "next-patch",
       "kind": "version",
       "label": "26.19",
-      "status": "ended",
+      "status": "observed",
       "at": "2026-09-23T00:00:00.000Z",
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-24T02:14:51.615Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -280,7 +280,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-29T21:39:18.517Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -294,7 +294,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -308,7 +308,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -322,7 +322,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     },
     {
@@ -336,7 +336,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-15T20:04:34.116Z",
+      "lastVerified": "2026-09-30T03:00:49.401Z",
       "publishState": "published"
     }
   ],
@@ -565,6 +565,15 @@
       "at": "2026-09-24T02:14:51.615Z",
       "reason": "scheduled instant has passed",
       "decision": "applied"
+    },
+    {
+      "entityKey": "lol/next-patch/26.19",
+      "field": "status",
+      "oldValue": "ended",
+      "newValue": "observed",
+      "at": "2026-09-30T03:00:49.401Z",
+      "reason": "observed by lol-patch-schedule",
+      "decision": "applied"
     }
   ],
   "overrides": [],
@@ -576,6 +585,15 @@
       "fetchedAt": "2026-09-15T20:04:34.116Z",
       "title": "Patch Schedule - League of Legends - League of Legends Support",
       "fetchMode": "browser",
+      "confidence": "high"
+    },
+    {
+      "id": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "url": "https://support.riotgames.com/en-us/league-of-legends/gameplay/patch-schedule-league-of-legends",
+      "sourceId": "lol-patch-schedule",
+      "fetchedAt": "2026-09-30T03:00:49.401Z",
+      "title": "Patch Schedule - League of Legends - League of Legends Support",
+      "fetchMode": "http",
       "confidence": "high"
     }
   ],
@@ -819,15 +837,255 @@
       "method": "ai",
       "quote": "26.24 December 9, 2026",
       "extractedAt": "2026-09-15T20:04:34.116Z"
+    },
+    {
+      "id": "59c21308d9e012300c92ee6d",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.01",
+      "field": "at",
+      "value": "2026-01-08T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.01 January 8, 2026 (Thursday)",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "007709321180395536c5a3c7",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.02",
+      "field": "at",
+      "value": "2026-01-22T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.02 January 22, 2026 (Thursday)",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "c91405acf5605f91540b6d30",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.03",
+      "field": "at",
+      "value": "2026-02-04T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.03 February 4, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "b019f81e9856c267acfc3d53",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.04",
+      "field": "at",
+      "value": "2026-02-19T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.04 February 19, 2026 (Thursday)",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "0cbe9b894e09ab48e2732b5e",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.05",
+      "field": "at",
+      "value": "2026-03-04T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.05 March 4, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "a53c439df78e497c02cfb895",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.06",
+      "field": "at",
+      "value": "2026-03-18T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.06 March 18, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "0d440f16520e0e79f56711a0",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.07",
+      "field": "at",
+      "value": "2026-04-01T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.07 April 1, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "371acebf36503de6f67ceda3",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.08",
+      "field": "at",
+      "value": "2026-04-15T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.08 April 15, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "3df0835e03b7eceb211bf80b",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.09",
+      "field": "at",
+      "value": "2026-04-29T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.09 April 29, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "990a513b946c8be66280a771",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.10",
+      "field": "at",
+      "value": "2026-05-13T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.10 May 13, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "c8025c2f3cf45c6b4a489029",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.11",
+      "field": "at",
+      "value": "2026-05-28T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.11 May 28, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "b486811ee99e7e713e3b41cd",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.12",
+      "field": "at",
+      "value": "2026-06-10T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.12 June 10, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "8acb3ed02f563541c6427f5d",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.13",
+      "field": "at",
+      "value": "2026-06-24T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.13 June 24, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "7586003b51a833712dfd03b7",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.14",
+      "field": "at",
+      "value": "2026-07-15T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.14 July 15, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "68762da933f49206b13a8af6",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.15",
+      "field": "at",
+      "value": "2026-07-29T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.15 July 29, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "819c6b5d59b97d75de040ae1",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.16",
+      "field": "at",
+      "value": "2026-08-12T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.16 August 12, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "aa971e175f22511613b6c8d3",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.17",
+      "field": "at",
+      "value": "2026-08-26T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.17 August 26, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "53f53f8660e6fb037c2a741a",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.18",
+      "field": "at",
+      "value": "2026-09-10T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.18 September 10, 2026 (Thursday)",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "5b798da4889bc89e2a29518c",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.19",
+      "field": "at",
+      "value": "2026-09-23T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.19 September 23, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "544a84c46904fd3056a5ab7f",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.20",
+      "field": "at",
+      "value": "2026-10-07T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.20 October 7, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "3feaa1e59871c70b54cf491e",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.21",
+      "field": "at",
+      "value": "2026-10-21T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.21 October 21, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "e21961d96c5148445e80fe51",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.22",
+      "field": "at",
+      "value": "2026-11-04T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.22 November 4, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "e118d3e20aefdad5c9dfa5f3",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.23",
+      "field": "at",
+      "value": "2026-11-18T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.23 November 18, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
+    },
+    {
+      "id": "7dee7f9be43101ddc01f9cc9",
+      "documentId": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "eventKey": "lol/next-patch/26.24",
+      "field": "at",
+      "value": "2026-12-09T00:00:00.000Z",
+      "method": "ai",
+      "quote": "26.24 December 9, 2026",
+      "extractedAt": "2026-09-30T03:00:49.401Z"
     }
   ],
   "sources": [
     {
       "id": "lol-patch-schedule",
       "url": "https://support-leagueoflegends.riotgames.com/hc/en-us/articles/360018987893-League-of-Legends-Patch-Schedule",
-      "textHash": "cde5dd2617f8c947f97614c97935c07ca9b86d48d316349533056aa04e4a3332",
-      "lastFetchedAt": "2026-09-29T21:39:18.517Z",
-      "lastUsableAt": "2026-09-29T21:39:18.517Z",
+      "textHash": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
+      "lastFetchedAt": "2026-09-30T03:00:49.401Z",
+      "lastUsableAt": "2026-09-30T03:00:49.401Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -872,9 +1130,9 @@
       "via": "config",
       "title": "Patch Schedule - League of Legends - League of Legends Support",
       "discoveredAt": "2026-09-15T20:04:34.116Z",
-      "lastSuccessAt": "2026-09-15T20:04:34.116Z",
+      "lastSuccessAt": "2026-09-30T03:00:49.401Z",
       "lastFailureAt": "2026-09-15T23:03:01.303Z",
-      "successes": 1,
+      "successes": 2,
       "failures": 1
     }
   ],
