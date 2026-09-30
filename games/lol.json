@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "lol",
-  "updatedAt": "2026-09-30T03:00:49.401Z",
+  "updatedAt": "2026-09-30T11:34:53.329Z",
   "events": [
     {
       "key": "lol/next-patch/26.01",
@@ -14,7 +14,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -28,7 +28,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -42,7 +42,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -56,7 +56,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -70,7 +70,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -84,7 +84,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -98,7 +98,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -112,7 +112,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -126,7 +126,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -140,7 +140,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -154,7 +154,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -168,7 +168,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -182,7 +182,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -196,7 +196,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -210,7 +210,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -224,7 +224,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -238,7 +238,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -252,7 +252,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -266,7 +266,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -280,7 +280,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -294,7 +294,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -308,7 +308,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -322,7 +322,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     },
     {
@@ -336,7 +336,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-09-30T03:00:49.401Z",
+      "lastVerified": "2026-09-30T11:34:53.329Z",
       "publishState": "published"
     }
   ],
@@ -1083,9 +1083,9 @@
     {
       "id": "lol-patch-schedule",
       "url": "https://support-leagueoflegends.riotgames.com/hc/en-us/articles/360018987893-League-of-Legends-Patch-Schedule",
-      "textHash": "8560268afd9fa96dca8ca38f314e1347c445e280b3ac8967ed5ce7593ba9dfa4",
-      "lastFetchedAt": "2026-09-30T03:00:49.401Z",
-      "lastUsableAt": "2026-09-30T03:00:49.401Z",
+      "textHash": "cde5dd2617f8c947f97614c97935c07ca9b86d48d316349533056aa04e4a3332",
+      "lastFetchedAt": "2026-09-30T11:34:53.329Z",
+      "lastUsableAt": "2026-09-30T11:34:53.329Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -1130,9 +1130,9 @@
       "via": "config",
       "title": "Patch Schedule - League of Legends - League of Legends Support",
       "discoveredAt": "2026-09-15T20:04:34.116Z",
-      "lastSuccessAt": "2026-09-30T03:00:49.401Z",
+      "lastSuccessAt": "2026-09-30T11:34:53.329Z",
       "lastFailureAt": "2026-09-15T23:03:01.303Z",
-      "successes": 2,
+      "successes": 3,
       "failures": 1
     }
   ],
