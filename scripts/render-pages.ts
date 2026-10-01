@@ -275,12 +275,42 @@ export function blocksFor(data: TrackerData | undefined, now: Date = new Date())
  * own test, which makes it the anchor. Matched as a pattern rather than a literal, because each page's
  * canonical names that page.
  */
+/**
+ * The page's canonical `<link>` tags, exactly as written.
+ *
+ * Every `<link>` is found first and its `rel` is then read, rather than matching one shape of the whole
+ * tag: attribute order, quoting and case are the author's choice, and `<link href="…" rel="canonical">`
+ * is the same statement as `<link rel="canonical" href="…">`.
+ *
+ * This exists so that the two things that read the canonical cannot disagree about what counts as one.
+ * They did: `pageIdentityOf` was taught these spellings while the tag insertion below still accepted a
+ * single form, so a withheld page written the other way resolved its identity, decided `noindex`, and
+ * then failed the build looking for a tag it had just read.
+ */
+function canonicalTagsIn(html: string): string[] {
+    return (html.match(/<link\b[^>]*>/gi) ?? []).filter(tag => {
+        const rel = tag.match(/\brel\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+        if (!rel) return false;
+        return (rel[1] ?? rel[2] ?? rel[3] ?? "").trim().toLowerCase() === "canonical";
+    });
+}
+
+/** The href the page declares as canonical, or undefined where it declares exactly one or none. */
+function canonicalHrefIn(html: string): string | undefined {
+    const tags = canonicalTagsIn(html);
+    if (tags.length !== 1) return undefined;
+    const href = tags[0].match(/\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+    return href ? (href[1] ?? href[2] ?? href[3]) : undefined;
+}
+
 function insertAfterCanonical(html: string, tag: string, page: string): string {
-    const canonical = /<link rel="canonical"[^>]*>/g;
-    const found = html.match(canonical);
-    if (!found || found.length !== 1) throw new Error(`${page}: expected exactly one canonical link, found ${found?.length ?? 0}`);
+    const found = canonicalTagsIn(html);
+    if (found.length !== 1) throw new Error(`${page}: expected exactly one canonical link, found ${found.length}`);
     const eol = html.includes("\r\n") ? "\r\n" : "\n";
-    return html.replace(canonical, match => `${match}${eol}  ${tag}`);
+    // Spliced at the position the tag was found, rather than by replacing its text: the same string
+    // could legitimately appear elsewhere in the document, and only this occurrence is the canonical.
+    const at = html.indexOf(found[0]);
+    return html.slice(0, at + found[0].length) + `${eol}  ${tag}` + html.slice(at + found[0].length);
 }
 
 /**
@@ -313,11 +343,10 @@ function infoRow(indent: string, eol: string, label: string, value: string): str
  * manifest knows, and the caller then falls back to what the data alone says.
  */
 export function pageIdentityOf(html: string): string | undefined {
-    // Parsed, not pattern-matched. `<link href="…" rel="canonical">` and single-quoted attributes are
-    // the same statement written differently, and the navigation test reads them with cheerio — a regex
-    // here would resolve a page the rest of the build resolves fine, and withhold it in one place and
-    // not the other. That split is worse than either answer on its own.
-    const href = cheerio.load(html)(`link[rel="canonical" i]`).attr("href");
+    // Through the same reader the tag insertion uses, so the two can never disagree about which tag is
+    // the canonical or how many there are. `<link href="…" rel="canonical">` and single-quoted or
+    // upper-case attributes are the same statement written differently.
+    const href = canonicalHrefIn(html);
     if (!href) return undefined;
     let url: URL;
     try {

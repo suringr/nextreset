@@ -308,6 +308,38 @@ test("a canonical is read as markup, so valid spellings of it resolve the same p
     // A canonical naming another site is not this page saying where it lives.
     assert.equal(pageIdentityOf(`<link rel="canonical" href="https://example.com/roblox/status/">`), undefined);
     assert.equal(pageIdentityOf(`<link rel="canonical" href="::::">`), undefined);
+    // Two canonicals is not one statement of identity, and the build already refuses to render it.
+    assert.equal(pageIdentityOf(`<link rel="canonical" href="/roblox/status/"><link rel='canonical' href='/lol/next-patch/'>`), undefined);
+});
+
+test("every canonical spelling the parser accepts, the noindex tag can be inserted after", () => {
+    // Codex, PR #64 round 3: teaching pageIdentityOf these spellings without teaching the insertion the
+    // same ones turned a silent mismatch into a build crash — the page resolved its identity, decided
+    // noindex, then threw looking for a tag it had just read. Both now go through one reader.
+    const roblox = fs.readFileSync(path.join(PUBLIC, "roblox/status/index.html"), "utf8");
+    const authored = roblox.match(/<link rel="canonical"[^>]*>/)![0];
+
+    for (const spelling of [
+        `<link href="https://nextreset.co/roblox/status/" rel="canonical">`,
+        `<link rel='canonical' href='https://nextreset.co/roblox/status/'>`,
+        `<link REL="CANONICAL" HREF="https://nextreset.co/roblox/status/">`,
+        `<link rel="canonical" href="/roblox/status/">`
+    ]) {
+        const html = roblox.replace(authored, spelling);
+        assert.equal(pageIdentityOf(html), "roblox/status/index.html", `identity: ${spelling}`);
+        const out = renderTrackerHtml(html, ROBLOX_ANSWERED, "roblox/status/index.html", NOW);
+        assert.ok(out.includes(NOINDEX_TAG), `tag not inserted for: ${spelling}`);
+        // And inserted after that tag, not somewhere else in the head.
+        assert.ok(out.indexOf(NOINDEX_TAG) > out.indexOf(spelling), `tag inserted before the canonical: ${spelling}`);
+    }
+
+    // A page with no canonical, or two, refuses to render rather than guessing where the tag goes.
+    // Driven with data that cannot answer, because that is what makes the tag necessary: without a
+    // readable canonical the page has no identity, so the editorial list cannot reach it and only the
+    // data rule can ask for the tag.
+    const unanswered: TrackerData = { ...ROBLOX_ANSWERED, nextEventUtc: null };
+    assert.throws(() => renderTrackerHtml(roblox.replace(authored, ""), unanswered, "roblox/status/index.html", NOW), /exactly one canonical/);
+    assert.throws(() => renderTrackerHtml(roblox.replace(authored, authored + authored), unanswered, "roblox/status/index.html", NOW), /exactly one canonical/);
 });
 
 test("the sitemap and the noindex tag always answer about the same page", () => {
