@@ -19,10 +19,11 @@
 import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
-import { IndexDecision, NOINDEX_TAG, indexStateFor, staticPageDecision } from "./indexing";
+import { IndexDecision, NOINDEX_TAG, staticPageDecision, trackerDecision } from "./indexing";
 import { blocksFor as dataBlocksFor, loadKnowledge, renderBlocks } from "./render-data-blocks";
 import { CardGroup, renderHomeHtml } from "./render-home";
 import { SitemapEntry, SitemapInput, renderSitemap } from "./render-sitemap";
+import { pageAtUrlPath } from "./site-map";
 import { minifyCss } from "./minify-css";
 import { replaceSlot } from "./render-slots";
 import { VersionedAssets, versionAssets } from "./version-assets";
@@ -47,6 +48,9 @@ export interface TrackerData {
 }
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/** Where the site is published. A canonical naming anywhere else is not this page stating its own URL. */
+export const ORIGIN = "https://nextreset.co";
 
 /** Publishers behind the source hosts we actually use. A host we do not know shows as its hostname. */
 const PUBLISHERS: ReadonlyArray<readonly [string, string]> = [
@@ -271,12 +275,123 @@ export function blocksFor(data: TrackerData | undefined, now: Date = new Date())
  * own test, which makes it the anchor. Matched as a pattern rather than a literal, because each page's
  * canonical names that page.
  */
+/**
+ * The page's canonical `<link>` tags, exactly as written.
+ *
+ * Every `<link>` is found first and its `rel` is then read, rather than matching one shape of the whole
+ * tag: attribute order, quoting and case are the author's choice, and `<link href="…" rel="canonical">`
+ * is the same statement as `<link rel="canonical" href="…">`.
+ *
+ * This exists so that the two things that read the canonical cannot disagree about what counts as one.
+ * They did: `pageIdentityOf` was taught these spellings while the tag insertion below still accepted a
+ * single form, so a withheld page written the other way resolved its identity, decided `noindex`, and
+ * then failed the build looking for a tag it had just read.
+ */
+/**
+ * Blanks every HTML comment, keeping the document's length and so every offset into it.
+ *
+ * A canonical link left behind inside a comment is not a canonical link — a crawler does not see it,
+ * and neither should anything here. Replacing each comment with spaces of the same length means a
+ * position found in the blanked copy is the same position in the original, so the text can be scanned
+ * safely and still spliced by index.
+ */
+function blankComments(html: string): string {
+    return html.replace(/<!--[\s\S]*?-->/g, comment => " ".repeat(comment.length));
+}
+
+/**
+ * Where the page's canonical `<link>` tags are, as text, with their offsets into the original HTML.
+ *
+ * Attribute order, quoting and case are the author's choice, so every `<link>` is found first and its
+ * `rel` read afterwards. Two things this must not do, both of which it did once:
+ *
+ *   - count a canonical inside a comment. Cheerio does not, and a crawler does not.
+ *   - treat `data-rel="canonical"` as `rel`. `\brel` matches inside `data-rel`, because a hyphen is a
+ *     word boundary; the attribute name has to be preceded by whitespace to be its own attribute.
+ *
+ * `canonicalOf` cross-checks the result against cheerio, so if this text scan and a real HTML parser
+ * ever disagree about a page, the build stops instead of quietly picking one of the two answers.
+ */
+/**
+ * Where a `<link>` tag ends, counting from just after its name.
+ *
+ * Not `[^>]*`. A quoted attribute may legally contain `>` — `href="…/status/?q=>"` is a valid URL in a
+ * valid tag — and a scan that stops at the first one reports a tag that ends in the middle of an
+ * attribute value. Both readers still agree there is one canonical, so the cross-check passes, and the
+ * robots tag is then spliced inside the href: the page loses its `noindex` and keeps its exclusion from
+ * the sitemap. Quotes are tracked so the bracket that ends the tag is the one outside them.
+ *
+ * Returns undefined for a tag that is never closed, which is markup this build should not guess at.
+ */
+function endOfTag(html: string, from: number): number | undefined {
+    let quote: string | undefined;
+    for (let i = from; i < html.length; i++) {
+        const character = html[i];
+        if (quote) {
+            if (character === quote) quote = undefined;
+        } else if (character === '"' || character === "'") {
+            quote = character;
+        } else if (character === ">") {
+            return i;
+        }
+    }
+    return undefined;
+}
+
+function canonicalTagsIn(html: string): Array<{ tag: string; at: number }> {
+    const found: Array<{ tag: string; at: number }> = [];
+    const links = /<link\b/gi;
+    const scannable = blankComments(html);
+    for (let match = links.exec(scannable); match !== null; match = links.exec(scannable)) {
+        const close = endOfTag(scannable, match.index + match[0].length);
+        if (close === undefined) break;
+        links.lastIndex = close + 1;
+        const tag = scannable.slice(match.index, close + 1);
+        const rel = tag.match(/[\s]rel\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+        if (!rel) continue;
+        if ((rel[1] ?? rel[2] ?? rel[3] ?? "").trim().toLowerCase() !== "canonical") continue;
+        // The tag's text is taken from the original at the offsets found in the blanked copy: blanking
+        // preserves length, and a `<link>` cannot contain a comment, so the two are the same bytes.
+        found.push({ tag: html.slice(match.index, close + 1), at: match.index });
+    }
+    return found;
+}
+
+export interface CanonicalLink {
+    tag: string;
+    at: number;
+    href: string;
+}
+
+/**
+ * The one canonical link a page declares, or undefined where it does not declare exactly one.
+ *
+ * Read twice, by a real HTML parser and by the text scan that knows where the tag sits, and the two
+ * must agree. Cheerio is the authority on what the markup means — it is what the navigation test and a
+ * crawler see — and the scan is the only one that can say where to write. A disagreement means the text
+ * scan has a case the parser handles differently, which is how this went wrong before, so it throws
+ * rather than choosing.
+ */
+export function canonicalOf(html: string, page = "page"): CanonicalLink | undefined {
+    const parsed = cheerio.load(html)(`link[rel="canonical" i]`);
+    const scanned = canonicalTagsIn(html);
+    if (parsed.length !== scanned.length) {
+        throw new Error(`${page}: canonical links read as ${parsed.length} by the parser and ${scanned.length} by the scan`);
+    }
+    if (scanned.length !== 1) return undefined;
+    const href = parsed.attr("href");
+    if (!href) return undefined;
+    return { ...scanned[0], href };
+}
+
 function insertAfterCanonical(html: string, tag: string, page: string): string {
-    const canonical = /<link rel="canonical"[^>]*>/g;
-    const found = html.match(canonical);
-    if (!found || found.length !== 1) throw new Error(`${page}: expected exactly one canonical link, found ${found?.length ?? 0}`);
+    const canonical = canonicalOf(html, page);
+    if (!canonical) throw new Error(`${page}: expected exactly one canonical link with an href`);
     const eol = html.includes("\r\n") ? "\r\n" : "\n";
-    return html.replace(canonical, match => `${match}${eol}  ${tag}`);
+    // Spliced at the offset the tag was found at, rather than by replacing its text: the same string
+    // could legitimately appear elsewhere in the document, and only this occurrence is the canonical.
+    const end = canonical.at + canonical.tag.length;
+    return html.slice(0, end) + `${eol}  ${tag}` + html.slice(end);
 }
 
 /**
@@ -294,14 +409,59 @@ function infoRow(indent: string, eol: string, label: string, value: string): str
     ].join(eol);
 }
 
-/** Writes the verified facts into one tracker page. Pure: takes HTML and data, returns HTML. */
-export function renderTrackerHtml(html: string, data: TrackerData | undefined, page = "page", now: Date = new Date(), blocksHtml = ""): string {
+/**
+ * Which page this HTML says it is, from its own canonical link.
+ *
+ * `page` is a label a caller passes for error messages, and callers spell it however reads best —
+ * "lol/next-patch", "cs2/last-update", or just "page" in a test that only cares about drift. That is
+ * fine for a message and unusable as the key to a policy: looking `EDITORIAL_NOINDEX` up by a label
+ * would silently fail to withhold a page whose caller wrote the label the other way, and the page would
+ * publish as indexable with nothing to show for it.
+ *
+ * The canonical link is the page's own statement of where it lives. The build already guarantees there
+ * is exactly one, and `navigation.test.ts` holds it equal to the page's location, so it is the one
+ * identity that cannot drift from what is published. Returns undefined when the HTML names no page the
+ * manifest knows, and the caller then falls back to what the data alone says.
+ */
+export function pageIdentityOf(html: string): string | undefined {
+    // Through the same reader the tag insertion uses, so the two can never disagree about which tag is
+    // the canonical or how many there are. `<link href="…" rel="canonical">` and single-quoted or
+    // upper-case attributes are the same statement written differently.
+    const href = canonicalOf(html)?.href;
+    if (!href) return undefined;
+    let url: URL;
+    try {
+        url = new URL(href, ORIGIN);
+    } catch {
+        return undefined;
+    }
+    // A canonical pointing somewhere else entirely is not this page saying where it lives.
+    if (url.origin !== ORIGIN) return undefined;
+    return pageAtUrlPath(url.pathname)?.page;
+}
+
+/**
+ * Writes the verified facts into one tracker page. Pure: takes HTML and data, returns HTML.
+ *
+ * `page` is a label for error messages only. Which page this *is* — and so whether it is editorially
+ * withheld — is read from the HTML's own canonical link, never from that label. See `pageIdentityOf`.
+ *
+ * `decision` is the index decision already taken for this page. `renderSite` computes it once and hands
+ * it to both the sitemap and this renderer, because the one thing worse than withholding a page in the
+ * wrong place is withholding it in one place and not the other: a page that is absent from the sitemap
+ * and missing its `noindex` tag is neither submitted nor actually withheld. Omitted, it is computed the
+ * same way from the same HTML, so a caller that leaves it out still gets a consistent answer.
+ */
+export function renderTrackerHtml(html: string, data: TrackerData | undefined, page = "page", now: Date = new Date(), blocksHtml = "", decision?: IndexDecision): string {
     const b = blocksFor(data, now);
 
     // A page that cannot answer its question is honest but thin, and asking to be indexed on it is
     // asking to be judged on the page that says the least. It is still crawled, and its links still
-    // followed to the pages that do answer something.
-    if (indexStateFor(data, now).state === "noindex") {
+    // followed to the pages that do answer something. The same tag carries an editorial decision that
+    // a page is not worth a reader's click, which is why this asks for the whole decision and not just
+    // the data rule.
+    const indexing = decision ?? trackerDecision(pageIdentityOf(html), data, now);
+    if (indexing.state === "noindex") {
         html = insertAfterCanonical(html, NOINDEX_TAG, page);
     }
 
@@ -462,7 +622,34 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
         // A page we are asking Google not to index is not also submitted for indexing: asking for both
         // at once is the kind of contradiction that teaches a crawler to trust neither. Its facts are
         // still counted, because the homepage shows its card and is dated by everything on it.
-        const decision = indexStateFor(data, now);
+        // One identity, resolved once from the page's own canonical, and one decision taken from it.
+        // The sitemap below and the renderer further down both read this, so they cannot disagree.
+        //
+        // A tracker that cannot be identified fails the build rather than being decided by its data
+        // alone. "No opinion" is the wrong default here: an editorially withheld page whose canonical
+        // had drifted would quietly skip EDITORIAL_NOINDEX, render without the tag, and be submitted
+        // under its filesystem URL — withheld nowhere. The publish job runs build:site without the test
+        // suite, so no test stands between that drift and production; this does. Template drift is
+        // fatal everywhere else in this pipeline and there is no reason for identity to be the
+        // exception.
+        const identity = pageIdentityOf(html);
+        if (!identity) {
+            throw new Error(
+                `${page}: no canonical naming a page this site publishes. A tracker's index decision is ` +
+                `taken from its canonical, so it must declare exactly one, at its own URL.`
+            );
+        }
+        // And it must be this page's own URL. A page that copies another tracker's canonical resolves
+        // perfectly well — to the wrong tracker — so it would take that tracker's index decision while
+        // the sitemap went on using this file's path. Roblox carrying League's canonical would publish
+        // Roblox without `noindex` and submit it, editorial exclusion and all.
+        if (identity !== page) {
+            throw new Error(
+                `${page}: declares the canonical of ${identity}. A page's canonical must name its own URL, ` +
+                `or its index decision and its sitemap entry are about two different pages.`
+            );
+        }
+        const decision = trackerDecision(identity, data, now);
         summary.indexing.push({ page, ...decision });
         pagesForSitemap.push({ page, tracker, listed: decision.state === "index" });
 
@@ -482,7 +669,7 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
             console.warn(`  ⚠ ${page}: knowledge unusable, publishing without data blocks (${error instanceof Error ? error.message : String(error)})`);
         }
 
-        const rendered = renderTrackerHtml(html, data, page, now, blocksHtml);
+        const rendered = renderTrackerHtml(html, data, page, now, blocksHtml, decision);
         fs.writeFileSync(file, rendered, "utf8");
         const blocks = blocksFor(data, now);
         summary.rendered.push({ page, game: tracker.game, type: tracker.type, status: data?.status ?? "no-data", value: blocks.value, blocks: blocksHtml ? blocksHtml.split("<h2>").length - 1 : 0 });

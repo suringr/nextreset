@@ -21,6 +21,7 @@
  */
 import * as cheerio from "cheerio";
 import { TrackerData, hasVerifiedValue, isUnanswered } from "./render-pages";
+import { pageEntry } from "./site-map";
 
 export type IndexState = "index" | "noindex";
 
@@ -28,6 +29,64 @@ export interface IndexDecision {
     state: IndexState;
     /** Why, for the build log. Never published: a reader is told what is known, not how it was judged. */
     reason: string;
+}
+
+/**
+ * Trackers withheld from the index by a decision, not by their data.
+ *
+ * The rule below this is data-driven: a page that publishes a verified value asks to be indexed. These
+ * three publish a verified value and are still withheld, because the value is not the question. Each one
+ * is a judgement about whether the page is worth a reader's click, and a judgement has to be written
+ * down somewhere a person can read it and argue with it.
+ *
+ * It is deliberately a list of named pages with stated reasons rather than a threshold. A threshold —
+ * "fewer than N history rows" — would look principled, would be trivial to satisfy by padding, and would
+ * tell the next reader that the number meant something. It does not. These are editorial calls.
+ *
+ * Being on this list costs a page its place in the index and its link in the footer (see `isListed`). It
+ * does not delete the page, the route, the provider or the data: the URL keeps working, the homepage
+ * still shows the card, and `/resets/` can still show the row. Removing an entry is how a page comes
+ * back, and that is meant to be a deliberate edit.
+ */
+export interface EditorialExclusion {
+    /** The page, as the renderer names it. */
+    page: string;
+    /** Why this page is withheld. Read by a person, never published. */
+    reason: string;
+}
+
+export const EDITORIAL_NOINDEX: readonly EditorialExclusion[] = [
+    {
+        page: "fortnite/next-season/index.html",
+        reason: "the topic is stopped: fortnite.com is behind a challenge we do not circumvent, and no " +
+            "permitted source states the season end, so the page cannot answer its question at all"
+    },
+    {
+        page: "roblox/status/index.html",
+        reason: "a service status is not a reset, and status.roblox.com answers it first-hand; the page " +
+            "restates one word from an API that the reader can read directly"
+    },
+    {
+        page: "red-dead-redemption-2/last-update/index.html",
+        reason: "the Newswire is a JS shell with no dated articles, so the page publishes one unverifiable " +
+            "date and no history; countdowns for this game were stopped as a source decision"
+    }
+];
+
+/** Why a page is editorially withheld, or undefined where it is not. */
+export function editorialNoindex(page: string): string | undefined {
+    return EDITORIAL_NOINDEX.find(entry => entry.page === page)?.reason;
+}
+
+/**
+ * Whether a tracker appears in the footer's list of every tracker.
+ *
+ * Tied to the editorial list rather than to the data rule, because the footer is baked into authored
+ * HTML and the data rule is evaluated per build. A provider failing this morning should not restructure
+ * the site's navigation; a decision that a page is not worth reading should.
+ */
+export function isListed(page: string): boolean {
+    return pageEntry(page)?.role === "tracker" && editorialNoindex(page) === undefined;
 }
 
 /** The robots directive for a page that should not be indexed. Crawled and followed, just not listed. */
@@ -47,6 +106,23 @@ export function indexStateFor(data: TrackerData | undefined, now: Date): IndexDe
         return { state: "noindex", reason: "the question has no answer right now" };
     }
     return { state: "index", reason: "publishes a verified value" };
+}
+
+/**
+ * The whole decision for a tracker page: the editorial call first, then the data.
+ *
+ * The order matters and only one way round is honest. A page withheld by judgement stays withheld on the
+ * day its provider happens to succeed, so the reason in the build log is the real one rather than
+ * whichever rule fired first. Asking the data first would report "publishes a verified value" for a page
+ * that is not going to be indexed either way.
+ */
+export function trackerDecision(page: string | undefined, data: TrackerData | undefined, now: Date): IndexDecision {
+    // `page` is the identity the HTML declared, which is undefined when the markup names no page this
+    // site publishes. That is a page the editorial list cannot have an opinion about, so the data
+    // decides — the same answer this rule gave before an editorial list existed.
+    const editorial = page === undefined ? undefined : editorialNoindex(page);
+    if (editorial) return { state: "noindex", reason: `withheld: ${editorial}` };
+    return indexStateFor(data, now);
 }
 
 /**

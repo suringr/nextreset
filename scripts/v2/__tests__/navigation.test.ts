@@ -11,10 +11,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import * as cheerio from "cheerio";
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
+import { EDITORIAL_NOINDEX, NOINDEX_TAG, isListed } from "../../indexing";
 import { GameKnowledge } from "../../render-data-blocks";
-import { trackerOf } from "../../render-pages";
+import { TrackerData, canonicalOf, pageIdentityOf, renderSite, renderTrackerHtml, trackerOf } from "../../render-pages";
 import { buildSitemap, factsChangedAt, sitemapEntries, urlPathOf } from "../../render-sitemap";
+import { SITE_PAGES, matchesDirectory, pageEntry, trackerPages as trackerManifest } from "../../site-map";
 import { gamePages } from "../../update-game-pages";
 import { GAMES } from "../games";
 
@@ -37,6 +40,15 @@ function authoredPages(): string[] {
 
 const PAGES = authoredPages();
 const load = (page: string) => cheerio.load(fs.readFileSync(path.join(PUBLIC, page), "utf8"));
+
+/** A pinned clock, and two trackers that answer — so only the editorial rule can withhold either. */
+const NOW = new Date("2026-09-16T12:00:00Z");
+const ROBLOX_ANSWERED: TrackerData = {
+    game: "roblox", type: "status", status: "fresh", nextEventUtc: "2026-09-16T02:18:42.170Z",
+    precision: "exact", fetched_at_utc: "2026-09-16T11:00:00.000Z",
+    last_success_at_utc: "2026-09-16T11:00:00.000Z", source_url: "https://status.roblox.com", confidence: "high"
+};
+const LOL_ANSWERED: TrackerData = { ...ROBLOX_ANSWERED, game: "lol", type: "next-patch", nextEventUtc: "2026-09-23T00:00:00.000Z", precision: "day" };
 
 test("a page's place in the build is its URL", () => {
     assert.equal(urlPathOf("index.html"), "/");
@@ -136,7 +148,10 @@ test("every page in the sitemap is a page that exists, at the URL it calls canon
     });
     const entries = sitemapEntries(inputs, ORIGIN, () => undefined);
     assert.equal(entries.length, PAGES.length);
-    assert.ok(PAGES.length >= 15, `expected every authored page, found ${PAGES.length}`);
+    // What this used to assert with ">= 15" — that the walk really found the site, rather than an empty
+    // directory that would make every loop below vacuous.
+    const { undeclared, missing } = matchesDirectory(PUBLIC);
+    assert.deepEqual([...undeclared, ...missing], [], "the directory and scripts/site-map.ts disagree");
 
     for (const page of PAGES) {
         const canonical = load(page)(`link[rel="canonical"]`).attr("href");
@@ -189,9 +204,14 @@ test("every page says where it sits, and its markup says the same thing", () => 
     }
 });
 
-test("every tracker is reachable from every page", () => {
-    const expected = gamePages.map(page => `/${page.game}/${page.type}/`).sort();
-    assert.equal(expected.length, 12);
+test("every listed tracker is reachable from every page, and no withheld one is", () => {
+    // The footer names the trackers worth reading, not every tracker that exists. A page withheld from
+    // the index (EDITORIAL_NOINDEX) is not advertised from fifteen other pages — that would be fifteen
+    // invitations to the page we rated lowest, and fifteen crawl paths into it.
+    const expected = gamePages.filter(page => isListed(page.path)).map(page => `/${page.game}/${page.type}/`).sort();
+    const withheld = gamePages.filter(page => !isListed(page.path)).map(page => `/${page.game}/${page.type}/`);
+    assert.equal(expected.length + withheld.length, gamePages.length);
+    assert.ok(expected.length > 0 && withheld.length > 0, "this test is only meaningful with some of each");
 
     for (const page of PAGES) {
         if (page === "index.html") continue; // the homepage lists them in its own words
@@ -203,18 +223,237 @@ test("every tracker is reachable from every page", () => {
         const links = nav.find("a").toArray().map(a => $(a).attr("href")!);
         const current = nav.find(`[aria-current="page"]`);
         assert.equal(current.length <= 1, true, `${page}: at most one current page`);
-        const listed = [...links, ...(current.length ? [`/${page.replace(/index\.html$/, "")}`] : [])].sort();
+        const named = [...links, ...(current.length ? [`/${page.replace(/index\.html$/, "")}`] : [])].sort();
 
-        if (trackerOf(fs.readFileSync(path.join(PUBLIC, page), "utf8"), page)) {
-            assert.deepEqual(listed, expected, `${page}: the footer does not name every tracker exactly once`);
-            assert.equal(current.length, 1, `${page}: a tracker page does not link to itself`);
+        const self = `/${page.replace(/index\.html$/, "")}`;
+        if (expected.includes(self)) {
+            assert.deepEqual(named, expected, `${page}: the footer does not name every listed tracker exactly once`);
+            assert.equal(current.length, 1, `${page}: a listed tracker page does not link to itself`);
         } else {
-            assert.deepEqual(links.sort(), expected, `${page}: the footer does not name every tracker`);
+            // Every other page — the static pages, the 404, and a withheld tracker's own page — links to
+            // the listed set and names nothing as current.
+            assert.deepEqual(links.sort(), expected, `${page}: the footer does not name every listed tracker`);
+            assert.equal(current.length, 0, `${page}: nothing here is the current tracker`);
         }
 
+        for (const href of withheld) {
+            assert.ok(!links.includes(href), `${page}: links to ${href}, which is withheld from the index`);
+        }
         for (const href of links) {
             assert.ok(fs.existsSync(path.join(PUBLIC, href.replace(/^\//, ""), "index.html")), `${page}: ${href} does not exist`);
         }
+    }
+});
+
+test("the manifest's trackers are the registry's trackers, and the pages' own", () => {
+    // Codex, PR #64: the game/type on each manifest entry was read by nothing, so a typo in it could
+    // not fail. It is checked against both of the other places the same pair is written — the tracker
+    // registry, and what each authored page says about itself — so the three cannot drift apart.
+    const manifest = trackerManifest();
+    assert.deepEqual(
+        manifest.map(entry => `${entry.tracker!.game}/${entry.tracker!.type}`).sort(),
+        gamePages.map(entry => `${entry.game}/${entry.type}`).sort(),
+        "the manifest and the tracker registry disagree about which trackers exist"
+    );
+    for (const entry of manifest) {
+        assert.ok(entry.tracker, `${entry.page} is declared a tracker with no game/type`);
+        const html = fs.readFileSync(path.join(PUBLIC, entry.page), "utf8");
+        assert.deepEqual(trackerOf(html, entry.page), entry.tracker, `${entry.page}: the page and the manifest disagree`);
+        assert.equal(`${entry.tracker.game}/${entry.tracker.type}/index.html`, entry.page, `${entry.page}: path and tracker disagree`);
+    }
+    // Nothing that is not a tracker claims one.
+    for (const entry of SITE_PAGES.filter(e => e.role !== "tracker")) {
+        assert.equal(entry.tracker, undefined, `${entry.page} is not a tracker but carries tracker metadata`);
+    }
+});
+
+test("a page is withheld by what its canonical says it is, not by the label a caller passed", () => {
+    // Codex, PR #64: the editorial list used to be looked up by the `page` argument, which is a label
+    // for error messages that callers spell however reads best ("fortnite/next-season", or just
+    // "page"). A withheld tracker rendered through such a call would have published as indexable.
+    const roblox = fs.readFileSync(path.join(PUBLIC, "roblox/status/index.html"), "utf8");
+    assert.equal(pageIdentityOf(roblox), "roblox/status/index.html", "a page is identified by its canonical");
+
+    // The same HTML, rendered with three different labels, is withheld every time.
+    for (const label of ["roblox/status", "page", "anything at all"]) {
+        const out = renderTrackerHtml(roblox, ROBLOX_ANSWERED, label, NOW);
+        assert.ok(out.includes(NOINDEX_TAG), `label ${JSON.stringify(label)} lost the withholding`);
+    }
+    // And a page that is not withheld does not gain the tag from a label that happens to name one.
+    const lol = fs.readFileSync(path.join(PUBLIC, "lol/next-patch/index.html"), "utf8");
+    assert.equal(pageIdentityOf(lol), "lol/next-patch/index.html");
+    assert.ok(!renderTrackerHtml(lol, LOL_ANSWERED, "roblox/status/index.html", NOW).includes(NOINDEX_TAG));
+
+    // Markup that names no page this site publishes is decided by its data alone.
+    assert.equal(pageIdentityOf(`<link rel="canonical" href="https://nextreset.co/not-a-page/">`), undefined);
+    assert.equal(pageIdentityOf("<html></html>"), undefined);
+});
+
+test("a canonical is read as markup, so valid spellings of it resolve the same page", () => {
+    // Codex, PR #64 round 2: this was a regex, and `<link href="…" rel="canonical">` or single quotes
+    // made it return undefined while cheerio — which the navigation test and the rest of the build use
+    // — read them fine. A withheld page written that way would have lost its noindex tag while still
+    // being dropped from the sitemap: neither submitted nor actually withheld.
+    const page = "roblox/status/index.html";
+    for (const markup of [
+        `<link rel="canonical" href="https://nextreset.co/roblox/status/">`,
+        `<link href="https://nextreset.co/roblox/status/" rel="canonical">`,
+        `<link rel='canonical' href='https://nextreset.co/roblox/status/'>`,
+        `<link REL="CANONICAL" HREF="https://nextreset.co/roblox/status/">`,
+        `<link rel="canonical" href="/roblox/status/">`,
+        `<link rel="canonical" href="https://nextreset.co/roblox/status">`
+    ]) {
+        assert.equal(pageIdentityOf(markup), page, `not resolved: ${markup}`);
+    }
+    // A canonical naming another site is not this page saying where it lives.
+    assert.equal(pageIdentityOf(`<link rel="canonical" href="https://example.com/roblox/status/">`), undefined);
+    assert.equal(pageIdentityOf(`<link rel="canonical" href="::::">`), undefined);
+    // Two canonicals is not one statement of identity, and the build already refuses to render it.
+    assert.equal(pageIdentityOf(`<link rel="canonical" href="/roblox/status/"><link rel='canonical' href='/lol/next-patch/'>`), undefined);
+});
+
+test("every canonical spelling the parser accepts, the noindex tag can be inserted after", () => {
+    // Codex, PR #64 round 3: teaching pageIdentityOf these spellings without teaching the insertion the
+    // same ones turned a silent mismatch into a build crash — the page resolved its identity, decided
+    // noindex, then threw looking for a tag it had just read. Both now go through one reader.
+    const roblox = fs.readFileSync(path.join(PUBLIC, "roblox/status/index.html"), "utf8");
+    const authored = roblox.match(/<link rel="canonical"[^>]*>/)![0];
+
+    for (const spelling of [
+        `<link href="https://nextreset.co/roblox/status/" rel="canonical">`,
+        `<link rel='canonical' href='https://nextreset.co/roblox/status/'>`,
+        `<link REL="CANONICAL" HREF="https://nextreset.co/roblox/status/">`,
+        `<link rel="canonical" href="/roblox/status/">`
+    ]) {
+        const html = roblox.replace(authored, spelling);
+        assert.equal(pageIdentityOf(html), "roblox/status/index.html", `identity: ${spelling}`);
+        const out = renderTrackerHtml(html, ROBLOX_ANSWERED, "roblox/status/index.html", NOW);
+        assert.ok(out.includes(NOINDEX_TAG), `tag not inserted for: ${spelling}`);
+        // And inserted after that tag, not somewhere else in the head.
+        assert.ok(out.indexOf(NOINDEX_TAG) > out.indexOf(spelling), `tag inserted before the canonical: ${spelling}`);
+    }
+
+    // A page with no canonical, or two, refuses to render rather than guessing where the tag goes.
+    // Driven with data that cannot answer, because that is what makes the tag necessary: without a
+    // readable canonical the page has no identity, so the editorial list cannot reach it and only the
+    // data rule can ask for the tag.
+    const unanswered: TrackerData = { ...ROBLOX_ANSWERED, nextEventUtc: null };
+    assert.throws(() => renderTrackerHtml(roblox.replace(authored, ""), unanswered, "roblox/status/index.html", NOW), /exactly one canonical/);
+    assert.throws(() => renderTrackerHtml(roblox.replace(authored, authored + authored), unanswered, "roblox/status/index.html", NOW), /exactly one canonical/);
+});
+
+test("a canonical in a comment is not a canonical, and data-rel is not rel", () => {
+    // Codex, PR #64 round 4: the text scan counted a commented-out canonical and matched `data-rel`,
+    // because `\brel` matches inside it — a hyphen is a word boundary. Either made a withheld page look
+    // like it had two canonicals (or none), which bypassed EDITORIAL_NOINDEX entirely: no tag, and the
+    // URL submitted under its filesystem path. Withheld nowhere.
+    const real = `<link rel="canonical" href="https://nextreset.co/roblox/status/">`;
+    for (const noise of [
+        `<!-- <link rel="canonical" href="https://nextreset.co/old/"> -->`,
+        `<!--\n  <link rel="canonical" href="https://nextreset.co/old/">\n-->`,
+        `<link data-rel="canonical" href="https://nextreset.co/other/">`,
+        `<link xrel="canonical" href="https://nextreset.co/other/">`
+    ]) {
+        assert.equal(pageIdentityOf(`${noise}${real}`), "roblox/status/index.html", `misread: ${noise}`);
+        assert.equal(pageIdentityOf(`${real}${noise}`), "roblox/status/index.html", `misread: ${noise}`);
+    }
+    // And blanking comments must not shift the offsets insertion relies on.
+    const withComment = `<head>\n  <!-- an old note -->\n  ${real}\n</head>`;
+    const found = canonicalOf(withComment, "test")!;
+    assert.equal(withComment.slice(found.at, found.at + found.tag.length), real, "the offset does not point at the tag");
+});
+
+test("a tracker that cannot say which page it is fails the build", () => {
+    // Codex, PR #64 round 4, with the evidence that settled it: refresh-data.yml runs build:site
+    // without the test suite, so nothing in this file stands between canonical drift and production.
+    // Deciding such a page by its data alone would silently un-withhold Roblox or Red Dead.
+    const dist = fs.mkdtempSync(path.join(os.tmpdir(), "nextreset-noid-"));
+    fs.mkdirSync(path.join(dist, "roblox", "status"), { recursive: true });
+    fs.mkdirSync(path.join(dist, "data"), { recursive: true });
+    const html = fs.readFileSync(path.join(PUBLIC, "roblox/status/index.html"), "utf8");
+    const authored = html.match(/<link rel="canonical"[^>]*>/)![0];
+    fs.writeFileSync(path.join(dist, "data", "roblox.status.json"), JSON.stringify(ROBLOX_ANSWERED));
+
+    for (const broken of [
+        "",                                                                   // no canonical at all
+        `<link rel="canonical" href="https://nextreset.co/not-a-page/">`,     // a page we do not publish
+        `<link rel="canonical" href="https://example.com/roblox/status/">`    // somebody else's site
+    ]) {
+        fs.writeFileSync(path.join(dist, "roblox", "status", "index.html"), html.replace(authored, broken), "utf8");
+        assert.throws(() => renderSite(dist, NOW, dist), /no canonical naming a page this site publishes/,
+            `drift was tolerated: ${broken || "(none)"}`);
+    }
+
+    // Codex, PR #64 round 5: a canonical that resolves to the *wrong* page is the dangerous case, not
+    // the unresolvable one. Roblox carrying League's canonical takes League's index decision — League
+    // is not withheld — while the sitemap goes on using Roblox's own path. The page would publish
+    // without noindex and be submitted, editorial exclusion and all.
+    fs.writeFileSync(
+        path.join(dist, "roblox", "status", "index.html"),
+        html.replace(authored, `<link rel="canonical" href="https://nextreset.co/lol/next-patch/">`),
+        "utf8"
+    );
+    assert.throws(() => renderSite(dist, NOW, dist), /declares the canonical of lol\/next-patch/);
+    fs.rmSync(dist, { recursive: true, force: true });
+});
+
+test("a quoted attribute may contain a bracket, and the tag still ends where it ends", () => {
+    // Codex, PR #64 round 5: `[^>]*` ended the tag at a `>` inside href. Both readers still agreed there
+    // was one canonical, so the cross-check passed, and the robots tag was spliced into the attribute
+    // value — the page losing its noindex while keeping its exclusion from the sitemap.
+    const href = "https://nextreset.co/roblox/status/?q=%3E>";
+    const tricky = `<link rel="canonical" href="${href}">`;
+    const found = canonicalOf(`<head>${tricky}</head>`, "test");
+    assert.ok(found, "a canonical with a bracket in its href was not found");
+    assert.equal(found!.tag, tricky, "the tag was cut short at the bracket inside the attribute");
+
+    // And end to end: the tag lands after the link, not inside it.
+    const roblox = fs.readFileSync(path.join(PUBLIC, "roblox/status/index.html"), "utf8");
+    const authored = roblox.match(/<link rel="canonical"[^>]*>/)![0];
+    const page = roblox.replace(authored, `<link rel="canonical" href="https://nextreset.co/roblox/status/?x=>">`);
+    const out = renderTrackerHtml(page, ROBLOX_ANSWERED, "roblox/status/index.html", NOW);
+    assert.ok(out.includes(NOINDEX_TAG), "no noindex tag was written");
+    assert.ok(!/href="[^"]*noindex/.test(out), "the robots tag was spliced inside the href");
+});
+
+test("the sitemap and the noindex tag always answer about the same page", () => {
+    // The failure this guards: a page excluded from the sitemap but rendered without its tag, or the
+    // reverse. renderSite takes one decision per page and hands it to both, so the only way they can
+    // disagree is if someone splits them again.
+    const dist = fs.mkdtempSync(path.join(os.tmpdir(), "nextreset-agree-"));
+    for (const entry of trackerManifest()) {
+        const dir = path.join(dist, path.dirname(entry.page));
+        fs.mkdirSync(dir, { recursive: true });
+        fs.copyFileSync(path.join(PUBLIC, entry.page), path.join(dist, entry.page));
+    }
+    fs.mkdirSync(path.join(dist, "data"), { recursive: true });
+    // Every tracker answers, so nothing here is withheld except by decision.
+    for (const entry of trackerManifest()) {
+        const { game, type } = entry.tracker!;
+        fs.writeFileSync(path.join(dist, "data", `${game}.${type}.json`),
+            JSON.stringify({ ...ROBLOX_ANSWERED, game, type, nextEventUtc: "2026-09-16T02:18:42.170Z" }));
+    }
+    const summary = renderSite(dist, NOW, dist);
+    const submitted = new Set(summary.sitemap.map(e => e.loc));
+    for (const entry of trackerManifest()) {
+        const html = fs.readFileSync(path.join(dist, entry.page), "utf8");
+        const tagged = html.includes(`content="noindex, follow"`);
+        const listed = submitted.has(`https://nextreset.co${urlPathOf(entry.page)}`);
+        assert.notEqual(tagged, listed, `${entry.page}: tagged=${tagged} but in sitemap=${listed}`);
+        assert.equal(tagged, !isListed(entry.page), `${entry.page}: the tag disagrees with the editorial list`);
+    }
+    fs.rmSync(dist, { recursive: true, force: true });
+});
+
+test("a withheld tracker keeps its route, its data and its card — it only loses the index and the footer", () => {
+    // The point of withholding rather than deleting. Each one is still a page a reader can open, still
+    // has its provider in the registry, and is still declared by the manifest.
+    for (const { page: file, reason } of EDITORIAL_NOINDEX) {
+        assert.ok(fs.existsSync(path.join(PUBLIC, file)), `${file} was deleted rather than withheld`);
+        assert.ok(pageEntry(file), `${file} is withheld but not declared in scripts/site-map.ts`);
+        assert.equal(pageEntry(file)!.role, "tracker", `${file} is not a tracker`);
+        assert.notEqual(reason.trim(), "", `${file}: a withheld page needs a reason`);
+        assert.ok(gamePages.some(entry => entry.path === file), `${file} left the tracker registry`);
     }
 });
 
@@ -242,7 +481,11 @@ test("a URL that does not exist has a page of its own", () => {
     assert.ok(!PAGES.includes("404.html"), "it is not an index.html and so is never listed");
     assert.equal($(".breadcrumbs").length, 0, "it sits nowhere in the hierarchy");
     const links = $(".footer-nav a").toArray().map(a => $(a).attr("href")!).sort();
-    assert.deepEqual(links, gamePages.map(page => `/${page.game}/${page.type}/`).sort(), "every tracker is reachable from it");
+    assert.deepEqual(
+        links,
+        gamePages.filter(page => isListed(page.path)).map(page => `/${page.game}/${page.type}/`).sort(),
+        "every listed tracker is reachable from it"
+    );
 });
 
 test("the documented sources are the sources the code actually reads", () => {
