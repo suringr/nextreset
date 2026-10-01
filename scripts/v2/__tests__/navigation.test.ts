@@ -11,10 +11,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import * as cheerio from "cheerio";
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 import { EDITORIAL_NOINDEX, NOINDEX_TAG, isListed } from "../../indexing";
 import { GameKnowledge } from "../../render-data-blocks";
-import { TrackerData, pageIdentityOf, renderTrackerHtml, trackerOf } from "../../render-pages";
+import { TrackerData, pageIdentityOf, renderSite, renderTrackerHtml, trackerOf } from "../../render-pages";
 import { buildSitemap, factsChangedAt, sitemapEntries, urlPathOf } from "../../render-sitemap";
 import { SITE_PAGES, matchesDirectory, pageEntry, trackerPages as trackerManifest } from "../../site-map";
 import { gamePages } from "../../update-game-pages";
@@ -286,6 +287,56 @@ test("a page is withheld by what its canonical says it is, not by the label a ca
     // Markup that names no page this site publishes is decided by its data alone.
     assert.equal(pageIdentityOf(`<link rel="canonical" href="https://nextreset.co/not-a-page/">`), undefined);
     assert.equal(pageIdentityOf("<html></html>"), undefined);
+});
+
+test("a canonical is read as markup, so valid spellings of it resolve the same page", () => {
+    // Codex, PR #64 round 2: this was a regex, and `<link href="…" rel="canonical">` or single quotes
+    // made it return undefined while cheerio — which the navigation test and the rest of the build use
+    // — read them fine. A withheld page written that way would have lost its noindex tag while still
+    // being dropped from the sitemap: neither submitted nor actually withheld.
+    const page = "roblox/status/index.html";
+    for (const markup of [
+        `<link rel="canonical" href="https://nextreset.co/roblox/status/">`,
+        `<link href="https://nextreset.co/roblox/status/" rel="canonical">`,
+        `<link rel='canonical' href='https://nextreset.co/roblox/status/'>`,
+        `<link REL="CANONICAL" HREF="https://nextreset.co/roblox/status/">`,
+        `<link rel="canonical" href="/roblox/status/">`,
+        `<link rel="canonical" href="https://nextreset.co/roblox/status">`
+    ]) {
+        assert.equal(pageIdentityOf(markup), page, `not resolved: ${markup}`);
+    }
+    // A canonical naming another site is not this page saying where it lives.
+    assert.equal(pageIdentityOf(`<link rel="canonical" href="https://example.com/roblox/status/">`), undefined);
+    assert.equal(pageIdentityOf(`<link rel="canonical" href="::::">`), undefined);
+});
+
+test("the sitemap and the noindex tag always answer about the same page", () => {
+    // The failure this guards: a page excluded from the sitemap but rendered without its tag, or the
+    // reverse. renderSite takes one decision per page and hands it to both, so the only way they can
+    // disagree is if someone splits them again.
+    const dist = fs.mkdtempSync(path.join(os.tmpdir(), "nextreset-agree-"));
+    for (const entry of trackerManifest()) {
+        const dir = path.join(dist, path.dirname(entry.page));
+        fs.mkdirSync(dir, { recursive: true });
+        fs.copyFileSync(path.join(PUBLIC, entry.page), path.join(dist, entry.page));
+    }
+    fs.mkdirSync(path.join(dist, "data"), { recursive: true });
+    // Every tracker answers, so nothing here is withheld except by decision.
+    for (const entry of trackerManifest()) {
+        const { game, type } = entry.tracker!;
+        fs.writeFileSync(path.join(dist, "data", `${game}.${type}.json`),
+            JSON.stringify({ ...ROBLOX_ANSWERED, game, type, nextEventUtc: "2026-09-16T02:18:42.170Z" }));
+    }
+    const summary = renderSite(dist, NOW, dist);
+    const submitted = new Set(summary.sitemap.map(e => e.loc));
+    for (const entry of trackerManifest()) {
+        const html = fs.readFileSync(path.join(dist, entry.page), "utf8");
+        const tagged = html.includes(`content="noindex, follow"`);
+        const listed = submitted.has(`https://nextreset.co${urlPathOf(entry.page)}`);
+        assert.notEqual(tagged, listed, `${entry.page}: tagged=${tagged} but in sitemap=${listed}`);
+        assert.equal(tagged, !isListed(entry.page), `${entry.page}: the tag disagrees with the editorial list`);
+    }
+    fs.rmSync(dist, { recursive: true, force: true });
 });
 
 test("a withheld tracker keeps its route, its data and its card — it only loses the index and the footer", () => {

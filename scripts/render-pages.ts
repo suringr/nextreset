@@ -49,6 +49,9 @@ export interface TrackerData {
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
+/** Where the site is published. A canonical naming anywhere else is not this page stating its own URL. */
+export const ORIGIN = "https://nextreset.co";
+
 /** Publishers behind the source hosts we actually use. A host we do not know shows as its hostname. */
 const PUBLISHERS: ReadonlyArray<readonly [string, string]> = [
     ["riotgames.com", "Riot Games"],
@@ -310,15 +313,21 @@ function infoRow(indent: string, eol: string, label: string, value: string): str
  * manifest knows, and the caller then falls back to what the data alone says.
  */
 export function pageIdentityOf(html: string): string | undefined {
-    const canonical = html.match(/<link rel="canonical"[^>]*href="([^"]*)"/);
-    if (!canonical) return undefined;
-    let urlPath: string;
+    // Parsed, not pattern-matched. `<link href="…" rel="canonical">` and single-quoted attributes are
+    // the same statement written differently, and the navigation test reads them with cheerio — a regex
+    // here would resolve a page the rest of the build resolves fine, and withhold it in one place and
+    // not the other. That split is worse than either answer on its own.
+    const href = cheerio.load(html)(`link[rel="canonical" i]`).attr("href");
+    if (!href) return undefined;
+    let url: URL;
     try {
-        urlPath = new URL(canonical[1], "https://nextreset.co").pathname;
+        url = new URL(href, ORIGIN);
     } catch {
         return undefined;
     }
-    return pageAtUrlPath(urlPath)?.page;
+    // A canonical pointing somewhere else entirely is not this page saying where it lives.
+    if (url.origin !== ORIGIN) return undefined;
+    return pageAtUrlPath(url.pathname)?.page;
 }
 
 /**
@@ -326,8 +335,14 @@ export function pageIdentityOf(html: string): string | undefined {
  *
  * `page` is a label for error messages only. Which page this *is* — and so whether it is editorially
  * withheld — is read from the HTML's own canonical link, never from that label. See `pageIdentityOf`.
+ *
+ * `decision` is the index decision already taken for this page. `renderSite` computes it once and hands
+ * it to both the sitemap and this renderer, because the one thing worse than withholding a page in the
+ * wrong place is withholding it in one place and not the other: a page that is absent from the sitemap
+ * and missing its `noindex` tag is neither submitted nor actually withheld. Omitted, it is computed the
+ * same way from the same HTML, so a caller that leaves it out still gets a consistent answer.
  */
-export function renderTrackerHtml(html: string, data: TrackerData | undefined, page = "page", now: Date = new Date(), blocksHtml = ""): string {
+export function renderTrackerHtml(html: string, data: TrackerData | undefined, page = "page", now: Date = new Date(), blocksHtml = "", decision?: IndexDecision): string {
     const b = blocksFor(data, now);
 
     // A page that cannot answer its question is honest but thin, and asking to be indexed on it is
@@ -335,7 +350,8 @@ export function renderTrackerHtml(html: string, data: TrackerData | undefined, p
     // followed to the pages that do answer something. The same tag carries an editorial decision that
     // a page is not worth a reader's click, which is why this asks for the whole decision and not just
     // the data rule.
-    if (trackerDecision(pageIdentityOf(html), data, now).state === "noindex") {
+    const indexing = decision ?? trackerDecision(pageIdentityOf(html), data, now);
+    if (indexing.state === "noindex") {
         html = insertAfterCanonical(html, NOINDEX_TAG, page);
     }
 
@@ -496,7 +512,9 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
         // A page we are asking Google not to index is not also submitted for indexing: asking for both
         // at once is the kind of contradiction that teaches a crawler to trust neither. Its facts are
         // still counted, because the homepage shows its card and is dated by everything on it.
-        const decision = trackerDecision(pageIdentityOf(html) ?? page, data, now);
+        // One identity, resolved once from the page's own canonical, and one decision taken from it.
+        // The sitemap below and the renderer further down both read this, so they cannot disagree.
+        const decision = trackerDecision(pageIdentityOf(html), data, now);
         summary.indexing.push({ page, ...decision });
         pagesForSitemap.push({ page, tracker, listed: decision.state === "index" });
 
@@ -516,7 +534,7 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
             console.warn(`  ⚠ ${page}: knowledge unusable, publishing without data blocks (${error instanceof Error ? error.message : String(error)})`);
         }
 
-        const rendered = renderTrackerHtml(html, data, page, now, blocksHtml);
+        const rendered = renderTrackerHtml(html, data, page, now, blocksHtml, decision);
         fs.writeFileSync(file, rendered, "utf8");
         const blocks = blocksFor(data, now);
         summary.rendered.push({ page, game: tracker.game, type: tracker.type, status: data?.status ?? "no-data", value: blocks.value, blocks: blocksHtml ? blocksHtml.split("<h2>").length - 1 : 0 });

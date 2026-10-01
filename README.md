@@ -242,6 +242,7 @@ the headline, so the tag and the page can never disagree:
 | The page publishes | Robots | In the sitemap |
 |--------------------|--------|----------------|
 | a verified value | nothing | yes |
+| a verified value, but the page is in `EDITORIAL_NOINDEX` | `noindex, follow` | no |
 | `No official date announced` | `noindex, follow` | no |
 | `Data unavailable` | `noindex, follow` | no |
 
@@ -249,8 +250,12 @@ the headline, so the tag and the page can never disagree:
 something. Nothing is hidden from a reader — the page stays where it was and says what it knows — and
 it returns to the index by itself on the next build after a source answers.
 
-Today that is Fortnite alone, whose season end has had no official date since April. It was in the
-sitemap for three months while showing a date that had already passed.
+Fortnite was the first: its season end has had no official date since April, and it sat in the sitemap
+for three months while showing a date that had already passed. It is now withheld by decision as well,
+along with Roblox and Red Dead — see "Trackers withheld from the index" below for why each.
+
+Which page a decision applies to is read from that page's own canonical link, not from a path handed to
+the renderer, so the sitemap and the `noindex` tag are always answering about the same page.
 
 ### Why there are no hub pages
 
@@ -550,7 +555,10 @@ This ensures:
 ## 🔍 SEO
 
 - `robots.txt`: Allows HTML pages, disallows `/data/` directory
-- `sitemap.xml`: Lists all game event pages for search engines
+- `sitemap.xml`: Lists the pages that ask to be indexed, and only those — a page carrying `noindex`
+  is never submitted. Two things withhold a page: it cannot answer its question today (the data rule
+  above), or it is in `EDITORIAL_NOINDEX` (the three trackers above). Built from the pages that exist,
+  never authored, so it cannot drift from them.
 
 ## 📝 License
 
