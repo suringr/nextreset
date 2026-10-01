@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "ea-sports-fc",
-  "updatedAt": "2026-09-30T21:39:58.038Z",
+  "updatedAt": "2026-10-01T03:07:16.161Z",
   "events": [
     {
       "key": "ea-sports-fc/last-title-update/fc26-1.0.2",
@@ -280,7 +280,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-23T15:46:56.333Z",
-      "lastVerified": "2026-09-30T21:39:58.038Z",
+      "lastVerified": "2026-10-01T03:07:16.161Z",
       "publishState": "published"
     }
   ],
@@ -714,8 +714,8 @@
       "id": "eafc-steam-fc26",
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=3405690&count=100&maxlength=240&feeds=steam_community_announcements",
       "textHash": "9491e3f564f773474a000f4032df8d3abf15424e6a81dcb5eea9767eb5378ba3",
-      "lastFetchedAt": "2026-09-30T21:39:58.038Z",
-      "lastUsableAt": "2026-09-30T21:39:58.038Z",
+      "lastFetchedAt": "2026-10-01T03:07:16.161Z",
+      "lastUsableAt": "2026-10-01T03:07:16.161Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -724,8 +724,8 @@
       "id": "eafc-steam-fc27",
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=4080220&count=100&maxlength=240&feeds=steam_community_announcements",
       "textHash": "f9c60db791964b5ee5ca3908a328bcf47dbf5fa3e9f7f2532fcd4f9f8a28c1d0",
-      "lastFetchedAt": "2026-09-30T21:39:58.038Z",
-      "lastUsableAt": "2026-09-30T21:39:58.038Z",
+      "lastFetchedAt": "2026-10-01T03:07:16.161Z",
+      "lastUsableAt": "2026-10-01T03:07:16.161Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
