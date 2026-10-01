@@ -87,10 +87,17 @@ test("the editorial reason is the one reported, even on a day the provider succe
 });
 
 test("every withheld tracker is a real page, with a reason, and is not listed", () => {
+    // Deliberately no length check. A character count is the same kind of fake quality gate the
+    // editorial list exists to avoid: it would fail a short true reason and pass a padded empty one.
+    // What is worth holding is that a reason exists and that it was written for this page — three
+    // entries sharing one sentence would mean nobody thought about the second and third.
+    const reasons = EDITORIAL_NOINDEX.map(entry => entry.reason.trim());
+    assert.equal(new Set(reasons).size, reasons.length, "two withheld pages share a reason");
+
     for (const { page, reason } of EDITORIAL_NOINDEX) {
         assert.ok(pageEntry(page), `${page} is withheld but not declared in the manifest`);
         assert.equal(pageEntry(page)!.role, "tracker", `${page} is withheld but is not a tracker`);
-        assert.ok(reason.length > 20, `${page} needs a reason a person can read and argue with`);
+        assert.notEqual(reason.trim(), "", `${page} is withheld with no reason given`);
         assert.equal(isListed(page), false, `${page} is withheld and must not be in the footer`);
         assert.equal(editorialNoindex(page), reason);
     }

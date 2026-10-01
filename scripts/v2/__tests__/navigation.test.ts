@@ -12,11 +12,11 @@ import assert from "node:assert/strict";
 import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
-import { EDITORIAL_NOINDEX, isListed } from "../../indexing";
+import { EDITORIAL_NOINDEX, NOINDEX_TAG, isListed } from "../../indexing";
 import { GameKnowledge } from "../../render-data-blocks";
-import { trackerOf } from "../../render-pages";
+import { TrackerData, pageIdentityOf, renderTrackerHtml, trackerOf } from "../../render-pages";
 import { buildSitemap, factsChangedAt, sitemapEntries, urlPathOf } from "../../render-sitemap";
-import { matchesDirectory, pageEntry } from "../../site-map";
+import { SITE_PAGES, matchesDirectory, pageEntry, trackerPages as trackerManifest } from "../../site-map";
 import { gamePages } from "../../update-game-pages";
 import { GAMES } from "../games";
 
@@ -39,6 +39,15 @@ function authoredPages(): string[] {
 
 const PAGES = authoredPages();
 const load = (page: string) => cheerio.load(fs.readFileSync(path.join(PUBLIC, page), "utf8"));
+
+/** A pinned clock, and two trackers that answer — so only the editorial rule can withhold either. */
+const NOW = new Date("2026-09-16T12:00:00Z");
+const ROBLOX_ANSWERED: TrackerData = {
+    game: "roblox", type: "status", status: "fresh", nextEventUtc: "2026-09-16T02:18:42.170Z",
+    precision: "exact", fetched_at_utc: "2026-09-16T11:00:00.000Z",
+    last_success_at_utc: "2026-09-16T11:00:00.000Z", source_url: "https://status.roblox.com", confidence: "high"
+};
+const LOL_ANSWERED: TrackerData = { ...ROBLOX_ANSWERED, game: "lol", type: "next-patch", nextEventUtc: "2026-09-23T00:00:00.000Z", precision: "day" };
 
 test("a page's place in the build is its URL", () => {
     assert.equal(urlPathOf("index.html"), "/");
@@ -235,6 +244,50 @@ test("every listed tracker is reachable from every page, and no withheld one is"
     }
 });
 
+test("the manifest's trackers are the registry's trackers, and the pages' own", () => {
+    // Codex, PR #64: the game/type on each manifest entry was read by nothing, so a typo in it could
+    // not fail. It is checked against both of the other places the same pair is written — the tracker
+    // registry, and what each authored page says about itself — so the three cannot drift apart.
+    const manifest = trackerManifest();
+    assert.deepEqual(
+        manifest.map(entry => `${entry.tracker!.game}/${entry.tracker!.type}`).sort(),
+        gamePages.map(entry => `${entry.game}/${entry.type}`).sort(),
+        "the manifest and the tracker registry disagree about which trackers exist"
+    );
+    for (const entry of manifest) {
+        assert.ok(entry.tracker, `${entry.page} is declared a tracker with no game/type`);
+        const html = fs.readFileSync(path.join(PUBLIC, entry.page), "utf8");
+        assert.deepEqual(trackerOf(html, entry.page), entry.tracker, `${entry.page}: the page and the manifest disagree`);
+        assert.equal(`${entry.tracker.game}/${entry.tracker.type}/index.html`, entry.page, `${entry.page}: path and tracker disagree`);
+    }
+    // Nothing that is not a tracker claims one.
+    for (const entry of SITE_PAGES.filter(e => e.role !== "tracker")) {
+        assert.equal(entry.tracker, undefined, `${entry.page} is not a tracker but carries tracker metadata`);
+    }
+});
+
+test("a page is withheld by what its canonical says it is, not by the label a caller passed", () => {
+    // Codex, PR #64: the editorial list used to be looked up by the `page` argument, which is a label
+    // for error messages that callers spell however reads best ("fortnite/next-season", or just
+    // "page"). A withheld tracker rendered through such a call would have published as indexable.
+    const roblox = fs.readFileSync(path.join(PUBLIC, "roblox/status/index.html"), "utf8");
+    assert.equal(pageIdentityOf(roblox), "roblox/status/index.html", "a page is identified by its canonical");
+
+    // The same HTML, rendered with three different labels, is withheld every time.
+    for (const label of ["roblox/status", "page", "anything at all"]) {
+        const out = renderTrackerHtml(roblox, ROBLOX_ANSWERED, label, NOW);
+        assert.ok(out.includes(NOINDEX_TAG), `label ${JSON.stringify(label)} lost the withholding`);
+    }
+    // And a page that is not withheld does not gain the tag from a label that happens to name one.
+    const lol = fs.readFileSync(path.join(PUBLIC, "lol/next-patch/index.html"), "utf8");
+    assert.equal(pageIdentityOf(lol), "lol/next-patch/index.html");
+    assert.ok(!renderTrackerHtml(lol, LOL_ANSWERED, "roblox/status/index.html", NOW).includes(NOINDEX_TAG));
+
+    // Markup that names no page this site publishes is decided by its data alone.
+    assert.equal(pageIdentityOf(`<link rel="canonical" href="https://nextreset.co/not-a-page/">`), undefined);
+    assert.equal(pageIdentityOf("<html></html>"), undefined);
+});
+
 test("a withheld tracker keeps its route, its data and its card — it only loses the index and the footer", () => {
     // The point of withholding rather than deleting. Each one is still a page a reader can open, still
     // has its provider in the registry, and is still declared by the manifest.
@@ -242,7 +295,7 @@ test("a withheld tracker keeps its route, its data and its card — it only lose
         assert.ok(fs.existsSync(path.join(PUBLIC, file)), `${file} was deleted rather than withheld`);
         assert.ok(pageEntry(file), `${file} is withheld but not declared in scripts/site-map.ts`);
         assert.equal(pageEntry(file)!.role, "tracker", `${file} is not a tracker`);
-        assert.ok(reason.trim().length > 20, `${file}: a withheld page needs a reason a person can read`);
+        assert.notEqual(reason.trim(), "", `${file}: a withheld page needs a reason`);
         assert.ok(gamePages.some(entry => entry.path === file), `${file} left the tracker registry`);
     }
 });

@@ -116,8 +116,11 @@ export function indexStateFor(data: TrackerData | undefined, now: Date): IndexDe
  * whichever rule fired first. Asking the data first would report "publishes a verified value" for a page
  * that is not going to be indexed either way.
  */
-export function trackerDecision(page: string, data: TrackerData | undefined, now: Date): IndexDecision {
-    const editorial = editorialNoindex(page);
+export function trackerDecision(page: string | undefined, data: TrackerData | undefined, now: Date): IndexDecision {
+    // `page` is the identity the HTML declared, which is undefined when the markup names no page this
+    // site publishes. That is a page the editorial list cannot have an opinion about, so the data
+    // decides — the same answer this rule gave before an editorial list existed.
+    const editorial = page === undefined ? undefined : editorialNoindex(page);
     if (editorial) return { state: "noindex", reason: `withheld: ${editorial}` };
     return indexStateFor(data, now);
 }

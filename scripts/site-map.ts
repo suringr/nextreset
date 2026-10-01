@@ -90,6 +90,27 @@ export function pageEntry(page: string): SitePage | undefined {
     return SITE_PAGES.find(entry => entry.page === page);
 }
 
+/** The URL path a page is published at: "lol/next-patch/index.html" -> "/lol/next-patch/". */
+export function urlPathOfPage(page: string): string {
+    return `/${page.replace(/index\.html$/, "")}`.replace(/\/{2,}/g, "/");
+}
+
+/**
+ * The page published at a site-relative URL path, or undefined where no page is.
+ *
+ * This is how a rule that applies to a named page finds that page without trusting a caller to have
+ * spelled it the same way. A page's canonical link is the one statement of its own identity that the
+ * build already validates — there is exactly one, and `navigation.test.ts` holds it to the page's
+ * location — so resolving through the URL is resolving through the thing a crawler would use.
+ *
+ * Accepts the path with or without its trailing slash, because a canonical href may be written either
+ * way and the difference is not meant to change what a page is.
+ */
+export function pageAtUrlPath(urlPath: string): SitePage | undefined {
+    const wanted = urlPath.endsWith("/") ? urlPath : `${urlPath}/`;
+    return SITE_PAGES.find(entry => urlPathOfPage(entry.page) === wanted);
+}
+
 export interface DirectoryMatch {
     /** Pages on disk that the manifest does not declare. */
     undeclared: string[];

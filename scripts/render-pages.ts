@@ -23,6 +23,7 @@ import { IndexDecision, NOINDEX_TAG, staticPageDecision, trackerDecision } from 
 import { blocksFor as dataBlocksFor, loadKnowledge, renderBlocks } from "./render-data-blocks";
 import { CardGroup, renderHomeHtml } from "./render-home";
 import { SitemapEntry, SitemapInput, renderSitemap } from "./render-sitemap";
+import { pageAtUrlPath } from "./site-map";
 import { minifyCss } from "./minify-css";
 import { replaceSlot } from "./render-slots";
 import { VersionedAssets, versionAssets } from "./version-assets";
@@ -295,11 +296,36 @@ function infoRow(indent: string, eol: string, label: string, value: string): str
 }
 
 /**
+ * Which page this HTML says it is, from its own canonical link.
+ *
+ * `page` is a label a caller passes for error messages, and callers spell it however reads best —
+ * "lol/next-patch", "cs2/last-update", or just "page" in a test that only cares about drift. That is
+ * fine for a message and unusable as the key to a policy: looking `EDITORIAL_NOINDEX` up by a label
+ * would silently fail to withhold a page whose caller wrote the label the other way, and the page would
+ * publish as indexable with nothing to show for it.
+ *
+ * The canonical link is the page's own statement of where it lives. The build already guarantees there
+ * is exactly one, and `navigation.test.ts` holds it equal to the page's location, so it is the one
+ * identity that cannot drift from what is published. Returns undefined when the HTML names no page the
+ * manifest knows, and the caller then falls back to what the data alone says.
+ */
+export function pageIdentityOf(html: string): string | undefined {
+    const canonical = html.match(/<link rel="canonical"[^>]*href="([^"]*)"/);
+    if (!canonical) return undefined;
+    let urlPath: string;
+    try {
+        urlPath = new URL(canonical[1], "https://nextreset.co").pathname;
+    } catch {
+        return undefined;
+    }
+    return pageAtUrlPath(urlPath)?.page;
+}
+
+/**
  * Writes the verified facts into one tracker page. Pure: takes HTML and data, returns HTML.
  *
- * `page` is the path within the build — "lol/next-patch/index.html" — not a label. It names the file in
- * error messages, and it is the key the editorial withholding list is looked up by, so a caller that
- * passes something else gets a page that is rendered correctly and silently not withheld.
+ * `page` is a label for error messages only. Which page this *is* — and so whether it is editorially
+ * withheld — is read from the HTML's own canonical link, never from that label. See `pageIdentityOf`.
  */
 export function renderTrackerHtml(html: string, data: TrackerData | undefined, page = "page", now: Date = new Date(), blocksHtml = ""): string {
     const b = blocksFor(data, now);
@@ -309,7 +335,7 @@ export function renderTrackerHtml(html: string, data: TrackerData | undefined, p
     // followed to the pages that do answer something. The same tag carries an editorial decision that
     // a page is not worth a reader's click, which is why this asks for the whole decision and not just
     // the data rule.
-    if (trackerDecision(page, data, now).state === "noindex") {
+    if (trackerDecision(pageIdentityOf(html), data, now).state === "noindex") {
         html = insertAfterCanonical(html, NOINDEX_TAG, page);
     }
 
@@ -470,7 +496,7 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
         // A page we are asking Google not to index is not also submitted for indexing: asking for both
         // at once is the kind of contradiction that teaches a crawler to trust neither. Its facts are
         // still counted, because the homepage shows its card and is dated by everything on it.
-        const decision = trackerDecision(page, data, now);
+        const decision = trackerDecision(pageIdentityOf(html) ?? page, data, now);
         summary.indexing.push({ page, ...decision });
         pagesForSitemap.push({ page, tracker, listed: decision.state === "index" });
 

@@ -414,7 +414,7 @@ export function footerNavHtml(pages: GamePage[], current?: GamePage): string {
             ? `        <span aria-current="page">${label}</span>`
             : `        <a href="/${page.game}/${page.type}/">${label}</a>`;
     });
-    return `<nav class="footer-nav" aria-label="All trackers">
+    return `<nav class="footer-nav" aria-label="Trackers">
 ${items.join('\n')}
       </nav>`;
 }
