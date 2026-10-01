@@ -15,7 +15,7 @@ import * as os from "os";
 import * as path from "path";
 import { EDITORIAL_NOINDEX, NOINDEX_TAG, isListed } from "../../indexing";
 import { GameKnowledge } from "../../render-data-blocks";
-import { TrackerData, pageIdentityOf, renderSite, renderTrackerHtml, trackerOf } from "../../render-pages";
+import { TrackerData, canonicalOf, pageIdentityOf, renderSite, renderTrackerHtml, trackerOf } from "../../render-pages";
 import { buildSitemap, factsChangedAt, sitemapEntries, urlPathOf } from "../../render-sitemap";
 import { SITE_PAGES, matchesDirectory, pageEntry, trackerPages as trackerManifest } from "../../site-map";
 import { gamePages } from "../../update-game-pages";
@@ -340,6 +340,50 @@ test("every canonical spelling the parser accepts, the noindex tag can be insert
     const unanswered: TrackerData = { ...ROBLOX_ANSWERED, nextEventUtc: null };
     assert.throws(() => renderTrackerHtml(roblox.replace(authored, ""), unanswered, "roblox/status/index.html", NOW), /exactly one canonical/);
     assert.throws(() => renderTrackerHtml(roblox.replace(authored, authored + authored), unanswered, "roblox/status/index.html", NOW), /exactly one canonical/);
+});
+
+test("a canonical in a comment is not a canonical, and data-rel is not rel", () => {
+    // Codex, PR #64 round 4: the text scan counted a commented-out canonical and matched `data-rel`,
+    // because `\brel` matches inside it — a hyphen is a word boundary. Either made a withheld page look
+    // like it had two canonicals (or none), which bypassed EDITORIAL_NOINDEX entirely: no tag, and the
+    // URL submitted under its filesystem path. Withheld nowhere.
+    const real = `<link rel="canonical" href="https://nextreset.co/roblox/status/">`;
+    for (const noise of [
+        `<!-- <link rel="canonical" href="https://nextreset.co/old/"> -->`,
+        `<!--\n  <link rel="canonical" href="https://nextreset.co/old/">\n-->`,
+        `<link data-rel="canonical" href="https://nextreset.co/other/">`,
+        `<link xrel="canonical" href="https://nextreset.co/other/">`
+    ]) {
+        assert.equal(pageIdentityOf(`${noise}${real}`), "roblox/status/index.html", `misread: ${noise}`);
+        assert.equal(pageIdentityOf(`${real}${noise}`), "roblox/status/index.html", `misread: ${noise}`);
+    }
+    // And blanking comments must not shift the offsets insertion relies on.
+    const withComment = `<head>\n  <!-- an old note -->\n  ${real}\n</head>`;
+    const found = canonicalOf(withComment, "test")!;
+    assert.equal(withComment.slice(found.at, found.at + found.tag.length), real, "the offset does not point at the tag");
+});
+
+test("a tracker that cannot say which page it is fails the build", () => {
+    // Codex, PR #64 round 4, with the evidence that settled it: refresh-data.yml runs build:site
+    // without the test suite, so nothing in this file stands between canonical drift and production.
+    // Deciding such a page by its data alone would silently un-withhold Roblox or Red Dead.
+    const dist = fs.mkdtempSync(path.join(os.tmpdir(), "nextreset-noid-"));
+    fs.mkdirSync(path.join(dist, "roblox", "status"), { recursive: true });
+    fs.mkdirSync(path.join(dist, "data"), { recursive: true });
+    const html = fs.readFileSync(path.join(PUBLIC, "roblox/status/index.html"), "utf8");
+    const authored = html.match(/<link rel="canonical"[^>]*>/)![0];
+    fs.writeFileSync(path.join(dist, "data", "roblox.status.json"), JSON.stringify(ROBLOX_ANSWERED));
+
+    for (const broken of [
+        "",                                                                   // no canonical at all
+        `<link rel="canonical" href="https://nextreset.co/not-a-page/">`,     // a page we do not publish
+        `<link rel="canonical" href="https://example.com/roblox/status/">`    // somebody else's site
+    ]) {
+        fs.writeFileSync(path.join(dist, "roblox", "status", "index.html"), html.replace(authored, broken), "utf8");
+        assert.throws(() => renderSite(dist, NOW, dist), /no canonical naming a page this site publishes/,
+            `drift was tolerated: ${broken || "(none)"}`);
+    }
+    fs.rmSync(dist, { recursive: true, force: true });
 });
 
 test("the sitemap and the noindex tag always answer about the same page", () => {

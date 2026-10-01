@@ -287,30 +287,81 @@ export function blocksFor(data: TrackerData | undefined, now: Date = new Date())
  * single form, so a withheld page written the other way resolved its identity, decided `noindex`, and
  * then failed the build looking for a tag it had just read.
  */
-function canonicalTagsIn(html: string): string[] {
-    return (html.match(/<link\b[^>]*>/gi) ?? []).filter(tag => {
-        const rel = tag.match(/\brel\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
-        if (!rel) return false;
-        return (rel[1] ?? rel[2] ?? rel[3] ?? "").trim().toLowerCase() === "canonical";
-    });
+/**
+ * Blanks every HTML comment, keeping the document's length and so every offset into it.
+ *
+ * A canonical link left behind inside a comment is not a canonical link — a crawler does not see it,
+ * and neither should anything here. Replacing each comment with spaces of the same length means a
+ * position found in the blanked copy is the same position in the original, so the text can be scanned
+ * safely and still spliced by index.
+ */
+function blankComments(html: string): string {
+    return html.replace(/<!--[\s\S]*?-->/g, comment => " ".repeat(comment.length));
 }
 
-/** The href the page declares as canonical, or undefined where it declares exactly one or none. */
-function canonicalHrefIn(html: string): string | undefined {
-    const tags = canonicalTagsIn(html);
-    if (tags.length !== 1) return undefined;
-    const href = tags[0].match(/\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
-    return href ? (href[1] ?? href[2] ?? href[3]) : undefined;
+/**
+ * Where the page's canonical `<link>` tags are, as text, with their offsets into the original HTML.
+ *
+ * Attribute order, quoting and case are the author's choice, so every `<link>` is found first and its
+ * `rel` read afterwards. Two things this must not do, both of which it did once:
+ *
+ *   - count a canonical inside a comment. Cheerio does not, and a crawler does not.
+ *   - treat `data-rel="canonical"` as `rel`. `\brel` matches inside `data-rel`, because a hyphen is a
+ *     word boundary; the attribute name has to be preceded by whitespace to be its own attribute.
+ *
+ * `canonicalOf` cross-checks the result against cheerio, so if this text scan and a real HTML parser
+ * ever disagree about a page, the build stops instead of quietly picking one of the two answers.
+ */
+function canonicalTagsIn(html: string): Array<{ tag: string; at: number }> {
+    const found: Array<{ tag: string; at: number }> = [];
+    const links = /<link\b[^>]*>/gi;
+    const scannable = blankComments(html);
+    for (let match = links.exec(scannable); match !== null; match = links.exec(scannable)) {
+        const rel = match[0].match(/[\s]rel\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+        if (!rel) continue;
+        if ((rel[1] ?? rel[2] ?? rel[3] ?? "").trim().toLowerCase() !== "canonical") continue;
+        // The tag's text is taken from the original, because a comment blanked inside it would
+        // otherwise be spliced back as spaces. A `<link>` cannot contain a comment, so they are equal.
+        found.push({ tag: html.slice(match.index, match.index + match[0].length), at: match.index });
+    }
+    return found;
+}
+
+export interface CanonicalLink {
+    tag: string;
+    at: number;
+    href: string;
+}
+
+/**
+ * The one canonical link a page declares, or undefined where it does not declare exactly one.
+ *
+ * Read twice, by a real HTML parser and by the text scan that knows where the tag sits, and the two
+ * must agree. Cheerio is the authority on what the markup means — it is what the navigation test and a
+ * crawler see — and the scan is the only one that can say where to write. A disagreement means the text
+ * scan has a case the parser handles differently, which is how this went wrong before, so it throws
+ * rather than choosing.
+ */
+export function canonicalOf(html: string, page = "page"): CanonicalLink | undefined {
+    const parsed = cheerio.load(html)(`link[rel="canonical" i]`);
+    const scanned = canonicalTagsIn(html);
+    if (parsed.length !== scanned.length) {
+        throw new Error(`${page}: canonical links read as ${parsed.length} by the parser and ${scanned.length} by the scan`);
+    }
+    if (scanned.length !== 1) return undefined;
+    const href = parsed.attr("href");
+    if (!href) return undefined;
+    return { ...scanned[0], href };
 }
 
 function insertAfterCanonical(html: string, tag: string, page: string): string {
-    const found = canonicalTagsIn(html);
-    if (found.length !== 1) throw new Error(`${page}: expected exactly one canonical link, found ${found.length}`);
+    const canonical = canonicalOf(html, page);
+    if (!canonical) throw new Error(`${page}: expected exactly one canonical link with an href`);
     const eol = html.includes("\r\n") ? "\r\n" : "\n";
-    // Spliced at the position the tag was found, rather than by replacing its text: the same string
+    // Spliced at the offset the tag was found at, rather than by replacing its text: the same string
     // could legitimately appear elsewhere in the document, and only this occurrence is the canonical.
-    const at = html.indexOf(found[0]);
-    return html.slice(0, at + found[0].length) + `${eol}  ${tag}` + html.slice(at + found[0].length);
+    const end = canonical.at + canonical.tag.length;
+    return html.slice(0, end) + `${eol}  ${tag}` + html.slice(end);
 }
 
 /**
@@ -346,7 +397,7 @@ export function pageIdentityOf(html: string): string | undefined {
     // Through the same reader the tag insertion uses, so the two can never disagree about which tag is
     // the canonical or how many there are. `<link href="…" rel="canonical">` and single-quoted or
     // upper-case attributes are the same statement written differently.
-    const href = canonicalHrefIn(html);
+    const href = canonicalOf(html)?.href;
     if (!href) return undefined;
     let url: URL;
     try {
@@ -543,7 +594,22 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
         // still counted, because the homepage shows its card and is dated by everything on it.
         // One identity, resolved once from the page's own canonical, and one decision taken from it.
         // The sitemap below and the renderer further down both read this, so they cannot disagree.
-        const decision = trackerDecision(pageIdentityOf(html), data, now);
+        //
+        // A tracker that cannot be identified fails the build rather than being decided by its data
+        // alone. "No opinion" is the wrong default here: an editorially withheld page whose canonical
+        // had drifted would quietly skip EDITORIAL_NOINDEX, render without the tag, and be submitted
+        // under its filesystem URL — withheld nowhere. The publish job runs build:site without the test
+        // suite, so no test stands between that drift and production; this does. Template drift is
+        // fatal everywhere else in this pipeline and there is no reason for identity to be the
+        // exception.
+        const identity = pageIdentityOf(html);
+        if (!identity) {
+            throw new Error(
+                `${page}: no canonical naming a page this site publishes. A tracker's index decision is ` +
+                `taken from its canonical, so it must declare exactly one, at its own URL.`
+            );
+        }
+        const decision = trackerDecision(identity, data, now);
         summary.indexing.push({ page, ...decision });
         pagesForSitemap.push({ page, tracker, listed: decision.state === "index" });
 
