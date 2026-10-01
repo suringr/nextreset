@@ -383,7 +383,37 @@ test("a tracker that cannot say which page it is fails the build", () => {
         assert.throws(() => renderSite(dist, NOW, dist), /no canonical naming a page this site publishes/,
             `drift was tolerated: ${broken || "(none)"}`);
     }
+
+    // Codex, PR #64 round 5: a canonical that resolves to the *wrong* page is the dangerous case, not
+    // the unresolvable one. Roblox carrying League's canonical takes League's index decision — League
+    // is not withheld — while the sitemap goes on using Roblox's own path. The page would publish
+    // without noindex and be submitted, editorial exclusion and all.
+    fs.writeFileSync(
+        path.join(dist, "roblox", "status", "index.html"),
+        html.replace(authored, `<link rel="canonical" href="https://nextreset.co/lol/next-patch/">`),
+        "utf8"
+    );
+    assert.throws(() => renderSite(dist, NOW, dist), /declares the canonical of lol\/next-patch/);
     fs.rmSync(dist, { recursive: true, force: true });
+});
+
+test("a quoted attribute may contain a bracket, and the tag still ends where it ends", () => {
+    // Codex, PR #64 round 5: `[^>]*` ended the tag at a `>` inside href. Both readers still agreed there
+    // was one canonical, so the cross-check passed, and the robots tag was spliced into the attribute
+    // value — the page losing its noindex while keeping its exclusion from the sitemap.
+    const href = "https://nextreset.co/roblox/status/?q=%3E>";
+    const tricky = `<link rel="canonical" href="${href}">`;
+    const found = canonicalOf(`<head>${tricky}</head>`, "test");
+    assert.ok(found, "a canonical with a bracket in its href was not found");
+    assert.equal(found!.tag, tricky, "the tag was cut short at the bracket inside the attribute");
+
+    // And end to end: the tag lands after the link, not inside it.
+    const roblox = fs.readFileSync(path.join(PUBLIC, "roblox/status/index.html"), "utf8");
+    const authored = roblox.match(/<link rel="canonical"[^>]*>/)![0];
+    const page = roblox.replace(authored, `<link rel="canonical" href="https://nextreset.co/roblox/status/?x=>">`);
+    const out = renderTrackerHtml(page, ROBLOX_ANSWERED, "roblox/status/index.html", NOW);
+    assert.ok(out.includes(NOINDEX_TAG), "no noindex tag was written");
+    assert.ok(!/href="[^"]*noindex/.test(out), "the robots tag was spliced inside the href");
 });
 
 test("the sitemap and the noindex tag always answer about the same page", () => {

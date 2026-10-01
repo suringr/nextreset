@@ -312,17 +312,47 @@ function blankComments(html: string): string {
  * `canonicalOf` cross-checks the result against cheerio, so if this text scan and a real HTML parser
  * ever disagree about a page, the build stops instead of quietly picking one of the two answers.
  */
+/**
+ * Where a `<link>` tag ends, counting from just after its name.
+ *
+ * Not `[^>]*`. A quoted attribute may legally contain `>` — `href="…/status/?q=>"` is a valid URL in a
+ * valid tag — and a scan that stops at the first one reports a tag that ends in the middle of an
+ * attribute value. Both readers still agree there is one canonical, so the cross-check passes, and the
+ * robots tag is then spliced inside the href: the page loses its `noindex` and keeps its exclusion from
+ * the sitemap. Quotes are tracked so the bracket that ends the tag is the one outside them.
+ *
+ * Returns undefined for a tag that is never closed, which is markup this build should not guess at.
+ */
+function endOfTag(html: string, from: number): number | undefined {
+    let quote: string | undefined;
+    for (let i = from; i < html.length; i++) {
+        const character = html[i];
+        if (quote) {
+            if (character === quote) quote = undefined;
+        } else if (character === '"' || character === "'") {
+            quote = character;
+        } else if (character === ">") {
+            return i;
+        }
+    }
+    return undefined;
+}
+
 function canonicalTagsIn(html: string): Array<{ tag: string; at: number }> {
     const found: Array<{ tag: string; at: number }> = [];
-    const links = /<link\b[^>]*>/gi;
+    const links = /<link\b/gi;
     const scannable = blankComments(html);
     for (let match = links.exec(scannable); match !== null; match = links.exec(scannable)) {
-        const rel = match[0].match(/[\s]rel\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+        const close = endOfTag(scannable, match.index + match[0].length);
+        if (close === undefined) break;
+        links.lastIndex = close + 1;
+        const tag = scannable.slice(match.index, close + 1);
+        const rel = tag.match(/[\s]rel\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
         if (!rel) continue;
         if ((rel[1] ?? rel[2] ?? rel[3] ?? "").trim().toLowerCase() !== "canonical") continue;
-        // The tag's text is taken from the original, because a comment blanked inside it would
-        // otherwise be spliced back as spaces. A `<link>` cannot contain a comment, so they are equal.
-        found.push({ tag: html.slice(match.index, match.index + match[0].length), at: match.index });
+        // The tag's text is taken from the original at the offsets found in the blanked copy: blanking
+        // preserves length, and a `<link>` cannot contain a comment, so the two are the same bytes.
+        found.push({ tag: html.slice(match.index, close + 1), at: match.index });
     }
     return found;
 }
@@ -607,6 +637,16 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
             throw new Error(
                 `${page}: no canonical naming a page this site publishes. A tracker's index decision is ` +
                 `taken from its canonical, so it must declare exactly one, at its own URL.`
+            );
+        }
+        // And it must be this page's own URL. A page that copies another tracker's canonical resolves
+        // perfectly well — to the wrong tracker — so it would take that tracker's index decision while
+        // the sitemap went on using this file's path. Roblox carrying League's canonical would publish
+        // Roblox without `noindex` and submit it, editorial exclusion and all.
+        if (identity !== page) {
+            throw new Error(
+                `${page}: declares the canonical of ${identity}. A page's canonical must name its own URL, ` +
+                `or its index decision and its sitemap entry are about two different pages.`
             );
         }
         const decision = trackerDecision(identity, data, now);
