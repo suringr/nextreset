@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "gta",
-  "updatedAt": "2026-10-01T03:07:11.247Z",
+  "updatedAt": "2026-10-01T12:03:41.960Z",
   "events": [
     {
       "key": "gta/weekly-reset/2026-09-17",
@@ -37,12 +37,26 @@
       "topic": "weekly-reset",
       "kind": "recurring",
       "label": "Weekly reset",
-      "status": "scheduled",
+      "status": "ended",
       "at": "2026-10-01T10:00:00.000Z",
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-24T10:44:59.331Z",
-      "lastVerified": "2026-10-01T03:07:11.247Z",
+      "lastVerified": "2026-10-01T12:03:41.960Z",
+      "publishState": "published"
+    },
+    {
+      "key": "gta/weekly-reset/2026-10-08",
+      "game": "gta",
+      "topic": "weekly-reset",
+      "kind": "recurring",
+      "label": "Weekly reset",
+      "status": "scheduled",
+      "at": "2026-10-08T10:00:00.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-10-01T12:03:41.960Z",
+      "lastVerified": "2026-10-01T12:03:41.960Z",
       "publishState": "published"
     }
   ],
@@ -89,6 +103,24 @@
       "oldValue": "scheduled",
       "newValue": "ended",
       "at": "2026-09-24T10:44:59.331Z",
+      "reason": "scheduled instant has passed",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "gta/weekly-reset/2026-10-08",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Weekly reset @ 2026-10-08T10:00:00.000Z",
+      "at": "2026-10-01T12:03:41.960Z",
+      "reason": "observed by gta-weekly-reset-rule",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "gta/weekly-reset/2026-10-01",
+      "field": "status",
+      "oldValue": "scheduled",
+      "newValue": "ended",
+      "at": "2026-10-01T12:03:41.960Z",
       "reason": "scheduled instant has passed",
       "decision": "applied"
     }
