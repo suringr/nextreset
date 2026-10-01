@@ -12,9 +12,11 @@ import assert from "node:assert/strict";
 import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
+import { EDITORIAL_NOINDEX, isListed } from "../../indexing";
 import { GameKnowledge } from "../../render-data-blocks";
 import { trackerOf } from "../../render-pages";
 import { buildSitemap, factsChangedAt, sitemapEntries, urlPathOf } from "../../render-sitemap";
+import { matchesDirectory, pageEntry } from "../../site-map";
 import { gamePages } from "../../update-game-pages";
 import { GAMES } from "../games";
 
@@ -136,7 +138,10 @@ test("every page in the sitemap is a page that exists, at the URL it calls canon
     });
     const entries = sitemapEntries(inputs, ORIGIN, () => undefined);
     assert.equal(entries.length, PAGES.length);
-    assert.ok(PAGES.length >= 15, `expected every authored page, found ${PAGES.length}`);
+    // What this used to assert with ">= 15" — that the walk really found the site, rather than an empty
+    // directory that would make every loop below vacuous.
+    const { undeclared, missing } = matchesDirectory(PUBLIC);
+    assert.deepEqual([...undeclared, ...missing], [], "the directory and scripts/site-map.ts disagree");
 
     for (const page of PAGES) {
         const canonical = load(page)(`link[rel="canonical"]`).attr("href");
@@ -189,9 +194,14 @@ test("every page says where it sits, and its markup says the same thing", () => 
     }
 });
 
-test("every tracker is reachable from every page", () => {
-    const expected = gamePages.map(page => `/${page.game}/${page.type}/`).sort();
-    assert.equal(expected.length, 12);
+test("every listed tracker is reachable from every page, and no withheld one is", () => {
+    // The footer names the trackers worth reading, not every tracker that exists. A page withheld from
+    // the index (EDITORIAL_NOINDEX) is not advertised from fifteen other pages — that would be fifteen
+    // invitations to the page we rated lowest, and fifteen crawl paths into it.
+    const expected = gamePages.filter(page => isListed(page.path)).map(page => `/${page.game}/${page.type}/`).sort();
+    const withheld = gamePages.filter(page => !isListed(page.path)).map(page => `/${page.game}/${page.type}/`);
+    assert.equal(expected.length + withheld.length, gamePages.length);
+    assert.ok(expected.length > 0 && withheld.length > 0, "this test is only meaningful with some of each");
 
     for (const page of PAGES) {
         if (page === "index.html") continue; // the homepage lists them in its own words
@@ -203,18 +213,37 @@ test("every tracker is reachable from every page", () => {
         const links = nav.find("a").toArray().map(a => $(a).attr("href")!);
         const current = nav.find(`[aria-current="page"]`);
         assert.equal(current.length <= 1, true, `${page}: at most one current page`);
-        const listed = [...links, ...(current.length ? [`/${page.replace(/index\.html$/, "")}`] : [])].sort();
+        const named = [...links, ...(current.length ? [`/${page.replace(/index\.html$/, "")}`] : [])].sort();
 
-        if (trackerOf(fs.readFileSync(path.join(PUBLIC, page), "utf8"), page)) {
-            assert.deepEqual(listed, expected, `${page}: the footer does not name every tracker exactly once`);
-            assert.equal(current.length, 1, `${page}: a tracker page does not link to itself`);
+        const self = `/${page.replace(/index\.html$/, "")}`;
+        if (expected.includes(self)) {
+            assert.deepEqual(named, expected, `${page}: the footer does not name every listed tracker exactly once`);
+            assert.equal(current.length, 1, `${page}: a listed tracker page does not link to itself`);
         } else {
-            assert.deepEqual(links.sort(), expected, `${page}: the footer does not name every tracker`);
+            // Every other page — the static pages, the 404, and a withheld tracker's own page — links to
+            // the listed set and names nothing as current.
+            assert.deepEqual(links.sort(), expected, `${page}: the footer does not name every listed tracker`);
+            assert.equal(current.length, 0, `${page}: nothing here is the current tracker`);
         }
 
+        for (const href of withheld) {
+            assert.ok(!links.includes(href), `${page}: links to ${href}, which is withheld from the index`);
+        }
         for (const href of links) {
             assert.ok(fs.existsSync(path.join(PUBLIC, href.replace(/^\//, ""), "index.html")), `${page}: ${href} does not exist`);
         }
+    }
+});
+
+test("a withheld tracker keeps its route, its data and its card — it only loses the index and the footer", () => {
+    // The point of withholding rather than deleting. Each one is still a page a reader can open, still
+    // has its provider in the registry, and is still declared by the manifest.
+    for (const { page: file, reason } of EDITORIAL_NOINDEX) {
+        assert.ok(fs.existsSync(path.join(PUBLIC, file)), `${file} was deleted rather than withheld`);
+        assert.ok(pageEntry(file), `${file} is withheld but not declared in scripts/site-map.ts`);
+        assert.equal(pageEntry(file)!.role, "tracker", `${file} is not a tracker`);
+        assert.ok(reason.trim().length > 20, `${file}: a withheld page needs a reason a person can read`);
+        assert.ok(gamePages.some(entry => entry.path === file), `${file} left the tracker registry`);
     }
 });
 
@@ -242,7 +271,11 @@ test("a URL that does not exist has a page of its own", () => {
     assert.ok(!PAGES.includes("404.html"), "it is not an index.html and so is never listed");
     assert.equal($(".breadcrumbs").length, 0, "it sits nowhere in the hierarchy");
     const links = $(".footer-nav a").toArray().map(a => $(a).attr("href")!).sort();
-    assert.deepEqual(links, gamePages.map(page => `/${page.game}/${page.type}/`).sort(), "every tracker is reachable from it");
+    assert.deepEqual(
+        links,
+        gamePages.filter(page => isListed(page.path)).map(page => `/${page.game}/${page.type}/`).sort(),
+        "every listed tracker is reachable from it"
+    );
 });
 
 test("the documented sources are the sources the code actually reads", () => {

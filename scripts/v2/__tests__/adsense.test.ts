@@ -17,6 +17,7 @@ import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
 import { ADSENSE_CLIENT, ADSENSE_LOADER, adsenseLoaderCount, carriesLoader, hasAdUnitMarkup } from "../../adsense";
+import { matchesDirectory, pagePaths } from "../../site-map";
 
 const ROOT = path.join(__dirname, "..", "..", "..");
 const PUBLIC = path.join(ROOT, "public");
@@ -39,12 +40,13 @@ const PAGES = authoredHtml();
 const read = (page: string) => fs.readFileSync(path.join(PUBLIC, page), "utf8");
 
 test("the site has the pages this test thinks it has", () => {
-    // If a page is added and this list is not, the coverage tests below would pass by never looking.
-    assert.equal(PAGES.length, 17, `expected 17 authored pages, found ${PAGES.length}: ${PAGES.join(", ")}`);
-    assert.ok(PAGES.includes("404.html"));
-    assert.ok(PAGES.includes("index.html"));
-    assert.ok(PAGES.includes("play/index.html"), "the arcade route");
-    assert.equal(PAGES.filter(p => p.split("/").length === 3).length, 12, "expected 12 tracker pages");
+    // If a page is added and the manifest is not, the coverage tests below would pass by never looking
+    // at it. The manifest replaced a literal count here for the same reason it did everywhere else: the
+    // property worth keeping is "nothing is covered by accident", not the number seventeen.
+    const { undeclared, missing } = matchesDirectory(PUBLIC);
+    assert.deepEqual(undeclared, [], "pages on disk that scripts/site-map.ts does not declare");
+    assert.deepEqual(missing, [], "pages scripts/site-map.ts declares that are not on disk");
+    assert.deepEqual(PAGES, pagePaths(), "the manifest and the directory walk disagree");
 });
 
 test("the arcade carries no ad code at all", () => {

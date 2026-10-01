@@ -19,7 +19,7 @@
 import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
-import { IndexDecision, NOINDEX_TAG, indexStateFor, staticPageDecision } from "./indexing";
+import { IndexDecision, NOINDEX_TAG, staticPageDecision, trackerDecision } from "./indexing";
 import { blocksFor as dataBlocksFor, loadKnowledge, renderBlocks } from "./render-data-blocks";
 import { CardGroup, renderHomeHtml } from "./render-home";
 import { SitemapEntry, SitemapInput, renderSitemap } from "./render-sitemap";
@@ -294,14 +294,22 @@ function infoRow(indent: string, eol: string, label: string, value: string): str
     ].join(eol);
 }
 
-/** Writes the verified facts into one tracker page. Pure: takes HTML and data, returns HTML. */
+/**
+ * Writes the verified facts into one tracker page. Pure: takes HTML and data, returns HTML.
+ *
+ * `page` is the path within the build — "lol/next-patch/index.html" — not a label. It names the file in
+ * error messages, and it is the key the editorial withholding list is looked up by, so a caller that
+ * passes something else gets a page that is rendered correctly and silently not withheld.
+ */
 export function renderTrackerHtml(html: string, data: TrackerData | undefined, page = "page", now: Date = new Date(), blocksHtml = ""): string {
     const b = blocksFor(data, now);
 
     // A page that cannot answer its question is honest but thin, and asking to be indexed on it is
     // asking to be judged on the page that says the least. It is still crawled, and its links still
-    // followed to the pages that do answer something.
-    if (indexStateFor(data, now).state === "noindex") {
+    // followed to the pages that do answer something. The same tag carries an editorial decision that
+    // a page is not worth a reader's click, which is why this asks for the whole decision and not just
+    // the data rule.
+    if (trackerDecision(page, data, now).state === "noindex") {
         html = insertAfterCanonical(html, NOINDEX_TAG, page);
     }
 
@@ -462,7 +470,7 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
         // A page we are asking Google not to index is not also submitted for indexing: asking for both
         // at once is the kind of contradiction that teaches a crawler to trust neither. Its facts are
         // still counted, because the homepage shows its card and is dated by everything on it.
-        const decision = indexStateFor(data, now);
+        const decision = trackerDecision(page, data, now);
         summary.indexing.push({ page, ...decision });
         pagesForSitemap.push({ page, tracker, listed: decision.state === "index" });
 

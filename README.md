@@ -460,9 +460,31 @@ Ten of the twelve run on the V2 pipeline (`scripts/v2/games.ts`); two are still 
 | Genshin Impact | Banner end | HoYoverse announcements API, three regions | Deterministic JSON |
 | EA SPORTS FC | Last title update | Steam Web API news, FC 26 and FC 27 | Deterministic JSON |
 | GTA Online | Weekly reset | Rockstar publishes the rule: Thursdays 10:00 UTC | Computed |
-| Roblox | Service status | hostedstatus.com, the API behind status.roblox.com | Deterministic JSON |
-| Fortnite | Season end | Epic's Battle Pass page on fortnite.com, behind a challenge we do not circumvent | V1 provider — currently unanswered |
-| Red Dead Redemption 2 | Last update | Rockstar Newswire | V1 provider |
+| Roblox | Service status | hostedstatus.com, the API behind status.roblox.com | Deterministic JSON — withheld from the index |
+| Fortnite | Season end | Epic's Battle Pass page on fortnite.com, behind a challenge we do not circumvent | V1 provider — topic stopped, withheld from the index |
+| Red Dead Redemption 2 | Last update | Rockstar Newswire | V1 provider — withheld from the index |
+
+### Trackers withheld from the index
+
+Three trackers keep their routes and their data but are not submitted for indexing and are not listed in
+the footer. The decision and the reason for each live in `EDITORIAL_NOINDEX` in `scripts/indexing.ts`;
+this is a summary, and that list is the source of truth.
+
+- **Fortnite — season end.** The topic is **stopped**. `fortnite.com` is behind a Cloudflare challenge,
+  and we do not circumvent it: both a plain fetch and a rendered browser navigation return the challenge
+  rather than content (see the `fortnite-http-challenge.html` and `fortnite-rendered-challenge.html`
+  fixtures). No other permitted source states the season end date. The one alternative found — the last
+  season *launch*, from Epic's scheduled-maintenance feed — answers a different question, and
+  `/fortnite/next-season/` is not going to quietly start meaning something else. The page stays, says it
+  has no official date, and is withheld. **Do not reopen this investigation without a new source.**
+- **Roblox — service status.** A service status is not a reset, and `status.roblox.com` answers it
+  first-hand and in real time. The page restates one word from an API a reader can read directly.
+- **Red Dead Redemption 2 — last update.** The Newswire is a JavaScript shell whose articles carry no
+  date; RSS and the sitemap 404. The page publishes a single date with no history behind it, and
+  countdowns for this game were stopped as a source decision.
+
+Being withheld costs a page its sitemap entry and its footer link. It does not remove the route, the
+provider, the stored data or the homepage card, and it is reversed by deleting one entry from that list.
 
 Only League of Legends uses a model, and only to read prose a person would otherwise read. Everything
 else is parsed deterministically, because a schedule in JSON is not a comprehension problem.

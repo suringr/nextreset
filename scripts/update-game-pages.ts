@@ -2,10 +2,25 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ADSENSE_LOADER } from './adsense';
 import { footerRowHtml } from './design/chrome';
+import { isListed } from './indexing';
 
 /**
- * Generate all game pages with rich content for AdSense compliance.
- * Each page includes: About, What Is, What Changes, FAQ, How We Track.
+ * The tracker registry, the footer navigation, and a page template that is no longer the page.
+ *
+ * `gamePages` below is the source of truth for which trackers exist, what each one is called, and the
+ * per-game copy each page carries. It is imported by the tests and by the footer navigation, and that is
+ * what this module is for in practice.
+ *
+ * ⚠ `generatePage` and the `require.main` block beneath it are STALE and must not be run. They were the
+ * original generator, and the published pages have moved on without them: the shared chrome header, the
+ * player chip, `player.js`, the inline critical CSS and the versioned asset URLs all arrived in later
+ * work that writes into the authored pages directly. Running `node build/update-game-pages.js` today
+ * would overwrite all twelve tracker pages with markup that predates the approved design, silently
+ * undoing it. There is deliberately no npm script for it.
+ *
+ * Changes to the authored pages are therefore made in `public/` (or by a targeted script), and anything
+ * this template says about their markup should be read as history. Rebuilding the generator so it
+ * reproduces the current pages byte for byte is worth doing, and is its own piece of work.
  */
 
 const publicDir = path.join(__dirname, '../public');
@@ -380,14 +395,20 @@ function breadcrumbSchema(page: GamePage): string {
 }
 
 /**
- * Every tracker, in the footer of every tracker page.
+ * Every tracker worth reading, in the footer of every page that has a footer.
  *
  * Each page was previously reachable only from the homepage. Linking them to each other means a reader
  * who lands on one can reach the rest, and the anchor text says what each one answers rather than
  * repeating the game's name alone. The current page is named but not linked.
+ *
+ * Trackers withheld from the index (see `EDITORIAL_NOINDEX`) are left out. A footer link from all
+ * fifteen pages to a page we are asking Google not to index is fifteen invitations to the page we think
+ * is worth the least — and for a reader it is fifteen chances to click through to the one tracker that
+ * cannot answer its question. The route still works, the homepage still shows its card, and `/resets/`
+ * can still carry its row; it just is not advertised as somewhere to go.
  */
 export function footerNavHtml(pages: GamePage[], current?: GamePage): string {
-    const items = pages.map(page => {
+    const items = pages.filter(page => isListed(page.path)).map(page => {
         const label = `${page.title} — ${page.typeTitle.toLowerCase()}`;
         return page === current
             ? `        <span aria-current="page">${label}</span>`

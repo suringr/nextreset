@@ -16,7 +16,8 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import * as vm from "vm";
-import { NOINDEX_TAG, declaresNoindex, indexStateFor, staticPageDecision } from "../../indexing";
+import { EDITORIAL_NOINDEX, NOINDEX_TAG, declaresNoindex, editorialNoindex, indexStateFor, isListed, staticPageDecision, trackerDecision } from "../../indexing";
+import { pageEntry } from "../../site-map";
 import { cardValue } from "../../render-home";
 import { TrackerData, blocksFor, renderSite, renderTrackerHtml, stateLine } from "../../render-pages";
 
@@ -61,6 +62,46 @@ test("a page that answers its question is the one asking to be indexed", () => {
     ] as Array<[string, TrackerData | undefined]>) {
         assert.equal(indexStateFor(data, NOW).state, "noindex", name);
     }
+});
+
+test("an editorial decision withholds a page the data rule would have indexed", () => {
+    // The three withheld trackers all publish a verified value, so the data rule alone would submit every
+    // one of them. This is the difference between "the page has no answer" and "the answer is not worth
+    // a reader's click", and only the second is a judgement.
+    const withheld = "roblox/status/index.html";
+    assert.equal(indexStateFor(ANSWERED, NOW).state, "index", "the data rule alone would index it");
+    assert.equal(trackerDecision(withheld, ANSWERED, NOW).state, "noindex");
+    assert.match(trackerDecision(withheld, ANSWERED, NOW).reason, /withheld:/);
+
+    // A page that is not on the list is decided by its data exactly as before.
+    assert.deepEqual(trackerDecision("lol/next-patch/index.html", ANSWERED, NOW), indexStateFor(ANSWERED, NOW));
+});
+
+test("the editorial reason is the one reported, even on a day the provider succeeds", () => {
+    // Order matters: asking the data first would log "publishes a verified value" for a page that is not
+    // going to be indexed either way, and the build log would stop being a record of why.
+    const page = "fortnite/next-season/index.html";
+    assert.match(trackerDecision(page, ANSWERED, NOW).reason, /topic is stopped/);
+    // And a withheld page whose data is also broken still reports the decision, not the breakage.
+    assert.match(trackerDecision(page, UNANSWERED, NOW).reason, /withheld:/);
+});
+
+test("every withheld tracker is a real page, with a reason, and is not listed", () => {
+    for (const { page, reason } of EDITORIAL_NOINDEX) {
+        assert.ok(pageEntry(page), `${page} is withheld but not declared in the manifest`);
+        assert.equal(pageEntry(page)!.role, "tracker", `${page} is withheld but is not a tracker`);
+        assert.ok(reason.length > 20, `${page} needs a reason a person can read and argue with`);
+        assert.equal(isListed(page), false, `${page} is withheld and must not be in the footer`);
+        assert.equal(editorialNoindex(page), reason);
+    }
+    // And the trackers kept are listed, so "withheld" and "listed" cannot both drift to the same answer.
+    assert.equal(isListed("lol/next-patch/index.html"), true);
+    assert.equal(isListed("minecraft/last-release/index.html"), true, "eligible for rescue, still listed");
+    assert.equal(isListed("warzone/last-patch/index.html"), true, "eligible for rescue, still listed");
+    // Only a tracker can be listed: the homepage and the arcade are not trackers and never appear there.
+    assert.equal(isListed("index.html"), false);
+    assert.equal(isListed("play/index.html"), false);
+    assert.equal(editorialNoindex("lol/next-patch/index.html"), undefined);
 });
 
 test("a value the pipeline has withdrawn is unavailable everywhere, and asks for nothing", () => {

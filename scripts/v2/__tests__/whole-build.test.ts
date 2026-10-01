@@ -18,6 +18,7 @@ import { adsenseLoaderCount, carriesLoader, hasAdUnitMarkup } from "../../adsens
 import { declaresNoindex } from "../../indexing";
 import { TrackerData, hasVerifiedValue, isUnanswered, renderSite, trackerOf } from "../../render-pages";
 import { urlPathOf } from "../../render-sitemap";
+import { matchesDirectory, trackerPages as trackerManifest } from "../../site-map";
 
 const ROOT = path.join(__dirname, "..", "..", "..");
 const NOW = new Date("2026-09-17T12:00:00.000Z");
@@ -82,11 +83,13 @@ const trackerPages = site.pages.filter(page => trackerOf(read(page), page));
 test.after(() => site.cleanup());
 
 test("the build produced every page the site has", () => {
-    assert.equal(trackerPages.length, 12, `expected 12 tracker pages, found ${trackerPages.length}`);
-    assert.ok(site.pages.includes("index.html"));
-    assert.ok(site.pages.includes("play/index.html"));
-    assert.ok(site.pages.includes("404.html"));
-    assert.ok(site.pages.includes("about/index.html") && site.pages.includes("privacy/index.html"));
+    // Against the manifest rather than a literal, so adding a page is one declarative edit instead of a
+    // renumbering exercise across three suites — and so a page that is built but undeclared still fails.
+    const { undeclared, missing } = matchesDirectory(site.dir);
+    assert.deepEqual(undeclared, [], "the build produced pages scripts/site-map.ts does not declare");
+    assert.deepEqual(missing, [], "the build did not produce pages scripts/site-map.ts declares");
+    assert.deepEqual(trackerPages.sort(), trackerManifest().map(entry => entry.page).sort(),
+        "the pages that read as trackers are not the pages declared as trackers");
 });
 
 /** How many tracker pages have data behind them in this build — the number a value check must reach. */
