@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "cs2",
-  "updatedAt": "2026-10-02T03:09:07.215Z",
+  "updatedAt": "2026-10-02T11:34:49.911Z",
   "events": [
     {
       "key": "cs2/last-update/1831432155569878",
@@ -350,7 +350,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-01T03:07:10.755Z",
-      "lastVerified": "2026-10-02T03:09:07.215Z",
+      "lastVerified": "2026-10-02T11:34:49.911Z",
       "publishState": "published"
     }
   ],
@@ -1072,8 +1072,8 @@
       "id": "cs2-steam-patchnotes",
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=730&count=20&maxlength=240&feeds=steam_community_announcements&tags=patchnotes",
       "textHash": "38e1400ba0c7e29674243a8e25c1e79a2f13edf88c3f3328383c42ea64fde389",
-      "lastFetchedAt": "2026-10-02T03:09:07.215Z",
-      "lastUsableAt": "2026-10-02T03:09:07.215Z",
+      "lastFetchedAt": "2026-10-02T11:34:49.911Z",
+      "lastUsableAt": "2026-10-02T11:34:49.911Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
