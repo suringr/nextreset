@@ -1,0 +1,16 @@
+{
+  "provider_id": "cs2",
+  "game": "cs2",
+  "type": "last-update",
+  "title": "Counter-Strike 2 Last Update",
+  "status": "fresh",
+  "nextEventUtc": "2026-10-02T22:24:13.000Z",
+  "fetched_at_utc": "2026-10-03T20:20:37.728Z",
+  "last_success_at_utc": "2026-10-03T20:20:37.728Z",
+  "source_url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656387875",
+  "confidence": "high",
+  "http_status": 200,
+  "fetch_mode": "http",
+  "notes": "Counter-Strike 2 Update",
+  "precision": "exact"
+}

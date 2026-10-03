@@ -1,0 +1,16 @@
+{
+  "provider_id": "ea-sports-fc",
+  "game": "ea-sports-fc",
+  "type": "last-title-update",
+  "title": "EA SPORTS FC Last Title Update",
+  "status": "fresh",
+  "nextEventUtc": "2026-10-02T10:14:19.000Z",
+  "fetched_at_utc": "2026-10-03T20:20:43.334Z",
+  "last_success_at_utc": "2026-10-03T20:20:43.334Z",
+  "source_url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656385735",
+  "confidence": "high",
+  "http_status": 200,
+  "fetch_mode": "http",
+  "notes": "EA SPORTS FC 27 v1.0.3 - Small Bug Fix Update",
+  "precision": "exact"
+}
