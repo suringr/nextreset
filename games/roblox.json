@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "roblox",
-  "updatedAt": "2026-10-04T11:31:14.596Z",
+  "updatedAt": "2026-10-04T16:09:57.381Z",
   "events": [
     {
       "key": "roblox/status/2026-08-07t04-48-28z",
@@ -28,7 +28,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-29T17:16:17.163Z",
-      "lastVerified": "2026-10-04T11:31:14.596Z",
+      "lastVerified": "2026-10-04T16:09:57.381Z",
       "publishState": "published"
     }
   ],
@@ -61,7 +61,7 @@
       "url": "http://hostedstatus.com/1.0/status/59db90dbcdeb2f04dadcf16d",
       "etag": "W/\"15e3-TNbLActWPELMbbkHO6l9hIDqc7U\"",
       "textHash": "537b9ab96174b561f535de95d9d67ad1b2bf22736df4e62f81ab18197d6f776a",
-      "lastFetchedAt": "2026-10-04T11:31:14.596Z",
+      "lastFetchedAt": "2026-10-04T16:09:57.381Z",
       "lastUsableAt": "2026-09-29T17:16:17.163Z",
       "lastVerdict": "usable",
       "lastMode": "http",
