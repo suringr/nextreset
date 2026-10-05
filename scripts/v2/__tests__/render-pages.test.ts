@@ -199,7 +199,12 @@ test("renderSite writes only HTML, leaves the data files byte-identical, and cov
     fs.mkdirSync(path.join(dist, "gta", "weekly-reset"), { recursive: true });
     fs.mkdirSync(path.join(dist, "data"), { recursive: true });
     fs.writeFileSync(path.join(dist, "lol", "next-patch", "index.html"), PAGE);
-    fs.writeFileSync(path.join(dist, "gta", "weekly-reset", "index.html"), PAGE.replace(`data-game="lol" data-type="next-patch"`, `data-game="gta" data-type="weekly-reset"`));
+    // A copy of the League page standing in for GTA has to say it is the GTA page, canonical included.
+    // It did not, and renderSite now refuses it: a page carrying another tracker's canonical would take
+    // that tracker's index decision while the sitemap used its own path (Codex, #64 round 5).
+    fs.writeFileSync(path.join(dist, "gta", "weekly-reset", "index.html"), PAGE
+        .replace(`data-game="lol" data-type="next-patch"`, `data-game="gta" data-type="weekly-reset"`)
+        .replace("https://nextreset.co/lol/next-patch/", "https://nextreset.co/gta/weekly-reset/"));
     // The homepage has no tracker of its own; it shows every tracker's card.
     fs.writeFileSync(path.join(dist, "index.html"), HOME);
     const dataFile = path.join(dist, "data", "lol.next-patch.json");
