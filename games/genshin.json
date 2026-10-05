@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "genshin",
-  "updatedAt": "2026-10-05T03:02:47.879Z",
+  "updatedAt": "2026-10-05T13:01:58.358Z",
   "events": [
     {
       "key": "genshin/next-banner/event-wishes-2026-09-22-14-59-59",
@@ -28,7 +28,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-21T11:26:49.461Z",
-      "lastVerified": "2026-10-05T03:02:47.879Z",
+      "lastVerified": "2026-10-05T13:01:58.358Z",
       "publishState": "published"
     }
   ],
@@ -108,9 +108,9 @@
     {
       "id": "genshin-announcements-os_asia",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_asia",
-      "textHash": "cdac2171b202c7f8748c9fe862a32f5b8b63cafad6b1bcff88b2a77f024a50e2",
-      "lastFetchedAt": "2026-10-05T03:02:47.879Z",
-      "lastUsableAt": "2026-10-05T03:02:47.879Z",
+      "textHash": "78a97cf54c9785808b4ddb1ddc53d389a8849c546f7248b62fedbb7d6b5ffc2a",
+      "lastFetchedAt": "2026-10-05T13:01:58.358Z",
+      "lastUsableAt": "2026-10-05T13:01:58.358Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -118,9 +118,9 @@
     {
       "id": "genshin-announcements-os_euro",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_euro",
-      "textHash": "f85127604fad082384b2c10cc5b327475096d631cd182d2c16cf2bb55be93926",
-      "lastFetchedAt": "2026-10-05T03:02:47.879Z",
-      "lastUsableAt": "2026-10-05T03:02:47.879Z",
+      "textHash": "b533adeb352b8a1e038d34070646f832361c440215fbbd77c129c4fdbf4a91a4",
+      "lastFetchedAt": "2026-10-05T13:01:58.358Z",
+      "lastUsableAt": "2026-10-05T13:01:58.358Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -128,9 +128,9 @@
     {
       "id": "genshin-announcements-os_usa",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_usa",
-      "textHash": "8a5b072b15f66124272bc10e59ea00285cca87d9b44fddc2be7d5be9d84a62ff",
-      "lastFetchedAt": "2026-10-05T03:02:47.879Z",
-      "lastUsableAt": "2026-10-05T03:02:47.879Z",
+      "textHash": "401b2ded1ed34e3d28540ba34e4a8ae19607836b51f17538c5aea9ca7baf9c91",
+      "lastFetchedAt": "2026-10-05T13:01:58.358Z",
+      "lastUsableAt": "2026-10-05T13:01:58.358Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
