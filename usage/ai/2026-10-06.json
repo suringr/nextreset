@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-06",
+  "calls": [
+    {
+      "at": "2026-10-06T22:00:59.806Z",
+      "runId": "gha-37537769977-1",
+      "provider": "gemini",
+      "model": "gemini-3.5-flash",
+      "game": "lol",
+      "topic": "next-patch",
+      "operation": "classify",
+      "repair": false,
+      "success": true,
+      "retries": 0,
+      "inputTokens": 948,
+      "outputTokens": 117,
+      "thoughtTokens": 0,
+      "estimatedInputCostUsd": 0.0014219999999999999,
+      "estimatedOutputCostUsd": 0.001053,
+      "estimatedCostUsd": 0.0024749999999999998,
+      "priceSource": "Gemini API pricing page, paid tier, read 2026-09-15"
+    },
+    {
+      "at": "2026-10-06T22:01:08.633Z",
+      "runId": "gha-37537769977-1",
+      "provider": "gemini",
+      "model": "gemini-3.5-flash",
+      "game": "lol",
+      "topic": "next-patch",
+      "operation": "extract",
+      "repair": false,
+      "success": true,
+      "retries": 0,
+      "inputTokens": 1352,
+      "outputTokens": 2821,
+      "thoughtTokens": 0,
+      "estimatedInputCostUsd": 0.002028,
+      "estimatedOutputCostUsd": 0.025389000000000002,
+      "estimatedCostUsd": 0.027417,
+      "priceSource": "Gemini API pricing page, paid tier, read 2026-09-15"
+    }
+  ]
+}
