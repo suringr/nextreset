@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "lol",
-  "updatedAt": "2026-10-07T12:18:41.393Z",
+  "updatedAt": "2026-10-07T22:25:58.857Z",
   "events": [
     {
       "key": "lol/next-patch/26.01",
@@ -1883,5 +1883,14 @@
       "failures": 1
     }
   ],
-  "topicStates": []
+  "topicStates": [
+    {
+      "topic": "next-patch",
+      "deferred": {
+        "reason": "deferred_due_to_budget",
+        "detail": "AI budget exhausted (topic-calls): lol/next-patch used 4 of 5 calls today (UTC 2026-10-07); this work needs up to 3 more",
+        "at": "2026-10-07T22:25:58.857Z"
+      }
+    }
+  ]
 }
