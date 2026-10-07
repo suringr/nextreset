@@ -39,6 +39,44 @@
       "estimatedOutputCostUsd": 0.025389000000000002,
       "estimatedCostUsd": 0.027418500000000002,
       "priceSource": "Gemini API pricing page, paid tier, read 2026-09-15"
+    },
+    {
+      "at": "2026-10-07T12:18:43.422Z",
+      "runId": "gha-37620025825-1",
+      "provider": "gemini",
+      "model": "gemini-3.5-flash",
+      "game": "lol",
+      "topic": "next-patch",
+      "operation": "classify",
+      "repair": false,
+      "success": true,
+      "retries": 0,
+      "inputTokens": 949,
+      "outputTokens": 118,
+      "thoughtTokens": 0,
+      "estimatedInputCostUsd": 0.0014234999999999999,
+      "estimatedOutputCostUsd": 0.001062,
+      "estimatedCostUsd": 0.0024855,
+      "priceSource": "Gemini API pricing page, paid tier, read 2026-09-15"
+    },
+    {
+      "at": "2026-10-07T12:18:52.105Z",
+      "runId": "gha-37620025825-1",
+      "provider": "gemini",
+      "model": "gemini-3.5-flash",
+      "game": "lol",
+      "topic": "next-patch",
+      "operation": "extract",
+      "repair": false,
+      "success": true,
+      "retries": 0,
+      "inputTokens": 1353,
+      "outputTokens": 2869,
+      "thoughtTokens": 0,
+      "estimatedInputCostUsd": 0.0020295,
+      "estimatedOutputCostUsd": 0.025821,
+      "estimatedCostUsd": 0.0278505,
+      "priceSource": "Gemini API pricing page, paid tier, read 2026-09-15"
     }
   ]
 }
