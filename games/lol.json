@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "lol",
-  "updatedAt": "2026-10-07T22:25:58.857Z",
+  "updatedAt": "2026-10-08T03:35:41.403Z",
   "events": [
     {
       "key": "lol/next-patch/26.01",
@@ -14,7 +14,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -28,7 +28,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -42,7 +42,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -56,7 +56,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -70,7 +70,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -84,7 +84,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -98,7 +98,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -112,7 +112,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -126,7 +126,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -140,7 +140,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -154,7 +154,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -168,7 +168,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -182,7 +182,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -196,7 +196,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -210,7 +210,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -224,7 +224,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -238,7 +238,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -252,7 +252,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -266,7 +266,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -275,12 +275,12 @@
       "topic": "next-patch",
       "kind": "version",
       "label": "26.20",
-      "status": "scheduled",
+      "status": "observed",
       "at": "2026-10-07T00:00:00.000Z",
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -294,7 +294,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -308,7 +308,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -322,7 +322,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     },
     {
@@ -336,7 +336,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-07T12:18:41.393Z",
+      "lastVerified": "2026-10-08T03:35:41.403Z",
       "publishState": "published"
     }
   ],
@@ -572,6 +572,15 @@
       "oldValue": "ended",
       "newValue": "observed",
       "at": "2026-09-30T03:00:49.401Z",
+      "reason": "observed by lol-patch-schedule",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "lol/next-patch/26.20",
+      "field": "status",
+      "oldValue": "scheduled",
+      "newValue": "observed",
+      "at": "2026-10-08T03:35:41.403Z",
       "reason": "observed by lol-patch-schedule",
       "decision": "applied"
     }
@@ -1830,9 +1839,9 @@
     {
       "id": "lol-patch-schedule",
       "url": "https://support-leagueoflegends.riotgames.com/hc/en-us/articles/360018987893-League-of-Legends-Patch-Schedule",
-      "textHash": "2f1264b7d1c2907ed9ae6fdbcd79de3d7b4924312f737bdd81324d9b7428f765",
-      "lastFetchedAt": "2026-10-07T12:18:41.393Z",
-      "lastUsableAt": "2026-10-07T12:18:41.393Z",
+      "textHash": "cde5dd2617f8c947f97614c97935c07ca9b86d48d316349533056aa04e4a3332",
+      "lastFetchedAt": "2026-10-08T03:35:41.403Z",
+      "lastUsableAt": "2026-10-08T03:35:41.403Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -1877,20 +1886,11 @@
       "via": "config",
       "title": "Patch Schedule - League of Legends - League of Legends Support",
       "discoveredAt": "2026-09-15T20:04:34.116Z",
-      "lastSuccessAt": "2026-10-07T12:18:41.393Z",
+      "lastSuccessAt": "2026-10-08T03:35:41.403Z",
       "lastFailureAt": "2026-09-15T23:03:01.303Z",
-      "successes": 6,
+      "successes": 7,
       "failures": 1
     }
   ],
-  "topicStates": [
-    {
-      "topic": "next-patch",
-      "deferred": {
-        "reason": "deferred_due_to_budget",
-        "detail": "AI budget exhausted (topic-calls): lol/next-patch used 4 of 5 calls today (UTC 2026-10-07); this work needs up to 3 more",
-        "at": "2026-10-07T22:25:58.857Z"
-      }
-    }
-  ]
+  "topicStates": []
 }
