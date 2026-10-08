@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "genshin",
-  "updatedAt": "2026-10-08T03:35:52.964Z",
+  "updatedAt": "2026-10-08T12:28:16.609Z",
   "events": [
     {
       "key": "genshin/next-banner/event-wishes-2026-09-22-14-59-59",
@@ -28,7 +28,21 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-21T11:26:49.461Z",
-      "lastVerified": "2026-10-08T03:35:52.964Z",
+      "lastVerified": "2026-10-08T12:28:16.609Z",
+      "publishState": "published"
+    },
+    {
+      "key": "genshin/next-banner/event-wishes-2026-11-03-14-59-59",
+      "game": "genshin",
+      "topic": "next-banner",
+      "kind": "occurrence",
+      "label": "Void Star's Advent / La Chanson Cerise / Epitome Invocation: ends 2026-11-03 14:59 server time (Asia 06:59 UTC, Europe 13:59 UTC, America 19:59 UTC)",
+      "status": "scheduled",
+      "at": "2026-11-03T06:59:59.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-10-08T12:28:16.609Z",
+      "lastVerified": "2026-10-08T12:28:16.609Z",
       "publishState": "published"
     }
   ],
@@ -59,6 +73,15 @@
       "at": "2026-09-22T10:34:58.246Z",
       "reason": "scheduled instant has passed",
       "decision": "applied"
+    },
+    {
+      "entityKey": "genshin/next-banner/event-wishes-2026-11-03-14-59-59",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Void Star's Advent / La Chanson Cerise / Epitome Invocation: ends 2026-11-03 14:59 server time (Asia 06:59 UTC, Europe 13:59 UTC, America 19:59 UTC) @ 2026-11-03T06:59:59.000Z",
+      "at": "2026-10-08T12:28:16.609Z",
+      "reason": "observed by genshin-announcements-os_asia",
+      "decision": "applied"
     }
   ],
   "overrides": [],
@@ -77,6 +100,15 @@
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_asia",
       "sourceId": "genshin-announcements-os_asia",
       "fetchedAt": "2026-09-21T11:26:49.461Z",
+      "title": "Genshin Impact announcements (Asia server)",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "c0d9e73bc4ca329b5bd8017bda5bf3e337ecde8f651e06d00d7c4a31b8b7a200",
+      "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_asia",
+      "sourceId": "genshin-announcements-os_asia",
+      "fetchedAt": "2026-10-08T12:28:16.609Z",
       "title": "Genshin Impact announcements (Asia server)",
       "fetchMode": "http",
       "confidence": "high"
@@ -102,15 +134,25 @@
       "method": "deterministic",
       "quote": "{\"ann_id\":21876,\"title\":\"Event Wish \\\"When Warm Winds Cavort\\\" - Boosted Drop Rate for \\\"Snowy Banquet's Sharp Blade\\\" Vesna (Anemo)!\",\"subtitle\":\"Event Wish \\\"When Warm Winds Cavort\\\"\",\"banner\":\"https://sdk.hoyoverse.com/upload/ann/2026/09/11/0280fb4b14ec01bb37bb3ee0253a108a_8262450589619702638_transformed.jpg\",\"content\":\"\",\"type_label\":\"Event\",\"tag_label\":\"2\",\"tag_icon\":\"https://sdk.hoyoverse.com/upload/announcement/2020/03/05/2cf7327b5fb2c050872ead29e338e368_7400353291716098710.png\",\"login_alert\":1,\"lang\":\"en-us\",\"start_time\":\"2026-09-21 05:00:00\",\"end_time\":\"2026-10-13 17:59:00\",\"type\":1,\"remind\":1,\"alert\":0,\"tag_start_time\":\"2000-01-02 08:04:05\",\"tag_end_time\":\"2030-01-02 15:04:05\",\"remind_ver\":1,\"has_content\":true,\"extra_remind\":0,\"tag_icon_hover\":\"\",\"logout_remind\":0,\"logout_remind_ver\":1,\"country\":\"\",\"need_remind_text\":0,\"remind_text\":\"\",\"weak_remind\":1,\"remind_consumption_type\":0}",
       "extractedAt": "2026-09-21T11:26:49.461Z"
+    },
+    {
+      "id": "ea72d4104ba947575bad2eb0",
+      "documentId": "c0d9e73bc4ca329b5bd8017bda5bf3e337ecde8f651e06d00d7c4a31b8b7a200",
+      "eventKey": "genshin/next-banner/event-wishes-2026-11-03-14-59-59",
+      "field": "at",
+      "value": "2026-11-03T06:59:59.000Z",
+      "method": "deterministic",
+      "quote": "{\"ann_id\":21888,\"title\":\"Event Wish \\\"Void Star's Advent\\\" - Boosted Drop Rate for \\\"Void Star\\\" Skirk (Cryo)!\",\"subtitle\":\"Event Wish \\\"Void Star's Advent\\\"\",\"banner\":\"https://sdk.hoyoverse.com/upload/ann/2026/09/23/8668a2e84580c1426c290a447320bcd9_5708783295049261864_transformed.jpg\",\"content\":\"\",\"type_label\":\"Event\",\"tag_label\":\"2\",\"tag_icon\":\"https://sdk.hoyoverse.com/upload/announcement/2020/03/05/2cf7327b5fb2c050872ead29e338e368_7400353291716098710.png\",\"login_alert\":1,\"lang\":\"en-us\",\"start_time\":\"2026-10-08 16:00:00\",\"end_time\":\"2026-11-03 14:59:59\",\"type\":1,\"remind\":1,\"alert\":0,\"tag_start_time\":\"2000-01-02 15:04:05\",\"tag_end_time\":\"2030-01-02 15:04:05\",\"remind_ver\":1,\"has_content\":true,\"extra_remind\":0,\"tag_icon_hover\":\"\",\"logout_remind\":0,\"logout_remind_ver\":1,\"country\":\"\",\"need_remind_text\":0,\"remind_text\":\"\",\"weak_remind\":1,\"remind_consumption_type\":0}",
+      "extractedAt": "2026-10-08T12:28:16.609Z"
     }
   ],
   "sources": [
     {
       "id": "genshin-announcements-os_asia",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_asia",
-      "textHash": "f4a17b759dfe748801b1cbaa9f61c02065f0729b84b5375aaefc163c4fab5ef8",
-      "lastFetchedAt": "2026-10-08T03:35:52.964Z",
-      "lastUsableAt": "2026-10-08T03:35:52.964Z",
+      "textHash": "c0d9e73bc4ca329b5bd8017bda5bf3e337ecde8f651e06d00d7c4a31b8b7a200",
+      "lastFetchedAt": "2026-10-08T12:28:16.609Z",
+      "lastUsableAt": "2026-10-08T12:28:16.609Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -118,9 +160,9 @@
     {
       "id": "genshin-announcements-os_euro",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_euro",
-      "textHash": "af5f03b358f582aceae2ab4d52f77c02709c42ce88f38125892dcf014c0892c9",
-      "lastFetchedAt": "2026-10-08T03:35:52.964Z",
-      "lastUsableAt": "2026-10-08T03:35:52.964Z",
+      "textHash": "932563b17cd29945c2ade30d1e5f439f968cfc3bee17246f58b418e465071838",
+      "lastFetchedAt": "2026-10-08T12:28:16.609Z",
+      "lastUsableAt": "2026-10-08T12:28:16.609Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -128,9 +170,9 @@
     {
       "id": "genshin-announcements-os_usa",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_usa",
-      "textHash": "80755d065f605abe00575c0d22481acf74b542e29834b4d27a398dcf66a76fda",
-      "lastFetchedAt": "2026-10-08T03:35:52.964Z",
-      "lastUsableAt": "2026-10-08T03:35:52.964Z",
+      "textHash": "f23d7433117ad035b1610fb6f3d00705c08e7b909d6f9e0b7bcf7026c7e3c444",
+      "lastFetchedAt": "2026-10-08T12:28:16.609Z",
+      "lastUsableAt": "2026-10-08T12:28:16.609Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
