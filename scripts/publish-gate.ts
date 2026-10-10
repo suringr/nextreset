@@ -15,6 +15,7 @@
  * ordinary day: the pages say so honestly, the trackers that still answer are unaffected, and shipping
  * that is right. It refuses only where publishing would leave the site worse than not publishing at all.
  */
+import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
 import { declaresNoindex } from "./indexing";
@@ -71,20 +72,38 @@ export function inspect(distDir: string): GateReport {
 
     for (const page of pages) {
         const html = fs.readFileSync(path.join(distDir, page), "utf8");
+        // Only where the renderer writes, never the whole document.
+        //
+        // A substring search over the source would refuse a deploy because a publisher used one of these
+        // words. `data.notes` is copied into the page from the source, so an update actually titled
+        // "Loading..." — or any title containing "NaN" — would block every publish from then on
+        // (Codex, #69). A false refusal here is as damaging as a missed one: it stops the site updating
+        // at all, and the cause would be invisible.
+        const $ = cheerio.load(html);
+        const written = $("[data-nr-slot], [data-nr-region], .countdown-value, .countdown-label").text();
         for (const placeholder of PLACEHOLDERS) {
-            if (html.includes(placeholder)) {
-                findings.push({ level: "refuse", message: `${page} still shows "${placeholder}"` });
+            if (written.includes(placeholder)) {
+                findings.push({ level: "refuse", message: `${page} still shows "${placeholder}" where a value should be` });
             }
         }
         (declaresNoindex(html) ? noindex : indexable).push(page);
     }
 
-    // Every page the manifest declares, actually built. A page that silently stopped being produced is a
-    // 404 on a URL that was in yesterday's sitemap.
+    // The build and the manifest have to agree, in both directions.
+    //
+    // A declared page that was not produced is a 404 on a URL that was in yesterday's sitemap. An
+    // undeclared page that *was* produced is worse in a different way: `renderSite` treats an unfamiliar
+    // non-tracker page as indexable static content and puts it in the sitemap, so a stray file under
+    // public/ gets force-published and submitted for indexing. The suite checks both directions and the
+    // publish job does not run the suite (Codex, #69).
     const declared = pagePaths();
     const missing = declared.filter(page => !pages.includes(page));
     if (missing.length > 0) {
         findings.push({ level: "refuse", message: `the build is missing ${missing.length} declared page(s): ${missing.join(", ")}` });
+    }
+    const undeclared = pages.filter(page => !declared.includes(page));
+    if (undeclared.length > 0) {
+        findings.push({ level: "refuse", message: `the build produced ${undeclared.length} page(s) the manifest does not declare: ${undeclared.join(", ")}` });
     }
 
     // A build in which no tracker can answer anything is not this site. Publishing it over a working one
@@ -121,6 +140,20 @@ export function inspect(distDir: string): GateReport {
             } else if (!builtPaths.has(location)) {
                 findings.push({ level: "refuse", message: `${location} is in the sitemap but was not built` });
             }
+        }
+        // Existing is not the same as usable. An empty or truncated sitemap parses to nothing, every
+        // check above passes vacuously, and the site publishes asking to be indexed through a file that
+        // lists no pages (Codex, #69). The sitemap and the robots tags are two answers to one question,
+        // so they have to name the same set.
+        const shouldList = indexable.map(urlPathOfFile).sort();
+        const listed = [...sitemap].sort();
+        if (listed.length !== shouldList.length || listed.some((location, at) => location !== shouldList[at])) {
+            const absent = shouldList.filter(location => !listed.includes(location));
+            findings.push({
+                level: "refuse",
+                message: `the sitemap lists ${listed.length} page(s) but ${shouldList.length} are indexable` +
+                    (absent.length > 0 ? `; missing: ${absent.join(", ")}` : "")
+            });
         }
     }
 

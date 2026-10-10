@@ -28,7 +28,8 @@ function healthyBuild(): { dir: string; cleanup(): void } {
         fs.mkdirSync(path.dirname(file), { recursive: true });
         // 404 and the arcade ask not to be indexed; everything else answers.
         const withheld = page === "404.html" || page === "play/index.html";
-        fs.writeFileSync(file, `<!DOCTYPE html><html><head>${withheld ? NOINDEX : ""}</head><body><h1>${page}</h1></body></html>`, "utf8");
+        fs.writeFileSync(file, `<!DOCTYPE html><html><head>${withheld ? NOINDEX : ""}</head><body><h1>${page}</h1>`
+            + `<div class="countdown-value" data-nr-slot="answer-value">October 21, 2026</div></body></html>`, "utf8");
         if (!withheld) indexable.push(page);
     }
     writeSitemap(dir, indexable);
@@ -90,13 +91,15 @@ test("one tracker still answering is enough to publish", () => {
     }
 });
 
-test("a placeholder anywhere in the build is refused", () => {
+test("a placeholder where a value should be is refused", () => {
+    // In the slot the renderer writes into — which is where an unrendered page leaves its placeholder,
+    // and the only place the gate looks.
     const build = healthyBuild();
     try {
         const page = trackerPages()[0].page;
         const file = path.join(build.dir, page);
-        fs.writeFileSync(file, fs.readFileSync(file, "utf8").replace("<h1>", "<h1>--:--:-- "), "utf8");
-        assert.match(refusals(build.dir).join("\n"), /still shows "--:--"/);
+        fs.writeFileSync(file, fs.readFileSync(file, "utf8").replace("October 21, 2026", "--:--:--"), "utf8");
+        assert.match(refusals(build.dir).join(" | "), /still shows "--:--"/);
     } finally {
         build.cleanup();
     }
@@ -155,4 +158,64 @@ test("sitemap locations are read as paths, whatever the origin", () => {
   <url><loc>  https://nextreset.co/lol/next-patch/  </loc></url>
 </urlset>`;
     assert.deepEqual(sitemapPaths(xml), ["/", "/lol/next-patch/"]);
+});
+
+test("a publisher's own words are not mistaken for a placeholder", () => {
+    // The false-refusal direction, which is as damaging as a missed one: a refusal stops the site
+    // updating at all and the cause is invisible. `data.notes` is copied into the page from the source,
+    // so an update actually titled "Loading..." used to block every publish from then on (Codex, #69).
+    const build = healthyBuild();
+    try {
+        const page = trackerPages()[0].page;
+        const file = path.join(build.dir, page);
+        const html = fs.readFileSync(file, "utf8")
+            .replace("<h1>", "<h1>Patch notes: fixed a NaN in the damage formula, and Loading... screens</h1><h1>");
+        fs.writeFileSync(file, html, "utf8");
+        assert.deepEqual(refusals(build.dir), [], "prose outside the rendered slots was read as a placeholder");
+    } finally {
+        build.cleanup();
+    }
+});
+
+test("a sitemap that lists nothing is refused", () => {
+    // Existing is not the same as usable. An empty or truncated file parses to no locations, every other
+    // sitemap check passes vacuously, and the site publishes asking to be indexed through a file naming
+    // no pages.
+    const build = healthyBuild();
+    try {
+        fs.writeFileSync(path.join(build.dir, "sitemap.xml"), `<?xml version="1.0"?>
+<urlset>
+</urlset>
+`, "utf8");
+        assert.match(refusals(build.dir).join(" | "), /the sitemap lists 0 page\(s\) but \d+ are indexable/);
+    } finally {
+        build.cleanup();
+    }
+});
+
+test("a sitemap missing an indexable page is refused", () => {
+    const build = healthyBuild();
+    try {
+        const dropped = trackerPages()[0].page;
+        writeSitemap(build.dir, pagePaths().filter(page =>
+            page !== "404.html" && page !== "play/index.html" && page !== dropped));
+        assert.match(refusals(build.dir).join(" | "), /missing: \/[^,\s]+/);
+    } finally {
+        build.cleanup();
+    }
+});
+
+test("a page the manifest does not declare is refused", () => {
+    // renderSite treats an unfamiliar non-tracker page as indexable static content and puts it in the
+    // sitemap, so a stray file under public/ would be force-published and submitted for indexing. The
+    // suite checks both directions; the publish job does not run the suite.
+    const build = healthyBuild();
+    try {
+        const stray = path.join(build.dir, "scratch", "index.html");
+        fs.mkdirSync(path.dirname(stray), { recursive: true });
+        fs.writeFileSync(stray, "<!DOCTYPE html><html><head></head><body><h1>notes to self</h1></body></html>", "utf8");
+        assert.match(refusals(build.dir).join(" | "), /the manifest does not declare: scratch\/index\.html/);
+    } finally {
+        build.cleanup();
+    }
 });
