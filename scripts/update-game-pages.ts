@@ -441,11 +441,14 @@ function generatePage(page: GamePage): string {
   <meta property="og:title" content="${page.title} ${page.typeTitle} - NextReset">
   <meta property="og:description" content="${page.metaDescription}">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://nextreset.co/og.png">
+  <meta property="og:image" content="https://nextreset.co/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <link rel="canonical" href="https://nextreset.co/${page.game}/${page.type}/">
   <title>${page.title} ${page.typeTitle} - NextReset</title>
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/favicon.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#0b0f14">
 
