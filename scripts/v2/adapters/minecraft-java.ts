@@ -218,7 +218,7 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
         // Spent the moment the request goes out, before anything can be made of the response. A transport
         // error, a 5xx or a parse that throws all consume one, which is what keeps a permanently broken
         // parse from downloading the whole source on every run forever.
-        if (unconditional) sourceStates = [countExtractionAttempt(sourceStates[0], previous, EXTRACTION_VERSION)];
+        if (unconditional) sourceStates = [countExtractionAttempt(sourceStates[0], previous, EXTRACTION_VERSION, fetched.requests)];
         if (fetched.outcome === "unusable") {
             return { events: [], failure: fetched.error ?? fetched.verdict?.reason ?? "fetch failed", failureKind: failureKindFromFetch(fetched), sourceStates };
         }

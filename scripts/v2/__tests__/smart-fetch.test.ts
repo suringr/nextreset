@@ -253,3 +253,12 @@ test("the extraction version survives a fetch that rewrites the rest of the stat
     assert.equal(result.state.etag, '"new"', "the rest of the state should still be replaced");
     assert.equal(result.state.extractionVersion, 3, "the extraction version was dropped by a successful fetch");
 });
+
+test("a retried fetch reports every request it issued", async () => {
+    // One smartFetch is not one request. A caller spending a per-request budget has to be told what was
+    // actually spent: under `unconditional`, each 5xx retry is another validator-free download.
+    const flaky = fakeTransport({ http: [{ status: 503 }, { status: 503 }, { body: fixture("minecraft-article.html"), headers: { "content-type": "text/html" } }] });
+    const result = await smartFetch(ARTICLE_URL, { expect: { kind: "html" }, transport: flaky, now, retryDelayMs: 0 });
+    assert.equal(flaky.gets.length, 3, "this test needs the retry path");
+    assert.equal(result.requests, 3, "the caller would have been told one request went out, not three");
+});

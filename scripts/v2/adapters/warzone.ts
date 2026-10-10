@@ -228,7 +228,7 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
         const fetched = await smartFetch(source.url, { expect: { kind: "text", minWords: 20, markers: ["Patch Notes"] }, allowRender: false, previous, transport, label: `${game.id}-${topic.type}`, now, unconditional });
         let sourceStates: SourceState[] = [{ id: source.id, url: source.url, ...fetched.state }];
         // Spent when the request goes out, not when it succeeds -- see the Minecraft adapter.
-        if (unconditional) sourceStates = [countExtractionAttempt(sourceStates[0], previous, EXTRACTION_VERSION)];
+        if (unconditional) sourceStates = [countExtractionAttempt(sourceStates[0], previous, EXTRACTION_VERSION, fetched.requests)];
         if (fetched.outcome === "unusable") {
             return { events: [], failure: fetched.error ?? fetched.verdict?.reason ?? "fetch failed", failureKind: failureKindFromFetch(fetched), sourceStates };
         }

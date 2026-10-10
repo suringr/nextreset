@@ -491,3 +491,50 @@ test("rolling back to an older adapter does not lower the mark", async () => {
     assert.equal(store.load("minecraft").sources[0].extractionVersion, EXTRACTION_VERSION + 4,
         "an older adapter lowered the mark, so redeploying the newer one would read the source again");
 });
+
+test("retries inside one run are charged to the attempt budget", async () => {
+    // Codex (#68): smartFetch retries a transport error or a 5xx up to three times, and under an
+    // unconditional read every one of those is another validator-free download. Charging one attempt per
+    // call made a budget of three permit as many as nine requests.
+    const { store } = tempStore();
+    const flaky = fakeTransport({ http: [{ status: 503 }, { status: 503 }, { body: HISTORY, headers: { "content-type": "application/json" } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(flaky), store, NOW);
+    assert.equal(flaky.gets.length, 3, "this test needs the retry path");
+
+    const state = store.load("minecraft").sources[0];
+    // The read succeeded, so the version is banked and the budget released — the charge matters on the
+    // failing path, which the next assertion covers.
+    assert.equal(state.extractionVersion, EXTRACTION_VERSION);
+
+    const { store: second } = tempStore();
+    const broken = fakeTransport({ http: [{ status: 503 }, { status: 503 }, { body: '{"latest":{"release":"26.3"},"versions":[]}', headers: { "content-type": "application/json" } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(broken), second, NOW);
+    const spent = second.load("minecraft").sources[0]?.extractionAttempts?.tries;
+    assert.equal(spent, 3, `three requests went out but ${spent} attempt(s) were charged`);
+    assert.equal(shouldReadInFull(second.load("minecraft").sources[0], EXTRACTION_VERSION, false), false,
+        "the budget should be exhausted after three validator-free requests, however they were grouped");
+});
+
+test("a rollback does not hand a newer version a fresh budget", async () => {
+    // Codex (#68): version N exhausts its attempts, the deployment rolls back to M < N, and a genuine
+    // source change that M parses successfully cleared N's spent attempts. Redeploying N then found a
+    // full budget, so rollback/change/redeploy cycles walked through the per-version cap.
+    const { store } = tempStore();
+    const first = fakeTransport({ http: [{ body: HISTORY, headers: { "content-type": "application/json" } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(first), store, NOW);
+
+    // A newer capability has already tried and given up here.
+    const before = store.load("minecraft");
+    store.save({
+        ...before,
+        sources: before.sources.map(s => ({ ...s, extractionVersion: 0, extractionAttempts: { version: EXTRACTION_VERSION + 4, tries: MAX_EXTRACTION_ATTEMPTS } }))
+    });
+
+    // Today's older adapter sees a changed manifest and succeeds.
+    const changed = edit(HISTORY, m => { m.latest = { release: "26.4", snapshot: "26.5-rc-1" }; m.versions.push({ id: "26.4", type: "release", url: "https://piston-meta.mojang.com/v1/packages/0000/26.4.json", time: "2026-11-02T00:00:00+00:00", releaseTime: "2026-11-01T10:00:00+00:00" }); });
+    await runTracker(game, topic, createMinecraftJavaAdapter(fakeTransport({ http: [{ body: changed, headers: { "content-type": "application/json" } }] })), store, new Date("2026-11-11T06:00:00Z"));
+
+    const after = store.load("minecraft").sources[0];
+    assert.deepEqual(after.extractionAttempts, { version: EXTRACTION_VERSION + 4, tries: MAX_EXTRACTION_ATTEMPTS },
+        "the older adapter wiped a newer version's spent attempts");
+});

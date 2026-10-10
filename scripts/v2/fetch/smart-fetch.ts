@@ -81,10 +81,16 @@ export function shouldReadInFull(previous: SourceFetchState | undefined, version
     return spent < MAX_EXTRACTION_ATTEMPTS;
 }
 
-/** Marks one unconditional read as spent against `version`, whatever the run goes on to make of it. */
-export function countExtractionAttempt<T extends SourceFetchState>(state: T, previous: SourceFetchState | undefined, version: number): T {
+/**
+ * Marks unconditional reads as spent against `version`, whatever the run goes on to make of them.
+ *
+ * `requests` rather than one, because a single `smartFetch` can issue several: a transport error or a
+ * 5xx is retried, and under `unconditional` each retry is also validator-free. Charging one per call
+ * made the budget three times looser than it reads (Codex, #68).
+ */
+export function countExtractionAttempt<T extends SourceFetchState>(state: T, previous: SourceFetchState | undefined, version: number, requests = 1): T {
     const spent = previous?.extractionAttempts?.version === version ? previous.extractionAttempts.tries : 0;
-    return { ...state, extractionAttempts: { version, tries: spent + 1 } };
+    return { ...state, extractionAttempts: { version, tries: spent + Math.max(1, requests) } };
 }
 
 /**
@@ -96,7 +102,11 @@ export function countExtractionAttempt<T extends SourceFetchState>(state: T, pre
  */
 export function recordExtraction<T extends SourceFetchState>(state: T, previous: SourceFetchState | undefined, version: number): T {
     const next = { ...state, extractionVersion: Math.max(previous?.extractionVersion ?? 0, version) };
-    delete next.extractionAttempts;
+    // Only the budget this success actually settles. A rolled-back deployment succeeding at version M
+    // must not clear the attempts a newer version N already spent, or redeploying N would find a fresh
+    // budget and repeat a read it had already given up on (Codex, #68).
+    const spentOn = next.extractionAttempts?.version;
+    if (spentOn === undefined || spentOn <= version) delete next.extractionAttempts;
     return next;
 }
 
@@ -155,6 +165,14 @@ function isRetryableStatus(status: number): boolean {
 
 export interface SmartFetchResult {
     outcome: "usable" | "unchanged" | "unusable";
+    /**
+     * HTTP requests this call actually issued, retries included.
+     *
+     * One `smartFetch` is not one request: a transport error or a 5xx is retried, and with
+     * `unconditional` every one of those retries also goes out without validators. A caller spending a
+     * per-request budget has to charge what was spent, not what it asked for (Codex, #68).
+     */
+    requests: number;
     verdict?: Verdict;
     /** Present for "usable", and for "unchanged" when the body was received (same hash). */
     document?: FetchedDocument;
@@ -194,6 +212,7 @@ export async function smartFetch(url: string, options: SmartFetchOptions): Promi
         verdict,
         error,
         attempts,
+        requests,
         state: {
             ...previous,
             lastFetchedAt: nowIso,
@@ -210,6 +229,7 @@ export async function smartFetch(url: string, options: SmartFetchOptions): Promi
             verdict,
             document,
             attempts,
+            requests,
             state: {
                 // Validators belong to the representation that produced this document. A 200 that
                 // omits them, or a browser render (no HTTP validators), clears them so a later 304
@@ -240,8 +260,10 @@ export async function smartFetch(url: string, options: SmartFetchOptions): Promi
     const lastModified = options.unconditional ? undefined : previous.lastModified;
     let response;
     let lastError: string | undefined;
+    let requests = 0;
     for (let attempt = 0; attempt <= retries; attempt++) {
         try {
+            requests++;
             response = await transport.get({ url, timeoutMs: options.timeoutMs, etag, lastModified });
             lastError = undefined;
             if (!isRetryableStatus(response.status) || attempt === retries) break;
@@ -262,6 +284,7 @@ export async function smartFetch(url: string, options: SmartFetchOptions): Promi
         return {
             outcome: "unchanged",
             attempts,
+            requests,
             state: { ...previous, lastFetchedAt: nowIso, lastVerdict: "usable", lastMode: "http", consecutiveFailures: 0 }
         };
     }
