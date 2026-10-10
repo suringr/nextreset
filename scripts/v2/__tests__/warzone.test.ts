@@ -5,7 +5,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { WARZONE_PATCH_NOTES_URL, createWarzonePatchAdapter, parseCardDate, parseWarzoneUpdate } from "../adapters/warzone";
+import { KEPT_ARCHIVE, WARZONE_PATCH_NOTES_URL, createWarzonePatchAdapter, parseCardDate, parseWarzoneArchive, parseWarzoneUpdate } from "../adapters/warzone";
 import { MockAiProvider } from "../ai/mock";
 import { DEFAULT_AI_BUDGET_LIMITS, createAiGate } from "../cost/budget";
 import { AiUsageLedger } from "../cost/ledger";
@@ -71,11 +71,22 @@ test("the first run publishes the current Warzone update at day precision with a
     assert.deepEqual([fresh.nextEventUtc, fresh.notes, fresh.source_url, fresh.confidence], [LATEST.at, LATEST.title, LATEST.url, "high"]);
 
     const k1 = store.load("warzone");
-    assert.deepEqual(k1.events.map(e => [e.key, e.precision, e.timezone]), [[`warzone/last-patch/${LATEST.identity}`, "day", undefined]], "day precision: the page states no time or time zone");
-    assert.deepEqual([k1.documents.length, k1.claims.length], [1, 1]);
+    // The current card, plus the archive beneath it. Every one at day precision: the page states a
+    // day with no time or zone, and inventing one would be our value rather than Activision's.
+    const archive = parseWarzoneArchive(PAGE);
+    assert.equal(k1.events.length, archive.length + 1, "the archive beneath the card was not imported");
+    for (const event of k1.events) assert.deepEqual([event.precision, event.timezone], ["day", undefined]);
+    assert.ok(k1.events.some(e => e.key === `warzone/last-patch/${LATEST.identity}`), "the current card is not among them");
+
+    // One document — they all came out of the same response — and a claim each, because `blocksFor`
+    // will not list a past event it cannot evidence.
+    assert.deepEqual([k1.documents.length, k1.claims.length], [1, archive.length + 1]);
     assert.deepEqual([k1.documents[0].id, k1.documents[0].url], [k1.sources[0].textHash, WARZONE_PATCH_NOTES_URL]);
-    assert.deepEqual([k1.claims[0].value, k1.claims[0].linkUrl, k1.claims[0].method], [LATEST.at, LATEST.url, "deterministic"]);
-    assert.ok(PAGE.includes(k1.claims[0].quote!));
+    const currentClaim = k1.claims.find(c => c.eventKey === `warzone/last-patch/${LATEST.identity}`)!;
+    assert.deepEqual([currentClaim.value, currentClaim.linkUrl, currentClaim.method], [LATEST.at, LATEST.url, "deterministic"]);
+    assert.ok(PAGE.includes(currentClaim.quote!), "the current card's quote is not a verbatim slice");
+    // Every archive row carries its own article link, which is the evidence a reader is shown.
+    for (const claim of k1.claims) assert.match(claim.linkUrl!, /^https:\/\/www\.callofduty\.com\/patchnotes\//);
     assert.doesNotThrow(() => validateGameKnowledge(JSON.parse(JSON.stringify(k1))));
 
     const second = await runTracker(game, topic, adapter, store, new Date("2026-09-16T06:00:00Z"), { ai: gate });
@@ -93,7 +104,9 @@ test("an in-place article update becomes a new event; a broken page keeps the la
     const run = await runTracker(game, topic, createWarzonePatchAdapter(fakeTransport({ http: [{ body: updated }] })), store, new Date("2026-09-16T06:00:00Z"));
     assert.equal((run.result as any).nextEventUtc, "2026-09-15T00:00:00.000Z");
     assert.equal(run.created, 1);
-    assert.deepEqual(store.load("warzone").events.map(e => e.key).sort(), [`warzone/last-patch/${SLUG}-2026-08-28`, `warzone/last-patch/${SLUG}-2026-09-15`]);
+    const keys = store.load("warzone").events.map(e => e.key);
+    assert.ok(keys.includes(`warzone/last-patch/${SLUG}-2026-08-28`), "the superseded update was dropped");
+    assert.ok(keys.includes(`warzone/last-patch/${SLUG}-2026-09-15`), "the in-place update is not its own event");
 
     const goodHash = store.load("warzone").sources[0].textHash;
     const broken = await runTracker(game, topic, createWarzonePatchAdapter(fakeTransport({ http: [{ body: updated.replace("game-tile warzone", "game-tile mw4") }] })), store, new Date("2026-09-16T12:00:00Z"));
@@ -120,4 +133,71 @@ test("the production registry runs Warzone on the patch notes page adapter", () 
     assert.equal(game.sources[0].url, WARZONE_PATCH_NOTES_URL);
     assert.equal(topic.discovery, undefined, "a deterministic page source needs no discovery");
     assert.equal(typeof adapterFor(topic), "function");
+});
+
+/**
+ * The rescue (PR 3a). I withheld this page from the index on the premise that the Call of Duty page
+ * publishes one card per game and keeps no archive. That was wrong, and Codex caught it: beneath the
+ * current card is a "View past patch notes" accordion carrying the previous articles with their dates
+ * and links — in the very response this adapter already fetches. The decision was reversed.
+ */
+test("the patches behind the current one come out of the page's own archive", () => {
+    const archive = parseWarzoneArchive(PAGE);
+    assert.ok(archive.length > 0, "the accordion beneath the card was not read");
+    assert.ok(archive.length <= KEPT_ARCHIVE, "more was kept than the page can draw");
+
+    // Warzone's archive, not the one a few hundred lines further down. The same markup carries Black
+    // Ops' past patch notes, and merging them would publish another game's patches as Warzone's.
+    for (const entry of archive) {
+        assert.match(entry.title, /Warzone/i, `${entry.title} is not a Warzone patch`);
+        assert.match(entry.url, /^https:\/\/www\.callofduty\.com\/patchnotes\//);
+        assert.ok(Number.isFinite(Date.parse(entry.at)), `${entry.title} has no readable date`);
+    }
+    assert.equal(archive.filter(e => /black ops|modern warfare/i.test(e.title)).length, 0, "another game's patches reached Warzone");
+
+    // Newest first, and every row distinct.
+    const times = archive.map(e => Date.parse(e.at));
+    assert.deepEqual(times, [...times].sort((a, b) => b - a), "not ordered newest first");
+    assert.equal(new Set(archive.map(e => e.identity)).size, archive.length, "the same article was listed twice");
+
+    // The identity scheme is the card's, so an article moving between the card and the archive is
+    // recognised as the event it already was rather than becoming a second one.
+    const current = parseWarzoneUpdate(PAGE);
+    assert.equal(archive.some(e => e.identity === current.identity), false, "the current card is duplicated into the archive");
+});
+
+test("a page with no archive still publishes its current card", () => {
+    // The accordion is an enhancement to the page, not a requirement of it. If Activision drops it,
+    // the tracker keeps working with one row rather than failing.
+    const stripped = PAGE.replace(/<div class="post-grid-accordion"[\s\S]*?<\/div>\s*<\/div>/g, "");
+    assert.doesNotThrow(() => parseWarzoneUpdate(stripped));
+    assert.deepEqual(parseWarzoneArchive("<html><body>nothing here</body></html>"), []);
+});
+
+test("an unchanged response is still read when its body came down with it", async () => {
+    // Codex, PR #66: on the first deploy after this change the store holds no history, and the page
+    // reads as unchanged until Activision next patches anything. A 304 has no body and cannot be read
+    // — but a 200 whose hash matched does, and importing from it costs no request at all.
+    const { store } = tempStore();
+    const first = fakeTransport({ http: [{ body: PAGE, headers: { "content-type": "text/html" } }] });
+    await runTracker(game, topic, createWarzonePatchAdapter(first), store, NOW);
+
+    // Wind the store back to the single-event shape this page had before the rescue, keeping the
+    // source state — which is exactly what a deploy onto the existing knowledge branch looks like.
+    const before = store.load("warzone");
+    const current = parseWarzoneUpdate(PAGE);
+    const currentKey = `warzone/last-patch/${current.identity}`;
+    store.save({
+        ...before,
+        events: before.events.filter(e => e.key === currentKey),
+        claims: before.claims.filter(c => c.eventKey === currentKey)
+    });
+    assert.equal(store.load("warzone").events.length, 1, "the store was not wound back");
+
+    // The same bytes again: smartFetch reports unchanged, and the history is imported anyway.
+    const again = fakeTransport({ http: [{ body: PAGE, headers: { "content-type": "text/html" } }] });
+    const run = await runTracker(game, topic, createWarzonePatchAdapter(again), store, new Date("2026-09-17T00:00:00Z"));
+    assert.equal(run.result.status, "fresh");
+    assert.equal(again.gets.length, 1, "the backfill cost an extra request");
+    assert.equal(store.load("warzone").events.length, parseWarzoneArchive(PAGE).length + 1, "the history was not backfilled");
 });

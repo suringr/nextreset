@@ -11,15 +11,17 @@
  * latest Java Edition release. Bedrock Edition has its own source and is not
  * mixed in here (V1 mixed both editions from one changelog listing).
  *
- * Each run upserts only the latest release, so the knowledge file does not
- * import hundreds of old versions; history accumulates from the first run on.
+ * Each run upserts the current release and the eleven before it, all read from
+ * the same response. The manifest lists every version Minecraft has ever had, so
+ * the page's history costs no extra request; `KEPT_RELEASES` bounds what is taken
+ * from it, because a page is not a data dump.
  *
  * Evidence is the fetched manifest itself: the document is the manifest URL and
- * its content hash, and the claim quotes the release's entry exactly as it
- * appears in that response. Evidence is recorded only when the release instant
- * is new to the knowledge file, so a manifest that changes for snapshots does
- * not add copies. The manifest is machine data, so visitors keep the official
- * changelogs page as the link (TopicView.linkEvidence).
+ * its content hash, and each claim quotes its release's entry exactly as it
+ * appears in that response. Evidence is recorded only when a release instant is
+ * new to the knowledge file, so a manifest that changes for snapshots does not
+ * add copies. The manifest is machine data, so every row's link is the official
+ * changelogs page rather than raw launcher JSON.
  *
  * No model is involved: an unchanged manifest stops at the text hash, and a
  * changed one is parsed by code.
@@ -103,16 +105,32 @@ export function parseRecentJavaReleases(text: string, limit = KEPT_RELEASES): Ja
     if (!Array.isArray(versions)) throw new Error("No versions in Mojang version manifest");
     const quoted = indexJsonObjects(text, "id");
     const releases: JavaRelease[] = [];
+    const seen = new Set<string>();
     for (const entry of versions) {
         if (entry?.type !== "release") continue;
         if (typeof entry.id !== "string" || typeof entry.releaseTime !== "string") continue;
         const at = new Date(entry.releaseTime);
         if (isNaN(at.getTime())) continue;
+        // One entry per id. `indexJsonObjects` keys quotes by id and keeps the first, so a manifest
+        // listing an id twice would hand the second entry the first entry's quote — a claim whose
+        // value says one instant and whose supposedly verbatim evidence says another, both upserted
+        // against the same event key. The first entry wins, which is the one the quote belongs to.
+        if (seen.has(entry.id)) continue;
+        seen.add(entry.id);
         const excerpt = quoted.get(entry.id);
         // A release that cannot be quoted verbatim is not evidence, and history without evidence is
         // just a list. Skipped rather than fatal: one unquotable old version must not cost the page
         // the current release, which parseLatestJavaRelease checks for separately and strictly.
         if (!excerpt) continue;
+        // And the quote must be the quote for this entry, not merely a quote that exists. Cheap to
+        // check, and it is the only thing standing between "verbatim evidence" and a plausible string.
+        let quotedEntry: { releaseTime?: unknown };
+        try {
+            quotedEntry = JSON.parse(excerpt);
+        } catch {
+            continue;
+        }
+        if (quotedEntry.releaseTime !== entry.releaseTime) continue;
         releases.push({ id: entry.id, at: at.toISOString(), releaseTime: entry.releaseTime, excerpt });
     }
     return releases.sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, limit);
@@ -162,7 +180,20 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
             return { events: [], failure: fetched.error ?? fetched.verdict?.reason ?? "fetch failed", failureKind: failureKindFromFetch(fetched), sourceStates };
         }
         const fetch = { httpStatus: fetched.document?.status ?? 304, mode: fetched.document?.mode ?? "http" as const };
-        if (fetched.outcome === "unchanged") {
+        // An unchanged response still gets read when the body came down with it.
+        //
+        // `unchanged` covers two different things: a 304, which has no body at all, and a 200 whose
+        // hash matched, which has one. Returning early for both was right when a run imported only the
+        // current release — there was nothing new to learn from bytes we had seen before. It is wrong
+        // now: on the first deploy after this change the store holds no history, and the manifest will
+        // read as unchanged until Mojang next publishes anything. Where the body is in our hands,
+        // parsing it imports the history for no request at all; the upserts are idempotent, so a run
+        // that learns nothing new writes nothing.
+        //
+        // A true 304 has no body and cannot be read. The next change to the manifest — Mojang ships
+        // snapshots most weeks — completes the import, and nothing is published wrongly in the interim.
+        const unchanged = fetched.outcome === "unchanged";
+        if (unchanged && !fetched.document) {
             return { events: [], unchanged: true, sourceStates, fetch, work: { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 } };
         }
 
@@ -226,8 +257,11 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
             confidence: Confidence.High,
             sourceStates,
             fetch,
-            // Structured JSON parsed by code: never sent to a model.
-            work: { unchanged: 0, deterministic: 1, sentToAi: 0, deferred: 0 }
+            // Structured JSON parsed by code: never sent to a model. A response we had already seen
+            // still counts as unchanged work even when it is re-read for the history it carries.
+            work: unchanged
+                ? { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 }
+                : { unchanged: 0, deterministic: 1, sentToAi: 0, deferred: 0 }
         };
     };
 }

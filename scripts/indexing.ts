@@ -70,13 +70,6 @@ export const EDITORIAL_NOINDEX: readonly EditorialExclusion[] = [
         page: "red-dead-redemption-2/last-update/index.html",
         reason: "the Newswire is a JS shell with no dated articles, so the page publishes one unverifiable " +
             "date and no history; countdowns for this game were stopped as a source decision"
-    },
-    {
-        page: "warzone/last-patch/index.html",
-        reason: "the Call of Duty patch notes page publishes one card per game and no archive, so the page " +
-            "can only ever show the current patch date and a link; history accrues one entry per patch " +
-            "cycle and reading more would mean crawling we are not going to do. Rescued if the store " +
-            "ever holds enough to be a reference — see the note in the README"
     }
 ];
 

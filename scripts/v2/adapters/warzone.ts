@@ -15,8 +15,12 @@
  *
  * Precision: the page states a day only, with no time or time zone, so events
  * are stored at day precision (published as midnight UTC of that day, as V1 did).
- * V1 read the older-notes list and published a date 16 days old; the current card
- * is authoritative.
+ *
+ * Beneath the card the page carries a "View past patch notes" accordion, and that
+ * is this topic's history: previous articles with their dates and links, in the
+ * same response. V1's mistake was reading that list for the *headline* and
+ * publishing a date 16 days old. The current card is authoritative for what the
+ * latest patch is; the accordion is authoritative for what came before it.
  *
  * The page is fetched as text, so any change is examined; parsing is
  * deterministic and no model is involved. Evidence names the fetched page; the
@@ -52,6 +56,24 @@ export interface WarzoneUpdate {
     url: string;
     /** The page from the Warzone tile through its date element, verbatim. */
     excerpt: string;
+}
+
+/**
+ * One patch notes article from the page's own "View past patch notes" accordion.
+ *
+ * No `excerpt`: the accordion gives a title, a date and a link, and the link is what a reader wants.
+ * A verbatim slice of list markup would be evidence nobody is shown, and `evidenceFor` ignores a
+ * deterministic quote anyway — the article URL is what ends up beside the row.
+ */
+export interface WarzoneArchiveEntry {
+    /** The same scheme as the card's: article slug plus update day. */
+    identity: string;
+    title: string;
+    /** Midnight UTC of the publication day (day precision, as the page states it). */
+    at: string;
+    /** The date exactly as the accordion prints it, e.g. "August 12, 2026". */
+    published: string;
+    url: string;
 }
 
 /** "August 28, 2026" as midnight UTC of that day, or undefined when it is not a real calendar day in that form. */
@@ -99,6 +121,65 @@ export function parseWarzoneUpdate(html: string): WarzoneUpdate {
     return { identity: `${slug}-${at.slice(0, 10)}`, title, at, dataDate, url: `${SITE}${href}`, excerpt };
 }
 
+/**
+ * How many archived patch notes the page keeps.
+ *
+ * `render-data-blocks` draws twelve rows of history, so storing more would be bytes written on every
+ * run to show nothing. The accordion carries about twice that.
+ */
+export const KEPT_ARCHIVE = 12;
+
+/**
+ * The Warzone patch notes the page's own archive lists, newest first.
+ *
+ * The card at the top of the page is the current patch, and beneath it Activision publishes a "View
+ * past patch notes" accordion: a list of previous articles with their titles, their publication dates
+ * and their links, scoped to the Warzone tile. All of it is in the response this adapter already
+ * fetches, so the page's history costs no request, no crawl and no model call.
+ *
+ * It is read from the accordion that belongs to the Warzone tile, never from every accordion on the
+ * page: the same markup carries Black Ops' archive a few hundred lines further down, and merging the
+ * two would publish another game's patches as Warzone's.
+ *
+ * Dates are day-precision, as the card's are — the page states a day with no time or zone, and
+ * inventing one would be our value rather than Activision's.
+ */
+export function parseWarzoneArchive(html: string, limit = KEPT_ARCHIVE): WarzoneArchiveEntry[] {
+    const $ = cheerio.load(html);
+    // The tile that says which game a section is for sits beside the accordion, not inside it, so the
+    // accordion is matched by walking out to the nearest ancestor that names a game and checking that
+    // the game it names is Warzone and only Warzone. Looking inside finds nothing; taking the first
+    // accordion on the page would take whichever Activision happens to put first.
+    const accordions = $(".post-grid-accordion").filter((_, el) => {
+        for (let node = $(el).parent(); node.length > 0; node = node.parent()) {
+            const tiles = node.find("li.game-tile");
+            if (tiles.length === 0) continue;
+            return tiles.length === 1 && tiles.first().hasClass("warzone");
+        }
+        return false;
+    });
+    if (accordions.length !== 1) return [];
+    const entries: WarzoneArchiveEntry[] = [];
+    const seen = new Set<string>();
+    accordions.first().find(".post-grid-accordion__list li").each((_, li) => {
+        const item = $(li);
+        const href = item.find('a[href^="/patchnotes/"]').first().attr("href");
+        const slug = href ? /^\/patchnotes\/\d{4}\/\d{2}\/([a-z0-9-]+)\/?$/.exec(href)?.[1] : undefined;
+        const published = item.find(".pub-date").first().text().replace(/\s+/g, " ").trim();
+        const title = item.find(".post-title").first().text().replace(/\s+/g, " ").trim();
+        if (!href || !slug || !published || !title) return;
+        const at = parseCardDate(published);
+        if (!at) return;
+        // The same identity scheme the current card uses, so an article that moves out of the archive
+        // and into the card (or back) is recognised as the event it already was rather than a new one.
+        const identity = `${slug}-${at.slice(0, 10)}`;
+        if (seen.has(identity)) return;
+        seen.add(identity);
+        entries.push({ identity, title, at, published, url: `${SITE}${href}` });
+    });
+    return entries.sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, limit);
+}
+
 function sha(text: string): string {
     return crypto.createHash("sha256").update(text).digest("hex");
 }
@@ -119,7 +200,19 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
             return { events: [], failure: fetched.error ?? fetched.verdict?.reason ?? "fetch failed", failureKind: failureKindFromFetch(fetched), sourceStates };
         }
         const fetch = { httpStatus: fetched.document?.status ?? 304, mode: fetched.document?.mode ?? "http" as const };
-        if (fetched.outcome === "unchanged") {
+        // An unchanged response still gets read when the body came down with it.
+        //
+        // `unchanged` covers two different things: a 304, which has no body at all, and a 200 whose
+        // hash matched, which has one. Returning early for both was right when a run imported only the
+        // current card — there was nothing new to learn from bytes we had seen before. It is wrong now:
+        // on the first deploy after this change the store holds no archive, and the page reads as
+        // unchanged until Activision next patches anything. Where the body is in our hands, parsing it
+        // imports the history for no request at all, and the upserts are idempotent.
+        //
+        // A true 304 has no body and cannot be read. The next change to the page — any of the three
+        // games patching — completes the import, and nothing is published wrongly in the interim.
+        const unchanged = fetched.outcome === "unchanged";
+        if (unchanged && !fetched.document) {
             return { events: [], unchanged: true, sourceStates, fetch, work: { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 } };
         }
 
@@ -142,9 +235,18 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
             return { events: [], failure: error instanceof Error ? error.message : String(error), failureKind: "extraction-failed", sourceStates };
         }
 
-        // Evidence only when this update day is new to the knowledge file.
+        // The patches behind the current one, from the page's own "View past patch notes" accordion.
+        // Same response, same fetch: history here costs nothing that the headline did not already cost.
+        const archive = parseWarzoneArchive(page.body).filter(entry => entry.identity !== update.identity);
+
+        // Evidence only where this update day is new to the knowledge file. The card carries a verbatim
+        // excerpt; an archive row carries its article link, which is the evidence a reader is actually
+        // shown and what `blocksFor` requires before it will list a past event at all.
+        const evidenced = (identity: string, at: string) =>
+            knowledge.claims.some(c => c.eventKey === eventKey(game.id, topic.type, identity) && c.field === "at" && c.value === at);
+
         const key = eventKey(game.id, topic.type, update.identity);
-        const known = knowledge.claims.some(c => c.eventKey === key && c.field === "at" && c.value === update.at);
+        const known = evidenced(update.identity, update.at);
         const claims: Claim[] = known ? [] : [{
             id: sha(`${page.textHash}|${key}|at|${update.at}`).slice(0, 24),
             documentId: page.textHash,
@@ -156,7 +258,24 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
             linkUrl: update.url,
             extractedAt: page.fetchedAt
         }];
-        const documents: Document[] = known ? [] : [{
+        for (const entry of archive) {
+            if (evidenced(entry.identity, entry.at)) continue;
+            const entryKey = eventKey(game.id, topic.type, entry.identity);
+            claims.push({
+                id: sha(`${page.textHash}|${entryKey}|at|${entry.at}`).slice(0, 24),
+                documentId: page.textHash,
+                eventKey: entryKey,
+                field: "at",
+                value: entry.at,
+                method: "deterministic",
+                // No quote: the accordion's markup is a list item nobody is shown, and a deterministic
+                // quote is ignored for display anyway. The article link is the evidence that reaches
+                // the reader.
+                linkUrl: entry.url,
+                extractedAt: page.fetchedAt
+            });
+        }
+        const documents: Document[] = claims.length === 0 ? [] : [{
             id: page.textHash,
             url: page.finalUrl,
             sourceId: source.id,
@@ -167,7 +286,10 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
         }];
         return {
             // Day precision: the page states no time or time zone.
-            events: [{ identity: update.identity, label: update.title, status: "observed", at: update.at, precision: "day" }],
+            events: [
+                { identity: update.identity, label: update.title, status: "observed", at: update.at, precision: "day" },
+                ...archive.map(entry => ({ identity: entry.identity, label: entry.title, status: "observed" as const, at: entry.at, precision: "day" as const }))
+            ],
             // The current card is authoritative: a date corrected backward retires the later update it no longer names.
             currentIdentity: update.identity,
             documents,
@@ -175,8 +297,11 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
             confidence: Confidence.High,
             sourceStates,
             fetch,
-            // HTML parsed by code: never sent to a model.
-            work: { unchanged: 0, deterministic: 1, sentToAi: 0, deferred: 0 }
+            // HTML parsed by code: never sent to a model. A response we had already seen still counts
+            // as unchanged work even when it is re-read for the archive it carries.
+            work: unchanged
+                ? { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 }
+                : { unchanged: 0, deterministic: 1, sentToAi: 0, deferred: 0 }
         };
     };
 }
