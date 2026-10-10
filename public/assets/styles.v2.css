@@ -1453,3 +1453,122 @@ footer a:hover {
     color: var(--ink-muted);
   }
 }
+
+/* The hub's own column. Prose reads at 68ch and a six-column table does not, so
+   the page lifts the constraint and hands it back to everything that is still
+   prose. Lifting it for the whole page was the first attempt and made every
+   paragraph on /resets/ run the full 1160px, which is the readability problem
+   `--measure` exists to prevent. */
+.page-wide {
+  max-width: none;
+}
+
+.page-wide > * {
+  max-width: var(--measure);
+}
+
+.page-wide > .resets-wrap {
+  max-width: none;
+}
+
+/* ---------------------------------------------------------------------------
+   /resets/ — every tracker's value in one table.
+
+   The table is the page, so it gets the full column rather than the prose
+   measure, and it scrolls sideways on a phone instead of wrapping six columns
+   into unreadable slivers. `.is-soon` marks a row whose moment is inside the
+   coming week: the one thing a reader scanning this page is usually looking for.
+   --------------------------------------------------------------------------- */
+.resets-wrap {
+  margin: 16px 0 24px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+  background: linear-gradient(135deg, var(--deep-from), var(--tracker-to));
+}
+
+.resets {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.resets th,
+.resets td {
+  padding: 10px 11px;
+  text-align: left;
+  border-bottom: 1px solid var(--row-line);
+  vertical-align: baseline;
+}
+
+.resets thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--stat);
+  color: var(--tile-label);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  border-bottom-color: var(--stat-line);
+}
+
+.resets tbody tr:last-child th,
+.resets tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.resets tbody th {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.resets tbody th a {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.resets td {
+  color: var(--ink-muted);
+}
+
+/* A row happening inside the coming week, which is what most readers came for. */
+.resets tr.is-soon th,
+.resets tr.is-soon td {
+  background: var(--arc-from);
+}
+
+.reset-soon {
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: var(--r-star);
+  background: var(--star);
+  border: 1px solid var(--star-line);
+  color: var(--star-on);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Filled by app.js from the UTC instant in the row; served as an em dash. */
+.reset-local {
+  color: var(--ink);
+}
+
+.is-none {
+  color: var(--dot);
+}
+
+@media (min-width: 701px) {
+  .resets {
+    font-size: 14px;
+  }
+
+  .resets th,
+  .resets td {
+    padding: 11px 14px;
+  }
+}

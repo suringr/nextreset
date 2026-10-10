@@ -18,6 +18,14 @@ import * as fs from "fs";
 import * as path from "path";
 import { GameKnowledge, loadKnowledge, publishedEvents } from "./render-data-blocks";
 
+/**
+ * Pages whose content is every tracker's content, and which are therefore dated by all of them.
+ *
+ * They have no tracker of their own, so nothing in the loop below can date them, and left alone they
+ * would be published undated beside About and Privacy — pages that really are static.
+ */
+export const AGGREGATE_PAGES: readonly string[] = ["/", "/resets/"];
+
 export interface SitemapEntry {
     loc: string;
     /** ISO 8601, or absent where the build cannot honestly date the page. */
@@ -112,8 +120,14 @@ export function sitemapEntries(pages: SitemapInput[], origin: string, knowledgeF
         entries.push(lastmod ? { loc, lastmod } : { loc });
     }
 
-    const home = entries.find(entry => entry.loc === `${origin}/`);
-    if (home && newest) home.lastmod = newest;
+    // The pages that show every tracker at once are as new as the newest of them. Both of them: the
+    // homepage carries every card, and /resets/ carries every row. Dating the hub like About or Privacy
+    // — which genuinely never change — would tell a crawler that a page rebuilt from twelve moving
+    // facts is static, which is the opposite of what it is.
+    for (const loc of AGGREGATE_PAGES.map(page => `${origin}${page}`)) {
+        const entry = entries.find(candidate => candidate.loc === loc);
+        if (entry && newest) entry.lastmod = newest;
+    }
 
     // The homepage first, then by URL: a stable order, so a rebuild that changed nothing produces the
     // same file.

@@ -921,9 +921,53 @@ function closeMenuOnChoice() {
     });
 }
 
+/**
+ * The reader's own clock, beside the UTC value, on /resets/.
+ *
+ * Progressive enhancement in the strict sense: the table is complete before this runs. Every row
+ * already carries the published instant in UTC, which is the time zone publishers state their
+ * schedules in, and this adds the same moment in whatever zone the device is set to. With JavaScript
+ * off, or if Intl is unavailable, the cell keeps the em dash it was served with and nothing is lost.
+ *
+ * No request, no lookup, no geolocation service: the browser already knows its own zone, including
+ * which side of a daylight-saving change today is on. That is the whole reason this is done here
+ * rather than at build time — a server cannot know the reader's zone, and guessing from an IP address
+ * would be a paid service, a privacy cost and still a guess.
+ */
+function fillLocalTimes(root) {
+    var scope = root || (typeof document !== 'undefined' ? document : null);
+    if (!scope || !scope.querySelectorAll) return 0;
+    var cells = scope.querySelectorAll('.reset-local[data-utc]');
+    var filled = 0;
+    for (var i = 0; i < cells.length; i++) {
+        var cell = cells[i];
+        var at = new Date(cell.getAttribute('data-utc'));
+        if (isNaN(at.getTime())) continue;
+        try {
+            // The zone's own name, so a reader can tell at a glance whose clock this is. Both calls are
+            // in one try: a browser that cannot format one cannot be trusted to have formatted the other.
+            var when = at.toLocaleString(undefined, {
+                year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+            var zone = '';
+            if (typeof Intl !== 'undefined' && Intl.DateTimeFormat) {
+                var resolved = Intl.DateTimeFormat().resolvedOptions();
+                zone = (resolved && resolved.timeZone) || '';
+            }
+            cell.textContent = zone ? when + ' (' + zone + ')' : when;
+            cell.classList.remove('is-none');
+            filled++;
+        } catch (e) {
+            // Leave the served em dash in place. A wrong local time is worse than none.
+        }
+    }
+    return filled;
+}
+
 // Guarded so the display helpers above can be loaded and tested outside a browser.
 if (typeof document !== 'undefined') {
     closeMenuOnChoice();
+    fillLocalTimes();
     if (typeof window !== 'undefined' && window.addEventListener) {
         window.addEventListener('pageshow', function (event) {
             if (event && event.persisted) resyncPlayer();

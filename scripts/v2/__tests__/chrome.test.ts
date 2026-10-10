@@ -18,6 +18,7 @@ import { FOOTER_ROW, NAV, PLAYER_CHIP_ID, SITE_NAME, SITE_NAV_ID, chromeHtml, ch
 import { applyChrome, applyPlayerScript } from "../../update-chrome";
 import { renderSite } from "../../render-pages";
 import { criticalCss } from "../../design/tokens";
+import { pagePaths } from "../../site-map";
 
 const ROOT = path.join(__dirname, "..", "..", "..");
 const NOW = new Date("2026-09-17T12:00:00.000Z");
@@ -56,7 +57,9 @@ const read = (page: string) => fs.readFileSync(path.join(site.dir, page), "utf8"
 test.after(() => site.cleanup());
 
 test("every page carries exactly one shared header", () => {
-    assert.equal(site.pages.length, 17, `expected 17 pages, found ${site.pages.length}`);
+    // Against the manifest, not a literal: adding a page is one declarative edit, and a page that is
+    // built but undeclared still fails. The last literal count left over from before scripts/site-map.ts.
+    assert.deepEqual(site.pages.slice().sort(), pagePaths(), "the build and scripts/site-map.ts disagree");
     for (const page of site.pages) {
         const $ = cheerio.load(read(page));
         assert.equal($("header.chrome").length, 1, `${page} has ${$("header.chrome").length} headers`);

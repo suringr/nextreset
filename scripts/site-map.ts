@@ -64,6 +64,7 @@ export const SITE_PAGES: readonly SitePage[] = [
 
     { page: "play/index.html", role: "play" },
 
+    { page: "resets/index.html", role: "static" },
     { page: "about/index.html", role: "static" },
     { page: "privacy/index.html", role: "static" },
 

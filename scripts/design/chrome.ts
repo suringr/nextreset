@@ -22,7 +22,7 @@ import { PageKind, pageKind } from "./tokens";
 import { ONE_SHOT_NAME } from "./one-shot";
 
 /** Which navigation item a page belongs to. */
-export type ChromeSection = "home" | "trackers" | "arcade" | "about" | "none";
+export type ChromeSection = "home" | "trackers" | "resets" | "arcade" | "about" | "none";
 
 export interface NavItem {
     section: ChromeSection;
@@ -38,6 +38,7 @@ export interface NavItem {
  */
 export const NAV: ReadonlyArray<NavItem> = [
     { section: "trackers", label: "Trackers", href: "/#all-games" },
+    { section: "resets", label: "Reset times", href: "/resets/" },
     { section: "arcade", label: "Arcade", href: "/play/" },
     { section: "about", label: "About", href: "/about/" }
 ];
@@ -74,6 +75,7 @@ export function sectionOf(page: string): ChromeSection {
     if (kind === "home") return "home";
     if (kind === "tracker") return "trackers";
     if (kind === "play") return "arcade";
+    if (page === "resets/index.html") return "resets";
     return page === "about/index.html" ? "about" : "none";
 }
 
