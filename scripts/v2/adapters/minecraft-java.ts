@@ -31,7 +31,7 @@ import { Confidence } from "../../types";
 import { failureKindFromFetch } from "../reasons";
 import { Adapter } from "../adapter";
 import { Claim, Document, SourceState } from "../domain";
-import { FetchedDocument, smartFetch } from "../fetch/smart-fetch";
+import { FetchedDocument, countExtractionAttempt, recordExtraction, shouldReadInFull, smartFetch } from "../fetch/smart-fetch";
 import { Transport } from "../fetch/transport";
 import { eventKey } from "../identity";
 import { indexJsonObjects } from "../json-quote";
@@ -210,15 +210,15 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
             knowledge.claims.some(claim =>
                 claim.eventKey === event.key && claim.field === "at" && claim.linkUrl === MINECRAFT_CHANGELOGS_PAGE));
 
-        // There is something to learn and this capability has not yet had its one unconditional read, so
-        // ask for the body rather than a 304. Both halves matter: `settled` stops it the moment the
-        // backfill lands, and the version stops it even if the backfill can never reach the cap -- a
-        // manifest listing fewer releases than `KEPT_RELEASES` would otherwise re-read on every run
-        // forever, learning nothing each time.
-        const unconditional = !settled && (previous?.extractionVersion ?? 0) < EXTRACTION_VERSION;
+        // There is something to learn, this capability has not had its read yet, and it has budget left.
+        const unconditional = shouldReadInFull(previous, EXTRACTION_VERSION, settled);
 
         const fetched = await smartFetch(source.url, { expect: { kind: "json" }, allowRender: false, previous, transport, label: `${game.id}-${topic.type}`, now, unconditional });
-        const sourceStates: SourceState[] = [{ id: source.id, url: source.url, ...fetched.state }];
+        let sourceStates: SourceState[] = [{ id: source.id, url: source.url, ...fetched.state }];
+        // Spent the moment the request goes out, before anything can be made of the response. A transport
+        // error, a 5xx or a parse that throws all consume one, which is what keeps a permanently broken
+        // parse from downloading the whole source on every run forever.
+        if (unconditional) sourceStates = [countExtractionAttempt(sourceStates[0], previous, EXTRACTION_VERSION)];
         if (fetched.outcome === "unusable") {
             return { events: [], failure: fetched.error ?? fetched.verdict?.reason ?? "fetch failed", failureKind: failureKindFromFetch(fetched), sourceStates };
         }
@@ -268,11 +268,10 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
         const kept = parseRecentJavaReleases(fetched.document!.body);
         const releases = [release, ...kept.filter(previous => previous.id !== release.id)];
 
-        // The manifest has now been read in full, so the unconditional budget for this capability is
-        // spent. Recorded here rather than beside the fetch: a parse that threw returned above with the
-        // version untouched, so a transient failure gets another attempt instead of silently burning the
-        // one chance to backfill.
-        sourceStates[0] = { ...sourceStates[0], extractionVersion: EXTRACTION_VERSION };
+        // The manifest has been read in full, so the capability is recorded and the attempt budget is
+        // released. Recorded here rather than beside the fetch: a parse that threw returned above with
+        // the version untouched, so a transient failure still has attempts left to use.
+        sourceStates[0] = recordExtraction(sourceStates[0], previous, EXTRACTION_VERSION);
 
         // Evidence for each, and only where it is new: a manifest that changed for snapshots adds no
         // copies, and an unchanged response never gets this far.

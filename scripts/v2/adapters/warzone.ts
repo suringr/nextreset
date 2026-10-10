@@ -37,7 +37,7 @@ import * as crypto from "crypto";
 import { Confidence } from "../../types";
 import { Adapter } from "../adapter";
 import { Claim, Document, SourceState } from "../domain";
-import { smartFetch } from "../fetch/smart-fetch";
+import { countExtractionAttempt, recordExtraction, shouldReadInFull, smartFetch } from "../fetch/smart-fetch";
 import { Transport } from "../fetch/transport";
 import { eventKey } from "../identity";
 
@@ -220,14 +220,15 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
         const settled = held.length >= reachable && held.slice(0, reachable).every(event =>
             knowledge.claims.some(claim => claim.eventKey === event.key && claim.field === "at" && !!claim.linkUrl));
 
-        // Something to learn, and this capability has not yet had its one unconditional read. `settled`
-        // stops it as soon as the archive lands; the version stops it even when the archive is shorter
-        // than the cap, which is the realistic case here -- the accordion lists what Activision chose to
-        // keep, and that can be fewer than `KEPT_ARCHIVE` entries.
-        const unconditional = !settled && (previous?.extractionVersion ?? 0) < EXTRACTION_VERSION;
+        // Something to learn, this capability has not had its read yet, and it has budget left. The
+        // archive is the realistic case for the version bound: the accordion lists what Activision chose
+        // to keep, which can be fewer than `KEPT_ARCHIVE` entries, so `settled` may never become true.
+        const unconditional = shouldReadInFull(previous, EXTRACTION_VERSION, settled);
 
         const fetched = await smartFetch(source.url, { expect: { kind: "text", minWords: 20, markers: ["Patch Notes"] }, allowRender: false, previous, transport, label: `${game.id}-${topic.type}`, now, unconditional });
-        const sourceStates: SourceState[] = [{ id: source.id, url: source.url, ...fetched.state }];
+        let sourceStates: SourceState[] = [{ id: source.id, url: source.url, ...fetched.state }];
+        // Spent when the request goes out, not when it succeeds -- see the Minecraft adapter.
+        if (unconditional) sourceStates = [countExtractionAttempt(sourceStates[0], previous, EXTRACTION_VERSION)];
         if (fetched.outcome === "unusable") {
             return { events: [], failure: fetched.error ?? fetched.verdict?.reason ?? "fetch failed", failureKind: failureKindFromFetch(fetched), sourceStates };
         }
@@ -272,10 +273,8 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
         // Same response, same fetch: history here costs nothing that the headline did not already cost.
         const archive = parseWarzoneArchive(page.body).filter(entry => entry.identity !== update.identity);
 
-        // The page has now been read in full, so the unconditional budget for this capability is spent.
-        // Recorded after the parse rather than beside the fetch: a parse that threw returned above with
-        // the version untouched, so a transient failure gets another attempt.
-        sourceStates[0] = { ...sourceStates[0], extractionVersion: EXTRACTION_VERSION };
+        // The page has been read in full: record the capability and release the attempt budget.
+        sourceStates[0] = recordExtraction(sourceStates[0], previous, EXTRACTION_VERSION);
 
         // Evidence only where this update day is new to the knowledge file. The card carries a verbatim
         // excerpt; an archive row carries its article link, which is the evidence a reader is actually

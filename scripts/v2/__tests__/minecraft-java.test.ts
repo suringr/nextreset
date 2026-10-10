@@ -14,6 +14,7 @@ import { AiUsageLedger } from "../cost/ledger";
 import { adapterFor, findGame, findTopic } from "../games";
 import { runTracker } from "../pipeline";
 import { validateGameKnowledge } from "../validate";
+import { MAX_EXTRACTION_ATTEMPTS, shouldReadInFull } from "../fetch/smart-fetch";
 import { fakeTransport, fixture } from "./fake-transport";
 import { V1_ROBLOX_FRESH_KEYS, tempStore } from "./helpers";
 
@@ -440,12 +441,53 @@ test("a source that can never fill the cap is still only read unconditionally on
         "the unconditional read repeated, so a source that never fills the cap pays for one on every run forever");
 });
 
-test("a parse that fails does not spend the one unconditional read", async () => {
-    // The budget is recorded after the manifest has actually been read, not beside the fetch. A version
-    // banked on a parse that threw would close the only window the backfill ever gets.
+test("a parse that fails keeps its remaining attempts but not an unlimited supply", async () => {
+    // The version is recorded after the manifest has actually been read, so a parse that threw does not
+    // bank the capability and still has attempts left. But "still has attempts" has to be finite: Codex
+    // (#68) pointed out that recording only on success buys a *permanently* broken parse an unbounded
+    // run of full downloads, and that my first version of this test asserted the state after one failure
+    // and so codified the loop rather than detecting it.
     const { store } = tempStore();
-    const broken = fakeTransport({ http: [{ body: '{"latest":{"release":"26.3"},"versions":[]}', headers: { "content-type": "application/json" } }] });
-    await runTracker(game, topic, createMinecraftJavaAdapter(broken), store, NOW);
-    const source = store.load("minecraft").sources[0];
-    assert.equal(source?.extractionVersion, undefined, "a failed parse banked the capability as applied");
+    const broken = () => fakeTransport({ http: [{ body: '{"latest":{"release":"26.3"},"versions":[]}', headers: { "content-type": "application/json" } }] });
+
+    for (let run = 1; run <= MAX_EXTRACTION_ATTEMPTS; run++) {
+        await runTracker(game, topic, createMinecraftJavaAdapter(broken()), store, new Date(`2026-09-1${run}T00:00:00Z`));
+        const state = store.load("minecraft").sources[0];
+        assert.equal(state?.extractionVersion, undefined, "a failed parse banked the capability as applied");
+        assert.equal(state?.extractionAttempts?.tries, run, `run ${run} did not consume an attempt`);
+    }
+
+    // Budget exhausted: the adapter must stop asking for the body on this capability.
+    assert.equal(shouldReadInFull(store.load("minecraft").sources[0], EXTRACTION_VERSION, false), false,
+        "a parse that fails every time would keep downloading the whole manifest for ever");
+});
+
+test("a newer capability starts with a fresh budget", async () => {
+    // Keyed by version, so a capability that exhausted its attempts does not hand an exhausted budget to
+    // the next one — otherwise shipping a fix for the broken parser could never apply it.
+    const spent = { consecutiveFailures: 0, extractionAttempts: { version: EXTRACTION_VERSION, tries: MAX_EXTRACTION_ATTEMPTS } };
+    assert.equal(shouldReadInFull(spent, EXTRACTION_VERSION, false), false, "the exhausted version should be done");
+    assert.equal(shouldReadInFull(spent, EXTRACTION_VERSION + 1, false), true, "the next capability inherited an exhausted budget");
+});
+
+test("rolling back to an older adapter does not lower the mark", async () => {
+    // Codex (#68): if version N has succeeded and the deployment is rolled back to an adapter declaring
+    // M < N, a changed response on the rolled-back build would overwrite N with M, and redeploying N
+    // would repeat a capability read that had already happened. Rollback cycles would walk straight
+    // through the per-version bound.
+    const { store } = tempStore();
+    const first = fakeTransport({ http: [{ body: HISTORY, headers: { "content-type": "application/json" } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(first), store, NOW);
+
+    // Pretend a later capability has already read this source.
+    const before = store.load("minecraft");
+    store.save({ ...before, sources: before.sources.map(s => ({ ...s, extractionVersion: EXTRACTION_VERSION + 4 })) });
+
+    // Now today's adapter sees a changed manifest and records what it read.
+    const changed = edit(HISTORY, m => { m.latest = { release: "26.4", snapshot: "26.5-rc-1" }; m.versions.push({ id: "26.4", type: "release", url: "https://piston-meta.mojang.com/v1/packages/0000/26.4.json", time: "2026-11-02T00:00:00+00:00", releaseTime: "2026-11-01T10:00:00+00:00" }); });
+    const rolled = fakeTransport({ http: [{ body: changed, headers: { "content-type": "application/json" } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(rolled), store, new Date("2026-11-11T06:00:00Z"));
+
+    assert.equal(store.load("minecraft").sources[0].extractionVersion, EXTRACTION_VERSION + 4,
+        "an older adapter lowered the mark, so redeploying the newer one would read the source again");
 });

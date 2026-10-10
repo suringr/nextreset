@@ -164,7 +164,8 @@ function canonicalSourceState(s: SourceState): SourceState {
         // Rebuilt field by field so the bytes are stable, which also means a field missing from this list
         // is silently dropped on every save. Leaving this one out made the adapter re-arm its one
         // unconditional fetch on every run, because the record of having spent it never survived.
-        extractionVersion: s.extractionVersion
+        extractionVersion: s.extractionVersion,
+        extractionAttempts: s.extractionAttempts ? { version: s.extractionAttempts.version, tries: s.extractionAttempts.tries } : undefined
     });
 }
 

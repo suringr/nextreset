@@ -43,6 +43,61 @@ export interface SourceFetchState {
      * has actually succeeded — a version recorded on a parse that threw would make the gap permanent.
      */
     extractionVersion?: number;
+    /**
+     * Unconditional reads already spent on a version that has not yet succeeded.
+     *
+     * Recording the version only on success buys a transient failure another attempt, and buys a
+     * *permanent* failure an unbounded one: a source whose shape changed under the parser would be
+     * downloaded in full on every run for the rest of time, which is exactly the recurring cost this
+     * mechanism exists to avoid (Codex, #68). The attempt is counted before the body is parsed, so a
+     * transport error, a 5xx or a throw all consume one.
+     *
+     * Keyed by version so a later capability starts with a full budget rather than inheriting an
+     * exhausted one.
+     */
+    extractionAttempts?: { version: number; tries: number };
+}
+
+/**
+ * How many unconditional reads a single capability version may spend before giving up.
+ *
+ * Small on purpose. The backfill is an optimisation -- the history arrives anyway on the next genuine
+ * change to the source -- so the budget only needs to cover a flake or two, not to keep trying.
+ */
+export const MAX_EXTRACTION_ATTEMPTS = 3;
+
+/**
+ * Whether to ask for the body although nothing has changed.
+ *
+ * Three conditions, each closing a different hole: `settled` stops once the backfill has landed, the
+ * version stops a backfill that can never land, and the attempt count stops one that fails every time.
+ * Shared rather than written out in each adapter, because two copies of a bound are one copy away from
+ * disagreeing.
+ */
+export function shouldReadInFull(previous: SourceFetchState | undefined, version: number, settled: boolean): boolean {
+    if (settled) return false;
+    if ((previous?.extractionVersion ?? 0) >= version) return false;
+    const spent = previous?.extractionAttempts?.version === version ? previous.extractionAttempts.tries : 0;
+    return spent < MAX_EXTRACTION_ATTEMPTS;
+}
+
+/** Marks one unconditional read as spent against `version`, whatever the run goes on to make of it. */
+export function countExtractionAttempt<T extends SourceFetchState>(state: T, previous: SourceFetchState | undefined, version: number): T {
+    const spent = previous?.extractionAttempts?.version === version ? previous.extractionAttempts.tries : 0;
+    return { ...state, extractionAttempts: { version, tries: spent + 1 } };
+}
+
+/**
+ * Marks `version` as having read this source in full, and releases the attempt budget.
+ *
+ * Never lowers the mark. Rolling back to an adapter declaring an older version would otherwise overwrite
+ * a newer one on the next changed response, and redeploying would then repeat a capability read that had
+ * already happened — a per-version bound that rollback cycles could walk straight through (Codex, #68).
+ */
+export function recordExtraction<T extends SourceFetchState>(state: T, previous: SourceFetchState | undefined, version: number): T {
+    const next = { ...state, extractionVersion: Math.max(previous?.extractionVersion ?? 0, version) };
+    delete next.extractionAttempts;
+    return next;
 }
 
 export interface FetchedDocument {
@@ -168,9 +223,10 @@ export async function smartFetch(url: string, options: SmartFetchOptions): Promi
                 lastMode: document.mode,
                 consecutiveFailures: 0,
                 // Carried, never set here. This state is rebuilt from scratch rather than spread, so a
-                // field smartFetch does not know about is a field it silently drops — and dropping this
-                // one would re-arm the unconditional fetch on every single run.
-                extractionVersion: previous.extractionVersion
+                // field smartFetch does not know about is a field it silently drops — and dropping either
+                // of these would re-arm the unconditional fetch on every single run.
+                extractionVersion: previous.extractionVersion,
+                extractionAttempts: previous.extractionAttempts
             }
         };
     };

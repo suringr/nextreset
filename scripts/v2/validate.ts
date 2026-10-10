@@ -172,6 +172,17 @@ function validateSourceState(value: unknown, path: string): void {
         && (typeof state.extractionVersion !== "number" || state.extractionVersion < 0 || !Number.isInteger(state.extractionVersion))) {
         fail(`${path}.extractionVersion`, "must be a non-negative integer when present");
     }
+    // The attempt budget decides whether a validator-free request goes out, so a malformed value here is
+    // a cost control that has quietly stopped working rather than a cosmetic problem.
+    if (state.extractionAttempts !== undefined) {
+        const attempts = requireRecord(state.extractionAttempts, `${path}.extractionAttempts`);
+        for (const key of ["version", "tries"]) {
+            const n = attempts[key];
+            if (typeof n !== "number" || n < 0 || !Number.isInteger(n)) {
+                fail(`${path}.extractionAttempts.${key}`, "must be a non-negative integer");
+            }
+        }
+    }
 }
 
 function validateDiscoveredSource(value: unknown, path: string): void {
