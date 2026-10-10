@@ -260,37 +260,58 @@ test("no page promises that it updates itself", () => {
 // The same page referred readers to "the countdown above" while displaying no date at all. A page that
 // cannot answer its question must not describe an answer it is not showing -- in the document or in the
 // structured data, which is the copy that outlives the page in search results.
-test("a tracker with no value does not describe one", () => {
-    let checked = 0;
-    for (const page of trackerPages) {
-        const tracker = trackerOf(read(page), page)!;
-        const file = path.join(site.dir, "data", `${tracker.game}.${tracker.type}.json`);
-        // A missing file is not a reason to skip: it is the strongest form of "no value", and the one
-        // `blocksFor(undefined)` renders as "Data unavailable". Skipping it (Codex, P2) excused exactly
-        // the trackers a clean CI checkout has no data for, while `checked > 0` stayed satisfied by
-        // unrelated expired fixtures — a guard that looked like it was working and was not.
-        const data = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) as TrackerData : undefined;
-        // Asked of the data rather than of the rendered string, so the guard holds whatever wording the
-        // "no value" headline takes in future.
-        if (data !== undefined && hasVerifiedValue(data) && !isUnanswered(data, NOW)) continue;
-        checked++;
-        const html = read(page);
-        // Every way these pages have actually phrased it, not only the three I happened to write. The
-        // claim class is "this page tells you a value is on display"; "shown", "displayed" and "in the
-        // tracker" are the same claim in different word orders.
-        const describes = [
-            /countdown above/i,
-            /shown in the countdown/i,
-            /is shown above/i,
-            /is displayed above/i,
-            /is shown in the tracker/i,
-            /date is shown in the/i
-        ];
-        for (const described of describes) {
-            assert.ok(!described.test(html), `${page} has no value to show but still points at one: ${described}`);
+/** Ways a page can tell a reader that a value is on display. Same claim, different word orders. */
+const DESCRIBES_A_VALUE = [
+    /countdown above/i,
+    /shown in the countdown/i,
+    /is shown above/i,
+    /is displayed above/i,
+    /is shown in the tracker/i,
+    /date is shown in the/i
+];
+
+test("no tracker describes a value it is not showing — checked against every one of them", () => {
+    // Rendered with no data at all, rather than judged against whichever fixtures happen to be valid.
+    //
+    // Two weaker versions of this guard shipped before this one. The first skipped trackers whose data
+    // file was absent, which is precisely the state it existed to catch. The second fixed that but still
+    // only examined trackers that were unanswered *in this build*, so a page with state-dependent prose
+    // was excused for as long as its fixture held — and `checked > 0` passed on one unrelated tracker
+    // (Codex, #67). The population now is every tracker there is, in the state where the claim is wrong.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nextreset-novalue-"));
+    try {
+        const copy = (from: string, to: string) => {
+            fs.mkdirSync(to, { recursive: true });
+            for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+                const a = path.join(from, entry.name);
+                const b = path.join(to, entry.name);
+                if (entry.isDirectory()) copy(a, b);
+                else fs.copyFileSync(a, b);
+            }
+        };
+        copy(path.join(ROOT, "public"), dir);
+        // Every tracker unanswered at once: no live data, and no vault to fall back to.
+        fs.rmSync(path.join(dir, "data"), { recursive: true, force: true });
+        fs.mkdirSync(path.join(dir, "data"), { recursive: true });
+        renderSite(dir, NOW, ROOT);
+
+        const exercised: string[] = [];
+        for (const entry of trackerManifest()) {
+            const html = fs.readFileSync(path.join(dir, entry.page), "utf8");
+            const headline = cheerio.load(html)(".countdown-value").first().text().trim();
+            assert.match(headline, /No official date announced|Data unavailable/,
+                `${entry.page} was supposed to have no value in this render, but reads "${headline}"`);
+            for (const describes of DESCRIBES_A_VALUE) {
+                assert.ok(!describes.test(html), `${entry.page} has no value to show but still points at one: ${describes}`);
+            }
+            exercised.push(entry.page);
         }
+        // The population is the manifest, not "more than none". A guard whose coverage can quietly shrink
+        // to one page is a guard that will pass on the day it matters.
+        assert.deepEqual(exercised.sort(), trackerManifest().map(entry => entry.page).sort());
+    } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
     }
-    assert.ok(checked > 0, "no unanswered tracker in this build — the guard checked nothing");
 });
 
 test("the privacy policy still describes the site that exists", () => {

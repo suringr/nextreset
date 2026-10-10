@@ -113,7 +113,7 @@ export const gamePages: GamePage[] = [
         ],
         faq: [
             { q: 'How often does VALORANT get updated?', a: 'VALORANT follows a two-week patch cycle with alternating major and minor patches. Major patches bring bigger gameplay changes while minor patches focus on fixes.' },
-            { q: 'When did the last VALORANT patch come out?', a: 'Whenever Riot last published patch notes. The date is the publication date Riot gave that patch, not one we derived, and the history beneath lists the patches before it.' },
+            { q: 'When did the last VALORANT patch come out?', a: 'Whenever Riot last published patch notes. The date is the publication date Riot gave that patch, not one we derived.' },
             { q: 'Does VALORANT have downtime during patches?', a: 'Yes, VALORANT typically goes offline for a few hours during patch deployment. Riot usually announces the maintenance window in advance on their social media channels.' }
         ]
     },
@@ -137,7 +137,7 @@ export const gamePages: GamePage[] = [
         ],
         faq: [
             { q: 'How often does CS2 get updated?', a: 'CS2 doesn\'t follow a fixed schedule. Valve releases updates as needed — sometimes weekly for bug fixes, sometimes with longer gaps between major content updates.' },
-            { q: 'When was the last CS2 update?', a: 'Whenever Valve last shipped one - it does not announce updates in advance. This page takes the date from Valve’s own update announcements rather than deriving it, and the history beneath lists the updates before it.' },
+            { q: 'When was the last CS2 update?', a: 'Whenever Valve last shipped one - it does not announce updates in advance. This page takes the date from Valve’s own update announcements rather than deriving it.' },
             { q: 'Do CS2 updates require a game restart?', a: 'Yes, updates are downloaded automatically through Steam and typically require restarting the game. Major updates may also require a brief matchmaking interruption.' }
         ]
     },
@@ -161,7 +161,7 @@ export const gamePages: GamePage[] = [
         ],
         faq: [
             { q: 'How often does Minecraft get updated?', a: 'Minecraft typically receives 1-2 major updates per year, with smaller bug-fix releases in between. Snapshots (test versions) are released more frequently for community testing.' },
-            { q: 'When was the last Minecraft release?', a: 'Whenever Mojang last shipped a stable Java Edition release. The date is the release time Mojang records in its own launcher manifest, exact to the second, and the history beneath lists the releases before it. Snapshots and pre-releases are test builds and are deliberately left out.' },
+            { q: 'When was the last Minecraft release?', a: 'Whenever Mojang last shipped a stable Java Edition release. The date is the release time Mojang records in its own launcher manifest, exact to the second. Snapshots and pre-releases are test builds and are deliberately left out.' },
             { q: 'Do I need to update manually?', a: 'If you\'re using the official Minecraft Launcher, updates are downloaded automatically. You can also choose to play older versions through the launcher\'s version selector.' }
         ]
     },
@@ -233,7 +233,7 @@ export const gamePages: GamePage[] = [
         ],
         faq: [
             { q: 'How often does Warzone get updated?', a: 'Warzone typically receives updates every 1-2 weeks, with larger seasonal updates arriving roughly every 6 weeks. Mid-season updates often bring balance patches and new content.' },
-            { q: 'When was the last Warzone patch?', a: 'Whenever Activision last updated its patch notes page. The date is the day that page gives the current Warzone patch, and the history beneath links each previous article.' },
+            { q: 'When was the last Warzone patch?', a: 'Whenever Activision last updated its patch notes page. The date is the day that page gives the current Warzone patch.' },
             { q: 'Are Warzone updates the same across all platforms?', a: 'Yes, Warzone patches release simultaneously across PlayStation, Xbox, and PC. All platforms receive the same balance changes and content updates.' }
         ]
     },
@@ -281,7 +281,7 @@ export const gamePages: GamePage[] = [
         ],
         faq: [
             { q: 'How often does PUBG get patched?', a: 'PUBG typically receives major updates at the start of each season (roughly every 2 months) with smaller fix patches in between as needed.' },
-            { q: 'When was the last PUBG update?', a: 'Whenever KRAFTON last published patch notes. This page takes the date from those notes rather than deriving it, and the history beneath links the notes each previous patch came from.' },
+            { q: 'When was the last PUBG update?', a: 'Whenever KRAFTON last published patch notes. This page takes the date from those notes rather than deriving it.' },
             { q: 'Does PUBG have downtime during updates?', a: 'Yes, PUBG servers go offline for several hours during major patch deployments. KRAFTON usually announces maintenance schedules in advance through their official channels.' }
         ]
     },
@@ -316,8 +316,8 @@ export const gamePages: GamePage[] = [
         typeTitle: 'Last Title Update',
         title: 'EA SPORTS FC',
         kicker: 'Sports',
-        metaDescription: 'Track the latest EA SPORTS FC title update and patch notes. Live status sourced from EA Forums Game Info Hub.',
-        aboutTracker: 'This page tracks the most recent EA SPORTS FC title update. Data is sourced from the EA Forums Game Info Hub, where the development team posts official patch notes and update announcements.',
+        metaDescription: 'Track the latest EA SPORTS FC title update. The date comes from EA’s own announcement posts, read at the moment EA published them.',
+        aboutTracker: 'This page tracks the most recent EA SPORTS FC title update, read from EA’s own announcement posts for each title year. EA’s Forums answer automated requests with a challenge and are not used.',
         whatIsIt: 'EA SPORTS FC (formerly FIFA) receives regular title updates throughout its annual cycle. These updates address gameplay balance, fix bugs, and occasionally introduce new features. Title updates are the primary way EA Sports tunes the game after launch, adjusting everything from player movement and shooting mechanics to goalkeeper AI and set-piece behavior.',
         whatChanges: [
             'Gameplay mechanic tuning (shooting, passing, dribbling)',
@@ -329,7 +329,7 @@ export const gamePages: GamePage[] = [
         ],
         faq: [
             { q: 'How often does EA SPORTS FC get title updates?', a: 'Title updates typically arrive every few weeks, with more frequent updates early in the game\'s cycle (October-January) and less frequent updates later in the year.' },
-            { q: 'When was the last EA FC update?', a: 'Whenever EA last published one. EA ships title updates when they are ready rather than on a schedule, so there is no next date until EA names one. The date here comes from EA’s official Game Info Hub, and the history beneath lists the title updates before it.' },
+            { q: 'When was the last EA FC update?', a: 'Whenever EA last published one. EA ships title updates when they are ready rather than on a schedule, so there is no next date until EA names one. The date here is the publication time of EA’s own announcement post, which is where the title update notes appear.' },
             { q: 'Do title updates affect Ultimate Team?', a: 'Yes, title updates can change gameplay mechanics that affect all modes including Ultimate Team. However, content updates (new promos, SBCs, objectives) happen separately through server-side updates.' }
         ]
     }
