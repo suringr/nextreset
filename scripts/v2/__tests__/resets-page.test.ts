@@ -145,8 +145,28 @@ test("a row inside the coming week says so, and one outside it does not", () => 
         }
         const ahead = row.at > NOW.getTime();
         const within = row.at - NOW.getTime() <= SOON_DAYS * 86_400_000;
-        assert.equal(row.soon, ahead && within, `${row.title}: soon=${row.soon} for an event at ${new Date(row.at).toISOString()}`);
+        assert.equal(row.soon, row.upcoming && ahead && within, `${row.title}: soon=${row.soon} for an event at ${new Date(row.at).toISOString()}`);
     }
+});
+
+test("a past observation with a skewed clock is not advertised as still to come", () => {
+    // Codex, PR #65 round 4: the pipeline deliberately keeps an observed event whose timestamp sits a
+    // little ahead of now — source clock skew, or a change that landed mid-request (views.ts,
+    // selectCurrentEvent). "Within 7 days" on a last-patch row would tell a reader that a patch which
+    // has already shipped is still coming.
+    const skewed = new Date(NOW.getTime() + 60_000).toISOString();
+    const rows = resetRows({
+        read: (game, type) => (game === "cs2" ? answered("cs2", "last-update", skewed) : undefined),
+        knowledge: () => undefined,
+        now: NOW
+    });
+    const cs2 = rows.find(row => row.game === "cs2")!;
+    assert.equal(cs2.upcoming, false, "a last-update row is not a future-facing tracker");
+    assert.ok(cs2.at! > NOW.getTime(), "this test needs the skew it is testing");
+    assert.equal(cs2.soon, false, "a past observation was advertised as within the week");
+
+    const html = renderResetsHtml(PAGE, rows);
+    assert.ok(!/is-soon/.test(html), "the shipped table marked a past observation as upcoming");
 });
 
 test("what is coming up is first, soonest first; what happened is next, newest first", () => {

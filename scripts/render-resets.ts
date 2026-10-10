@@ -190,7 +190,12 @@ export function resetRows(input: ResetsInput): ResetRow[] {
             exact,
             badge: value.badgeText,
             badgeClass: value.badgeClass,
-            soon: ahead && value.at! - input.now.getTime() <= SOON_DAYS * DAY_MS,
+            // Only something that is actually ahead of the reader can be "within 7 days". A last-patch
+            // row is a past observation, and the pipeline deliberately keeps one whose timestamp sits a
+            // little ahead of the clock — source skew, or a change that landed mid-request (see
+            // selectCurrentEvent). Without the group test, that skew would advertise a patch that has
+            // already shipped as something still to come.
+            soon: value.group === "upcoming" && ahead && value.at! - input.now.getTime() <= SOON_DAYS * DAY_MS,
             at: value.at,
             upcoming: value.group === "upcoming"
         });
