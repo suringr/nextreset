@@ -20,6 +20,27 @@
 
   <link rel="stylesheet" href="/assets/styles.v2.css">
 
+  <!-- Consent Mode v2 defaults, set before any Google tag loads.
+       Without this, Google Analytics starts measuring the moment the page opens and a consent choice
+       made afterwards arrives too late for the pageview that prompted it. Denying by default and
+       waiting means nothing is stored until the visitor has answered.
+       Scoped to the EEA, the UK and Switzerland, which is where prior consent is required and where
+       Google's own CMP (configured in AdSense Privacy & messaging) shows its message and issues the
+       update. Elsewhere the defaults stay granted, so this changes who is measured, not whether
+       measurement works. -->
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: 'denied',
+      wait_for_update: 500,
+      region: ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE','IS','LI','NO','GB','CH']
+    });
+  </script>
+
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -110,6 +131,9 @@
       </p>
       <p>
         Google requires publishers to use a Google-certified consent management platform before serving personalised ads to visitors in the European Economic Area, the United Kingdom and Switzerland. NextReset uses Google's own consent management platform, configured through AdSense Privacy &amp; messaging rather than as separate code on the Site. Where it applies, a European regulations message asks the visitor to give or refuse consent for Google advertising and the related data processing, and they can change that choice afterwards. Which visitors see the message, and what advertising follows, depends on their location, their choices and Google's configuration.
+      </p>
+      <p>
+        Alongside that, every page on this site declares its consent defaults before any Google tag loads. For visitors in the European Economic Area, the United Kingdom and Switzerland, advertising storage, advertising identifiers, ad personalisation and analytics storage all start as <strong>denied</strong>, and stay denied until the consent message is answered. A choice made after a page has already been measured would arrive too late for the visit that prompted it, so nothing is stored on that visit until the answer exists. Outside those countries the defaults stay granted, and the analytics described above apply as written.
       </p>
 
       <h2>Data We Don't Collect</h2>

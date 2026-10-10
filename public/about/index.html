@@ -21,6 +21,27 @@
 
   <link rel="stylesheet" href="/assets/styles.v2.css">
 
+  <!-- Consent Mode v2 defaults, set before any Google tag loads.
+       Without this, Google Analytics starts measuring the moment the page opens and a consent choice
+       made afterwards arrives too late for the pageview that prompted it. Denying by default and
+       waiting means nothing is stored until the visitor has answered.
+       Scoped to the EEA, the UK and Switzerland, which is where prior consent is required and where
+       Google's own CMP (configured in AdSense Privacy & messaging) shows its message and issues the
+       update. Elsewhere the defaults stay granted, so this changes who is measured, not whether
+       measurement works. -->
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: 'denied',
+      wait_for_update: 500,
+      region: ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE','IS','LI','NO','GB','CH']
+    });
+  </script>
+
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
