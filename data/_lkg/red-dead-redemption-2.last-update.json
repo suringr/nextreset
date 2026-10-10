@@ -1,0 +1,14 @@
+{
+  "provider_id": "red-dead-redemption-2",
+  "game": "red-dead-redemption-2",
+  "type": "last-update",
+  "title": "Red Dead Redemption 2 Last Update",
+  "status": "fresh",
+  "nextEventUtc": "2026-10-06T00:00:00.000Z",
+  "fetched_at_utc": "2026-10-10T16:36:04.203Z",
+  "last_success_at_utc": "2026-10-10T16:36:04.203Z",
+  "source_url": "https://www.rockstargames.com/newswire/article/ak4395a99k534o/chaos-engulfs-the-frontier-as-halloween-approaches",
+  "confidence": "high",
+  "fetch_mode": "browser",
+  "notes": "Red Dead OnlineOctober 6, 2026Chaos Engulfs the Frontier as Halloween Approaches"
+}
