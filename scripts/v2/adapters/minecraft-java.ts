@@ -199,11 +199,20 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
         // snapshots most weeks — completes the import, and nothing is published wrongly in the interim.
         const unchanged = fetched.outcome === "unchanged";
         const skipped = { events: [], unchanged: true, sourceStates, fetch, work: { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 } };
-        // Nothing to re-read once the store already holds as much history as a run would ever take
-        // from this response, so the common case after the backfill costs exactly what it did before:
-        // no parse at all. Before then, a body in hand is worth reading.
-        const held = knowledge.events.filter(event => event.topic === topic.type).length;
-        if (unchanged && (!fetched.document || held >= KEPT_RELEASES)) return skipped;
+        // Nothing to re-read once there is nothing left to learn from this response, so the common
+        // case after the backfill costs exactly what it did before: no parse at all.
+        //
+        // Two things can still be learned, and a count only sees one of them. A store that accumulated
+        // twelve releases the old way — one per run, over a year — satisfies any count-based test while
+        // every one of its claims still lacks the reader's link, and skipping on that basis would leave
+        // those rows pointing at raw launcher JSON until the manifest hash happened to change. So the
+        // question is whether the store holds as much as a run would take *and* every event already
+        // carries the link, which is self-clearing and needs no version marker.
+        const held = knowledge.events.filter(event => event.topic === topic.type);
+        const settled = held.length >= KEPT_RELEASES && held.every(event =>
+            knowledge.claims.some(claim =>
+                claim.eventKey === event.key && claim.field === "at" && claim.linkUrl === MINECRAFT_CHANGELOGS_PAGE));
+        if (unchanged && (!fetched.document || settled)) return skipped;
 
         let release: JavaRelease;
         try {

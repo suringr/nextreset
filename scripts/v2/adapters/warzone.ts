@@ -213,10 +213,17 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
         // games patching — completes the import, and nothing is published wrongly in the interim.
         const unchanged = fetched.outcome === "unchanged";
         const skipped = { events: [], unchanged: true, sourceStates, fetch, work: { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 } };
-        // Nothing to re-read once the store already holds as much archive as a run would ever take
-        // from this response: after the backfill an unchanged page costs exactly what it did before.
-        const held = knowledge.events.filter(event => event.topic === topic.type).length;
-        if (unchanged && (!fetched.document || held > KEPT_ARCHIVE)) return skipped;
+        // Nothing to re-read once there is nothing left to learn from this response: after the
+        // backfill an unchanged page costs exactly what it did before.
+        //
+        // The card plus the archive, so the store is settled at one more than the archive alone. And
+        // every event has to carry its article link, for the same reason Minecraft's does — a count
+        // cannot tell a completed import from a store that accumulated the same number one run at a
+        // time. Here the legacy claims already carried a link, so an upgraded store settles at once.
+        const held = knowledge.events.filter(event => event.topic === topic.type);
+        const settled = held.length > KEPT_ARCHIVE && held.every(event =>
+            knowledge.claims.some(claim => claim.eventKey === event.key && claim.field === "at" && !!claim.linkUrl));
+        if (unchanged && (!fetched.document || settled)) return skipped;
 
         const page = fetched.document!;
         let update: WarzoneUpdate;

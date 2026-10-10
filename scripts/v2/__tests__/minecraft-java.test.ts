@@ -313,3 +313,36 @@ test("a legacy claim without a reader's link is upgraded rather than trusted", a
     const forCurrent = after.claims.filter(c => c.eventKey === currentKey);
     assert.ok(forCurrent.some(c => c.linkUrl === MINECRAFT_CHANGELOGS_PAGE), "the legacy claim was trusted and the link never arrived");
 });
+
+test("a legacy store that reached the cap the slow way is still upgraded", async () => {
+    // Codex, #66 round 3: the short-circuit counted events, and a count cannot tell a completed import
+    // from a store that accumulated the same number one run at a time over a year. Such a store passes
+    // any count test while every claim still lacks the reader's link — so it would have exited before
+    // the upgrade loop and kept those rows pointing at raw launcher JSON until the hash changed.
+    const { store } = tempStore();
+    const serve = () => fakeTransport({ http: [{ body: HISTORY, headers: { "content-type": "application/json" } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(serve()), store, new Date("2026-11-11T00:00:00Z"));
+
+    // The same twelve releases, but evidenced the old way: ids without the link, and no linkUrl.
+    const before = store.load("minecraft");
+    assert.equal(before.events.length, KEPT_RELEASES, "this test needs a store at the cap");
+    const legacy = before.claims.map(claim => ({
+        ...claim,
+        id: createHash("sha256").update(`${claim.documentId}|${claim.eventKey}|at|${claim.value}`).digest("hex").slice(0, 24),
+        linkUrl: undefined
+    }));
+    store.save({ ...before, claims: legacy });
+    assert.equal(store.load("minecraft").claims.every(c => c.linkUrl === undefined), true, "the store was not wound back");
+
+    // Identical bytes: smartFetch reports unchanged, and the links are still repaired.
+    const again = serve();
+    await runTracker(game, topic, createMinecraftJavaAdapter(again), store, new Date("2026-11-11T06:00:00Z"));
+    assert.equal(again.gets.length, 1, "the upgrade cost an extra request");
+    const after = store.load("minecraft");
+    for (const event of after.events) {
+        assert.ok(
+            after.claims.some(c => c.eventKey === event.key && c.linkUrl === MINECRAFT_CHANGELOGS_PAGE),
+            `${event.key} still has no reader's link`
+        );
+    }
+});
