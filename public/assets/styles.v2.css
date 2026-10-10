@@ -1454,6 +1454,13 @@ footer a:hover {
   }
 }
 
+/* The hub's own column. Prose reads at 68ch; a six-column table does not, and
+   `max-width: none` on the table's wrapper cannot escape an ancestor that is
+   already 68ch wide — the constraint has to be lifted where it is applied. */
+.page-wide {
+  max-width: none;
+}
+
 /* ---------------------------------------------------------------------------
    /resets/ — every tracker's value in one table.
 
@@ -1463,7 +1470,6 @@ footer a:hover {
    coming week: the one thing a reader scanning this page is usually looking for.
    --------------------------------------------------------------------------- */
 .resets-wrap {
-  max-width: none;
   margin: 16px 0 24px;
   overflow-x: auto;
   border: 1px solid var(--line);

@@ -21,7 +21,7 @@ import { findByAttribute, spliceElement } from "./html-elements";
 import { REGION_ATTRIBUTE } from "./render-slots";
 import { CardValue, cardValue } from "./render-home";
 import { GameKnowledge, KnowledgeEvent, loadKnowledge, publishedEvents } from "./render-data-blocks";
-import { TrackerData, escapeHtml, formatDate, formatDateTime, isFutureFacing } from "./render-pages";
+import { TrackerData, escapeHtml, formatDate, formatDateTime } from "./render-pages";
 import { isListed } from "./indexing";
 import { trackerPages } from "./site-map";
 import { gamePages } from "./update-game-pages";
@@ -69,7 +69,7 @@ export interface ResetRow {
  * promise. Where the gaps are uneven — Valve ships Counter-Strike updates when they are ready — there
  * is no cadence to report, and the column stays empty rather than inventing a rhythm.
  */
-export function cadenceOf(knowledge: GameKnowledge | undefined, topic: string, rule?: string): string | undefined {
+export function cadenceOf(knowledge: GameKnowledge | undefined, topic: string, rule?: string, now?: Date): string | undefined {
     if (rule) return rule;
     const events = publishedEvents(knowledge?.events, topic)
         .map((event: KnowledgeEvent) => (event.at ? Date.parse(event.at) : NaN))
@@ -92,6 +92,15 @@ export function cadenceOf(knowledge: GameKnowledge | undefined, topic: string, r
     // Valve ships twice in a day and then not for a month and there is no rhythm to find.
     const close = gaps.filter(gap => Math.abs(gap - median) <= median * 0.25).length;
     if (close / gaps.length <= 0.75) return undefined;
+    // A break is a break; an abandonment is not a rhythm. The ratio alone cannot tell them apart —
+    // four weekly gaps and then a two-year silence is four fifths "close to the median", and would
+    // have been published as "About weekly" for a game nobody has updated since. An outlier may be
+    // twice the median, which covers Riot's split breaks, and not more.
+    if (gaps.some(gap => gap > median * 2)) return undefined;
+    // And the rhythm has to still be running. "How often" is a claim in the present tense, so a
+    // history that stopped longer ago than the rhythm itself no longer describes anything current.
+    const last = events[events.length - 1];
+    if (now && now.getTime() - last > median * 2) return undefined;
     const days = Math.round(median / DAY_MS);
     if (days < 1) return undefined;
     if (days === 1) return "About daily";
@@ -124,22 +133,37 @@ export function resetRows(input: ResetsInput): ResetRow[] {
     const rows: ResetRow[] = [];
     for (const entry of trackerPages()) {
         const { game, type } = entry.tracker!;
+        // A tracker the manifest declares but the registry has no copy for cannot be given a row, and
+        // skipping it would publish a table that silently omits a game while still passing the "not
+        // empty" check. The publish job does not run the tests, so this is the only thing standing
+        // between registry drift and a hub that quietly loses a tracker.
         const page = gamePages.find(candidate => candidate.game === game && candidate.type === type);
-        if (!page) continue;
+        if (!page) {
+            throw new Error(`${game}/${type}: declared as a tracker page but absent from the tracker registry, so /resets/ cannot describe it`);
+        }
         const data = input.read(game, type);
         const value: CardValue = cardValue(data, input.now);
         const exact = data?.precision === "exact" && !value.unanswered && value.at !== undefined;
         const atIso = value.dataset.nextUtc || undefined;
         const ahead = value.at !== undefined && value.at > input.now.getTime();
+        // The homepage says "Updating..." for an exact instant that has just passed, because it is a
+        // live countdown with nothing to count to until the next refresh. A table of facts is not that
+        // page: it still knows the instant, and printing a placeholder in the UTC column while the
+        // column beside it showed that same instant converted would be the table contradicting itself.
+        // So the published value is always formatted here, and only the states that genuinely have no
+        // value — unavailable, or a question with no answer — keep their sentence.
+        const when = value.at !== undefined
+            ? (exact ? formatDateTime(atIso!) : formatDate(atIso!))
+            : value.value;
         rows.push({
             game,
             type,
             title: page.title,
             tracks: page.typeTitle,
             href: isListed(entry.page) ? `/${game}/${type}/` : undefined,
-            cadence: cadenceOf(input.knowledge(game), type, STATED_CADENCE[`${game}/${type}`]),
+            cadence: cadenceOf(input.knowledge(game), type, STATED_CADENCE[`${game}/${type}`], input.now),
             atIso: value.unanswered ? undefined : atIso,
-            when: value.value,
+            when,
             exact,
             badge: value.badgeText,
             badgeClass: value.badgeClass,

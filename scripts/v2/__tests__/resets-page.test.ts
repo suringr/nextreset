@@ -217,6 +217,74 @@ test("cadence is a rule the publisher states, or a rhythm the history shows, or 
     assert.equal(cadenceOf(uneven, "t"), undefined);
 });
 
+test("an instant that has just passed is still an instant, not the homepage's placeholder", () => {
+    // Codex, PR #65: cardValue says "Updating..." for an exact future-facing event whose moment has
+    // gone, because it is a live countdown with nothing left to count to. A table of facts still knows
+    // the instant. Copying the placeholder put it in the UTC column while the column beside it showed
+    // that same instant converted — the table contradicting itself, in the one place this project
+    // promises a crawler sees the real value.
+    const justPassed = new Date("2026-10-08T10:00:01.000Z");
+    const rows = resetRows({
+        read: (game, type) => (game === "gta" ? answered("gta", "weekly-reset", "2026-10-08T10:00:00.000Z") : undefined),
+        knowledge: () => undefined,
+        now: justPassed
+    });
+    const gta = rows.find(row => row.game === "gta")!;
+    assert.ok(!/Updating/.test(gta.when), `the UTC column published a placeholder: ${gta.when}`);
+    assert.match(gta.when, /October 8, 2026 at 10:00 UTC/);
+
+    // And the two columns agree: whatever the UTC cell says, the local cell converts the same instant.
+    const html = renderResetsHtml(PAGE, rows);
+    const $ = cheerio.load(html);
+    const cell = $(`.reset-local[data-utc="${gta.atIso}"]`);
+    assert.equal(cell.length, 1, "the local cell is not offered the instant the UTC cell shows");
+});
+
+test("an abandoned rhythm is not a cadence", () => {
+    // Codex, PR #65: four weekly gaps and then a two-year silence is four fifths "close to the median",
+    // which the ratio test alone published as "About weekly" for a game nobody has touched since.
+    const at = (days: number[]): GameKnowledge => ({
+        game: "x", claims: [],
+        events: days.map((day, i) => ({
+            key: `x/t/${i}`, topic: "t", label: `${i}`, status: "observed",
+            at: new Date(Date.UTC(2026, 0, 1 + day)).toISOString(), publishState: "published"
+        }))
+    });
+    const nowAfter = (day: number) => new Date(Date.UTC(2026, 0, 1 + day));
+
+    // Weekly, then gone for two years. The ratio is 4/5; the outlier is 104x the median.
+    const abandoned = at([0, 7, 14, 21, 28, 28 + 730]);
+    assert.equal(cadenceOf(abandoned, "t", undefined, nowAfter(28 + 731)), undefined);
+    assert.equal(cadenceOf(abandoned, "t"), undefined, "the magnitude cap applies without a clock too");
+
+    // A break of twice the median is a break, and the rhythm survives it.
+    const withBreak = at([0, 14, 28, 42, 56, 84, 98, 112]);
+    assert.equal(cadenceOf(withBreak, "t", undefined, nowAfter(113)), "About every 2 weeks");
+
+    // A rhythm that stopped longer ago than the rhythm itself is not a present-tense claim any more.
+    assert.equal(cadenceOf(at([0, 14, 28, 42, 56]), "t", undefined, nowAfter(57)), "About every 2 weeks");
+    assert.equal(cadenceOf(at([0, 14, 28, 42, 56]), "t", undefined, nowAfter(56 + 60)), undefined);
+});
+
+test("a tracker the registry has lost fails the build rather than vanishing from the table", () => {
+    // Codex, PR #65: this used to `continue`, so drift published a table quietly missing a game while
+    // still passing the "not empty" check — and the publish job does not run these tests.
+    const rows = () => resetRows({
+        read: () => undefined,
+        knowledge: () => undefined,
+        now: NOW
+    });
+    assert.doesNotThrow(rows, "the registry and the manifest already disagree");
+
+    const original = gamePages.splice(0, 1)[0];
+    try {
+        assert.throws(rows, /absent from the tracker registry/);
+    } finally {
+        gamePages.unshift(original);
+    }
+    assert.doesNotThrow(rows, "the registry was not restored");
+});
+
 test("the hub refuses to publish an empty or undeclared table", () => {
     // The same rule the tracker pages follow: a page that cannot say what it knows fails the build
     // rather than being served with a hole in it.
@@ -261,7 +329,12 @@ test("a real build renders the hub and submits it", () => {
 
     const summary = renderSite(dist, NOW, dist);
     assert.equal(summary.resets, trackerPages().length, "the hub did not list every tracker");
-    assert.ok(summary.sitemap.some(entry => entry.loc === "https://nextreset.co/resets/"), "the hub is not in the sitemap");
+    const hub = summary.sitemap.find(entry => entry.loc === "https://nextreset.co/resets/");
+    assert.ok(hub, "the hub is not in the sitemap");
+    // Codex, PR #65: a page rebuilt from twelve moving facts was being dated like About and Privacy,
+    // which genuinely never change. It is as new as the newest thing on it, exactly as the homepage is.
+    const home = summary.sitemap.find(entry => entry.loc === "https://nextreset.co/");
+    assert.equal(hub!.lastmod, home!.lastmod, "the hub and the homepage show the same facts and must be dated alike");
 
     const html = fs.readFileSync(path.join(dist, "resets", "index.html"), "utf8");
     const $ = cheerio.load(html);
