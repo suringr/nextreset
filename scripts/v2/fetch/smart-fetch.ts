@@ -24,6 +24,25 @@ export interface SourceFetchState {
     lastVerdict?: string;
     lastMode?: "http" | "browser";
     consecutiveFailures: number;
+    /**
+     * The extraction capability that last read this source's content in full.
+     *
+     * A conditional GET is the right default: when nothing upstream changed, nothing downstream needs to
+     * run. But it makes an adapter's reach a property of *when it shipped*. Teach an adapter to read more
+     * out of the same response — a release history that was always in the manifest, an archive that was
+     * always under the card — and it can only ever apply that to content it has not seen. A source that is
+     * quiet keeps answering 304, a 304 has no body to re-read, and the new capability waits indefinitely
+     * for an upstream change that has nothing to do with it.
+     *
+     * So an adapter declares the version of its own extraction, and `smartFetch` carries the last one that
+     * ran here. When the adapter's version is ahead, the caller asks for one unconditional fetch, reads the
+     * whole representation, and records the new version. That is one request per source per capability
+     * change, and not an extra one: it replaces the conditional request the schedule was making anyway.
+     *
+     * `smartFetch` only preserves this field. The adapter sets it, and only after the extraction it names
+     * has actually succeeded — a version recorded on a parse that threw would make the gap permanent.
+     */
+    extractionVersion?: number;
 }
 
 export interface FetchedDocument {
@@ -63,6 +82,14 @@ export interface SmartFetchOptions {
     retries?: number;
     /** Base backoff between HTTP attempts in ms, doubled per attempt (default 1000; tests pass 0). */
     retryDelayMs?: number;
+    /**
+     * Send the request without validators, so the server answers with a body rather than a 304.
+     *
+     * For when the caller needs to read the representation again even though it has not changed — see
+     * `SourceFetchState.extractionVersion`. The outcome is still reported honestly: identical content is
+     * still `unchanged`, it simply arrives with the body attached this time.
+     */
+    unconditional?: boolean;
 }
 
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
@@ -139,7 +166,11 @@ export async function smartFetch(url: string, options: SmartFetchOptions): Promi
                 lastUsableAt: nowIso,
                 lastVerdict: "usable",
                 lastMode: document.mode,
-                consecutiveFailures: 0
+                consecutiveFailures: 0,
+                // Carried, never set here. This state is rebuilt from scratch rather than spread, so a
+                // field smartFetch does not know about is a field it silently drops — and dropping this
+                // one would re-arm the unconditional fetch on every single run.
+                extractionVersion: previous.extractionVersion
             }
         };
     };
@@ -147,11 +178,15 @@ export async function smartFetch(url: string, options: SmartFetchOptions): Promi
     // 1. Plain HTTP with conditional headers; bounded retries on transport errors and 5xx.
     const retries = options.retries ?? 2;
     const retryDelayMs = options.retryDelayMs ?? 1000;
+    // Withholding the validators is the whole of "unconditional": the request is otherwise identical, and
+    // the server answers 200 with a body instead of 304 without one.
+    const etag = options.unconditional ? undefined : previous.etag;
+    const lastModified = options.unconditional ? undefined : previous.lastModified;
     let response;
     let lastError: string | undefined;
     for (let attempt = 0; attempt <= retries; attempt++) {
         try {
-            response = await transport.get({ url, timeoutMs: options.timeoutMs, etag: previous.etag, lastModified: previous.lastModified });
+            response = await transport.get({ url, timeoutMs: options.timeoutMs, etag, lastModified });
             lastError = undefined;
             if (!isRetryableStatus(response.status) || attempt === retries) break;
             attempts.push({ mode: "http", status: response.status, code: "http-error", reason: `HTTP ${response.status}, retrying`, elapsedMs: response.elapsedMs });

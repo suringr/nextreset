@@ -7,7 +7,7 @@
 import test from "node:test";
 import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
-import { KEPT_RELEASES, MINECRAFT_CHANGELOGS_PAGE, MINECRAFT_MANIFEST_URL, createMinecraftJavaAdapter, parseLatestJavaRelease, parseRecentJavaReleases } from "../adapters/minecraft-java";
+import { EXTRACTION_VERSION, KEPT_RELEASES, MINECRAFT_CHANGELOGS_PAGE, MINECRAFT_MANIFEST_URL, createMinecraftJavaAdapter, parseLatestJavaRelease, parseRecentJavaReleases } from "../adapters/minecraft-java";
 import { MockAiProvider } from "../ai/mock";
 import { DEFAULT_AI_BUDGET_LIMITS, createAiGate } from "../cost/budget";
 import { AiUsageLedger } from "../cost/ledger";
@@ -374,4 +374,78 @@ test("releases too old for this parser to reach do not keep the manifest being r
     assert.deepEqual(run.work, { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 },
         "the manifest was re-read for releases this parser can never reach");
     assert.deepEqual([run.created, run.changes.length], [0, 0]);
+});
+
+/**
+ * The backfill lifecycle.
+ *
+ * Reading more out of a response the build already pays for only helps if the response still has a body.
+ * A conditional GET against a quiet source answers 304, a 304 has no body, and the new capability waits
+ * for an upstream change that has nothing to do with it. On the live site that wait was indefinite: the
+ * rescue shipped, the manifest stayed quiet, and the page kept showing one date and no history.
+ *
+ * So the adapter spends exactly one validator-free request per capability version, and only while there
+ * is still something to learn. Both halves are load-bearing and each is asserted on its own below.
+ */
+test("a source that would answer 304 is still read once when the adapter learns to read more", async () => {
+    const { store } = tempStore();
+
+    // A store as the old adapter left it: the current release only, and a source state carrying a
+    // validator — which is exactly what makes a real server withhold the body on the next run.
+    const seed = fakeTransport({ http: [{ body: CURRENT, headers: { "content-type": "application/json", etag: '"quiet"' } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(seed), store, NOW);
+    const seeded = store.load("minecraft");
+    store.save({ ...seeded, sources: seeded.sources.map(s => ({ ...s, extractionVersion: undefined })) });
+    assert.equal(store.load("minecraft").sources[0].etag, '"quiet"', "the store needs a validator for this test to mean anything");
+    assert.equal(store.load("minecraft").events.length, 1, "this test starts from a store with no history");
+
+    // Same manifest contents it has always served, now read by an adapter that knows about the list.
+    const again = fakeTransport({ http: [{ body: HISTORY, headers: { "content-type": "application/json", etag: '"quiet"' } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(again), store, new Date("2026-11-11T06:00:00Z"));
+
+    assert.equal(again.gets.length, 1, "the backfill cost more than the request the schedule was making anyway");
+    assert.deepEqual([again.gets[0].etag, again.gets[0].lastModified], [undefined, undefined],
+        "the request carried validators, so a real server would have answered 304 and the history would still be unread");
+    const after = store.load("minecraft");
+    assert.equal(after.events.length, KEPT_RELEASES, "the history did not arrive");
+    assert.equal(after.sources[0].extractionVersion, EXTRACTION_VERSION, "the one unconditional read was not recorded as spent");
+});
+
+test("once the history is in, the manifest is asked for conditionally again", async () => {
+    const { store } = tempStore();
+    const full = fakeTransport({ http: [{ body: HISTORY, headers: { "content-type": "application/json", etag: '"settled"' } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(full), store, NOW);
+    assert.equal(store.load("minecraft").events.length, KEPT_RELEASES, "this test needs a settled store");
+
+    const next = fakeTransport({ http: [{ status: 304, notModified: true }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(next), store, new Date("2026-11-11T06:00:00Z"));
+    assert.equal(next.gets[0].etag, '"settled"',
+        "a settled store should let the server answer 304 — re-reading it learns nothing and costs bandwidth");
+});
+
+test("a source that can never fill the cap is still only read unconditionally once", async () => {
+    // This capture holds a single release, so `settled` can never become true. Without the version
+    // budget the adapter would send a validator-free request on every run for the rest of time, which is
+    // precisely the recurring cost this design is not allowed to introduce.
+    const { store } = tempStore();
+    const serve = () => fakeTransport({ http: [{ body: CURRENT, headers: { "content-type": "application/json", etag: '"short"' } }] });
+
+    const first = serve();
+    await runTracker(game, topic, createMinecraftJavaAdapter(first), store, NOW);
+    assert.deepEqual([first.gets[0].etag, first.gets[0].lastModified], [undefined, undefined], "the first read should be unconditional");
+
+    const second = serve();
+    await runTracker(game, topic, createMinecraftJavaAdapter(second), store, new Date("2026-09-17T06:00:00Z"));
+    assert.equal(second.gets[0].etag, '"short"',
+        "the unconditional read repeated, so a source that never fills the cap pays for one on every run forever");
+});
+
+test("a parse that fails does not spend the one unconditional read", async () => {
+    // The budget is recorded after the manifest has actually been read, not beside the fetch. A version
+    // banked on a parse that threw would close the only window the backfill ever gets.
+    const { store } = tempStore();
+    const broken = fakeTransport({ http: [{ body: '{"latest":{"release":"26.3"},"versions":[]}', headers: { "content-type": "application/json" } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(broken), store, NOW);
+    const source = store.load("minecraft").sources[0];
+    assert.equal(source?.extractionVersion, undefined, "a failed parse banked the capability as applied");
 });

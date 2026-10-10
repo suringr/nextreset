@@ -164,6 +164,14 @@ function validateSourceState(value: unknown, path: string): void {
     if (typeof state.consecutiveFailures !== "number" || state.consecutiveFailures < 0 || !Number.isInteger(state.consecutiveFailures)) {
         fail(`${path}.consecutiveFailures`, "must be a non-negative integer");
     }
+    // Absent on every source written before extraction versioning existed, and absent for every adapter
+    // that never needs to re-read a representation, so optional. Present and nonsensical is a different
+    // thing: it decides whether a request goes out without validators, and a NaN or a negative would
+    // compare false against any version and send one on every run.
+    if (state.extractionVersion !== undefined
+        && (typeof state.extractionVersion !== "number" || state.extractionVersion < 0 || !Number.isInteger(state.extractionVersion))) {
+        fail(`${path}.extractionVersion`, "must be a non-negative integer when present");
+    }
 }
 
 function validateDiscoveredSource(value: unknown, path: string): void {

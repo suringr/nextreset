@@ -130,6 +130,17 @@ export function parseWarzoneUpdate(html: string): WarzoneUpdate {
 export const KEPT_ARCHIVE = 12;
 
 /**
+ * The version of what this adapter reads out of the patch notes page.
+ *
+ * Bumped when the adapter learns to extract something it could not extract before. It is the budget for
+ * the unconditional fetch described in `SourceFetchState.extractionVersion`: at most one per bump, spent
+ * only while there is still something to learn, and recorded once the page has been read in full.
+ *
+ * 1 -> reads the "View past patch notes" accordion as well as the current card.
+ */
+export const EXTRACTION_VERSION = 1;
+
+/**
  * The Warzone patch notes the page's own archive lists, newest first.
  *
  * The card at the top of the page is the current patch, and beneath it Activision publishes a "View
@@ -194,7 +205,28 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
         const stored = getSourceState(source.id);
         const previous = stored && stored.url === source.url ? stored : undefined;
 
-        const fetched = await smartFetch(source.url, { expect: { kind: "text", minWords: 20, markers: ["Patch Notes"] }, allowRender: false, previous, transport, label: `${game.id}-${topic.type}`, now });
+        // Whether this store already holds everything a run could take from the page, asked before the
+        // request so it can decide the shape of the request.
+        //
+        // The card plus the archive, so the store is settled at one more than the archive alone. Every
+        // event has to carry its article link for the same reason Minecraft's does: a count cannot tell a
+        // completed import from a store that accumulated the same number one run at a time. Asked only of
+        // the patches a run could actually reach -- a store holding more than that has older events this
+        // parser will never emit again, and requiring a link on those would never settle.
+        const reachable = KEPT_ARCHIVE + 1;
+        const held = knowledge.events
+            .filter(event => event.topic === topic.type)
+            .sort((a, b) => Date.parse(b.at ?? "") - Date.parse(a.at ?? ""));
+        const settled = held.length >= reachable && held.slice(0, reachable).every(event =>
+            knowledge.claims.some(claim => claim.eventKey === event.key && claim.field === "at" && !!claim.linkUrl));
+
+        // Something to learn, and this capability has not yet had its one unconditional read. `settled`
+        // stops it as soon as the archive lands; the version stops it even when the archive is shorter
+        // than the cap, which is the realistic case here -- the accordion lists what Activision chose to
+        // keep, and that can be fewer than `KEPT_ARCHIVE` entries.
+        const unconditional = !settled && (previous?.extractionVersion ?? 0) < EXTRACTION_VERSION;
+
+        const fetched = await smartFetch(source.url, { expect: { kind: "text", minWords: 20, markers: ["Patch Notes"] }, allowRender: false, previous, transport, label: `${game.id}-${topic.type}`, now, unconditional });
         const sourceStates: SourceState[] = [{ id: source.id, url: source.url, ...fetched.state }];
         if (fetched.outcome === "unusable") {
             return { events: [], failure: fetched.error ?? fetched.verdict?.reason ?? "fetch failed", failureKind: failureKindFromFetch(fetched), sourceStates };
@@ -213,23 +245,8 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
         // games patching — completes the import, and nothing is published wrongly in the interim.
         const unchanged = fetched.outcome === "unchanged";
         const skipped = { events: [], unchanged: true, sourceStates, fetch, work: { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 } };
-        // Nothing to re-read once there is nothing left to learn from this response: after the
-        // backfill an unchanged page costs exactly what it did before.
-        //
-        // The card plus the archive, so the store is settled at one more than the archive alone. And
-        // every event has to carry its article link, for the same reason Minecraft's does — a count
-        // cannot tell a completed import from a store that accumulated the same number one run at a
-        // time. Here the legacy claims already carried a link, so an upgraded store settles at once.
-        //
-        // Asked only of the patches a run could actually reach: the card and the archive behind it. A
-        // store that has accumulated more than that over the years holds older events this parser will
-        // never emit again, and requiring a link on those would re-read the page forever for nothing.
-        const reachable = KEPT_ARCHIVE + 1;
-        const held = knowledge.events
-            .filter(event => event.topic === topic.type)
-            .sort((a, b) => Date.parse(b.at ?? "") - Date.parse(a.at ?? ""));
-        const settled = held.length >= reachable && held.slice(0, reachable).every(event =>
-            knowledge.claims.some(claim => claim.eventKey === event.key && claim.field === "at" && !!claim.linkUrl));
+        // Nothing to re-read once there is nothing left to learn from this response: after the backfill
+        // an unchanged page costs exactly what it did before. A true 304 still has no body to read.
         if (unchanged && (!fetched.document || settled)) return skipped;
 
         const page = fetched.document!;
@@ -254,6 +271,11 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
         // The patches behind the current one, from the page's own "View past patch notes" accordion.
         // Same response, same fetch: history here costs nothing that the headline did not already cost.
         const archive = parseWarzoneArchive(page.body).filter(entry => entry.identity !== update.identity);
+
+        // The page has now been read in full, so the unconditional budget for this capability is spent.
+        // Recorded after the parse rather than beside the fetch: a parse that threw returned above with
+        // the version untouched, so a transient failure gets another attempt.
+        sourceStates[0] = { ...sourceStates[0], extractionVersion: EXTRACTION_VERSION };
 
         // Evidence only where this update day is new to the knowledge file. The card carries a verbatim
         // excerpt; an archive row carries its article link, which is the evidence a reader is actually

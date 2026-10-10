@@ -218,3 +218,38 @@ test("structured sources: JSON body becomes the document text, hashed", async ()
     assert.equal(second.outcome, "usable", "a value change must not be reported as unchanged");
     assert.notEqual(second.state.textHash, first.state.textHash);
 });
+
+test("an unconditional fetch withholds the validators so the body comes back, and still reports unchanged", async () => {
+    // The seam the backfill lifecycle rests on. A conditional GET against a quiet source answers 304 and
+    // withholds the body, which is correct almost always and wrong exactly when an adapter has learned to
+    // read something new out of a representation it has already seen. Asking without validators changes
+    // the response, not the truth: identical content is still reported as unchanged, it simply arrives
+    // with a body this time, and the caller decides whether that is worth re-reading.
+    const body = fixture("minecraft-article.html");
+    const previous = { ...EMPTY_SOURCE_STATE, etag: '"abc"', lastModified: "Mon, 06 Oct 2026 14:18:17 GMT", textHash: hashText(extractText(body).text) };
+
+    const conditional = fakeTransport({ http: [{ status: 304, notModified: true }] });
+    const first = await smartFetch(ARTICLE_URL, { expect: { kind: "html" }, previous, transport: conditional, now, retryDelayMs: 0 });
+    assert.deepEqual([conditional.gets[0].etag, conditional.gets[0].lastModified], ['"abc"', "Mon, 06 Oct 2026 14:18:17 GMT"]);
+    assert.equal(first.outcome, "unchanged");
+    assert.equal(first.document, undefined, "a 304 has no body to hand back");
+
+    const unconditional = fakeTransport({ http: [{ body, headers: { "content-type": "text/html" } }] });
+    const second = await smartFetch(ARTICLE_URL, { expect: { kind: "html" }, previous, transport: unconditional, now, retryDelayMs: 0, unconditional: true });
+    assert.deepEqual([unconditional.gets[0].etag, unconditional.gets[0].lastModified], [undefined, undefined], "validators were sent anyway");
+    assert.equal(second.outcome, "unchanged", "the content really is unchanged and should not be reported as new");
+    assert.ok(second.document, "the body was withheld, so there is still nothing to re-read");
+});
+
+test("the extraction version survives a fetch that rewrites the rest of the state", async () => {
+    // smartFetch rebuilds state field by field rather than spreading the previous one, so a field it does
+    // not know about is dropped on every successful fetch. Dropping this one re-arms the unconditional
+    // request on every run — the exact recurring cost the design forbids.
+    const body = fixture("minecraft-article.html");
+    const previous = { ...EMPTY_SOURCE_STATE, etag: '"old"', textHash: "something-else", extractionVersion: 3 };
+    const transport = fakeTransport({ http: [{ body, headers: { "content-type": "text/html", etag: '"new"' } }] });
+    const result = await smartFetch(ARTICLE_URL, { expect: { kind: "html" }, previous, transport, now, retryDelayMs: 0 });
+    assert.equal(result.outcome, "usable", "this test needs the path that rebuilds the state");
+    assert.equal(result.state.etag, '"new"', "the rest of the state should still be replaced");
+    assert.equal(result.state.extractionVersion, 3, "the extraction version was dropped by a successful fetch");
+});
