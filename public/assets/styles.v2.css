@@ -1454,10 +1454,20 @@ footer a:hover {
   }
 }
 
-/* The hub's own column. Prose reads at 68ch; a six-column table does not, and
-   `max-width: none` on the table's wrapper cannot escape an ancestor that is
-   already 68ch wide — the constraint has to be lifted where it is applied. */
+/* The hub's own column. Prose reads at 68ch and a six-column table does not, so
+   the page lifts the constraint and hands it back to everything that is still
+   prose. Lifting it for the whole page was the first attempt and made every
+   paragraph on /resets/ run the full 1160px, which is the readability problem
+   `--measure` exists to prevent. */
 .page-wide {
+  max-width: none;
+}
+
+.page-wide > * {
+  max-width: var(--measure);
+}
+
+.page-wide > .resets-wrap {
   max-width: none;
 }
 

@@ -31,6 +31,15 @@ const DAY_MS = 86_400_000;
 /** How far ahead "soon" reaches. A week is the window the weekly resets actually live in. */
 export const SOON_DAYS = 7;
 
+/**
+ * How many of the most recent intervals decide what "how often" says.
+ *
+ * Ten is roughly five months of a fortnightly game and two and a half of a weekly one: long enough
+ * that one odd interval cannot invent or destroy a rhythm, short enough that the answer describes what
+ * the game is doing now rather than what it did two years ago.
+ */
+export const RECENT_GAPS = 10;
+
 export interface ResetRow {
     game: string;
     type: string;
@@ -78,7 +87,17 @@ export function cadenceOf(knowledge: GameKnowledge | undefined, topic: string, r
     // Four events is three gaps: enough for "evenly spaced" to mean something rather than describing a
     // single interval twice. Fewer, and there is nothing to be consistent about.
     if (events.length < 4) return undefined;
-    const gaps = events.slice(1).map((at, index) => at - events[index]);
+    // The recent window, not the whole history.
+    //
+    // "How often" is a claim about now, and judging it on everything a game has ever done gets both
+    // ends wrong. A hiatus in 2024 followed by two years of weekly releases is a weekly game, and a
+    // rule that remembers the hiatus forever would never say so. Four weekly releases followed by a
+    // two-year silence and one more release is not a weekly game, however tidy those four gaps were.
+    // Looking at the last few gaps answers both: the hiatus falls out of the window once the rhythm
+    // has resumed, and the two-year gap is still in it.
+    const allGaps = events.slice(1).map((at, index) => at - events[index]);
+    const gaps = allGaps.slice(-RECENT_GAPS);
+    if (gaps.length < 3) return undefined;
     const sorted = [...gaps].sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)];
     if (median <= 0) return undefined;
@@ -95,7 +114,8 @@ export function cadenceOf(knowledge: GameKnowledge | undefined, topic: string, r
     // A break is a break; an abandonment is not a rhythm. The ratio alone cannot tell them apart —
     // four weekly gaps and then a two-year silence is four fifths "close to the median", and would
     // have been published as "About weekly" for a game nobody has updated since. An outlier may be
-    // twice the median, which covers Riot's split breaks, and not more.
+    // twice the median, which covers Riot's split breaks, and not more. Within the recent window, so
+    // an old hiatus stops counting against a game that has since resumed.
     if (gaps.some(gap => gap > median * 2)) return undefined;
     // And the rhythm has to still be running. "How often" is a claim in the present tense, so a
     // history that stopped longer ago than the rhythm itself no longer describes anything current.

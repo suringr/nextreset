@@ -266,6 +266,38 @@ test("an abandoned rhythm is not a cadence", () => {
     assert.equal(cadenceOf(at([0, 14, 28, 42, 56]), "t", undefined, nowAfter(56 + 60)), undefined);
 });
 
+test("an old hiatus stops counting once the rhythm has resumed", () => {
+    // Codex, PR #65 round 2: the magnitude cap applied to every gap a game had ever had, so one
+    // three-week break in its past suppressed the cadence forever, however many weekly releases
+    // followed. That contradicted the rule it sits next to, which exists to tolerate breaks.
+    //
+    // "How often" is a claim about now, so it is judged on the recent window. The hiatus falls out of
+    // it once the rhythm has resumed; a two-year silence with one release after it is still in it.
+    const from = (days: number[]): GameKnowledge => ({
+        game: "x", claims: [],
+        events: days.map((day, i) => ({
+            key: `x/t/${i}`, topic: "t", label: `${i}`, status: "observed",
+            at: new Date(Date.UTC(2026, 0, 1 + day)).toISOString(), publishState: "published"
+        }))
+    });
+    const weekly = (count: number, from0 = 0) => Array.from({ length: count }, (_, i) => from0 + i * 7);
+    const nowAfter = (day: number) => new Date(Date.UTC(2026, 0, 1 + day));
+
+    // A long hiatus, then twelve weeks of weekly releases. The game is weekly.
+    const resumed = [0, 7, 14, 21 + 90, ...weekly(12, 21 + 90 + 7)];
+    const last = resumed[resumed.length - 1];
+    assert.equal(cadenceOf(from(resumed), "t", undefined, nowAfter(last + 1)), "About weekly");
+
+    // The same hiatus, but only three releases since: it is still inside the window and still says
+    // nothing reliable, so the cadence stays unreported rather than being guessed at.
+    const barelyResumed = [0, 7, 14, 21 + 90, 21 + 97, 21 + 104];
+    assert.equal(cadenceOf(from(barelyResumed), "t", undefined, nowAfter(21 + 105)), undefined);
+
+    // And the abandonment case from round 1 still fails, because its gap is in the recent window.
+    const abandoned = [0, 7, 14, 21, 28, 28 + 730];
+    assert.equal(cadenceOf(from(abandoned), "t", undefined, nowAfter(28 + 731)), undefined);
+});
+
 test("a tracker the registry has lost fails the build rather than vanishing from the table", () => {
     // Codex, PR #65: this used to `continue`, so drift published a table quietly missing a game while
     // still passing the "not empty" check — and the publish job does not run these tests.
