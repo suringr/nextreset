@@ -487,6 +487,30 @@ this is a summary, and that list is the source of truth.
 - **Red Dead Redemption 2 — last update.** The Newswire is a JavaScript shell whose articles carry no
   date; RSS and the sitemap 404. The page publishes a single date with no history behind it, and
   countdowns for this game were stopped as a source decision.
+### Trackers rescued
+
+Two trackers were held back from the withheld list for a rescue attempt, and both worked, for the same
+reason: the history was already inside a response the build was paying for, and nobody had read it.
+
+- **Warzone — last patch.** I withheld this one first, on the premise that the Call of Duty patch notes
+  page publishes one card per game and keeps no archive. **That was wrong.** Beneath the current card
+  the page carries a "View past patch notes" accordion listing previous articles with their dates and
+  links, scoped to each game's tile. The adapter now reads the Warzone accordion for history while the
+  card stays authoritative for the headline — which is the distinction V1 got backwards when it read
+  that list for the headline and published a date 16 days old. The decision was reversed before merge.
+- **Minecraft — last release.** Rescued in the same round. The adapter stored only `latest.release` and
+  let history accumulate from its first run, so after a month the page still had one row. Mojang's
+  version manifest has always carried **every version Minecraft has ever had**, with its type and its
+  release instant, in the very response the build already fetches — it simply was not read. The adapter
+  now keeps the twelve most recent *releases* (the manifest's own `type` decides; snapshots and release
+  candidates are test builds and `/minecraft/last-release/` has always meant releases), each evidenced
+  by that manifest and linked to Mojang's changelogs page. **No extra request, no model call, no new
+  source**: eleven rows of history for bytes already paid for.
+
+Neither adapter fetches anything it did not fetch before. Where a response comes back unchanged but
+its body arrived anyway (a 200 whose hash matched), it is still parsed, so a deploy onto an existing
+knowledge branch imports the history immediately instead of waiting for the source to change. A true
+304 carries no body and cannot be read; the next change to the source completes the import.
 
 Being withheld costs a page its sitemap entry and its footer link. It does not remove the route, the
 provider, the stored data or the homepage card, and it is reversed by deleting one entry from that list.

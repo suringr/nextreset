@@ -103,8 +103,12 @@ test("every withheld tracker is a real page, with a reason, and is not listed", 
     }
     // And the trackers kept are listed, so "withheld" and "listed" cannot both drift to the same answer.
     assert.equal(isListed("lol/next-patch/index.html"), true);
-    assert.equal(isListed("minecraft/last-release/index.html"), true, "eligible for rescue, still listed");
-    assert.equal(isListed("warzone/last-patch/index.html"), true, "eligible for rescue, still listed");
+    // Both were held back from #64's list for a rescue attempt in PR 3, and both worked, for the same
+    // reason: the history was already inside a response the build was paying for and nobody had read
+    // it. Mojang's manifest lists every version ever; the Call of Duty page carries a "View past patch
+    // notes" archive beneath the current card.
+    assert.equal(isListed("minecraft/last-release/index.html"), true, "rescued: the manifest carries its history");
+    assert.equal(isListed("warzone/last-patch/index.html"), true, "rescued: the page's own archive carries its history");
     // Only a tracker can be listed: the homepage and the arcade are not trackers and never appear there.
     assert.equal(isListed("index.html"), false);
     assert.equal(isListed("play/index.html"), false);
