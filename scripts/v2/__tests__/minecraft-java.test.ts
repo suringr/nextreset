@@ -346,3 +346,32 @@ test("a legacy store that reached the cap the slow way is still upgraded", async
         );
     }
 });
+
+test("releases too old for this parser to reach do not keep the manifest being re-read", async () => {
+    // Codex, #66 round 4: settlement asked for a link on *every* stored release, and a store that has
+    // accumulated more than the cap holds older events this parser will never emit again. Requiring a
+    // link on those made `settled` permanently false, so every identical 200 re-read the whole manifest
+    // and learned nothing — forever.
+    const { store } = tempStore();
+    const serve = () => fakeTransport({ http: [{ body: HISTORY, headers: { "content-type": "application/json" } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(serve()), store, new Date("2026-11-11T00:00:00Z"));
+
+    // Three releases older than anything the manifest still lists, evidenced the old way: no link, and
+    // nothing this run can do about them.
+    const before = store.load("minecraft");
+    const ancient = ["24.0", "23.9", "23.8"].map((id, i) => ({
+        key: `minecraft/last-release/${id}`, game: "minecraft", topic: "last-release", kind: "version" as const,
+        label: id, status: "observed" as const, at: `2023-0${i + 1}-01T00:00:00.000Z`,
+        precision: "exact" as const, timezone: "UTC",
+        firstSeen: `2023-0${i + 1}-01T00:00:00.000Z`, lastVerified: `2023-0${i + 1}-01T00:00:00.000Z`,
+        publishState: "published" as const
+    }));
+    store.save({ ...before, events: [...before.events, ...ancient] });
+    assert.ok(store.load("minecraft").events.length > KEPT_RELEASES, "this test needs a store past the cap");
+
+    const again = serve();
+    const run = await runTracker(game, topic, createMinecraftJavaAdapter(again), store, new Date("2026-11-11T06:00:00Z"));
+    assert.deepEqual(run.work, { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 },
+        "the manifest was re-read for releases this parser can never reach");
+    assert.deepEqual([run.created, run.changes.length], [0, 0]);
+});

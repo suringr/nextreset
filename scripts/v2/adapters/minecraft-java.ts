@@ -208,8 +208,15 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
         // those rows pointing at raw launcher JSON until the manifest hash happened to change. So the
         // question is whether the store holds as much as a run would take *and* every event already
         // carries the link, which is self-clearing and needs no version marker.
-        const held = knowledge.events.filter(event => event.topic === topic.type);
-        const settled = held.length >= KEPT_RELEASES && held.every(event =>
+        //
+        // Asked only of the releases a run could actually reach. A store that has accumulated more
+        // than the cap over the years holds older events this parser will never emit again, so
+        // requiring a link on those would make `settled` permanently false and re-read the manifest on
+        // every run forever, learning nothing each time.
+        const held = knowledge.events
+            .filter(event => event.topic === topic.type)
+            .sort((a, b) => Date.parse(b.at ?? "") - Date.parse(a.at ?? ""));
+        const settled = held.length >= KEPT_RELEASES && held.slice(0, KEPT_RELEASES).every(event =>
             knowledge.claims.some(claim =>
                 claim.eventKey === event.key && claim.field === "at" && claim.linkUrl === MINECRAFT_CHANGELOGS_PAGE));
         if (unchanged && (!fetched.document || settled)) return skipped;

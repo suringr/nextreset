@@ -220,8 +220,15 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
         // every event has to carry its article link, for the same reason Minecraft's does — a count
         // cannot tell a completed import from a store that accumulated the same number one run at a
         // time. Here the legacy claims already carried a link, so an upgraded store settles at once.
-        const held = knowledge.events.filter(event => event.topic === topic.type);
-        const settled = held.length > KEPT_ARCHIVE && held.every(event =>
+        //
+        // Asked only of the patches a run could actually reach: the card and the archive behind it. A
+        // store that has accumulated more than that over the years holds older events this parser will
+        // never emit again, and requiring a link on those would re-read the page forever for nothing.
+        const reachable = KEPT_ARCHIVE + 1;
+        const held = knowledge.events
+            .filter(event => event.topic === topic.type)
+            .sort((a, b) => Date.parse(b.at ?? "") - Date.parse(a.at ?? ""));
+        const settled = held.length >= reachable && held.slice(0, reachable).every(event =>
             knowledge.claims.some(claim => claim.eventKey === event.key && claim.field === "at" && !!claim.linkUrl));
         if (unchanged && (!fetched.document || settled)) return skipped;
 
