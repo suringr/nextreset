@@ -99,8 +99,21 @@ jobs:
       # Commit and push knowledge changes (fast-forward only, never force) and detach the
       # worktree. Must run before the publish step, which wipes the working tree.
       - name: Persist knowledge branch
+        id: persist
         continue-on-error: true
         run: bash .github/scripts/knowledge-persist.sh
+
+      # The publish step wipes the working tree, and build/ goes with it. Whatever this run needs to
+      # report has to be read off disk before that happens.
+      - name: Record how this run went
+        id: health
+        if: always()
+        run: |
+          if [ -f build/refresh.failed ]; then
+            echo "refresh=failed" >> "$GITHUB_OUTPUT"
+          else
+            echo "refresh=ok" >> "$GITHUB_OUTPUT"
+          fi
 
       # Failed browser fetches write screenshots/HTML to build/debug (never under public/).
       # Must run before the publish step, which wipes the working tree.
@@ -135,3 +148,27 @@ jobs:
           git add -A
           git commit -m "chore(site): publish dist" || echo "No changes to commit"
           git push -f origin gh-pages
+
+      # Deploy, then complain -- not complain instead of deploying.
+      #
+      # A failed refresh or a knowledge branch that would not persist are both survivable: the static
+      # site, the arcade and every stored value still publish, and the pages say honestly what they do
+      # not know. What is not survivable is nobody finding out. `refresh:data || true` kept this job
+      # green while Fortnite's data sat stale from 2026-04-05, and a knowledge push that silently fails
+      # makes every run re-read sources it has already read.
+      #
+      # So the publish happens first and the run goes red afterwards, which is the only combination that
+      # keeps visitors served and the owner informed.
+      - name: Fail the run if it was degraded
+        if: always()
+        run: |
+          degraded=0
+          if [ "${{ steps.health.outputs.refresh }}" = "failed" ]; then
+            echo "::error title=Degraded publish::the data refresh failed; the site published its last known good values"
+            degraded=1
+          fi
+          if [ "${{ steps.persist.outcome }}" = "failure" ]; then
+            echo "::error title=Degraded publish::the knowledge branch did not persist; this run's learning is lost and sources will be re-read"
+            degraded=1
+          fi
+          exit $degraded

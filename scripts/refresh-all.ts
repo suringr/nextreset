@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import { FailureType, ProviderResult, StaleResult, UnavailableResult, Provider } from "./types";
 import { writeLiveJson, writeLkgJson, readLkgData, ensureDataDirs } from "./lib/data-output";
+import { clearRefreshFailed } from "./refresh-failed";
 import { JsonKnowledgeStore } from "./v2/store";
 import { runV2Tracker } from "./v2/pipeline";
 import { AiGate } from "./v2/cost/budget";
@@ -169,6 +170,10 @@ async function main() {
     console.log("=".repeat(60));
     console.log("NextReset Data Refresh (LKG Enabled)");
     console.log("=".repeat(60));
+
+    // Any marker left over belongs to an earlier run. Cleared here so the publish gate and the workflow
+    // are always reading this run's outcome and never an older one's.
+    clearRefreshFailed();
 
     try {
         ensureDataDirs();
