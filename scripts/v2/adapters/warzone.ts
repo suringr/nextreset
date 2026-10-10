@@ -37,7 +37,7 @@ import * as crypto from "crypto";
 import { Confidence } from "../../types";
 import { Adapter } from "../adapter";
 import { Claim, Document, SourceState } from "../domain";
-import { countExtractionAttempt, recordExtraction, shouldReadInFull, smartFetch } from "../fetch/smart-fetch";
+import { countExtractionAttempt, recordExtraction, remainingExtractionReads, smartFetch } from "../fetch/smart-fetch";
 import { Transport } from "../fetch/transport";
 import { eventKey } from "../identity";
 
@@ -223,9 +223,12 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
         // Something to learn, this capability has not had its read yet, and it has budget left. The
         // archive is the realistic case for the version bound: the accordion lists what Activision chose
         // to keep, which can be fewer than `KEPT_ARCHIVE` entries, so `settled` may never become true.
-        const unconditional = shouldReadInFull(previous, EXTRACTION_VERSION, settled);
+        // What is left of this capability's budget. Passed to `retries` as well as deciding the request
+        // shape, so a single call -- retries included -- cannot spend more than remains.
+        const allowance = remainingExtractionReads(previous, EXTRACTION_VERSION, settled);
+        const unconditional = allowance > 0;
 
-        const fetched = await smartFetch(source.url, { expect: { kind: "text", minWords: 20, markers: ["Patch Notes"] }, allowRender: false, previous, transport, label: `${game.id}-${topic.type}`, now, unconditional });
+        const fetched = await smartFetch(source.url, { expect: { kind: "text", minWords: 20, markers: ["Patch Notes"] }, allowRender: false, previous, transport, label: `${game.id}-${topic.type}`, now, unconditional, ...(unconditional ? { retries: allowance - 1 } : {}) });
         let sourceStates: SourceState[] = [{ id: source.id, url: source.url, ...fetched.state }];
         // Spent when the request goes out, not when it succeeds -- see the Minecraft adapter.
         if (unconditional) sourceStates = [countExtractionAttempt(sourceStates[0], previous, EXTRACTION_VERSION, fetched.requests)];

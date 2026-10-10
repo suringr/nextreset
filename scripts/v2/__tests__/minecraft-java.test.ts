@@ -538,3 +538,47 @@ test("a rollback does not hand a newer version a fresh budget", async () => {
     assert.deepEqual(after.extractionAttempts, { version: EXTRACTION_VERSION + 4, tries: MAX_EXTRACTION_ATTEMPTS },
         "the older adapter wiped a newer version's spent attempts");
 });
+
+test("one call cannot spend more than the budget has left", async () => {
+    // Codex (#68): the budget was checked before the call and charged after it, so a run with one
+    // attempt already spent could still send three more — a 5xx, a 5xx and a parse-invalid 200 — for
+    // four validator-free requests against a cap of three. The remaining allowance is now passed to
+    // `retries`, so a single call cannot overspend it.
+    const { store } = tempStore();
+    const BROKEN = '{"latest":{"release":"26.3"},"versions":[]}';
+
+    // Burn one attempt on a parse that fails without retrying (a clean 200 that does not parse).
+    await runTracker(game, topic, createMinecraftJavaAdapter(
+        fakeTransport({ http: [{ body: BROKEN, headers: { "content-type": "application/json" } }] })), store, NOW);
+    assert.equal(store.load("minecraft").sources[0].extractionAttempts?.tries, 1, "this test needs exactly one attempt spent");
+
+    // Two left. A flaky run must stop at two requests, not three.
+    const flaky = fakeTransport({ http: [{ status: 503 }, { status: 503 }, { body: BROKEN, headers: { "content-type": "application/json" } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(flaky), store, new Date("2026-09-18T00:00:00Z"));
+    assert.equal(flaky.gets.length, 2, `the call issued ${flaky.gets.length} requests with only 2 of the budget left`);
+
+    const state = store.load("minecraft").sources[0];
+    assert.equal(state.extractionAttempts?.tries, MAX_EXTRACTION_ATTEMPTS, "the budget should now be exactly spent");
+    assert.equal(shouldReadInFull(state, EXTRACTION_VERSION, false), false, "the budget is spent and should be closed");
+});
+
+test("charging an older version does not discard a newer version's spent budget", async () => {
+    // Codex (#68), the other half of the rollback hole: version N exhausts its attempts, the deployment
+    // rolls back to M, and because M has never been recorded the store is unsettled and M is allowed its
+    // own read. Charging that read used to overwrite N's counter, and M succeeding then cleared it — so
+    // redeploying N found a full budget again.
+    const { store } = tempStore();
+    const BROKEN = '{"latest":{"release":"26.3"},"versions":[]}';
+    await runTracker(game, topic, createMinecraftJavaAdapter(
+        fakeTransport({ http: [{ body: BROKEN, headers: { "content-type": "application/json" } }] })), store, NOW);
+
+    // A newer capability has already tried here and given up.
+    const before = store.load("minecraft");
+    store.save({ ...before, sources: before.sources.map(s => ({ ...s, extractionAttempts: { version: EXTRACTION_VERSION + 4, tries: MAX_EXTRACTION_ATTEMPTS } })) });
+
+    await runTracker(game, topic, createMinecraftJavaAdapter(
+        fakeTransport({ http: [{ body: BROKEN, headers: { "content-type": "application/json" } }] })), store, new Date("2026-09-19T00:00:00Z"));
+
+    assert.deepEqual(store.load("minecraft").sources[0].extractionAttempts, { version: EXTRACTION_VERSION + 4, tries: MAX_EXTRACTION_ATTEMPTS },
+        "an older version's charge overwrote a newer version's exhausted budget");
+});

@@ -31,7 +31,7 @@ import { Confidence } from "../../types";
 import { failureKindFromFetch } from "../reasons";
 import { Adapter } from "../adapter";
 import { Claim, Document, SourceState } from "../domain";
-import { FetchedDocument, countExtractionAttempt, recordExtraction, shouldReadInFull, smartFetch } from "../fetch/smart-fetch";
+import { FetchedDocument, countExtractionAttempt, recordExtraction, remainingExtractionReads, smartFetch } from "../fetch/smart-fetch";
 import { Transport } from "../fetch/transport";
 import { eventKey } from "../identity";
 import { indexJsonObjects } from "../json-quote";
@@ -211,9 +211,12 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
                 claim.eventKey === event.key && claim.field === "at" && claim.linkUrl === MINECRAFT_CHANGELOGS_PAGE));
 
         // There is something to learn, this capability has not had its read yet, and it has budget left.
-        const unconditional = shouldReadInFull(previous, EXTRACTION_VERSION, settled);
+        // What is left of this capability's budget. Passed to `retries` as well as deciding the request
+        // shape, so a single call -- retries included -- cannot spend more than remains.
+        const allowance = remainingExtractionReads(previous, EXTRACTION_VERSION, settled);
+        const unconditional = allowance > 0;
 
-        const fetched = await smartFetch(source.url, { expect: { kind: "json" }, allowRender: false, previous, transport, label: `${game.id}-${topic.type}`, now, unconditional });
+        const fetched = await smartFetch(source.url, { expect: { kind: "json" }, allowRender: false, previous, transport, label: `${game.id}-${topic.type}`, now, unconditional, ...(unconditional ? { retries: allowance - 1 } : {}) });
         let sourceStates: SourceState[] = [{ id: source.id, url: source.url, ...fetched.state }];
         // Spent the moment the request goes out, before anything can be made of the response. A transport
         // error, a 5xx or a parse that throws all consume one, which is what keeps a permanently broken

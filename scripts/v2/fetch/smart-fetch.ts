@@ -75,10 +75,22 @@ export const MAX_EXTRACTION_ATTEMPTS = 3;
  * disagreeing.
  */
 export function shouldReadInFull(previous: SourceFetchState | undefined, version: number, settled: boolean): boolean {
-    if (settled) return false;
-    if ((previous?.extractionVersion ?? 0) >= version) return false;
+    return remainingExtractionReads(previous, version, settled) > 0;
+}
+
+/**
+ * How many validator-free requests this capability may still issue.
+ *
+ * The budget is checked once, before the call, but one `smartFetch` can issue several: a transport
+ * error or a 5xx is retried, and under `unconditional` every retry is also validator-free. Checking
+ * before and charging after let a run with one attempt already spent send three more (Codex, #68). The
+ * caller passes this to `retries` so a single call cannot overspend what is left.
+ */
+export function remainingExtractionReads(previous: SourceFetchState | undefined, version: number, settled: boolean): number {
+    if (settled) return 0;
+    if ((previous?.extractionVersion ?? 0) >= version) return 0;
     const spent = previous?.extractionAttempts?.version === version ? previous.extractionAttempts.tries : 0;
-    return spent < MAX_EXTRACTION_ATTEMPTS;
+    return Math.max(0, MAX_EXTRACTION_ATTEMPTS - spent);
 }
 
 /**
@@ -89,7 +101,12 @@ export function shouldReadInFull(previous: SourceFetchState | undefined, version
  * made the budget three times looser than it reads (Codex, #68).
  */
 export function countExtractionAttempt<T extends SourceFetchState>(state: T, previous: SourceFetchState | undefined, version: number, requests = 1): T {
-    const spent = previous?.extractionAttempts?.version === version ? previous.extractionAttempts.tries : 0;
+    const held = previous?.extractionAttempts;
+    // A newer version's exhausted budget outranks this charge. Overwriting it (Codex, #68) let a
+    // rolled-back adapter at version M replace N's counter, and M succeeding then cleared it -- so
+    // redeploying N found a full budget and repeated a read it had already given up on.
+    if (held !== undefined && held.version > version) return state;
+    const spent = held?.version === version ? held.tries : 0;
     return { ...state, extractionAttempts: { version, tries: spent + Math.max(1, requests) } };
 }
 
