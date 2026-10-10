@@ -114,6 +114,11 @@ jobs:
           else
             echo "refresh=ok" >> "$GITHUB_OUTPUT"
           fi
+          # Degradation nobody has accepted: a provider that is not fresh while its page is still
+          # offered to readers. A topic already written down as stopped in EDITORIAL_NOINDEX is
+          # excluded, so Fortnite being unreachable does not hold the run red for ever and drown out
+          # the next real regression. Annotations naming each one are printed here too.
+          node build/refresh-health-report.js >> "$GITHUB_OUTPUT" || echo "degraded=0" >> "$GITHUB_OUTPUT"
 
       # Failed browser fetches write screenshots/HTML to build/debug (never under public/).
       # Must run before the publish step, which wipes the working tree.
@@ -162,13 +167,22 @@ jobs:
       - name: Fail the run if it was degraded
         if: always()
         run: |
-          degraded=0
+          bad=0
           if [ "${{ steps.health.outputs.refresh }}" = "failed" ]; then
-            echo "::error title=Degraded publish::the data refresh failed; the site published its last known good values"
-            degraded=1
+            echo "::error title=Degraded publish::the data refresh did not finish; the site published its last known good values"
+            bad=1
           fi
           if [ "${{ steps.persist.outcome }}" = "failure" ]; then
             echo "::error title=Degraded publish::the knowledge branch did not persist; this run's learning is lost and sources will be re-read"
-            degraded=1
+            bad=1
           fi
-          exit $degraded
+          # The case the exit code cannot see. `refresh-all` returns 0 unless more than half of all
+          # providers are unavailable, and a *stale* provider never counts at all -- so a tracker
+          # quietly serving last-known-good data for six months left every run green, which is exactly
+          # how Fortnite went unnoticed from 2026-04-05.
+          count="${{ steps.health.outputs.degraded }}"
+          if [ -n "$count" ] && [ "$count" != "0" ]; then
+            echo "::error title=Degraded publish::$count provider(s) are not fresh while their pages are still offered to readers; see the warnings above"
+            bad=1
+          fi
+          exit $bad

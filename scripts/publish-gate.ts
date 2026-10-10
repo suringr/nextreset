@@ -19,6 +19,7 @@ import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
 import { declaresNoindex } from "./indexing";
+import { readHealth, unexpectedlyDegraded } from "./refresh-health";
 import { pagePaths, trackerPages } from "./site-map";
 
 /** Strings that mean the renderer did not finish. None of them should ever reach a reader. */
@@ -157,10 +158,25 @@ export function inspect(distDir: string): GateReport {
         }
     }
 
-    // Reported, never fatal. The refresh failing is an ordinary day and the pages say so honestly; this
-    // exists so the run is not silent about it.
+    // Reported, never fatal. A provider failing is an ordinary day and the pages say so honestly; this
+    // exists so the run is not silent about it. The workflow decides what turns the run red.
     if (fs.existsSync(path.join(distDir, "..", "build", "refresh.failed"))) {
-        findings.push({ level: "warn", message: "the data refresh failed this run; the site is publishing its last known good values" });
+        findings.push({ level: "warn", message: "the data refresh did not finish this run; the site is publishing its last known good values" });
+    }
+    const health = readHealth();
+    if (health) {
+        for (const provider of health.providers.filter(p => p.status !== "fresh")) {
+            findings.push({
+                level: "warn",
+                message: `${provider.game}/${provider.type} is ${provider.status}${provider.detail ? `: ${provider.detail}` : ""}`
+            });
+        }
+        for (const provider of unexpectedlyDegraded(health)) {
+            findings.push({
+                level: "warn",
+                message: `${provider.game}/${provider.type} is ${provider.status} and its page is still offered to readers — nobody has accepted this stop`
+            });
+        }
     }
 
     return { findings, pages: pages.length, indexable, noindex, sitemap };
