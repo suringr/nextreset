@@ -52,8 +52,8 @@ export const gamePages: GamePage[] = [
         typeTitle: 'Season End',
         title: 'Fortnite',
         kicker: 'Battle Royale',
-        metaDescription: 'Track the exact countdown to when the current Fortnite season ends and the next one begins. Updated automatically from official Epic Games sources.',
-        aboutTracker: 'This page tracks the official end date for the current Fortnite Battle Pass season. The countdown is sourced directly from the official Fortnite Battle Pass page on fortnite.com, so you always see the real date — not a community guess.',
+        metaDescription: "Fortnite season end, read from Epic's official Battle Pass page - a source that has refused our servers since April 2026. What that means, and what a season change brings.",
+        aboutTracker: 'This page tracks the end date of the current Fortnite Battle Pass season, read from the official Battle Pass page on fortnite.com. Since 5 April 2026 that source has refused requests from our servers. When it does, this page shows no date rather than an estimate.',
         whatIsIt: 'Every few months, Epic Games launches a new Fortnite season with a completely refreshed Battle Pass, new map changes, fresh weapons, and unique gameplay mechanics. Each season typically lasts 10-13 weeks and introduces a new theme that reshapes the entire game experience. Knowing when the current season ends helps you plan your remaining Battle Pass challenges and prepare for whatever comes next.',
         whatChanges: [
             'New Battle Pass with 100+ tiers of cosmetics',
@@ -64,9 +64,9 @@ export const gamePages: GamePage[] = [
             'Competitive ranked season may reset'
         ],
         faq: [
-            { q: 'When does the current Fortnite season end?', a: 'The exact end date is shown in the countdown above. This date is pulled directly from the official Fortnite Battle Pass page and updates automatically.' },
+            { q: "Why does this page sometimes show no season end date?", a: 'Because the only sources we accept are Epic’s own, and since 5 April 2026 they have returned an HTTP 403 challenge to our servers rather than a page. We do not work around that challenge, and we do not take season dates from community trackers or unofficial API mirrors, accurate though those often are. When Epic’s page answers, the date appears here; when it does not, we would rather show nothing than a guess.' },
             { q: 'What happens when a Fortnite season ends?', a: 'When a season ends, your Battle Pass progress resets, the map typically changes, and a new set of weapons and items are introduced. Any unearned Battle Pass rewards from the previous season become unavailable.' },
-            { q: 'Can Fortnite seasons be extended?', a: 'Yes, Epic Games occasionally extends seasons beyond their originally announced end date. Our tracker updates automatically when this happens, so the countdown always reflects the latest official date.' }
+            { q: 'Where can I see the official season end date?', a: 'Epic shows the current season’s end date on the Battle Pass screen inside Fortnite itself, and announces season changes on fortnite.com. Those are the authoritative places. We would rather point you to them than restate a date we cannot verify.' }
         ]
     },
     {
@@ -113,7 +113,7 @@ export const gamePages: GamePage[] = [
         ],
         faq: [
             { q: 'How often does VALORANT get updated?', a: 'VALORANT follows a two-week patch cycle with alternating major and minor patches. Major patches bring bigger gameplay changes while minor patches focus on fixes.' },
-            { q: 'When did the last VALORANT patch come out?', a: 'The exact date of the most recent patch is shown above. This updates automatically whenever Riot releases a new game update.' },
+            { q: 'When did the last VALORANT patch come out?', a: 'The exact date of the most recent patch is shown above. It is the publication date Riot gave that patch in the official patch notes, not a date we derived.' },
             { q: 'Does VALORANT have downtime during patches?', a: 'Yes, VALORANT typically goes offline for a few hours during patch deployment. Riot usually announces the maintenance window in advance on their social media channels.' }
         ]
     },
@@ -256,7 +256,7 @@ export const gamePages: GamePage[] = [
             'Accompanying in-game events and activities'
         ],
         faq: [
-            { q: 'When does the current Genshin banner end?', a: 'The exact end date is shown in the countdown above. Each version typically has two banner phases, each lasting about 3 weeks.' },
+            { q: 'When does the current Genshin banner end?', a: 'Each version has two banner phases, and a phase typically runs about three weeks. When HoYoverse has announced the current phase’s end, this page shows that date at the top — and, because the three server regions reach that local time at different moments, the exact UTC instant for each one.' },
             { q: 'Does my pity reset when the banner changes?', a: 'Pity carries over between banners of the same type (character event wish). If you\'re at 70 pulls on one character banner, you\'ll still be at 70 when the next character banner starts.' },
             { q: 'How do I know which characters are coming next?', a: 'HoYoverse typically announces upcoming banners through the official Genshin Impact social media channels and in-game notices a few days before the current banner ends.' }
         ]

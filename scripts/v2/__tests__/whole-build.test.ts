@@ -242,6 +242,43 @@ test("no page promises a check frequency or invents a community", () => {
     }
 });
 
+// The Fortnite page told readers its date "is pulled directly from the official Fortnite Battle Pass
+// page and updates automatically", in prose and inside FAQPage schema, for the six months after that
+// source began answering 403. Promising future automatic behaviour is the same class of claim as
+// promising a check frequency, and it is a promise no source lets us keep: any publisher can go dark
+// tomorrow exactly as Epic did. A page may say where a value came from; it may not say what will
+// happen next.
+test("no page promises that it updates itself", () => {
+    for (const page of site.pages) {
+        const html = read(page);
+        for (const promise of [/updates? automatically/i, /updated automatically/i, /always reflects/i]) {
+            assert.ok(!promise.test(html), `${page} promises automatic updating, which no source guarantees`);
+        }
+    }
+});
+
+// The same page referred readers to "the countdown above" while displaying no date at all. A page that
+// cannot answer its question must not describe an answer it is not showing -- in the document or in the
+// structured data, which is the copy that outlives the page in search results.
+test("a tracker with no value does not describe one", () => {
+    let checked = 0;
+    for (const page of trackerPages) {
+        const tracker = trackerOf(read(page), page)!;
+        const file = path.join(site.dir, "data", `${tracker.game}.${tracker.type}.json`);
+        if (!fs.existsSync(file)) continue;
+        const data = JSON.parse(fs.readFileSync(file, "utf8")) as TrackerData;
+        // Asked of the data rather than of the rendered string, so the guard holds whatever wording the
+        // "no value" headline takes in future.
+        if (hasVerifiedValue(data) && !isUnanswered(data, NOW)) continue;
+        checked++;
+        const html = read(page);
+        for (const described of [/countdown above/i, /shown in the countdown/i, /date is shown in the/i]) {
+            assert.ok(!described.test(html), `${page} has no value to show but still points at one`);
+        }
+    }
+    assert.ok(checked > 0, "no unanswered tracker in this build — the guard checked nothing");
+});
+
 test("the privacy policy still describes the site that exists", () => {
     const privacy = read("privacy/index.html");
     assert.match(privacy, /includes the Google AdSense site code/);
