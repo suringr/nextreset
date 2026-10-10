@@ -71,6 +71,53 @@ export function parseLatestJavaRelease(text: string): JavaRelease {
     return { id, at: at.toISOString(), releaseTime: entry.releaseTime, excerpt };
 }
 
+/**
+ * How many releases the page keeps.
+ *
+ * The manifest lists every version Minecraft has ever had — hundreds — and importing all of them
+ * would be a data dump rather than a page. Twelve is what `render-data-blocks` will draw (its current
+ * event plus eleven rows of history), so storing more would cost bytes on every run to show nothing.
+ */
+export const KEPT_RELEASES = 12;
+
+/**
+ * The most recent releases the manifest names, newest first.
+ *
+ * The same response `parseLatestJavaRelease` reads. It already contains every version with its id,
+ * its type and its release instant, so the whole of this page's history is in bytes the build has
+ * already paid for: no second request, no new source, no crawl.
+ *
+ * Releases only, as the page has always promised. Snapshots and release candidates are test builds,
+ * `/minecraft/last-release/` is about releases, and mixing them in would quietly change what the page
+ * means. The manifest's own `type` field is what decides, so this is the source's distinction and not
+ * ours. Ordered by `releaseTime`, never by position: the array's order is Mojang's business.
+ */
+export function parseRecentJavaReleases(text: string, limit = KEPT_RELEASES): JavaRelease[] {
+    let data: any;
+    try {
+        data = JSON.parse(text);
+    } catch {
+        throw new Error("Invalid JSON in Mojang version manifest");
+    }
+    const versions = data?.versions;
+    if (!Array.isArray(versions)) throw new Error("No versions in Mojang version manifest");
+    const quoted = indexJsonObjects(text, "id");
+    const releases: JavaRelease[] = [];
+    for (const entry of versions) {
+        if (entry?.type !== "release") continue;
+        if (typeof entry.id !== "string" || typeof entry.releaseTime !== "string") continue;
+        const at = new Date(entry.releaseTime);
+        if (isNaN(at.getTime())) continue;
+        const excerpt = quoted.get(entry.id);
+        // A release that cannot be quoted verbatim is not evidence, and history without evidence is
+        // just a list. Skipped rather than fatal: one unquotable old version must not cost the page
+        // the current release, which parseLatestJavaRelease checks for separately and strictly.
+        if (!excerpt) continue;
+        releases.push({ id: entry.id, at: at.toISOString(), releaseTime: entry.releaseTime, excerpt });
+    }
+    return releases.sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, limit);
+}
+
 function sha(text: string): string {
     return crypto.createHash("sha256").update(text).digest("hex");
 }
@@ -81,7 +128,21 @@ export function javaReleaseEvidence(release: JavaRelease, manifest: FetchedDocum
     const documentId = manifest.textHash;
     return {
         document: { id: documentId, url: manifest.finalUrl, sourceId, fetchedAt: manifest.fetchedAt, title: "Mojang version manifest", fetchMode: manifest.mode, confidence: Confidence.High },
-        claim: { id: sha(`${documentId}|${key}|at|${release.at}`).slice(0, 24), documentId, eventKey: key, field: "at", value: release.at, method: "deterministic", quote: release.excerpt, extractedAt: manifest.fetchedAt }
+        claim: {
+            id: sha(`${documentId}|${key}|at|${release.at}`).slice(0, 24),
+            documentId,
+            eventKey: key,
+            field: "at",
+            value: release.at,
+            method: "deterministic",
+            quote: release.excerpt,
+            // What the evidence is and what a reader should be given are not the same URL. The manifest
+            // is the document this was read from and the thing that can be quoted; the changelogs page
+            // is where Mojang writes up a release for people. A row linking to raw launcher JSON would
+            // be citing our working rather than their announcement.
+            linkUrl: MINECRAFT_CHANGELOGS_PAGE,
+            extractedAt: manifest.fetchedAt
+        }
     };
 }
 
@@ -123,16 +184,45 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
             return { events: [], failure: error instanceof Error ? error.message : String(error), failureKind: "extraction-failed", sourceStates };
         }
 
-        // Evidence only when this release instant is new: a manifest that changed for snapshots adds no copies.
-        const key = eventKey(game.id, topic.type, release.id);
-        const alreadyEvidenced = knowledge.claims.some(c => c.eventKey === key && c.field === "at" && c.value === release.at);
-        const evidence = alreadyEvidenced ? undefined : javaReleaseEvidence(release, fetched.document!, game.id, topic.type, source.id);
+        // The releases this manifest names, current one first.
+        //
+        // The page used to publish one date and nothing else, because this adapter stored only
+        // `latest.release` and let history accumulate from the first run onwards — which after a month
+        // was still one row. The manifest has always carried the whole list; it simply was not read.
+        const kept = parseRecentJavaReleases(fetched.document!.body);
+        const releases = [release, ...kept.filter(previous => previous.id !== release.id)];
+
+        // Evidence for each, and only where it is new: a manifest that changed for snapshots adds no
+        // copies, and an unchanged response never gets this far.
+        //
+        // Every one of these is genuinely evidenced — the manifest is the document, and each release's
+        // entry is a verbatim quote of it — which is exactly what `blocksFor` requires before it will
+        // list a past event. Storing the history without claims looked like a saving and was really a
+        // way to have the rows and never show them: that rule exists so a rule-generated occurrence
+        // cannot claim a provenance it does not have, and these have one.
+        const documents: Document[] = [];
+        const claims: Claim[] = [];
+        for (const candidate of releases) {
+            const key = eventKey(game.id, topic.type, candidate.id);
+            if (knowledge.claims.some(c => c.eventKey === key && c.field === "at" && c.value === candidate.at)) continue;
+            const evidence = javaReleaseEvidence(candidate, fetched.document!, game.id, topic.type, source.id);
+            if (!documents.some(d => d.id === evidence.document.id)) documents.push(evidence.document);
+            claims.push(evidence.claim);
+        }
+
         return {
-            events: [{ identity: release.id, label: release.id, status: "observed", at: release.at, precision: "exact", timezone: "UTC" }],
+            events: releases.map(candidate => ({
+                identity: candidate.id,
+                label: candidate.id,
+                status: "observed" as const,
+                at: candidate.at,
+                precision: "exact" as const,
+                timezone: "UTC"
+            })),
             // The manifest is authoritative about which release is current: a rolled-back latest.release retires the newer one.
             currentIdentity: release.id,
-            documents: evidence ? [evidence.document] : [],
-            claims: evidence ? [evidence.claim] : [],
+            documents,
+            claims,
             confidence: Confidence.High,
             sourceStates,
             fetch,

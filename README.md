@@ -487,6 +487,24 @@ this is a summary, and that list is the source of truth.
 - **Red Dead Redemption 2 — last update.** The Newswire is a JavaScript shell whose articles carry no
   date; RSS and the sitemap 404. The page publishes a single date with no history behind it, and
   countdowns for this game were stopped as a source decision.
+- **Warzone — last patch.** Rescue attempted and failed. The Call of Duty patch notes page publishes
+  **one card per game** — Warzone, Black Ops, Modern Warfare — each carrying a single `data-date`, and
+  keeps no archive beside them. There is no history in the response however often it is read, so the
+  page can only ever show the current patch date and a link to its article. History accrues one entry
+  per patch cycle (two, at the time of writing), and getting more would mean crawling article archives,
+  which is both out of scope and against this project's cost rules. Remove the entry from
+  `EDITORIAL_NOINDEX` once the store holds enough for the page to be a reference rather than a fact.
+
+### Trackers rescued
+
+- **Minecraft — last release.** Rescued in the same round. The adapter stored only `latest.release` and
+  let history accumulate from its first run, so after a month the page still had one row. Mojang's
+  version manifest has always carried **every version Minecraft has ever had**, with its type and its
+  release instant, in the very response the build already fetches — it simply was not read. The adapter
+  now keeps the twelve most recent *releases* (the manifest's own `type` decides; snapshots and release
+  candidates are test builds and `/minecraft/last-release/` has always meant releases), each evidenced
+  by that manifest and linked to Mojang's changelogs page. **No extra request, no model call, no new
+  source**: eleven rows of history for bytes already paid for.
 
 Being withheld costs a page its sitemap entry and its footer link. It does not remove the route, the
 provider, the stored data or the homepage card, and it is reversed by deleting one entry from that list.
