@@ -109,8 +109,11 @@ export function cadenceOf(knowledge: GameKnowledge | undefined, topic: string, r
     // gap agree would throw away a two-week cycle that genuinely exists, because Riot takes Christmas
     // off. Allowing a quarter of them to disagree keeps that and still rejects Counter-Strike, where
     // Valve ships twice in a day and then not for a month and there is no rhythm to find.
+    // Strictly below, so that a quarter disagreeing is allowed rather than only fewer than a quarter —
+    // which is what the sentence above says, and what `<=` quietly did not do. With four intervals,
+    // three fortnights and one split break is exactly 0.75, and is a fortnightly game.
     const close = gaps.filter(gap => Math.abs(gap - median) <= median * 0.25).length;
-    if (close / gaps.length <= 0.75) return undefined;
+    if (close / gaps.length < 0.75) return undefined;
     // A break is a break; an abandonment is not a rhythm. The ratio alone cannot tell them apart —
     // four weekly gaps and then a two-year silence is four fifths "close to the median", and would
     // have been published as "About weekly" for a game nobody has updated since. An outlier may be

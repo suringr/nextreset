@@ -296,6 +296,15 @@ test("an old hiatus stops counting once the rhythm has resumed", () => {
     // And the abandonment case from round 1 still fails, because its gap is in the recent window.
     const abandoned = [0, 7, 14, 21, 28, 28 + 730];
     assert.equal(cadenceOf(from(abandoned), "t", undefined, nowAfter(28 + 731)), undefined);
+
+    // Codex, PR #65 round 3: exactly a quarter disagreeing is allowed, which is what the rule says.
+    // Three fortnights and one split break is a fortnightly game, and `<=` was rejecting it.
+    const quarterOut = [0, 14, 28, 42, 63];
+    assert.equal(cadenceOf(from(quarterOut), "t", undefined, nowAfter(64)), "About every 2 weeks");
+
+    // A third disagreeing is more than the rule allows, and is still refused.
+    const thirdOut = [0, 14, 28, 49, 70, 91];
+    assert.equal(cadenceOf(from(thirdOut), "t", undefined, nowAfter(92)), undefined);
 });
 
 test("a tracker the registry has lost fails the build rather than vanishing from the table", () => {
