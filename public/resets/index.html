@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="About NextReset — a free, automated game reset and update tracker using official publisher sources. Learn how we work and why we built this.">
-  <meta property="og:title" content="About - NextReset">
-  <meta property="og:description" content="Learn about NextReset, a free automated game reset tracker.">
+  <meta name="description" content="Every game reset, patch and season NextReset tracks, in one table: what it is, how often it comes round, the exact time in UTC, and the same moment in your own time zone.">
+  <meta property="og:title" content="All game reset times - NextReset">
+  <meta property="og:description" content="Every reset, patch and season we track, in one table — in UTC and in your own time zone.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://nextreset.co/og.png">
-  <link rel="canonical" href="https://nextreset.co/about/">
-  <title>About - NextReset</title>
+  <link rel="canonical" href="https://nextreset.co/resets/">
+  <title>All Game Reset Times - NextReset</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/favicon.png">
   <link rel="manifest" href="/site.webmanifest">
@@ -45,7 +45,7 @@
         {
           "@type": "ListItem",
           "position": 2,
-          "name": "About"
+          "name": "Reset times"
         }
       ]
     }
@@ -57,9 +57,9 @@
       <a class="chrome-brand" href="/" aria-label="NextReset">NEXT<i>//</i>RESET</a>
       <nav class="chrome-nav" id="site-nav" aria-label="Site" popover>
         <a href="/#all-games">Trackers</a>
-        <a href="/resets/">Reset times</a>
+        <a href="/resets/" aria-current="page">Reset times</a>
         <a href="/play/">Arcade</a>
-        <a href="/about/" aria-current="page">About</a>
+        <a href="/about/">About</a>
       </nav>
       <div class="chrome-end">
         <p class="chrome-player" id="chrome-player" hidden></p>
@@ -73,57 +73,69 @@
       <nav class="breadcrumbs" aria-label="Breadcrumb">
         <a href="/">Home</a>
         <span class="crumb-sep" aria-hidden="true">›</span>
-        <span aria-current="page">About</span>
+        <span aria-current="page">Reset times</span>
       </nav>
 
-      <h1>About NextReset</h1>
+      <h1>All game reset times</h1>
 
       <p>
-        NextReset is a free, fully automated website that tracks official game resets, updates, and patch releases for popular video games. Our mission is simple: give gamers accurate, honest information about when their games change — sourced directly from game publishers, with zero guesswork.
+        Every reset, patch and season NextReset follows, in one table. Each value is the one its own
+        tracker publishes, read from an official source and shown in UTC — the time zone publishers
+        state their schedules in. If your browser runs JavaScript, the same moment appears in your own
+        time zone beside it.
       </p>
 
-      <h2>Why We Built This</h2>
+      <!-- The table. Every value here is written at build time; the "Your time" column is the only
+           thing a browser adds, and it adds it from the UTC instant already in the row. -->
+      <div class="resets-wrap">
+        <table class="resets">
+          <caption class="visually-hidden">Reset, patch and season times for every game NextReset tracks</caption>
+          <thead>
+            <tr>
+              <th scope="col">Game</th>
+              <th scope="col">What it tracks</th>
+              <th scope="col">How often</th>
+              <th scope="col">When (UTC)</th>
+              <th scope="col">Your time</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody data-nr-region="resets">
+          </tbody>
+        </table>
+      </div>
+
+      <h2>How to read this</h2>
       <p>
-        If you've ever searched "when does Fortnite season end" or "GTA Online weekly reset time," you've probably landed on pages full of speculation, outdated information, or clickbait. We got tired of that. NextReset was built to be the opposite — a clean, fast site that shows you verified data from official sources and nothing else.
+        <strong>When (UTC)</strong> is the value exactly as the official source states it. Where a
+        publisher announces a day without a time — Riot's patch schedule does this — the row shows the
+        date alone, because a time would be ours rather than theirs.
+      </p>
+      <p>
+        <strong>Your time</strong> is that same instant in the time zone your device is set to. It is
+        only filled in where the source gave an exact time; a date announced without one is the same
+        date almost everywhere, and converting it would invent a moment nobody published.
+      </p>
+      <p>
+        <strong>How often</strong> is filled in two ways, and left empty when neither applies. GTA
+        Online's weekly reset is a rule Rockstar publishes, so it is quoted as a rule. The rest is read
+        from each game's own history: where the published dates are evenly spaced, the spacing is
+        reported as "about every" that long. Counter-Strike has no entry because Valve ships updates
+        when they are ready, and pretending otherwise would be inventing a rhythm.
+      </p>
+      <p>
+        <strong>Status</strong> says how fresh the value is. <em>Live</em> means the source answered on
+        the most recent check. <em>Stale</em> means it did not, and the last verified value is being
+        shown rather than an error. <em>No date</em> means the publisher has not announced one — we show
+        that instead of guessing.
       </p>
 
-      <h2>How It Works</h2>
+      <h2>A note on daylight saving</h2>
       <p>
-        NextReset runs on a fully automated pipeline with no manual intervention required:
-      </p>
-      <ul>
-        <li><strong>Several times a day</strong>, our system checks official game publisher websites, APIs, and news feeds for the latest dates and status information.</li>
-        <li><strong>Data is extracted</strong> using specialized scrapers for each game that understand the specific format of each publisher's announcements.</li>
-        <li><strong>Dates are validated</strong> with sanity checks — we reject anything that looks like a parsing error or falls outside a reasonable range.</li>
-        <li><strong>Results are published</strong> as static JSON files that power the countdown timers you see on each page.</li>
-        <li><strong>If a source fails</strong>, we preserve the last known good data rather than showing errors. You'll see a "Stale" indicator when this happens.</li>
-      </ul>
-
-      <h2>What We Track</h2>
-      <p>
-        We currently track 12 games covering battle royales, MOBAs, tactical shooters, sandbox games, and sports titles. Each game has its own dedicated tracker page with a live countdown, source attribution, confidence rating, and detailed information about what changes during each event.
-      </p>
-      <p>
-        Our sources include official game websites (fortnite.com, counter-strike.net, playvalorant.com), publisher APIs (Roblox status API), official news feeds (Steam RSS, Rockstar Newswire, EA Forums), and published patch schedules (Riot Games).
-      </p>
-
-      <h2>Our Principles</h2>
-      <ul>
-        <li><strong>Official sources only</strong> — We never rely on leaks, rumors, or community speculation.</li>
-        <li><strong>Honest data</strong> — If we don't have a date, we say so. We never fabricate or predict dates.</li>
-        <li><strong>Transparency</strong> — Every tracker shows its source, confidence level, and last update time.</li>
-        <li><strong>Zero maintenance</strong> — The system runs automatically with no manual updates needed.</li>
-        <li><strong>Privacy first</strong> — We don't require accounts, don't track personal data, and use minimal analytics.</li>
-      </ul>
-
-      <h2>Technical Details</h2>
-      <p>
-        NextReset is open source and built with TypeScript, running on GitHub Actions for automation and served as static files. The frontend uses vanilla HTML, CSS, and JavaScript with no framework overhead — resulting in near-instant page loads. Data extraction uses a combination of HTTP requests and headless browser rendering to handle both static and dynamic publisher websites.
-      </p>
-
-      <h2>Contact</h2>
-      <p>
-        NextReset is a passion project. If you have suggestions, notice incorrect data, or want to request a new game tracker, feel free to open an issue on our <a href="https://github.com/suringr/nextreset" target="_blank" rel="noopener">GitHub repository</a>.
+        UTC does not shift, but your clock does. GTA Online resets at 10:00 UTC every week of the year;
+        in New York that is 6:00 AM through the summer and 5:00 AM once the clocks go back. Nothing about
+        the reset moved — the offset between you and UTC did. The "Your time" column is computed by your
+        own browser, so it already accounts for this on the day it changes.
       </p>
     </div>
 
@@ -148,5 +160,6 @@
     </footer>
   </div>
   <script src="/assets/player.js" defer></script>
+  <script src="/assets/app.js" defer></script>
 </body>
 </html>

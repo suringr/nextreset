@@ -199,8 +199,11 @@ test("the consent platform is Google's, not code in this repository", () => {
 
 test("analytics survived the change", () => {
     // The loader was inserted next to the Analytics tag; this is the guard against landing on top of it.
+    // Every page but the 404, derived rather than counted, so a new page joins this automatically and
+    // a page that quietly loses its tag still fails.
     const withAnalytics = PAGES.filter(page => read(page).includes("G-YY6V5SR1DN"));
-    assert.equal(withAnalytics.length, 16, "Analytics should remain on all 16 content pages");
+    assert.deepEqual(withAnalytics.sort(), PAGES.filter(page => page !== "404.html").sort(),
+        "analytics is on a different set of pages than every page but the 404");
     assert.ok(!withAnalytics.includes("404.html"));
     // The arcade has no ad code and still has analytics: they are separate decisions.
     assert.ok(withAnalytics.includes("play/index.html"));

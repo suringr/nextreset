@@ -20,9 +20,10 @@ import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
 import { IndexDecision, NOINDEX_TAG, staticPageDecision, trackerDecision } from "./indexing";
-import { blocksFor as dataBlocksFor, loadKnowledge, renderBlocks } from "./render-data-blocks";
+import { GameKnowledge, blocksFor as dataBlocksFor, loadKnowledge, renderBlocks } from "./render-data-blocks";
 import { CardGroup, renderHomeHtml } from "./render-home";
 import { SitemapEntry, SitemapInput, renderSitemap } from "./render-sitemap";
+import { renderResetsHtml, resetRows } from "./render-resets";
 import { pageAtUrlPath } from "./site-map";
 import { minifyCss } from "./minify-css";
 import { replaceSlot } from "./render-slots";
@@ -548,6 +549,8 @@ export interface RenderSummary {
     skipped: number;
     /** How the homepage's cards were grouped, when the homepage was rendered. */
     home?: Record<CardGroup, number>;
+    /** How many trackers the /resets/ hub listed, when it was rendered. */
+    resets?: number;
     /** The version stamped on each asset, so a year-long cache cannot hold an old script. */
     assets: VersionedAssets;
     /** What went into sitemap.xml, and which of those pages could be dated. */
@@ -595,6 +598,14 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
     const readable = (iso: string, precision?: string) => (precision === "exact" ? formatDateTime(iso) : formatDate(iso));
     const pages = htmlFilesIn(distDir);
     const pagesForSitemap: SitemapInput[] = [];
+    // One read per game however many pages ask for it. The hub needs every game's history for its
+    // cadence column and the tracker pages need their own, and loading each file twelve times for one
+    // page would be work the build does not need to do.
+    const knowledgeCache = new Map<string, GameKnowledge | undefined>();
+    const knowledgeFor = (game: string) => {
+        if (!knowledgeCache.has(game)) knowledgeCache.set(game, loadKnowledge(root, game));
+        return knowledgeCache.get(game);
+    };
 
     for (const file of pages) {
         const html = fs.readFileSync(file, "utf8");
@@ -611,6 +622,18 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
                 const home = renderHomeHtml(html, (game, type) => readData(dataDir, game, type), now);
                 fs.writeFileSync(file, home.html, "utf8");
                 summary.home = home.counts;
+            } else if (page === "resets/index.html") {
+                // The hub carries every tracker's value, including the withheld ones: their data is
+                // real, and the reader loses nothing by their own page not being recommended. Drift
+                // throws for the same reason it does on the homepage — a table of empty rows is worse
+                // than no table.
+                const rows = resetRows({
+                    read: (game, type) => readData(dataDir, game, type),
+                    knowledge: game => knowledgeFor(game),
+                    now
+                });
+                fs.writeFileSync(file, renderResetsHtml(html, rows, page), "utf8");
+                summary.resets = rows.length;
             } else {
                 summary.skipped++;
             }
@@ -660,7 +683,7 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
         // more. Template drift still throws, because that means the page itself would be published wrong.
         let blocksHtml = "";
         try {
-            const knowledge = loadKnowledge(root, tracker.game);
+            const knowledge = knowledgeFor(tracker.game);
             const currentKey = knowledge?.events?.find(e => e.topic === tracker.type && e.at === data?.nextEventUtc)?.key;
             // A page that is not publishing a value must not list upcoming dates below that headline.
             const headlineAnswered = hasVerifiedValue(data) && !isUnanswered(data, now);
