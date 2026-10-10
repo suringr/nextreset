@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Fortnite season end, read from Epic's official Battle Pass page - a source that has refused our servers since April 2026. What that means, and what a season change brings.">
+  <meta name="description" content="Fortnite season end, read from Epic's official Battle Pass page - a source that began refusing our servers in April 2026. What that means, and what a season change brings.">
   <meta property="og:title" content="Fortnite Season End - NextReset">
-  <meta property="og:description" content="Fortnite season end, read from Epic's official Battle Pass page - a source that has refused our servers since April 2026. What that means, and what a season change brings.">
+  <meta property="og:description" content="Fortnite season end, read from Epic's official Battle Pass page - a source that began refusing our servers in April 2026. What that means, and what a season change brings.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://nextreset.co/og.png">
   <link rel="canonical" href="https://nextreset.co/fortnite/next-season/">
@@ -43,7 +43,7 @@
           "name": "Why does this page sometimes show no season end date?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Because the only sources we accept are Epic's own, and since 5 April 2026 they have returned an HTTP 403 challenge to our servers rather than a page. We do not work around that challenge, and we do not take season dates from community trackers or unofficial API mirrors, accurate though those often are. When Epic's page answers, the date appears here; when it does not, we would rather show nothing than a guess."
+            "text": "Because the only sources we accept are Epic's own, and on 5 April 2026 they began answering our servers with an HTTP 403 challenge rather than a page. We do not work around that challenge, and we do not take season dates from community trackers or unofficial API mirrors, accurate though those often are. When Epic's page answers, the date appears here; when it does not, we would rather show nothing than a guess."
           }
         },
         {
@@ -177,7 +177,7 @@
       <!-- About -->
       <div class="content-section">
         <h2>About this tracker</h2>
-        <p>This page tracks the end date of the current Fortnite Battle Pass season, read from the official Battle Pass page on fortnite.com. Since <strong>5 April 2026</strong> that source has refused requests from our servers. When it does, this page shows no date rather than an estimate.</p>
+        <p>This page tracks the end date of the current Fortnite Battle Pass season, read from the official Battle Pass page on fortnite.com. On <strong>5 April 2026</strong> that source began refusing requests from our servers. While it refuses, this page shows no date rather than an estimate.</p>
       </div>
 
       <!-- Why there is no date. The page cannot answer its own question, so it answers the next
@@ -185,13 +185,13 @@
            something the build observed, not something we assume. -->
       <div class="content-section">
         <h2>Why this page may show no date</h2>
-        <p>On 5 April 2026 the Battle Pass page began returning an HTTP 403 challenge to our requests instead of a page. Every official Epic property we can reasonably treat as a source answers our servers the same way — fortnite.com, its news section, the Epic Games news site and the Fortnite store page. Epic's <code>robots.txt</code> is itself behind the same challenge, so we cannot even read the rules it would like crawlers to follow.</p>
+        <p>On 5 April 2026 the Battle Pass page began returning an HTTP 403 challenge to our requests instead of a page. A check of Epic's other official properties found the same thing: fortnite.com, its news section, the Epic Games news site and the Fortnite store page all answered our servers that way, and Epic's <code>robots.txt</code> was itself behind the challenge, so we could not even read the rules it would like crawlers to follow.</p>
         <p>Two things we will not do to fill the gap:</p>
         <ul>
           <li><strong>Work around the challenge.</strong> It is a clear signal about automated access, and NextReset treats it as one.</li>
           <li><strong>Read the date from somewhere unofficial.</strong> Community trackers and third-party Fortnite APIs do publish season dates, and they are often right. They are not the publisher, and this site's one rule is that a date comes from whoever decides it.</li>
         </ul>
-        <p>The one Epic endpoint still answering is the service status API, which reports whether Fortnite is up — not when the season ends. It cannot answer this page's question.</p>
+        <p>The one Epic endpoint that did answer was the service status API, which reports whether Fortnite is up — not when the season ends. It cannot answer this page's question whatever it returns.</p>
         <p>Whenever the source does answer, the date it states appears at the top of this page like any other tracker here, with the time it was verified. When it does not, the top of the page says so plainly. Either way the sections below cover what a season change actually does.</p>
       </div>
 
@@ -219,7 +219,7 @@
         <h2>Frequently Asked Questions</h2>
             <details class="faq-item">
               <summary>Why does this page sometimes show no season end date?</summary>
-              <p>Because the only sources we accept are Epic's own, and since 5 April 2026 they have returned an HTTP 403 challenge to our servers rather than a page. We do not work around that challenge, and we do not take season dates from community trackers or unofficial API mirrors, accurate though those often are. When Epic's page answers, the date appears here; when it does not, we would rather show nothing than a guess.</p>
+              <p>Because the only sources we accept are Epic's own, and on 5 April 2026 they began answering our servers with an HTTP 403 challenge rather than a page. We do not work around that challenge, and we do not take season dates from community trackers or unofficial API mirrors, accurate though those often are. When Epic's page answers, the date appears here; when it does not, we would rather show nothing than a guess.</p>
             </details>
             <details class="faq-item">
               <summary>What happens when a Fortnite season ends?</summary>

@@ -265,15 +265,29 @@ test("a tracker with no value does not describe one", () => {
     for (const page of trackerPages) {
         const tracker = trackerOf(read(page), page)!;
         const file = path.join(site.dir, "data", `${tracker.game}.${tracker.type}.json`);
-        if (!fs.existsSync(file)) continue;
-        const data = JSON.parse(fs.readFileSync(file, "utf8")) as TrackerData;
+        // A missing file is not a reason to skip: it is the strongest form of "no value", and the one
+        // `blocksFor(undefined)` renders as "Data unavailable". Skipping it (Codex, P2) excused exactly
+        // the trackers a clean CI checkout has no data for, while `checked > 0` stayed satisfied by
+        // unrelated expired fixtures — a guard that looked like it was working and was not.
+        const data = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) as TrackerData : undefined;
         // Asked of the data rather than of the rendered string, so the guard holds whatever wording the
         // "no value" headline takes in future.
-        if (hasVerifiedValue(data) && !isUnanswered(data, NOW)) continue;
+        if (data !== undefined && hasVerifiedValue(data) && !isUnanswered(data, NOW)) continue;
         checked++;
         const html = read(page);
-        for (const described of [/countdown above/i, /shown in the countdown/i, /date is shown in the/i]) {
-            assert.ok(!described.test(html), `${page} has no value to show but still points at one`);
+        // Every way these pages have actually phrased it, not only the three I happened to write. The
+        // claim class is "this page tells you a value is on display"; "shown", "displayed" and "in the
+        // tracker" are the same claim in different word orders.
+        const describes = [
+            /countdown above/i,
+            /shown in the countdown/i,
+            /is shown above/i,
+            /is displayed above/i,
+            /is shown in the tracker/i,
+            /date is shown in the/i
+        ];
+        for (const described of describes) {
+            assert.ok(!described.test(html), `${page} has no value to show but still points at one: ${described}`);
         }
     }
     assert.ok(checked > 0, "no unanswered tracker in this build — the guard checked nothing");
