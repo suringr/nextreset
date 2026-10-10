@@ -212,9 +212,11 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
         // A true 304 has no body and cannot be read. The next change to the page — any of the three
         // games patching — completes the import, and nothing is published wrongly in the interim.
         const unchanged = fetched.outcome === "unchanged";
-        if (unchanged && !fetched.document) {
-            return { events: [], unchanged: true, sourceStates, fetch, work: { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 } };
-        }
+        const skipped = { events: [], unchanged: true, sourceStates, fetch, work: { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 } };
+        // Nothing to re-read once the store already holds as much archive as a run would ever take
+        // from this response: after the backfill an unchanged page costs exactly what it did before.
+        const held = knowledge.events.filter(event => event.topic === topic.type).length;
+        if (unchanged && (!fetched.document || held > KEPT_ARCHIVE)) return skipped;
 
         const page = fetched.document!;
         let update: WarzoneUpdate;
@@ -297,11 +299,10 @@ export function createWarzonePatchAdapter(transport?: Transport): Adapter {
             confidence: Confidence.High,
             sourceStates,
             fetch,
-            // HTML parsed by code: never sent to a model. A response we had already seen still counts
-            // as unchanged work even when it is re-read for the archive it carries.
-            work: unchanged
-                ? { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 }
-                : { unchanged: 0, deterministic: 1, sentToAi: 0, deferred: 0 }
+            // HTML parsed by code: never sent to a model. Re-reading a response we had already seen is
+            // deterministic work like any other -- `unchanged` means "skipped without parsing" in the
+            // run report, and this path parsed.
+            work: { unchanged: 0, deterministic: 1, sentToAi: 0, deferred: 0 }
         };
     };
 }

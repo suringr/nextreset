@@ -5,6 +5,7 @@
  * The earlier manifest is derived from it: the day before 26.3, release candidates listed ahead of 26.2.
  */
 import test from "node:test";
+import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import { KEPT_RELEASES, MINECRAFT_CHANGELOGS_PAGE, MINECRAFT_MANIFEST_URL, createMinecraftJavaAdapter, parseLatestJavaRelease, parseRecentJavaReleases } from "../adapters/minecraft-java";
 import { MockAiProvider } from "../ai/mock";
@@ -86,8 +87,13 @@ test("the first run publishes the release at its exact time on the existing page
 
     const second = await runTracker(game, topic, adapter, store, new Date("2026-09-16T06:00:00Z"), { ai: gate });
     assert.equal(second.result.status, "fresh");
-    assert.deepEqual([second.created, second.changes.length], [0, 0]);
-    assert.deepEqual(second.work, { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 });
+    assert.deepEqual([second.created, second.changes.length], [0, 0], "an unchanged run still learns nothing");
+    // This capture holds a single release, so the store can never reach KEPT_RELEASES and the adapter
+    // keeps re-reading the body in case there is history in it. Reported as deterministic work because
+    // that is what it is: `unchanged` in the run report means "skipped without parsing" (Codex, #66).
+    // A manifest with a real history reaches the cap on its first run and skips from then on, which the
+    // history test below asserts directly.
+    assert.deepEqual(second.work, { unchanged: 0, deterministic: 1, sentToAi: 0, deferred: 0 });
     const k2 = store.load("minecraft");
     assert.deepEqual([k2.events.length, k2.documents.length, k2.claims.length, k2.changes.length], [1, 1, 1, 1], "idempotent");
     assert.equal(model.requests.length, 0);
@@ -257,4 +263,53 @@ test("a run stores the history, each release evidenced by the manifest it was re
     assert.equal(again.result.status, "fresh");
     const k2 = store.load("minecraft");
     assert.deepEqual([k2.events.length, k2.documents.length, k2.claims.length], [KEPT_RELEASES, 1, KEPT_RELEASES], "idempotent");
+});
+
+test("once the history is in, an unchanged manifest is skipped without parsing again", async () => {
+    // Codex, #66: re-reading an unchanged body is how the backfill reaches an existing knowledge
+    // branch, but doing it on every run thereafter would be work for nothing. Once the store holds as
+    // much as a run would ever take from the response, there is nothing left to learn from it.
+    const { store } = tempStore();
+    const ledger = AiUsageLedger.inMemory();
+    const { gate } = noModelGate(ledger);
+    const serve = () => fakeTransport({ http: [{ body: HISTORY, headers: { "content-type": "application/json" } }] });
+
+    const first = await runTracker(game, topic, createMinecraftJavaAdapter(serve()), store, new Date("2026-11-11T00:00:00Z"), { ai: gate });
+    assert.deepEqual(first.work, { unchanged: 0, deterministic: 1, sentToAi: 0, deferred: 0 });
+    assert.equal(store.load("minecraft").events.length, KEPT_RELEASES);
+
+    const second = await runTracker(game, topic, createMinecraftJavaAdapter(serve()), store, new Date("2026-11-11T06:00:00Z"), { ai: gate });
+    assert.deepEqual(second.work, { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 }, "the response was parsed again for nothing");
+    assert.deepEqual([second.created, second.changes.length], [0, 0]);
+});
+
+test("a legacy claim without a reader's link is upgraded rather than trusted", async () => {
+    // Codex, #66: evidence is append-only (pipeline.ts drops a claim whose id is already stored), so an
+    // upgrade cannot improve a claim in place. Before the rescue the current release's claim carried no
+    // linkUrl, and treating it as "already evidenced" would have left that row pointing readers at raw
+    // launcher JSON for good. The link is part of the claim id, so a better claim is appended, and
+    // evidenceFor takes the newest.
+    const { store } = tempStore();
+    const serve = () => fakeTransport({ http: [{ body: HISTORY, headers: { "content-type": "application/json" } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(serve()), store, new Date("2026-11-11T00:00:00Z"));
+
+    // Wind the store back to what the old adapter wrote: one release, one claim, no link — and the id
+    // it would have had, which did not include the link. Spreading the new claim and dropping its
+    // linkUrl is not a legacy claim: it keeps the new id, so the pipeline would dedupe the upgrade away
+    // and the test would pass for the wrong reason.
+    const before = store.load("minecraft");
+    const currentKey = "minecraft/last-release/26.4";
+    const current = before.claims.find(c => c.eventKey === currentKey)!;
+    const legacyId = createHash("sha256")
+        .update(`${current.documentId}|${currentKey}|at|${current.value}`)
+        .digest("hex").slice(0, 24);
+    assert.notEqual(legacyId, current.id, "the id scheme did not change, so an upgrade could never append");
+    const legacy = { ...current, id: legacyId, linkUrl: undefined };
+    store.save({ ...before, events: before.events.filter(e => e.key === currentKey), claims: [legacy] });
+    assert.equal(store.load("minecraft").claims[0].linkUrl, undefined, "the store was not wound back");
+
+    await runTracker(game, topic, createMinecraftJavaAdapter(serve()), store, new Date("2026-11-11T06:00:00Z"));
+    const after = store.load("minecraft");
+    const forCurrent = after.claims.filter(c => c.eventKey === currentKey);
+    assert.ok(forCurrent.some(c => c.linkUrl === MINECRAFT_CHANGELOGS_PAGE), "the legacy claim was trusted and the link never arrived");
 });

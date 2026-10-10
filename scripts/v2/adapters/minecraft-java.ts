@@ -147,7 +147,12 @@ export function javaReleaseEvidence(release: JavaRelease, manifest: FetchedDocum
     return {
         document: { id: documentId, url: manifest.finalUrl, sourceId, fetchedAt: manifest.fetchedAt, title: "Mojang version manifest", fetchMode: manifest.mode, confidence: Confidence.High },
         claim: {
-            id: sha(`${documentId}|${key}|at|${release.at}`).slice(0, 24),
+            // The link is part of the identity, so a claim written before this adapter set one is not
+            // mistaken for this one. Evidence is append-only (pipeline.ts: a claim whose id is already
+            // present is dropped), which is the right rule — but it means an upgrade cannot improve a
+            // claim in place. It can add a better one, and `evidenceFor` takes the newest, so the row
+            // ends up pointing at the changelogs page rather than at raw launcher JSON.
+            id: sha(`${documentId}|${key}|at|${release.at}|${MINECRAFT_CHANGELOGS_PAGE}`).slice(0, 24),
             documentId,
             eventKey: key,
             field: "at",
@@ -193,9 +198,12 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
         // A true 304 has no body and cannot be read. The next change to the manifest — Mojang ships
         // snapshots most weeks — completes the import, and nothing is published wrongly in the interim.
         const unchanged = fetched.outcome === "unchanged";
-        if (unchanged && !fetched.document) {
-            return { events: [], unchanged: true, sourceStates, fetch, work: { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 } };
-        }
+        const skipped = { events: [], unchanged: true, sourceStates, fetch, work: { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 } };
+        // Nothing to re-read once the store already holds as much history as a run would ever take
+        // from this response, so the common case after the backfill costs exactly what it did before:
+        // no parse at all. Before then, a body in hand is worth reading.
+        const held = knowledge.events.filter(event => event.topic === topic.type).length;
+        if (unchanged && (!fetched.document || held >= KEPT_RELEASES)) return skipped;
 
         let release: JavaRelease;
         try {
@@ -235,7 +243,12 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
         const claims: Claim[] = [];
         for (const candidate of releases) {
             const key = eventKey(game.id, topic.type, candidate.id);
-            if (knowledge.claims.some(c => c.eventKey === key && c.field === "at" && c.value === candidate.at)) continue;
+            // Skipped only where the stored evidence already carries the reader's link. A claim from
+            // before the rescue states the same instant with no `linkUrl`, and treating that as
+            // "already evidenced" would leave the row sending readers to the manifest JSON for good.
+            const linked = knowledge.claims.some(c =>
+                c.eventKey === key && c.field === "at" && c.value === candidate.at && c.linkUrl === MINECRAFT_CHANGELOGS_PAGE);
+            if (linked) continue;
             const evidence = javaReleaseEvidence(candidate, fetched.document!, game.id, topic.type, source.id);
             if (!documents.some(d => d.id === evidence.document.id)) documents.push(evidence.document);
             claims.push(evidence.claim);
@@ -257,11 +270,10 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
             confidence: Confidence.High,
             sourceStates,
             fetch,
-            // Structured JSON parsed by code: never sent to a model. A response we had already seen
-            // still counts as unchanged work even when it is re-read for the history it carries.
-            work: unchanged
-                ? { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 }
-                : { unchanged: 0, deterministic: 1, sentToAi: 0, deferred: 0 }
+            // Structured JSON parsed by code: never sent to a model. Re-reading a response we had
+            // already seen is deterministic work like any other -- `unchanged` means "skipped without
+            // parsing" in the run report, and this path parsed.
+            work: { unchanged: 0, deterministic: 1, sentToAi: 0, deferred: 0 }
         };
     };
 }
