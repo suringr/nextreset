@@ -13,11 +13,27 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
+import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
+import { pagePaths } from "../../site-map";
 
 const PUBLIC = path.resolve(__dirname, "..", "..", "..", "public");
 const read = (asset: string) => fs.readFileSync(path.join(PUBLIC, asset));
+
+/** Every authored page, as a path relative to public/. */
+function pages(): string[] {
+    const out: string[] = [];
+    const walk = (dir: string) => {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+            const full = path.join(dir, entry.name);
+            if (entry.isDirectory()) walk(full);
+            else if (entry.name.endsWith(".html")) out.push(path.relative(PUBLIC, full).split(path.sep).join("/"));
+        }
+    };
+    walk(PUBLIC);
+    return out.sort();
+}
 
 type Picture = { format: "png" | "jpeg" | "ico" | "unknown"; width?: number; height?: number };
 
@@ -51,6 +67,28 @@ function identify(bytes: Buffer): Picture {
     return { format: "unknown" };
 }
 
+/**
+ * The sizes an .ico actually contains, read from its directory.
+ *
+ * Accepting the file on its four-byte signature alone (Codex, #70) would pass an icon with an empty or
+ * truncated directory — exactly the file that looks fine in git and renders nothing in a browser tab.
+ * A dimension byte of 0 means 256 in the ICO format, which is the one piece of arithmetic here.
+ */
+function icoEntries(bytes: Buffer): Array<{ width: number; height: number; bytes: number }> {
+    const count = bytes.readUInt16LE(4);
+    const entries: Array<{ width: number; height: number; bytes: number }> = [];
+    for (let i = 0; i < count; i++) {
+        const at = 6 + i * 16;
+        if (at + 16 > bytes.length) break;
+        const size = bytes.readUInt32LE(at + 8);
+        const offset = bytes.readUInt32LE(at + 12);
+        // The payload has to be inside the file, or the entry describes something that is not there.
+        if (offset + size > bytes.length) continue;
+        entries.push({ width: bytes[at] === 0 ? 256 : bytes[at], height: bytes[at + 1] === 0 ? 256 : bytes[at + 1], bytes: size });
+    }
+    return entries;
+}
+
 const EXPECTED: Array<{ asset: string; format: Picture["format"]; width?: number; height?: number }> = [
     { asset: "favicon.ico", format: "ico" },
     { asset: "favicon.png", format: "png", width: 32, height: 32 },
@@ -75,6 +113,16 @@ test("every image asset is the format its name claims, at the size the markup cl
     }
 });
 
+test("favicon.ico really contains the sizes a browser will probe for", () => {
+    const entries = icoEntries(read("favicon.ico"));
+    assert.ok(entries.length > 0, "favicon.ico has an empty or unreadable directory");
+    const sizes = entries.map(entry => `${entry.width}x${entry.height}`).sort();
+    assert.deepEqual(sizes, ["16x16", "24x24", "32x32", "48x48"].sort(), `favicon.ico contains ${sizes.join(", ")}`);
+    for (const entry of entries) {
+        assert.ok(entry.bytes > 0, `the ${entry.width}x${entry.height} entry has no payload`);
+    }
+});
+
 test("the manifest's icons exist at the sizes it declares", () => {
     // It used to declare 192 and 512 while pointing both at a single 1024x1024 JPEG.
     const manifest = JSON.parse(fs.readFileSync(path.join(PUBLIC, "site.webmanifest"), "utf8")) as {
@@ -90,24 +138,39 @@ test("the manifest's icons exist at the sizes it declares", () => {
     }
 });
 
-test("no page references an image that is not in the build", () => {
-    const pages: string[] = [];
-    const walk = (dir: string) => {
-        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-            const full = path.join(dir, entry.name);
-            if (entry.isDirectory()) walk(full);
-            else if (entry.name.endsWith(".html")) pages.push(full);
+test("every image a page references is in the build, checked page by page", () => {
+    // The first version of this counted matches across the whole repository and asserted the total was
+    // at least the number of pages (Codex, #70). Matches from other pages kept that true, so a page
+    // whose reference the regex stopped recognising — single quotes, a query string — would simply
+    // contribute nothing and pass. After deleting og.png, that is a broken social card that ships.
+    //
+    // Each page is now checked for the references it is supposed to have, through a parser rather than
+    // a pattern.
+    const all = pages();
+    assert.deepEqual(all.filter(page => page !== "404.html").sort(), pagePaths().filter(page => page !== "404.html").sort(),
+        "the pages on disk are not the pages the manifest declares");
+
+    for (const page of all) {
+        const $ = cheerio.load(read(page));
+        const referenced = new Set<string>();
+        const note = (value: string | undefined) => {
+            if (!value) return;
+            const url = value.replace(/^https:\/\/nextreset\.co/, "").split("?")[0];
+            if (/^\/[^/].*\.(png|jpe?g|svg|ico|webp)$/i.test(url)) referenced.add(url.slice(1));
+        };
+        $("link[rel*='icon']").each((_, el) => note($(el).attr("href")));
+        $("meta[property='og:image'], meta[name='twitter:image']").each((_, el) => note($(el).attr("content")));
+        $("img").each((_, el) => note($(el).attr("src")));
+
+        for (const asset of referenced) {
+            assert.ok(fs.existsSync(path.join(PUBLIC, asset)), `${page} references /${asset}, which does not exist`);
         }
-    };
-    walk(PUBLIC);
-    let checked = 0;
-    for (const page of pages) {
-        const html = fs.readFileSync(page, "utf8");
-        for (const match of html.matchAll(/(?:href|content|src)="(?:https:\/\/nextreset\.co)?(\/[^"]+\.(?:png|jpg|jpeg|svg|ico|webp))"/g)) {
-            const asset = match[1].replace(/^\//, "");
-            assert.ok(fs.existsSync(path.join(PUBLIC, asset)), `${path.relative(PUBLIC, page)} references ${match[1]}, which does not exist`);
-            checked++;
+        // Every page carries the icon set and the social card. A page that suddenly references none of
+        // them has lost its head tags, which no existence check would notice.
+        assert.ok(referenced.has("favicon.ico"), `${page} declares no .ico favicon`);
+        assert.ok(referenced.has("apple-touch-icon.png"), `${page} declares no apple-touch-icon`);
+        if (page !== "404.html") {
+            assert.ok(referenced.has("og.jpg"), `${page} declares no Open Graph image`);
         }
     }
-    assert.ok(checked >= pages.length, "the pages reference fewer images than there are pages; the scan is probably not matching");
 });
