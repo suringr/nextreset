@@ -18,16 +18,18 @@
  * So health is recorded per provider, from the results, rather than inferred from one process exit code.
  *
  * Which of them should turn the run red is the other half. "Any provider not fresh" would mean permanent
- * red while Fortnite is unreachable, and an alarm that is always on is an alarm nobody reads. The site
- * already records which topics are known to be stopped, in `EDITORIAL_NOINDEX`, and those are deliberate
- * written-down decisions rather than a threshold invented here. A provider degrading while its page is
- * editorially withheld is the situation someone already looked at and accepted. A provider degrading
- * while its page is still in the index is news.
+ * red while Fortnite is unreachable, and an alarm that is always on is an alarm nobody reads.
+ *
+ * The first version of this keyed on `EDITORIAL_NOINDEX`, reusing a decision about *indexing* to mean
+ * *this outage is expected*. Those two coincide for Fortnite and nowhere else. Roblox is withheld
+ * because a service status is not a reset and status.roblox.com answers it first-hand -- nothing to do
+ * with whether its provider works -- so a real Roblox regression would have left every run green
+ * indefinitely (Codex, #69).
+ *
+ * They are separate lists now, because they are separate judgements.
  */
 import * as fs from "fs";
 import * as path from "path";
-import { editorialNoindex } from "./indexing";
-import { trackerPages } from "./site-map";
 
 const BUILD = path.resolve(__dirname, "..", "build");
 export const FAILED_MARKER = path.join(BUILD, "refresh.failed");
@@ -46,24 +48,52 @@ export interface RefreshHealth {
     providers: ProviderHealth[];
 }
 
-/** The page a tracker publishes to, or undefined where the manifest does not know it. */
-function pageOf(game: string, type: string): string | undefined {
-    return trackerPages().find(entry => entry.tracker?.game === game && entry.tracker?.type === type)?.page;
+/**
+ * Outages someone has looked at and accepted, so a run that reports them is not a run worth failing.
+ *
+ * Deliberately a short list with a reason and a date against each, and deliberately not inferred from
+ * anything else. An entry here says "we know, we expect this today, stop telling us" -- which is a claim
+ * about the provider, not about the page, and is the only claim that should be able to silence an alarm.
+ *
+ * Removing an entry is how a topic starts being reported again, and that is meant to be a deliberate
+ * edit by someone who has decided the outage is no longer expected.
+ */
+export interface AcceptedOutage {
+    game: string;
+    type: string;
+    /** Why this one is expected, for whoever reads the list next. */
+    reason: string;
+    /** When it was accepted, so a stale entry is visible as a stale entry. */
+    since: string;
+}
+
+export const ACCEPTED_OUTAGES: readonly AcceptedOutage[] = [
+    {
+        game: "fortnite",
+        type: "next-season",
+        reason: "every official Epic property answers the publishing environment with a 403 challenge we do " +
+            "not circumvent, and no permitted source states the season end. The page says so plainly and is " +
+            "withheld from the index; there is nothing a run can report here that is not already known",
+        since: "2026-04-05"
+    }
+];
+
+/** Whether this provider's failure is one that has been accepted, and why. */
+export function acceptedOutage(game: string, type: string): AcceptedOutage | undefined {
+    return ACCEPTED_OUTAGES.find(entry => entry.game === game && entry.type === type);
 }
 
 /**
- * Degraded providers whose pages are still in the index — the ones nobody has decided to accept.
+ * Degraded providers nobody has accepted — the ones worth failing a run over.
  *
- * A provider that is failing while its page is editorially withheld is a known stop; one that is failing
- * while its page is still offered to readers is a regression.
+ * Asked of the accepted-outage list only. An editorial decision to withhold a page is not a statement
+ * that its provider is expected to fail: Roblox is withheld because a service status is not a reset, and
+ * its provider works perfectly well. Reading the one as the other would silence exactly the regression
+ * this exists to catch.
  */
 export function unexpectedlyDegraded(health: RefreshHealth): ProviderHealth[] {
-    return health.providers.filter(provider => {
-        if (provider.status === "fresh") return false;
-        const page = pageOf(provider.game, provider.type);
-        // A tracker the manifest does not know about has no accepted-stop decision behind it, so it counts.
-        return page === undefined || editorialNoindex(page) === undefined;
-    });
+    return health.providers.filter(provider =>
+        provider.status !== "fresh" && acceptedOutage(provider.game, provider.type) === undefined);
 }
 
 export function writeHealth(providers: ProviderHealth[], at: Date = new Date()): void {
