@@ -42,6 +42,10 @@
       wait_for_update: 500,
       region: ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE','IS','LI','NO','GB','CH']
     });
+    // Denying ad_storage does not stop the ad-click id in the URL being sent with the page location, so
+    // a visitor arriving on a gclid link was identifiable in the very signal the defaults were supposed
+    // to have made anonymous. Redaction strips it while consent is denied, and lifts when it is granted.
+    gtag('set', 'ads_data_redaction', true);
   </script>
 
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
@@ -134,6 +138,9 @@
       </p>
       <p>
         Google requires publishers to use a Google-certified consent management platform before serving personalised ads to visitors in the European Economic Area, the United Kingdom and Switzerland. NextReset uses Google's own consent management platform, configured through AdSense Privacy &amp; messaging rather than as separate code on the Site. Where it applies, a European regulations message asks the visitor to give or refuse consent for Google advertising and the related data processing, and they can change that choice afterwards. Which visitors see the message, and what advertising follows, depends on their location, their choices and Google's configuration.
+      </p>
+      <p>
+        The arcade at <a href="/play/">/play/</a> is the exception to all of this: it carries no advertising code and no analytics, so nothing on that page reports anything about your visit anywhere. The game keeps your progress on your own device, as described there.
       </p>
       <p>
         Alongside that, every page on this site declares its consent defaults before any Google tag loads. For visitors in the European Economic Area, the United Kingdom and Switzerland, advertising storage, advertising identifiers, ad personalisation and analytics storage all start as <strong>denied</strong>, and stay denied until the consent message is answered. While they are denied, no cookie is set and no advertising or analytics identifier is read from or written to your device. Google's tags do still send a measurement signal while consent is denied — without cookies, without identifiers, and used by Google in aggregate rather than tied to you. We would rather state that plainly than let “denied” be read as “nothing is sent”. Outside those countries the defaults stay granted, and the analytics described above apply as written.

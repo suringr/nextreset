@@ -43,6 +43,10 @@
       wait_for_update: 500,
       region: ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE','IS','LI','NO','GB','CH']
     });
+    // Denying ad_storage does not stop the ad-click id in the URL being sent with the page location, so
+    // a visitor arriving on a gclid link was identifiable in the very signal the defaults were supposed
+    // to have made anonymous. Redaction strips it while consent is denied, and lifts when it is granted.
+    gtag('set', 'ads_data_redaction', true);
   </script>
 
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
