@@ -86,8 +86,25 @@ function icoEntries(bytes: Buffer): { entries: Array<{ width: number; height: nu
         if (at + 16 > bytes.length) break;
         const size = bytes.readUInt32LE(at + 8);
         const offset = bytes.readUInt32LE(at + 12);
-        if (offset + size > bytes.length || size === 0) break;
-        entries.push({ width: bytes[at] === 0 ? 256 : bytes[at], height: bytes[at + 1] === 0 ? 256 : bytes[at + 1], bytes: size });
+        if (size === 0 || offset < 6 || offset + size > bytes.length) break;
+
+        // And the payload has to be an image of the size the directory claims. Bounds alone were not
+        // enough (Codex, #70): pointing every entry at offset 0 with size 1 passed, because each one was
+        // inside the file and the dimensions came from the directory record rather than from the data.
+        // A directory is a claim about the payload, so the payload is what settles it.
+        const payload = bytes.subarray(offset, offset + size);
+        const declaredWidth = bytes[at] === 0 ? 256 : bytes[at];
+        const declaredHeight = bytes[at + 1] === 0 ? 256 : bytes[at + 1];
+        const actual = identify(payload);
+        if (actual.format === "png") {
+            if (actual.width !== declaredWidth || actual.height !== declaredHeight) break;
+        } else {
+            // The other legal payload is a DIB: a 40-byte BITMAPINFOHEADER whose height counts the image
+            // and its mask together, hence the doubling.
+            if (payload.length < 40 || payload.readUInt32LE(0) !== 40) break;
+            if (payload.readInt32LE(4) !== declaredWidth || payload.readInt32LE(8) !== declaredHeight * 2) break;
+        }
+        entries.push({ width: declaredWidth, height: declaredHeight, bytes: size });
     }
     return { entries, declared };
 }
