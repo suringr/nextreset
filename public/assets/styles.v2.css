@@ -1574,7 +1574,7 @@ footer a:hover {
 }
 
 html,body{height:auto;min-height:100%;overflow:visible}
-#app{position:relative;flex:none}
+#app{position:relative;height:calc(100dvh - 44px)}
 #fire,#hint,#best{position:absolute}
 
 /* The prose under the game on /play/. That page inlines its whole first paint and never loads this
@@ -1586,4 +1586,4 @@ html,body{height:auto;min-height:100%;overflow:visible}
 .play-page ul{margin:0 0 12px;padding-left:20px;color:var(--ink-muted)}
 .play-page li{margin:0 0 7px}
 .play-page kbd{padding:1px 5px;border:1px solid var(--control-line);border-radius:var(--r-star);background:var(--control);font:inherit;font-size:12px}
-.play-more{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:2;display:inline-flex;align-items:center;min-height:var(--tap);padding:0 14px;color:var(--nav-ink);font-size:13px}
+.play-more{display:flex;align-items:center;justify-content:center;min-height:44px;border-top:1px solid var(--bar-line);background:var(--bar);color:var(--nav-ink);font-size:13px}

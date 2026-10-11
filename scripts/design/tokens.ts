@@ -301,7 +301,7 @@ const PLAY_PROSE = [
     // Overridden here rather than edited into ONE_SHOT_CSS, which is the approved prototype and is held
     // word for word by one-shot.test.ts.
     `html,body{height:auto;min-height:100%;overflow:visible}`,
-    `#app{position:relative;flex:none}`,
+    `#app{position:relative;height:calc(100dvh - 44px)}`,
     `#fire,#hint,#best{position:absolute}`,
     `.play-page{max-width:var(--measure);margin:0 auto;padding:28px var(--gutter) 56px;line-height:1.55}`,
     `.play-page h2{margin:28px 0 12px;font-size:19px;font-weight:700}`,
@@ -309,7 +309,7 @@ const PLAY_PROSE = [
     `.play-page ul{margin:0 0 12px;padding-left:20px;color:var(--ink-muted)}`,
     `.play-page li{margin:0 0 7px}`,
     `.play-page kbd{padding:1px 5px;border:1px solid var(--control-line);border-radius:var(--r-star);background:var(--control);font:inherit;font-size:12px}`,
-    `.play-more{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:2;display:inline-flex;align-items:center;min-height:var(--tap);padding:0 14px;color:var(--nav-ink);font-size:13px}`,
+    `.play-more{display:flex;align-items:center;justify-content:center;min-height:44px;border-top:1px solid var(--bar-line);background:var(--bar);color:var(--nav-ink);font-size:13px}`,
 ].join("");
 
 const PLAY = ONE_SHOT_CSS + PLAY_ADDITIONS + PLAY_PROSE;

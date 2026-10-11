@@ -676,3 +676,56 @@ test("what the page says about the game is what the game does", () => {
     // And the thing a player most needs to know before investing an evening.
     assert.match(prose, /on your device|private window/i, "the page does not say where progress is kept");
 });
+
+test("the difficulty the page describes is the difficulty the game applies", () => {
+    // I got these wrong first time and Codex (#72) caught it. I read the `Math.max` floors as the values
+    // at the last contract -- the 11-second floor needs contract 108 and is never reached -- and missed
+    // the random term on the hostile's reaction entirely. The page told players the clock fell to eleven
+    // seconds and the hostile fired in "a little over two and a half", when it is fourteen and between
+    // three and six.
+    //
+    // So the numbers are computed from the game's own formulas here rather than read back from prose.
+    // Read to the matching bracket rather than to the next comma: `Math.max(11,20-Math.floor(L/12))`
+    // has commas inside it, and stopping at the first one yields `Math.max(11`, which does not parse.
+    const formula = (name: string) => {
+        const at = GAME.indexOf(`${name}:Math.`);
+        assert.ok(at >= 0, `the game no longer has a ${name} formula, so the page cannot be checked against it`);
+        let depth = 0;
+        let end = at + name.length + 1;
+        for (; end < GAME.length; end++) {
+            const ch = GAME[end];
+            if (ch === "(") depth++;
+            else if (ch === ")") depth--;
+            else if (depth === 0 && (ch === "," || ch === "}")) break;
+        }
+        const expression = GAME.slice(at + name.length + 1, end);
+        return (L: number) => Function("L", `return ${expression}`)(L) as number;
+    };
+    const seconds = formula("time");
+    const crowd = formula("n");
+    const reaction = formula("reaction");
+    const spread = Number(/reaction\+Math\.random\(\)\*(\d+)/.exec(GAME)?.[1] ?? 0);
+    assert.ok(spread > 0, "the hostile's reaction no longer has a random spread");
+
+    const last = ONE_SHOT_CONTRACTS;
+    const prose = cheerio.load(PAGE)(".play-page").text().replace(/\s+/g, " ");
+
+    // The clock: twenty at the first contract, and whatever it really is at the last.
+    assert.equal(seconds(1), 20, "the opening time limit changed");
+    const words = ["eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"];
+    const lastWord = words[seconds(last) - 11];
+    assert.ok(prose.includes(`from twenty seconds to ${lastWord}`),
+        `the page does not say the clock falls from twenty seconds to ${lastWord} (${seconds(last)}s at contract ${last})`);
+
+    // The crowd: five to eleven.
+    assert.deepEqual([crowd(1), crowd(last)], [5, 11], "the crowd size changed");
+    assert.ok(prose.includes("from five people to eleven"), "the page does not describe the crowd correctly");
+
+    // The hostile: a range at each end, because of the spread.
+    const band = (L: number) => [Math.round(reaction(L) / 1000), Math.round((reaction(L) + spread) / 1000)];
+    const [earlyLow, earlyHigh] = band(31);
+    const [lateLow, lateHigh] = band(last);
+    assert.ok(prose.includes("seven to nine seconds"), `the hostile fires in ${earlyLow}-${earlyHigh}s at contract 31`);
+    assert.ok(prose.includes("between three\n        and six") || prose.includes("between three and six"),
+        `the hostile fires in ${lateLow}-${lateHigh}s at contract ${last}`);
+});
