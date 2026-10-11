@@ -58,6 +58,8 @@ export function generatePlayPage(): string {
   <meta property="og:description" content="Find the courier, stop the armed threat, clear eighty contracts. A free sniper arcade game in the browser.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://nextreset.co/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <link rel="canonical" href="${PLAY_URL}">
   <meta name="robots" content="noindex, follow">
   <title>${escapeHtml(title)}</title>

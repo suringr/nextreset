@@ -74,19 +74,22 @@ function identify(bytes: Buffer): Picture {
  * truncated directory — exactly the file that looks fine in git and renders nothing in a browser tab.
  * A dimension byte of 0 means 256 in the ICO format, which is the one piece of arithmetic here.
  */
-function icoEntries(bytes: Buffer): Array<{ width: number; height: number; bytes: number }> {
-    const count = bytes.readUInt16LE(4);
+function icoEntries(bytes: Buffer): { entries: Array<{ width: number; height: number; bytes: number }>; declared: number } {
+    const declared = bytes.readUInt16LE(4);
     const entries: Array<{ width: number; height: number; bytes: number }> = [];
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < declared; i++) {
         const at = 6 + i * 16;
+        // Every declared entry is returned or the count is wrong, which is itself the defect. Skipping
+        // the ones that do not parse (Codex, #70) let a file declaring five entries pass with four: the
+        // fifth read a PNG payload as a directory record, fell outside the file, and was dropped in
+        // silence. A directory that does not describe the file is a corrupt directory.
         if (at + 16 > bytes.length) break;
         const size = bytes.readUInt32LE(at + 8);
         const offset = bytes.readUInt32LE(at + 12);
-        // The payload has to be inside the file, or the entry describes something that is not there.
-        if (offset + size > bytes.length) continue;
+        if (offset + size > bytes.length || size === 0) break;
         entries.push({ width: bytes[at] === 0 ? 256 : bytes[at], height: bytes[at + 1] === 0 ? 256 : bytes[at + 1], bytes: size });
     }
-    return entries;
+    return { entries, declared };
 }
 
 const EXPECTED: Array<{ asset: string; format: Picture["format"]; width?: number; height?: number }> = [
@@ -114,13 +117,12 @@ test("every image asset is the format its name claims, at the size the markup cl
 });
 
 test("favicon.ico really contains the sizes a browser will probe for", () => {
-    const entries = icoEntries(read("favicon.ico"));
-    assert.ok(entries.length > 0, "favicon.ico has an empty or unreadable directory");
+    const { entries, declared } = icoEntries(read("favicon.ico"));
+    assert.ok(declared > 0, "favicon.ico declares no icons");
+    assert.equal(entries.length, declared,
+        `favicon.ico declares ${declared} icon(s) and only ${entries.length} of them point at real data`);
     const sizes = entries.map(entry => `${entry.width}x${entry.height}`).sort();
     assert.deepEqual(sizes, ["16x16", "24x24", "32x32", "48x48"].sort(), `favicon.ico contains ${sizes.join(", ")}`);
-    for (const entry of entries) {
-        assert.ok(entry.bytes > 0, `the ${entry.width}x${entry.height} entry has no payload`);
-    }
 });
 
 test("the manifest's icons exist at the sizes it declares", () => {
