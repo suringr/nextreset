@@ -175,7 +175,8 @@ test("the full-screen game is the only page excused, and it still reaches the tr
     assert.equal($(".breadcrumbs").length, 0);
     assert.equal($(".footer-nav").length, 0);
     assert.equal($('header.chrome a[href="/#all-games"]').length, 1, "no way from the game to the trackers");
-    assert.equal($('meta[name="robots"]').attr("content"), "noindex, follow");
+    // No longer withheld: the page explains the game beneath it, so it has something to be indexed for.
+    assert.equal($('meta[name="robots"]').length, 0, "the game page still asks not to be indexed");
 });
 
 test("every page says where it sits, and its markup says the same thing", () => {

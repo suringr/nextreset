@@ -280,7 +280,39 @@ export const PLAY_ADDITIONS = [
     `@media(max-width:700px){.noscript-note{top:44px}}`
 ].join("");
 
-const PLAY = ONE_SHOT_CSS + PLAY_ADDITIONS;
+
+/**
+ * The prose under the game.
+ *
+ * /play/ was a full-screen canvas and nothing else, so it told a reader nothing about the game and
+ * asked not to be indexed, which between them meant the only original thing on this site was invisible
+ * to everyone. The game still owns the first screen; this is what sits below it.
+ *
+ * Scoped to `.play-page` rather than reusing `.page` and `.container`: those are inlined by every other
+ * kind of page from their own blocks, and a second definition reaching them from here would be a layout
+ * change nobody asked for. Nothing in here is a literal colour -- design-tokens.test.ts forbids it, and
+ * rightly, because a colour written outside the token block is one no contrast test can find.
+ */
+const PLAY_PROSE = [
+    // The prototype is a full screen and nothing else: `overflow:hidden` on the body, and the controls
+    // fixed to the viewport. Both are right for a page that is only a game, and both are wrong the
+    // moment there is something underneath -- the first makes the prose unreachable rather than merely
+    // out of view, and the second would float a 106px FIRE button over the article all the way down.
+    // Overridden here rather than edited into ONE_SHOT_CSS, which is the approved prototype and is held
+    // word for word by one-shot.test.ts.
+    `html,body{height:auto;min-height:100%;overflow:visible}`,
+    `#app{position:relative;flex:none}`,
+    `#fire,#hint,#best{position:absolute}`,
+    `.play-page{max-width:var(--measure);margin:0 auto;padding:28px var(--gutter) 56px;line-height:1.55}`,
+    `.play-page h2{margin:28px 0 12px;font-size:19px;font-weight:700}`,
+    `.play-page p{margin:0 0 12px;color:var(--ink-muted)}`,
+    `.play-page ul{margin:0 0 12px;padding-left:20px;color:var(--ink-muted)}`,
+    `.play-page li{margin:0 0 7px}`,
+    `.play-page kbd{padding:1px 5px;border:1px solid var(--control-line);border-radius:var(--r-star);background:var(--control);font:inherit;font-size:12px}`,
+    `.play-more{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:2;display:inline-flex;align-items:center;min-height:var(--tap);padding:0 14px;color:var(--nav-ink);font-size:13px}`,
+].join("");
+
+const PLAY = ONE_SHOT_CSS + PLAY_ADDITIONS + PLAY_PROSE;
 
 /** About, Privacy, 404: prose and a way back. */
 const STATIC = [

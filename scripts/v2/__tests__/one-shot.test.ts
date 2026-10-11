@@ -96,7 +96,9 @@ test("every approved edit says why, and each is one of the kinds the owner appro
 
 test("the stylesheet is the prototype's, with the approved header edits, and the site's additions are named", () => {
     assert.equal(ONE_SHOT_CSS, applyEdits(prototypeCss(), CSS_EDITS));
-    assert.ok(criticalCss("play").endsWith(ONE_SHOT_CSS + PLAY_ADDITIONS), "the /play/ first-paint CSS is not the game's plus the additions");
+    // The game's CSS and the approved additions still arrive in that order and untouched; the prose
+    // rules follow them, because the page now has prose under the game.
+    assert.ok(criticalCss("play").includes(ONE_SHOT_CSS + PLAY_ADDITIONS), "the /play/ first-paint CSS is not the game's plus the additions");
     // The game's own rules, carried over untouched.
     for (const rule of ["#app{height:100dvh;display:flex;flex-direction:column}", "canvas{display:block;flex:1;width:100%;min-height:0;touch-action:none;cursor:none}",
         "#fire{position:fixed;right:20px;bottom:22px;width:106px;height:106px;", "#hint{position:fixed;left:14px;bottom:12px;"]) {
@@ -141,11 +143,16 @@ test("the name, the eighty contracts and the ranks are the game's own", () => {
 
 // === The page ===
 
-test("/play/ is noindex, carries no ad code and no site stylesheet, and loads the game after the record", () => {
+test("/play/ carries no ad code and no site stylesheet, and loads the game after the record", () => {
     const $ = cheerio.load(PAGE);
-    assert.equal($('meta[name="robots"]').attr("content"), "noindex, follow");
-    assert.equal(staticPageDecision(PAGE).state, "noindex");
+    // It used to ask not to be indexed, and that was right while it was a canvas and nothing else: a page
+    // with no words is not one to offer a search engine. It describes the game now -- the controls, what
+    // the eighty contracts ask, the rank ladder, where a save lives -- so it is offered like any other.
+    assert.equal($('meta[name="robots"]').length, 0, "the page asks not to be indexed, but it has something to say now");
+    assert.equal(staticPageDecision(PAGE).state, "index");
     assert.equal($('link[rel="canonical"]').attr("href"), PLAY_URL);
+    // Being indexable changes nothing about this. A game is a bad place to put something a player might
+    // hit by accident, and the loader is not here either -- not only the units.
     assert.ok(!/adsbygoogle|pagead2/.test(PAGE), "the game page carries AdSense");
     assert.equal($('link[href*="styles.v2.css"]').length, 0, "styles.v2.css would override the game's layout");
     assert.ok(PAGE.includes("G-YY6V5SR1DN"), "analytics");
@@ -638,4 +645,34 @@ test("the canvas follows its own box when the header grows, not only when the wi
     game.shootAt(game.frame.people.find(p => p.courier)!);
     game.step(16);
     assert.ok(game.says("MISSION CLEAR"), "a tap on the drawn courier missed after the header grew");
+});
+
+test("what the page says about the game is what the game does", () => {
+    // The page now describes the game: eighty contracts, the rank ladder, the XP step, where a save
+    // lives. Prose like that rots the moment someone tunes the game and forgets the page, and a reader
+    // has no way to tell. So the description is held against the constants rather than against my
+    // memory of them.
+    const $ = cheerio.load(PAGE);
+    const prose = $(".play-page").text().replace(/\s+/g, " ");
+    assert.ok(prose.length > 0, "the page has no description of the game");
+
+    // The number of contracts, written out and in the ranges.
+    assert.ok(prose.includes("eighty"), `the page does not say how many contracts there are`);
+    assert.equal(ONE_SHOT_CONTRACTS, 80, "the contract count changed and the page still says eighty");
+    assert.ok(prose.includes(`71–${ONE_SHOT_CONTRACTS}`), "the last contract range does not end at the last contract");
+
+    // Every rank, in the game's own order.
+    const named = [...ONE_SHOT_RANKS];
+    let at = -1;
+    for (const rank of named) {
+        const found = prose.indexOf(rank, at + 1);
+        assert.ok(found > at, `the page does not name ${rank} after the rank before it`);
+        at = found;
+    }
+
+    // The step between them.
+    assert.ok(prose.includes(ONE_SHOT_RANK_XP.toLocaleString("en-US")), `the page does not state the ${ONE_SHOT_RANK_XP} XP rank step`);
+
+    // And the thing a player most needs to know before investing an evening.
+    assert.match(prose, /on your device|private window/i, "the page does not say where progress is kept");
 });
