@@ -22,9 +22,12 @@
   <link rel="stylesheet" href="/assets/styles.v2.css">
 
   <!-- Consent Mode v2 defaults, set before any Google tag loads.
-       Without this, Google Analytics starts measuring the moment the page opens and a consent choice
-       made afterwards arrives too late for the pageview that prompted it. Denying by default and
-       waiting means nothing is stored until the visitor has answered.
+       Without this, Google's tags run with consent assumed and a choice made afterwards arrives too late
+       for the pageview that prompted it. Declared denied, no cookie is set and no advertising or
+       analytics identifier is read or written until the visitor has answered.
+       It is not a block: this is advanced consent mode, so the tags still send a cookieless signal while
+       consent is denied. Blocking outright would mean not loading the Google tag at all, which is also
+       how the consent message itself arrives.
        Scoped to the EEA, the UK and Switzerland, which is where prior consent is required and where
        Google's own CMP (configured in AdSense Privacy & messaging) shows its message and issues the
        update. Elsewhere the defaults stay granted, so this changes who is measured, not whether

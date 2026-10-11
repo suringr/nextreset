@@ -96,3 +96,18 @@ test("the privacy policy describes the defaults the pages actually declare", () 
     assert.match(privacy, /denied/);
     assert.match(privacy, /European Economic Area, the United Kingdom and Switzerland/);
 });
+
+test("the privacy policy does not say denied means nothing is sent", () => {
+    // It said the visit was not measured until the visitor answered. That is what *basic* consent mode
+    // does. This is advanced consent mode: the tags still send a cookieless signal while consent is
+    // denied, so "denied" gates cookies and identifiers rather than transmission (Codex, #71).
+    //
+    // The distinction is small and the claim was a privacy policy, which is the one document on a site
+    // that has to be exactly true.
+    const privacy = read("privacy/index.html");
+    assert.ok(!/nothing is stored on that visit/.test(privacy), "the policy still implies the visit is not measured at all");
+    assert.match(privacy, /still send a measurement signal while consent is denied/,
+        "the policy does not say that a cookieless signal is sent while consent is denied");
+    assert.match(privacy, /no cookie is set and no (advertising or analytics )?identifier/,
+        "the policy does not say what denying actually prevents");
+});
