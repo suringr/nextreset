@@ -53,7 +53,18 @@
     window.dataLayer = window.dataLayer || [];
     function gtag() { dataLayer.push(arguments); }
     gtag('js', new Date());
-    gtag('config', 'G-YY6V5SR1DN');
+    // Analytics sends the page location, and ads_data_redaction does not reach it: that setting covers
+    // Google Ads pings, not GA's page_location. So an ad-click id in the URL would arrive at Google
+    // attached to a visit whose consent was denied, which is the one thing the defaults were supposed to
+    // have prevented. Stripped here, before the first measurement rather than in a policy footnote.
+    var nrLocation = location.href;
+    try {
+      var nrUrl = new URL(nrLocation);
+      ['gclid', 'dclid', 'gbraid', 'wbraid', 'gclsrc', 'gad_source', 'msclkid', 'fbclid', '_gl']
+        .forEach(function (p) { nrUrl.searchParams.delete(p); });
+      nrLocation = nrUrl.href;
+    } catch (e) { /* an unparseable location is left alone rather than guessed at */ }
+    gtag('config', 'G-YY6V5SR1DN', { page_location: nrLocation });
   </script>
 
   <!-- Google AdSense site code -->
@@ -143,7 +154,7 @@
         The arcade at <a href="/play/">/play/</a> is the exception to all of this: it carries no advertising code and no analytics, so nothing on that page reports anything about your visit anywhere. The game keeps your progress on your own device, as described there.
       </p>
       <p>
-        Alongside that, every page on this site declares its consent defaults before any Google tag loads. For visitors in the European Economic Area, the United Kingdom and Switzerland, advertising storage, advertising identifiers, ad personalisation and analytics storage all start as <strong>denied</strong>, and stay denied until the consent message is answered. While they are denied, no cookie is set and no advertising or analytics identifier is read from or written to your device. Google's tags do still send a measurement signal while consent is denied — without cookies, without identifiers, and used by Google in aggregate rather than tied to you. We would rather state that plainly than let “denied” be read as “nothing is sent”. Outside those countries the defaults stay granted, and the analytics described above apply as written.
+        Alongside that, every page on this site declares its consent defaults before any Google tag loads. For visitors in the European Economic Area, the United Kingdom and Switzerland, advertising storage, advertising identifiers, ad personalisation and analytics storage all start as <strong>denied</strong>, and stay denied until the consent message is answered. While they are denied, no cookie is set and no advertising or analytics identifier is read from or written to your device. Google's tags do still send a measurement signal while consent is denied, and we would rather state that plainly than let “denied” be read as “nothing is sent”. That signal carries no cookie and no advertising identifier. It does carry the address of the page you are on, so before analytics sees it we remove the click identifiers that advertising links add to a URL — <code>gclid</code>, <code>dclid</code> and the others — which would otherwise have travelled with it. Outside those countries the defaults stay granted, and the analytics described above apply as written.
       </p>
 
       <h2>Data We Don't Collect</h2>

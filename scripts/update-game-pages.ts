@@ -505,7 +505,18 @@ function generatePage(page: GamePage): string {
     window.dataLayer = window.dataLayer || [];
     function gtag() { dataLayer.push(arguments); }
     gtag('js', new Date());
-    gtag('config', 'G-YY6V5SR1DN');
+    // Analytics sends the page location, and ads_data_redaction does not reach it: that setting covers
+    // Google Ads pings, not GA's page_location. So an ad-click id in the URL would arrive at Google
+    // attached to a visit whose consent was denied, which is the one thing the defaults were supposed to
+    // have prevented. Stripped here, before the first measurement rather than in a policy footnote.
+    var nrLocation = location.href;
+    try {
+      var nrUrl = new URL(nrLocation);
+      ['gclid', 'dclid', 'gbraid', 'wbraid', 'gclsrc', 'gad_source', 'msclkid', 'fbclid', '_gl']
+        .forEach(function (p) { nrUrl.searchParams.delete(p); });
+      nrLocation = nrUrl.href;
+    } catch (e) { /* an unparseable location is left alone rather than guessed at */ }
+    gtag('config', 'G-YY6V5SR1DN', { page_location: nrLocation });
   </script>
 
   <!-- Google AdSense site code -->

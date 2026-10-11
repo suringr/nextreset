@@ -111,3 +111,34 @@ test("the privacy policy does not say denied means nothing is sent", () => {
     assert.match(privacy, /no cookie is set and no (advertising or analytics )?identifier/,
         "the policy does not say what denying actually prevents");
 });
+
+test("the page location analytics receives has no advertising click id in it", () => {
+    // `ads_data_redaction` covers Google Ads pings and does not reach GA's `page_location` (Codex, #71),
+    // so a visitor arriving on a gclid link was identifiable in the measurement sent while their consent
+    // was denied — the one thing the defaults existed to prevent.
+    //
+    // Stripped before the first `config` call rather than disclosed in a footnote. The site buys no
+    // advertising, so nothing is lost by removing them.
+    const CLICK_IDS = ["gclid", "dclid", "gbraid", "wbraid", "gclsrc", "gad_source", "msclkid", "fbclid", "_gl"];
+    const measured = pages().filter(page => /googletagmanager\.com\/gtag\/js/.test(read(page)));
+    assert.ok(measured.length > 0, "no page loads analytics — this guard is checking nothing");
+
+    for (const page of measured) {
+        const html = read(page);
+        const strip = html.indexOf("searchParams.delete");
+        const config = html.indexOf("gtag('config'");
+        assert.ok(strip >= 0, `${page} sends the page location to analytics without removing click ids`);
+        assert.ok(strip < config, `${page} strips click ids after the config call, which is too late`);
+        assert.match(html, /page_location:/, `${page} does not override the page location it reports`);
+        for (const id of CLICK_IDS) {
+            assert.ok(html.includes(`'${id}'`), `${page} does not remove ${id}`);
+        }
+    }
+});
+
+test("the privacy policy says the click ids are removed", () => {
+    const privacy = read("privacy/index.html");
+    assert.match(privacy, /click identifiers that advertising links add/,
+        "the policy does not mention removing click identifiers");
+    assert.match(privacy, /gclid/, "the policy does not name one, so a reader cannot check it");
+});
