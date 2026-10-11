@@ -89,7 +89,16 @@ export function shouldReadInFull(previous: SourceFetchState | undefined, version
 export function remainingExtractionReads(previous: SourceFetchState | undefined, version: number, settled: boolean): number {
     if (settled) return 0;
     if ((previous?.extractionVersion ?? 0) >= version) return 0;
-    const spent = previous?.extractionAttempts?.version === version ? previous.extractionAttempts.tries : 0;
+    const held = previous?.extractionAttempts;
+    // A newer capability has already tried here and given up. Re-reading the same representation with an
+    // older parser cannot learn anything the newer one did not, so a rolled-back deployment gets nothing.
+    //
+    // This closes the hole the preservation fix opened: keeping N's marker meant M counted as having
+    // spent nothing and was granted a full budget, while `countExtractionAttempt` refused to charge M
+    // because N's marker outranked it -- three validator-free requests every run, for ever, exactly the
+    // unbounded case the whole mechanism exists to prevent (Codex, #68).
+    if (held !== undefined && held.version > version) return 0;
+    const spent = held?.version === version ? held.tries : 0;
     return Math.max(0, MAX_EXTRACTION_ATTEMPTS - spent);
 }
 

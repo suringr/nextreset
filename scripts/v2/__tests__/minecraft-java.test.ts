@@ -14,7 +14,7 @@ import { AiUsageLedger } from "../cost/ledger";
 import { adapterFor, findGame, findTopic } from "../games";
 import { runTracker } from "../pipeline";
 import { validateGameKnowledge } from "../validate";
-import { MAX_EXTRACTION_ATTEMPTS, shouldReadInFull } from "../fetch/smart-fetch";
+import { MAX_EXTRACTION_ATTEMPTS, remainingExtractionReads, shouldReadInFull } from "../fetch/smart-fetch";
 import { fakeTransport, fixture } from "./fake-transport";
 import { V1_ROBLOX_FRESH_KEYS, tempStore } from "./helpers";
 
@@ -581,4 +581,17 @@ test("charging an older version does not discard a newer version's spent budget"
 
     assert.deepEqual(store.load("minecraft").sources[0].extractionAttempts, { version: EXTRACTION_VERSION + 4, tries: MAX_EXTRACTION_ATTEMPTS },
         "an older version's charge overwrote a newer version's exhausted budget");
+});
+
+test("a newer version's exhausted budget stops an older one re-reading for ever", () => {
+    // Codex (#68), the hole my own rollback fix opened: keeping N's marker meant M counted as having
+    // spent nothing and was granted a full budget, while the charge was refused because N's marker
+    // outranked it. Three validator-free requests every run, for ever.
+    const exhaustedByNewer = { consecutiveFailures: 0, extractionAttempts: { version: EXTRACTION_VERSION + 4, tries: MAX_EXTRACTION_ATTEMPTS } };
+    assert.equal(remainingExtractionReads(exhaustedByNewer, EXTRACTION_VERSION, false), 0,
+        "a rolled-back adapter was granted reads a newer capability had already given up on");
+    assert.equal(shouldReadInFull(exhaustedByNewer, EXTRACTION_VERSION, false), false);
+
+    // A newer capability still gets its own budget, which is the point of keying by version.
+    assert.equal(remainingExtractionReads(exhaustedByNewer, EXTRACTION_VERSION + 5, false), MAX_EXTRACTION_ATTEMPTS);
 });
