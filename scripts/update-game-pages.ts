@@ -329,7 +329,7 @@ export const gamePages: GamePage[] = [
         ],
         faq: [
             { q: 'How often does EA SPORTS FC get title updates?', a: 'Title updates typically arrive every few weeks, with more frequent updates early in the game\'s cycle (October-January) and less frequent updates later in the year.' },
-            { q: 'When was the last EA FC update?', a: 'Whenever EA last published one. EA ships title updates when they are ready rather than on a schedule, so there is no next date until EA names one. The date here is the publication time of EA’s own announcement post, which is where the title update notes appear.' },
+            { q: 'When was the last EA FC update?', a: 'Whenever EA last published one. EA ships title updates when they are ready rather than on a schedule, so there is no next date until EA names one. Where this tracker has read an announcement, what it shows is its publication time; EA’s own posts are where the title update notes appear.' },
             { q: 'Do title updates affect Ultimate Team?', a: 'Yes, title updates can change gameplay mechanics that affect all modes including Ultimate Team. However, content updates (new promos, SBCs, objectives) happen separately through server-side updates.' }
         ]
     }

@@ -267,7 +267,12 @@ const DESCRIBES_A_VALUE = [
     /is shown above/i,
     /is displayed above/i,
     /is shown in the tracker/i,
-    /date is shown in the/i
+    /date is shown in the/i,
+    // Added after the rewrite introduced its own version of the same claim (Codex, #67). "The date here
+    // is X" asserts a date is here just as plainly as "shown above" did, and three of the six answers I
+    // wrote to fix the first phrasing had quietly reintroduced it in the second.
+    /date here is/i,
+    /the date here/i
 ];
 
 test("no tracker describes a value it is not showing — checked against every one of them", () => {
