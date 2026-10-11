@@ -722,10 +722,20 @@ test("the difficulty the page describes is the difficulty the game applies", () 
     assert.ok(prose.includes("from five people to eleven"), "the page does not describe the crowd correctly");
 
     // The hostile: a range at each end, because of the spread.
+    //
+    // The phrases are built from the computed numbers rather than written out. My first version of this
+    // calculated the band correctly, interpolated it into the *failure message*, and then asserted a
+    // hard-coded phrase that did not match it — so it passed while the page said "seven to nine" and the
+    // game meant six to eight (Codex, #72). A test that computes the right answer and asserts a
+    // different one is worse than no test, because it reads as coverage.
+    const FIRST_HOSTILE_CONTRACT = 31;
+    const small = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+    const said = (n: number) => small[n] ?? words[n - 11] ?? String(n);
     const band = (L: number) => [Math.round(reaction(L) / 1000), Math.round((reaction(L) + spread) / 1000)];
-    const [earlyLow, earlyHigh] = band(31);
+    const [earlyLow, earlyHigh] = band(FIRST_HOSTILE_CONTRACT);
     const [lateLow, lateHigh] = band(last);
-    assert.ok(prose.includes("seven to nine seconds"), `the hostile fires in ${earlyLow}-${earlyHigh}s at contract 31`);
-    assert.ok(prose.includes("between three\n        and six") || prose.includes("between three and six"),
-        `the hostile fires in ${lateLow}-${lateHigh}s at contract ${last}`);
+    assert.ok(prose.includes(`roughly ${said(earlyLow)} to ${said(earlyHigh)} seconds`),
+        `the page does not say roughly ${said(earlyLow)} to ${said(earlyHigh)} seconds (${earlyLow}-${earlyHigh}s at contract ${FIRST_HOSTILE_CONTRACT})`);
+    assert.ok(prose.includes(`between ${said(lateLow)} and ${said(lateHigh)}`),
+        `the page does not say between ${said(lateLow)} and ${said(lateHigh)} (${lateLow}-${lateHigh}s at contract ${last})`);
 });

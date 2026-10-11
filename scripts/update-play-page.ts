@@ -92,7 +92,7 @@ const PROSE = `  <!-- Below the game, so the game is still the whole of the firs
       <p>Three things tighten as you go, which is what makes the late contracts hard rather than merely
         longer. The time limit falls from twenty seconds to fourteen. The crowd grows from five people to
         eleven, so there is more to look through. And from contract 31 the hostile shoots back, sooner and
-        sooner: early on he takes roughly seven to nine seconds, and by the last contracts between three
+        sooner: early on he takes roughly six to eight seconds, and by the last contracts between three
         and six. He does not take the same time twice, so late contracts are a question of being ready
         rather than of counting.</p>
 

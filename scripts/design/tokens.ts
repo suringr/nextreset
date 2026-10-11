@@ -276,8 +276,13 @@ export const PLAY_ADDITIONS = [
     // Without JavaScript there is no game: the note covers the empty board and the FIRE button under the
     // header, rather than leaving a button that does nothing.
     `.noscript-note{position:fixed;top:52px;right:0;bottom:0;left:0;z-index:1;display:grid;place-content:center;padding:var(--sp-5);text-align:center;background:#071019;color:var(--ink-muted);font-size:var(--size-small)}`,
+    // Fixed and opaque to the foot of the viewport, which was right when there was nothing under the
+    // game and wrong once there was: scrolling moved the guide behind it, so the only readers who
+    // cannot play the game also could not read about it (Codex, #72). Bounded to the game area now,
+    // and it scrolls away like everything else.
+    `.noscript-note{position:absolute;bottom:auto;height:calc(100dvh - 52px - 44px)}`,
     `.noscript-note a{color:var(--link)}`,
-    `@media(max-width:700px){.noscript-note{top:44px}}`
+    `@media(max-width:700px){.noscript-note{top:44px;height:calc(100dvh - 44px - 44px)}}`
 ].join("");
 
 
