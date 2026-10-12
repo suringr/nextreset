@@ -77,6 +77,7 @@ jobs:
       # V2 trackers read/write knowledge/games/<game>.json. Check the `knowledge` branch out
       # as a git worktree at ./knowledge (gitignored on main); bootstraps the branch on first run.
       - name: Check out knowledge branch
+        id: knowledge
         continue-on-error: true
         run: bash .github/scripts/knowledge-checkout.sh
 
@@ -174,6 +175,15 @@ jobs:
           fi
           if [ "${{ steps.persist.outcome }}" = "failure" ]; then
             echo "::error title=Degraded publish::the knowledge branch did not persist; this run's learning is lost and sources will be re-read"
+            bad=1
+          fi
+          # A checkout that failed leaves a plain directory where the worktree should be. The persist
+          # step then warns that it is not a worktree and exits 0, so its outcome is `success` and the
+          # line above sees nothing -- while every event, every claim and the AI usage ledger were
+          # written into that directory, thrown away with the working tree, and rebuilt from nothing on
+          # the next run. Silently, and on every run.
+          if [ "${{ steps.knowledge.outcome }}" = "failure" ]; then
+            echo "::error title=Degraded publish::the knowledge branch was not checked out; nothing this run learned can be kept"
             bad=1
           fi
           # The case the exit code cannot see. `refresh-all` returns 0 unless more than half of all

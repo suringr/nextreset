@@ -108,8 +108,16 @@ export const ACCEPTED_OUTAGES: readonly AcceptedOutage[] = [
 export function acceptedOutage(game: string, type: string, status: ProviderHealth["status"], now: Date = new Date()): AcceptedOutage | undefined {
     const entry = ACCEPTED_OUTAGES.find(candidate => candidate.game === game && candidate.type === type);
     if (!entry || entry.expect !== status) return undefined;
-    const until = Date.parse(entry.until);
-    return Number.isFinite(until) && until >= now.getTime() ? entry : undefined;
+    // Through the end of the stated day, not up to the start of it.
+    //
+    // `Date.parse("2027-04-05")` is midnight UTC at the beginning of that date, so comparing against it
+    // directly made the acceptance lapse at 00:00 on the 5th — before the 06:00 run on the very day it
+    // was supposed to still cover, and changing behaviour inside one calendar day (Codex, #69). A date
+    // written in a list like this means the whole day.
+    const until = Date.parse(`${entry.until}T00:00:00.000Z`);
+    if (!Number.isFinite(until)) return undefined;
+    const DAY_MS = 86_400_000;
+    return until + DAY_MS > now.getTime() ? entry : undefined;
 }
 
 /**

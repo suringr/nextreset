@@ -135,3 +135,19 @@ test("nothing in the publish path imports the refresher", () => {
             `${file} imports refresh-all, which runs a data refresh when it is loaded`);
     }
 });
+
+test("an acceptance covers the whole of its last day", () => {
+    // `Date.parse("2027-04-05")` is midnight at the *start* of that date, so comparing against it
+    // directly made the acceptance lapse at 00:00 on the fifth — before the 06:00 run on the very day it
+    // was meant to still cover, and changing behaviour inside one calendar day (Codex, #69).
+    const held = health([{ game: accepted.game, type: accepted.type, status: accepted.expect }]);
+    const day = accepted.until;
+
+    for (const at of [`${day}T00:00:00.000Z`, `${day}T06:00:00.000Z`, `${day}T23:59:59.000Z`]) {
+        assert.deepEqual(unexpectedlyDegraded(held, new Date(at)), [],
+            `the acceptance had already lapsed at ${at}, inside the day it names`);
+    }
+    const next = new Date(Date.parse(`${day}T00:00:00.000Z`) + 86_400_000);
+    assert.equal(unexpectedlyDegraded(held, next).length, 1,
+        "the acceptance survived into the day after the one it names");
+});
