@@ -8,15 +8,16 @@ import * as path from 'path';
 const publicDir = path.join(__dirname, '../public');
 
 // Favicon HTML to add
-const faviconTags = `  <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="apple-touch-icon" href="/favicon.png">
+const faviconTags = `  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/favicon.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#0b0f14">`;
 
 // Update homepage
 const indexPath = path.join(publicDir, 'index.html');
 let indexContent = fs.readFileSync(indexPath, 'utf-8');
-if (!indexContent.includes('favicon.png')) {
+if (!indexContent.includes('favicon.ico')) {
     indexContent = indexContent.replace(
         '<link rel="stylesheet" href="/assets/styles.css">',
         `${faviconTags}\n  <link rel="stylesheet" href="/assets/styles.css">`
@@ -43,7 +44,7 @@ for (const pagePath of gamePages) {
     const filePath = path.join(publicDir, pagePath);
     let content = fs.readFileSync(filePath, 'utf-8');
 
-    if (!content.includes('favicon.png')) {
+    if (!content.includes('favicon.ico')) {
         content = content.replace(
             '<link rel="stylesheet" href="/assets/styles.css">',
             `${faviconTags}\n    <link rel="stylesheet" href="/assets/styles.css">`
