@@ -788,3 +788,21 @@ test("Space scrolls the guide once the game is off the screen, and still fires w
     vm.runInContext(inline![1], context);
     assert.equal(other, false, "the guard swallows keys the game needs");
 });
+
+test("a contract is held while its player is reading about it", () => {
+    // The hold the approved edit already applied to a hidden page, extended to a game scrolled off the
+    // screen — a situation that did not exist until /play/ grew an article beneath it (Codex, #72). The
+    // page stays visible, so the loop ran on: the clock advanced, the hostile fired at a crowd nobody
+    // could see, and an attempt could be lost while its player read how to play.
+    assert.match(GAME, /IntersectionObserver\(es=>hold\(!es\[0\]\.isIntersecting\)/,
+        "the game does not notice when it leaves the screen");
+    assert.match(GAME, /\.observe\(c\)/, "the observer watches something other than the canvas");
+
+    // Both conditions share one hold, so neither can resume a contract the other is still holding.
+    assert.match(GAME, /function hold\(away\)\{if\(away\)\{if\(!hiddenAt\)hiddenAt=performance\.now\(\);return\}if\(!hiddenAt\)return;resumeFrom\(hiddenAt\);hiddenAt=0\}/,
+        "the two ways of being unable to act no longer share one hold");
+    assert.match(GAME, /visibilitychange',\(\)=>hold\(document\.hidden\)/, "a hidden page no longer holds the contract");
+
+    // Guarded, because a browser without it should still play rather than throw.
+    assert.match(GAME, /if\(window\.IntersectionObserver\)/, "the observer is not feature-detected");
+});
