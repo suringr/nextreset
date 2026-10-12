@@ -1,0 +1,150 @@
+/**
+ * Consent, and whether it arrives in time to matter.
+ *
+ * The site loaded Google Analytics and the AdSense library with no consent signal of any kind. Google's
+ * own CMP, configured account-side, shows the European regulations message and issues an update — but
+ * an update only helps a tag that was waiting for it. Without a declared default, GA4 begins measuring
+ * the moment the page opens, and a choice made afterwards is too late for the pageview that prompted it.
+ *
+ * So the ordering is the thing these tests protect, not the presence of a snippet. A consent block that
+ * runs after the tag it is meant to gate is worse than none, because it looks like compliance.
+ */
+import test from "node:test";
+import assert from "node:assert/strict";
+import * as fs from "fs";
+import * as path from "path";
+
+const PUBLIC = path.resolve(__dirname, "..", "..", "..", "public");
+
+function pages(): string[] {
+    const out: string[] = [];
+    const walk = (dir: string) => {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+            const full = path.join(dir, entry.name);
+            if (entry.isDirectory()) walk(full);
+            else if (entry.name.endsWith(".html")) out.push(path.relative(PUBLIC, full).split(path.sep).join("/"));
+        }
+    };
+    walk(PUBLIC);
+    return out.sort();
+}
+
+const read = (page: string) => fs.readFileSync(path.join(PUBLIC, page), "utf8");
+
+/** Pages that load a Google tag, which are the only ones with anything to gate. */
+const measured = () => pages().filter(page => /googletagmanager\.com\/gtag\/js|adsbygoogle\.js/.test(read(page)));
+
+test("every page that loads a Google tag declares its consent defaults first", () => {
+    const checked = measured();
+    assert.ok(checked.length > 0, "no page loads a Google tag — this suite is checking nothing");
+    for (const page of checked) {
+        const html = read(page);
+        const declared = html.indexOf("gtag('consent', 'default'");
+        assert.ok(declared >= 0, `${page} loads a Google tag and declares no consent default`);
+
+        // Before the loader and before the config call. Both matter: the loader starts fetching, and
+        // the config call is what begins measurement.
+        for (const after of ["googletagmanager.com/gtag/js", "pagead2.googlesyndication.com", "gtag('config'"]) {
+            const at = html.indexOf(after);
+            if (at < 0) continue;
+            assert.ok(declared < at, `${page} declares consent after ${after}, which is too late to gate it`);
+        }
+    }
+});
+
+test("the defaults deny every storage type Consent Mode v2 defines", () => {
+    // Denying ad_storage alone was enough before 2024. ad_user_data and ad_personalization are the two
+    // v2 added, and omitting either leaves a signal ungated while looking complete.
+    for (const page of measured()) {
+        const html = read(page);
+        const block = html.slice(html.indexOf("gtag('consent', 'default'"));
+        for (const signal of ["ad_storage", "ad_user_data", "ad_personalization", "analytics_storage"]) {
+            assert.match(block.slice(0, 600), new RegExp(`${signal}:\\s*'denied'`), `${page} does not deny ${signal} by default`);
+        }
+    }
+});
+
+test("the denial is scoped to where prior consent is required", () => {
+    // Denying everywhere would switch analytics off worldwide, since the consent message is only shown
+    // where Google's CMP is configured to show it — the defaults would never be updated anywhere else.
+    // The region list is the EEA plus the UK and Switzerland.
+    const EEA = ["AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT",
+        "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE", "IS", "LI", "NO"];
+    for (const page of measured()) {
+        const html = read(page);
+        const block = html.slice(html.indexOf("gtag('consent', 'default'"), html.indexOf("gtag('consent', 'default'") + 900);
+        for (const country of [...EEA, "GB", "CH"]) {
+            assert.match(block, new RegExp(`'${country}'`), `${page} does not scope its consent default to ${country}`);
+        }
+        assert.match(block, /wait_for_update:\s*\d+/, `${page} does not wait for the consent message to answer`);
+    }
+});
+
+test("a page with no Google tag carries no consent block", () => {
+    // Nothing to gate, so nothing to declare. 404.html is the case today.
+    const unmeasured = pages().filter(page => !measured().includes(page));
+    for (const page of unmeasured) {
+        assert.ok(!read(page).includes("gtag('consent'"),
+            `${page} declares consent defaults but loads no Google tag`);
+    }
+});
+
+test("the privacy policy describes the defaults the pages actually declare", () => {
+    // The policy is a factual claim about the code. The two have been wrong about each other before.
+    const privacy = read("privacy/index.html");
+    assert.match(privacy, /consent defaults before any Google tag loads/);
+    assert.match(privacy, /denied/);
+    assert.match(privacy, /European Economic Area, the United Kingdom and Switzerland/);
+});
+
+test("the privacy policy does not say denied means nothing is sent", () => {
+    // It said the visit was not measured until the visitor answered. That is what *basic* consent mode
+    // does. This is advanced consent mode: the tags still send a cookieless signal while consent is
+    // denied, so "denied" gates cookies and identifiers rather than transmission (Codex, #71).
+    //
+    // The distinction is small and the claim was a privacy policy, which is the one document on a site
+    // that has to be exactly true.
+    const privacy = read("privacy/index.html");
+    assert.ok(!/nothing is stored on that visit/.test(privacy), "the policy still implies the visit is not measured at all");
+    assert.match(privacy, /still send a measurement signal while consent is denied/,
+        "the policy does not say that a cookieless signal is sent while consent is denied");
+    assert.match(privacy, /no cookie is set and no (advertising or analytics )?identifier/,
+        "the policy does not say what denying actually prevents");
+});
+
+test("the page location analytics receives has no advertising click id in it", () => {
+    // `ads_data_redaction` covers Google Ads pings and does not reach GA's `page_location` (Codex, #71),
+    // so a visitor arriving on a gclid link was identifiable in the measurement sent while their consent
+    // was denied — the one thing the defaults existed to prevent.
+    //
+    // Stripped before the first `config` call rather than disclosed in a footnote. The site buys no
+    // advertising, so nothing is lost by removing them.
+    const CLICK_IDS = ["gclid", "dclid", "gbraid", "wbraid", "gclsrc", "gad_source", "msclkid", "fbclid", "_gl"];
+    const measured = pages().filter(page => /googletagmanager\.com\/gtag\/js/.test(read(page)));
+    assert.ok(measured.length > 0, "no page loads analytics — this guard is checking nothing");
+
+    for (const page of measured) {
+        const html = read(page);
+        const strip = html.indexOf("searchParams.delete");
+        const config = html.indexOf("gtag('config'");
+        assert.ok(strip >= 0, `${page} sends the page location to analytics without removing click ids`);
+        assert.ok(strip < config, `${page} strips click ids after the config call, which is too late`);
+        assert.match(html, /page_location:/, `${page} does not override the page location it reports`);
+        // The same leak, one click later: a visitor landing on /x/?gclid=A and following a same-origin
+        // link hands that whole URL to the next page as document.referrer, which analytics collects on
+        // its own (Codex, #71). Overriding only the location left it reachable on the second page view.
+        assert.match(html, /page_referrer/, `${page} reports the referrer it was given, click ids and all`);
+        assert.match(html, /<meta name="referrer" content="strict-origin-when-cross-origin">/,
+            `${page} hands the full address to other sites`);
+        for (const id of CLICK_IDS) {
+            assert.ok(html.includes(`'${id}'`), `${page} does not remove ${id}`);
+        }
+    }
+});
+
+test("the privacy policy says the click ids are removed", () => {
+    const privacy = read("privacy/index.html");
+    assert.match(privacy, /click identifiers that advertising links add/,
+        "the policy does not mention removing click identifiers");
+    assert.match(privacy, /gclid/, "the policy does not name one, so a reader cannot check it");
+});

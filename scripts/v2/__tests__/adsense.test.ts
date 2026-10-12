@@ -199,12 +199,20 @@ test("the consent platform is Google's, not code in this repository", () => {
 
 test("analytics survived the change", () => {
     // The loader was inserted next to the Analytics tag; this is the guard against landing on top of it.
-    // Every page but the 404, derived rather than counted, so a new page joins this automatically and
-    // a page that quietly loses its tag still fails.
+    // Every page but the 404 and the arcade, derived rather than counted, so a new page joins this
+    // automatically and a page that quietly loses its tag still fails.
+    const untagged = ["404.html", "play/index.html"];
     const withAnalytics = PAGES.filter(page => read(page).includes("G-YY6V5SR1DN"));
-    assert.deepEqual(withAnalytics.sort(), PAGES.filter(page => page !== "404.html").sort(),
-        "analytics is on a different set of pages than every page but the 404");
-    assert.ok(!withAnalytics.includes("404.html"));
-    // The arcade has no ad code and still has analytics: they are separate decisions.
-    assert.ok(withAnalytics.includes("play/index.html"));
+    assert.deepEqual(withAnalytics.sort(), PAGES.filter(page => !untagged.includes(page)).sort(),
+        "analytics is on a different set of pages than expected");
+    // The arcade carries no Google code at all, and that is one decision rather than two.
+    //
+    // It never had an ad unit or the loader, which also means the consent message is delivered by
+    // nothing: Google's CMP arrives with the AdSense code (Codex, #71). An EEA visitor landing straight
+    // on /play/ would have had analytics defaults denied with no way ever to answer them -- measured
+    // cookielessly, in perpetuity, without being asked. Measuring a page where consent cannot be
+    // offered is the worst of both, so the page measures nobody.
+    for (const page of untagged) {
+        assert.ok(!read(page).includes("G-YY6V5SR1DN"), `${page} carries analytics`);
+    }
 });
