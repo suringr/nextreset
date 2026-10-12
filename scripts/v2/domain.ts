@@ -206,6 +206,10 @@ export interface SourceState {
     lastVerdict?: string;
     lastMode?: "http" | "browser";
     consecutiveFailures: number;
+    /** The extraction capability that last read this source in full — see `SourceFetchState`. */
+    extractionVersion?: number;
+    /** Unconditional reads spent on a capability that has not yet succeeded — see `SourceFetchState`. */
+    extractionAttempts?: { version: number; tries: number };
 }
 
 /** How a discovered page was found. */

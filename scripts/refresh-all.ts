@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import { FailureType, ProviderResult, StaleResult, UnavailableResult, Provider } from "./types";
 import { writeLiveJson, writeLkgJson, readLkgData, ensureDataDirs } from "./lib/data-output";
+import { ProviderHealth, clearRefreshHealth, escapeAnnotation, writeHealth } from "./refresh-health";
 import { JsonKnowledgeStore } from "./v2/store";
 import { runV2Tracker } from "./v2/pipeline";
 import { AiGate } from "./v2/cost/budget";
@@ -99,7 +100,6 @@ function logAdapterReport(entry: RegistryEntry, report: Record<string, unknown> 
     if (ai && ai.calls > 0) console.log(`  [${entry.id}] AI ${ai.model ?? ""}: ${ai.calls} call(s), ${ai.inputTokens} in / ${ai.outputTokens} out tokens${ai.estimatedCostUsd !== undefined ? `, est. $${ai.estimatedCostUsd.toFixed(4)}` : ""}`);
 }
 
-const escapeAnnotation = (s: string) => s.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
 
 async function runV2(entry: RegistryEntry, store: JsonKnowledgeStore, startTime: number, gate: AiGate): Promise<{ result: ProviderResult; line: TrackerCostLine }> {
     let result: ProviderResult;
@@ -169,6 +169,10 @@ async function main() {
     console.log("=".repeat(60));
     console.log("NextReset Data Refresh (LKG Enabled)");
     console.log("=".repeat(60));
+
+    // Any marker left over belongs to an earlier run. Cleared here so the publish gate and the workflow
+    // are always reading this run's outcome and never an older one's.
+    clearRefreshHealth();
 
     try {
         ensureDataDirs();
@@ -330,6 +334,16 @@ async function main() {
     } catch (error) {
         console.error(`AI cost summary could not be written: ${error instanceof Error ? error.message : String(error)}`);
     }
+
+    // What each provider managed, recorded from the results rather than inferred from the exit code
+    // below. The exit code answers "did the refresh finish", which is a different and much rarer
+    // question than "is anything quietly broken" -- see scripts/refresh-health.ts.
+    writeHealth(results.map(r => ({
+        game: r.game,
+        type: r.type,
+        status: r.status as ProviderHealth["status"],
+        detail: r.status === "unavailable" ? (r as UnavailableResult).explanation : r.status === "stale" ? r.reason : undefined
+    })));
 
     // Exit Code Logic
     // Fail only if > 50% are unavailable (catastrophic)

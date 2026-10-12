@@ -31,7 +31,7 @@ import { Confidence } from "../../types";
 import { failureKindFromFetch } from "../reasons";
 import { Adapter } from "../adapter";
 import { Claim, Document, SourceState } from "../domain";
-import { FetchedDocument, smartFetch } from "../fetch/smart-fetch";
+import { FetchedDocument, countExtractionAttempt, recordExtraction, remainingExtractionReads, smartFetch } from "../fetch/smart-fetch";
 import { Transport } from "../fetch/transport";
 import { eventKey } from "../identity";
 import { indexJsonObjects } from "../json-quote";
@@ -81,6 +81,18 @@ export function parseLatestJavaRelease(text: string): JavaRelease {
  * event plus eleven rows of history), so storing more would cost bytes on every run to show nothing.
  */
 export const KEPT_RELEASES = 12;
+
+/**
+ * The version of what this adapter reads out of the manifest.
+ *
+ * Bumped when the adapter learns to extract something it could not extract before. It is the budget for
+ * the unconditional fetch described in `SourceFetchState.extractionVersion`: at most one per bump, spent
+ * only while there is still something to learn, and recorded the moment the manifest has been read in
+ * full so the next run is conditional again.
+ *
+ * 1 -> reads the whole release list rather than only `latest.release`.
+ */
+export const EXTRACTION_VERSION = 1;
 
 /**
  * The most recent releases the manifest names, newest first.
@@ -179,8 +191,37 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
         const stored = getSourceState(source.id);
         const previous = stored && stored.url === source.url ? stored : undefined;
 
-        const fetched = await smartFetch(source.url, { expect: { kind: "json" }, allowRender: false, previous, transport, label: `${game.id}-${topic.type}`, now });
-        const sourceStates: SourceState[] = [{ id: source.id, url: source.url, ...fetched.state }];
+        // Whether this store already holds everything a run could take from the manifest, asked before the
+        // request so it can decide the shape of the request.
+        //
+        // Two things can be learned, and a count only sees one of them. A store that accumulated twelve
+        // releases the old way -- one per run, over a year -- satisfies any count-based test while every
+        // one of its claims still lacks the reader's link. So the question is whether the store holds as
+        // much as a run would take *and* every event already carries the link, which is self-clearing and
+        // needs no marker of its own.
+        //
+        // Asked only of the releases a run could actually reach: a store that accumulated more than the cap
+        // over the years holds older events this parser will never emit again, and requiring a link on
+        // those would make `settled` false forever.
+        const held = knowledge.events
+            .filter(event => event.topic === topic.type)
+            .sort((a, b) => Date.parse(b.at ?? "") - Date.parse(a.at ?? ""));
+        const settled = held.length >= KEPT_RELEASES && held.slice(0, KEPT_RELEASES).every(event =>
+            knowledge.claims.some(claim =>
+                claim.eventKey === event.key && claim.field === "at" && claim.linkUrl === MINECRAFT_CHANGELOGS_PAGE));
+
+        // There is something to learn, this capability has not had its read yet, and it has budget left.
+        // What is left of this capability's budget. Passed to `retries` as well as deciding the request
+        // shape, so a single call -- retries included -- cannot spend more than remains.
+        const allowance = remainingExtractionReads(previous, EXTRACTION_VERSION, settled);
+        const unconditional = allowance > 0;
+
+        const fetched = await smartFetch(source.url, { expect: { kind: "json" }, allowRender: false, previous, transport, label: `${game.id}-${topic.type}`, now, unconditional, ...(unconditional ? { retries: allowance - 1 } : {}) });
+        let sourceStates: SourceState[] = [{ id: source.id, url: source.url, ...fetched.state }];
+        // Spent the moment the request goes out, before anything can be made of the response. A transport
+        // error, a 5xx or a parse that throws all consume one, which is what keeps a permanently broken
+        // parse from downloading the whole source on every run forever.
+        if (unconditional) sourceStates = [countExtractionAttempt(sourceStates[0], previous, EXTRACTION_VERSION, fetched.requests)];
         if (fetched.outcome === "unusable") {
             return { events: [], failure: fetched.error ?? fetched.verdict?.reason ?? "fetch failed", failureKind: failureKindFromFetch(fetched), sourceStates };
         }
@@ -199,26 +240,9 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
         // snapshots most weeks — completes the import, and nothing is published wrongly in the interim.
         const unchanged = fetched.outcome === "unchanged";
         const skipped = { events: [], unchanged: true, sourceStates, fetch, work: { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 } };
-        // Nothing to re-read once there is nothing left to learn from this response, so the common
-        // case after the backfill costs exactly what it did before: no parse at all.
-        //
-        // Two things can still be learned, and a count only sees one of them. A store that accumulated
-        // twelve releases the old way — one per run, over a year — satisfies any count-based test while
-        // every one of its claims still lacks the reader's link, and skipping on that basis would leave
-        // those rows pointing at raw launcher JSON until the manifest hash happened to change. So the
-        // question is whether the store holds as much as a run would take *and* every event already
-        // carries the link, which is self-clearing and needs no version marker.
-        //
-        // Asked only of the releases a run could actually reach. A store that has accumulated more
-        // than the cap over the years holds older events this parser will never emit again, so
-        // requiring a link on those would make `settled` permanently false and re-read the manifest on
-        // every run forever, learning nothing each time.
-        const held = knowledge.events
-            .filter(event => event.topic === topic.type)
-            .sort((a, b) => Date.parse(b.at ?? "") - Date.parse(a.at ?? ""));
-        const settled = held.length >= KEPT_RELEASES && held.slice(0, KEPT_RELEASES).every(event =>
-            knowledge.claims.some(claim =>
-                claim.eventKey === event.key && claim.field === "at" && claim.linkUrl === MINECRAFT_CHANGELOGS_PAGE));
+        // Nothing to re-read once there is nothing left to learn from this response, so the common case
+        // after the backfill costs exactly what it did before: no parse at all. A 304 still arrives with
+        // no body and cannot be read whatever we would like to do with it.
         if (unchanged && (!fetched.document || settled)) return skipped;
 
         let release: JavaRelease;
@@ -246,6 +270,11 @@ export function createMinecraftJavaAdapter(transport?: Transport): Adapter {
         // was still one row. The manifest has always carried the whole list; it simply was not read.
         const kept = parseRecentJavaReleases(fetched.document!.body);
         const releases = [release, ...kept.filter(previous => previous.id !== release.id)];
+
+        // The manifest has been read in full, so the capability is recorded and the attempt budget is
+        // released. Recorded here rather than beside the fetch: a parse that threw returned above with
+        // the version untouched, so a transient failure still has attempts left to use.
+        sourceStates[0] = recordExtraction(sourceStates[0], previous, EXTRACTION_VERSION);
 
         // Evidence for each, and only where it is new: a manifest that changed for snapshots adds no
         // copies, and an unchanged response never gets this far.

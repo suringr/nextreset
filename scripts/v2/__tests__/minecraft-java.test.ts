@@ -7,13 +7,14 @@
 import test from "node:test";
 import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
-import { KEPT_RELEASES, MINECRAFT_CHANGELOGS_PAGE, MINECRAFT_MANIFEST_URL, createMinecraftJavaAdapter, parseLatestJavaRelease, parseRecentJavaReleases } from "../adapters/minecraft-java";
+import { EXTRACTION_VERSION, KEPT_RELEASES, MINECRAFT_CHANGELOGS_PAGE, MINECRAFT_MANIFEST_URL, createMinecraftJavaAdapter, parseLatestJavaRelease, parseRecentJavaReleases } from "../adapters/minecraft-java";
 import { MockAiProvider } from "../ai/mock";
 import { DEFAULT_AI_BUDGET_LIMITS, createAiGate } from "../cost/budget";
 import { AiUsageLedger } from "../cost/ledger";
 import { adapterFor, findGame, findTopic } from "../games";
 import { runTracker } from "../pipeline";
 import { validateGameKnowledge } from "../validate";
+import { MAX_EXTRACTION_ATTEMPTS, remainingExtractionReads, shouldReadInFull } from "../fetch/smart-fetch";
 import { fakeTransport, fixture } from "./fake-transport";
 import { V1_ROBLOX_FRESH_KEYS, tempStore } from "./helpers";
 
@@ -374,4 +375,223 @@ test("releases too old for this parser to reach do not keep the manifest being r
     assert.deepEqual(run.work, { unchanged: 1, deterministic: 0, sentToAi: 0, deferred: 0 },
         "the manifest was re-read for releases this parser can never reach");
     assert.deepEqual([run.created, run.changes.length], [0, 0]);
+});
+
+/**
+ * The backfill lifecycle.
+ *
+ * Reading more out of a response the build already pays for only helps if the response still has a body.
+ * A conditional GET against a quiet source answers 304, a 304 has no body, and the new capability waits
+ * for an upstream change that has nothing to do with it. On the live site that wait was indefinite: the
+ * rescue shipped, the manifest stayed quiet, and the page kept showing one date and no history.
+ *
+ * So the adapter spends exactly one validator-free request per capability version, and only while there
+ * is still something to learn. Both halves are load-bearing and each is asserted on its own below.
+ */
+test("a source that would answer 304 is still read once when the adapter learns to read more", async () => {
+    const { store } = tempStore();
+
+    // A store as the old adapter left it: the current release only, and a source state carrying a
+    // validator — which is exactly what makes a real server withhold the body on the next run.
+    const seed = fakeTransport({ http: [{ body: CURRENT, headers: { "content-type": "application/json", etag: '"quiet"' } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(seed), store, NOW);
+    const seeded = store.load("minecraft");
+    store.save({ ...seeded, sources: seeded.sources.map(s => ({ ...s, extractionVersion: undefined })) });
+    assert.equal(store.load("minecraft").sources[0].etag, '"quiet"', "the store needs a validator for this test to mean anything");
+    assert.equal(store.load("minecraft").events.length, 1, "this test starts from a store with no history");
+
+    // Same manifest contents it has always served, now read by an adapter that knows about the list.
+    const again = fakeTransport({ http: [{ body: HISTORY, headers: { "content-type": "application/json", etag: '"quiet"' } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(again), store, new Date("2026-11-11T06:00:00Z"));
+
+    assert.equal(again.gets.length, 1, "the backfill cost more than the request the schedule was making anyway");
+    assert.deepEqual([again.gets[0].etag, again.gets[0].lastModified], [undefined, undefined],
+        "the request carried validators, so a real server would have answered 304 and the history would still be unread");
+    const after = store.load("minecraft");
+    assert.equal(after.events.length, KEPT_RELEASES, "the history did not arrive");
+    assert.equal(after.sources[0].extractionVersion, EXTRACTION_VERSION, "the one unconditional read was not recorded as spent");
+});
+
+test("once the history is in, the manifest is asked for conditionally again", async () => {
+    const { store } = tempStore();
+    const full = fakeTransport({ http: [{ body: HISTORY, headers: { "content-type": "application/json", etag: '"settled"' } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(full), store, NOW);
+    assert.equal(store.load("minecraft").events.length, KEPT_RELEASES, "this test needs a settled store");
+
+    const next = fakeTransport({ http: [{ status: 304, notModified: true }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(next), store, new Date("2026-11-11T06:00:00Z"));
+    assert.equal(next.gets[0].etag, '"settled"',
+        "a settled store should let the server answer 304 — re-reading it learns nothing and costs bandwidth");
+});
+
+test("a source that can never fill the cap is still only read unconditionally once", async () => {
+    // This capture holds a single release, so `settled` can never become true. Without the version
+    // budget the adapter would send a validator-free request on every run for the rest of time, which is
+    // precisely the recurring cost this design is not allowed to introduce.
+    const { store } = tempStore();
+    const serve = () => fakeTransport({ http: [{ body: CURRENT, headers: { "content-type": "application/json", etag: '"short"' } }] });
+
+    const first = serve();
+    await runTracker(game, topic, createMinecraftJavaAdapter(first), store, NOW);
+    assert.deepEqual([first.gets[0].etag, first.gets[0].lastModified], [undefined, undefined], "the first read should be unconditional");
+
+    const second = serve();
+    await runTracker(game, topic, createMinecraftJavaAdapter(second), store, new Date("2026-09-17T06:00:00Z"));
+    assert.equal(second.gets[0].etag, '"short"',
+        "the unconditional read repeated, so a source that never fills the cap pays for one on every run forever");
+});
+
+test("a parse that fails keeps its remaining attempts but not an unlimited supply", async () => {
+    // The version is recorded after the manifest has actually been read, so a parse that threw does not
+    // bank the capability and still has attempts left. But "still has attempts" has to be finite: Codex
+    // (#68) pointed out that recording only on success buys a *permanently* broken parse an unbounded
+    // run of full downloads, and that my first version of this test asserted the state after one failure
+    // and so codified the loop rather than detecting it.
+    const { store } = tempStore();
+    const broken = () => fakeTransport({ http: [{ body: '{"latest":{"release":"26.3"},"versions":[]}', headers: { "content-type": "application/json" } }] });
+
+    for (let run = 1; run <= MAX_EXTRACTION_ATTEMPTS; run++) {
+        await runTracker(game, topic, createMinecraftJavaAdapter(broken()), store, new Date(`2026-09-1${run}T00:00:00Z`));
+        const state = store.load("minecraft").sources[0];
+        assert.equal(state?.extractionVersion, undefined, "a failed parse banked the capability as applied");
+        assert.equal(state?.extractionAttempts?.tries, run, `run ${run} did not consume an attempt`);
+    }
+
+    // Budget exhausted: the adapter must stop asking for the body on this capability.
+    assert.equal(shouldReadInFull(store.load("minecraft").sources[0], EXTRACTION_VERSION, false), false,
+        "a parse that fails every time would keep downloading the whole manifest for ever");
+});
+
+test("a newer capability starts with a fresh budget", async () => {
+    // Keyed by version, so a capability that exhausted its attempts does not hand an exhausted budget to
+    // the next one — otherwise shipping a fix for the broken parser could never apply it.
+    const spent = { consecutiveFailures: 0, extractionAttempts: { version: EXTRACTION_VERSION, tries: MAX_EXTRACTION_ATTEMPTS } };
+    assert.equal(shouldReadInFull(spent, EXTRACTION_VERSION, false), false, "the exhausted version should be done");
+    assert.equal(shouldReadInFull(spent, EXTRACTION_VERSION + 1, false), true, "the next capability inherited an exhausted budget");
+});
+
+test("rolling back to an older adapter does not lower the mark", async () => {
+    // Codex (#68): if version N has succeeded and the deployment is rolled back to an adapter declaring
+    // M < N, a changed response on the rolled-back build would overwrite N with M, and redeploying N
+    // would repeat a capability read that had already happened. Rollback cycles would walk straight
+    // through the per-version bound.
+    const { store } = tempStore();
+    const first = fakeTransport({ http: [{ body: HISTORY, headers: { "content-type": "application/json" } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(first), store, NOW);
+
+    // Pretend a later capability has already read this source.
+    const before = store.load("minecraft");
+    store.save({ ...before, sources: before.sources.map(s => ({ ...s, extractionVersion: EXTRACTION_VERSION + 4 })) });
+
+    // Now today's adapter sees a changed manifest and records what it read.
+    const changed = edit(HISTORY, m => { m.latest = { release: "26.4", snapshot: "26.5-rc-1" }; m.versions.push({ id: "26.4", type: "release", url: "https://piston-meta.mojang.com/v1/packages/0000/26.4.json", time: "2026-11-02T00:00:00+00:00", releaseTime: "2026-11-01T10:00:00+00:00" }); });
+    const rolled = fakeTransport({ http: [{ body: changed, headers: { "content-type": "application/json" } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(rolled), store, new Date("2026-11-11T06:00:00Z"));
+
+    assert.equal(store.load("minecraft").sources[0].extractionVersion, EXTRACTION_VERSION + 4,
+        "an older adapter lowered the mark, so redeploying the newer one would read the source again");
+});
+
+test("retries inside one run are charged to the attempt budget", async () => {
+    // Codex (#68): smartFetch retries a transport error or a 5xx up to three times, and under an
+    // unconditional read every one of those is another validator-free download. Charging one attempt per
+    // call made a budget of three permit as many as nine requests.
+    const { store } = tempStore();
+    const flaky = fakeTransport({ http: [{ status: 503 }, { status: 503 }, { body: HISTORY, headers: { "content-type": "application/json" } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(flaky), store, NOW);
+    assert.equal(flaky.gets.length, 3, "this test needs the retry path");
+
+    const state = store.load("minecraft").sources[0];
+    // The read succeeded, so the version is banked and the budget released — the charge matters on the
+    // failing path, which the next assertion covers.
+    assert.equal(state.extractionVersion, EXTRACTION_VERSION);
+
+    const { store: second } = tempStore();
+    const broken = fakeTransport({ http: [{ status: 503 }, { status: 503 }, { body: '{"latest":{"release":"26.3"},"versions":[]}', headers: { "content-type": "application/json" } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(broken), second, NOW);
+    const spent = second.load("minecraft").sources[0]?.extractionAttempts?.tries;
+    assert.equal(spent, 3, `three requests went out but ${spent} attempt(s) were charged`);
+    assert.equal(shouldReadInFull(second.load("minecraft").sources[0], EXTRACTION_VERSION, false), false,
+        "the budget should be exhausted after three validator-free requests, however they were grouped");
+});
+
+test("a rollback does not hand a newer version a fresh budget", async () => {
+    // Codex (#68): version N exhausts its attempts, the deployment rolls back to M < N, and a genuine
+    // source change that M parses successfully cleared N's spent attempts. Redeploying N then found a
+    // full budget, so rollback/change/redeploy cycles walked through the per-version cap.
+    const { store } = tempStore();
+    const first = fakeTransport({ http: [{ body: HISTORY, headers: { "content-type": "application/json" } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(first), store, NOW);
+
+    // A newer capability has already tried and given up here.
+    const before = store.load("minecraft");
+    store.save({
+        ...before,
+        sources: before.sources.map(s => ({ ...s, extractionVersion: 0, extractionAttempts: { version: EXTRACTION_VERSION + 4, tries: MAX_EXTRACTION_ATTEMPTS } }))
+    });
+
+    // Today's older adapter sees a changed manifest and succeeds.
+    const changed = edit(HISTORY, m => { m.latest = { release: "26.4", snapshot: "26.5-rc-1" }; m.versions.push({ id: "26.4", type: "release", url: "https://piston-meta.mojang.com/v1/packages/0000/26.4.json", time: "2026-11-02T00:00:00+00:00", releaseTime: "2026-11-01T10:00:00+00:00" }); });
+    await runTracker(game, topic, createMinecraftJavaAdapter(fakeTransport({ http: [{ body: changed, headers: { "content-type": "application/json" } }] })), store, new Date("2026-11-11T06:00:00Z"));
+
+    const after = store.load("minecraft").sources[0];
+    assert.deepEqual(after.extractionAttempts, { version: EXTRACTION_VERSION + 4, tries: MAX_EXTRACTION_ATTEMPTS },
+        "the older adapter wiped a newer version's spent attempts");
+});
+
+test("one call cannot spend more than the budget has left", async () => {
+    // Codex (#68): the budget was checked before the call and charged after it, so a run with one
+    // attempt already spent could still send three more — a 5xx, a 5xx and a parse-invalid 200 — for
+    // four validator-free requests against a cap of three. The remaining allowance is now passed to
+    // `retries`, so a single call cannot overspend it.
+    const { store } = tempStore();
+    const BROKEN = '{"latest":{"release":"26.3"},"versions":[]}';
+
+    // Burn one attempt on a parse that fails without retrying (a clean 200 that does not parse).
+    await runTracker(game, topic, createMinecraftJavaAdapter(
+        fakeTransport({ http: [{ body: BROKEN, headers: { "content-type": "application/json" } }] })), store, NOW);
+    assert.equal(store.load("minecraft").sources[0].extractionAttempts?.tries, 1, "this test needs exactly one attempt spent");
+
+    // Two left. A flaky run must stop at two requests, not three.
+    const flaky = fakeTransport({ http: [{ status: 503 }, { status: 503 }, { body: BROKEN, headers: { "content-type": "application/json" } }] });
+    await runTracker(game, topic, createMinecraftJavaAdapter(flaky), store, new Date("2026-09-18T00:00:00Z"));
+    assert.equal(flaky.gets.length, 2, `the call issued ${flaky.gets.length} requests with only 2 of the budget left`);
+
+    const state = store.load("minecraft").sources[0];
+    assert.equal(state.extractionAttempts?.tries, MAX_EXTRACTION_ATTEMPTS, "the budget should now be exactly spent");
+    assert.equal(shouldReadInFull(state, EXTRACTION_VERSION, false), false, "the budget is spent and should be closed");
+});
+
+test("charging an older version does not discard a newer version's spent budget", async () => {
+    // Codex (#68), the other half of the rollback hole: version N exhausts its attempts, the deployment
+    // rolls back to M, and because M has never been recorded the store is unsettled and M is allowed its
+    // own read. Charging that read used to overwrite N's counter, and M succeeding then cleared it — so
+    // redeploying N found a full budget again.
+    const { store } = tempStore();
+    const BROKEN = '{"latest":{"release":"26.3"},"versions":[]}';
+    await runTracker(game, topic, createMinecraftJavaAdapter(
+        fakeTransport({ http: [{ body: BROKEN, headers: { "content-type": "application/json" } }] })), store, NOW);
+
+    // A newer capability has already tried here and given up.
+    const before = store.load("minecraft");
+    store.save({ ...before, sources: before.sources.map(s => ({ ...s, extractionAttempts: { version: EXTRACTION_VERSION + 4, tries: MAX_EXTRACTION_ATTEMPTS } })) });
+
+    await runTracker(game, topic, createMinecraftJavaAdapter(
+        fakeTransport({ http: [{ body: BROKEN, headers: { "content-type": "application/json" } }] })), store, new Date("2026-09-19T00:00:00Z"));
+
+    assert.deepEqual(store.load("minecraft").sources[0].extractionAttempts, { version: EXTRACTION_VERSION + 4, tries: MAX_EXTRACTION_ATTEMPTS },
+        "an older version's charge overwrote a newer version's exhausted budget");
+});
+
+test("a newer version's exhausted budget stops an older one re-reading for ever", () => {
+    // Codex (#68), the hole my own rollback fix opened: keeping N's marker meant M counted as having
+    // spent nothing and was granted a full budget, while the charge was refused because N's marker
+    // outranked it. Three validator-free requests every run, for ever.
+    const exhaustedByNewer = { consecutiveFailures: 0, extractionAttempts: { version: EXTRACTION_VERSION + 4, tries: MAX_EXTRACTION_ATTEMPTS } };
+    assert.equal(remainingExtractionReads(exhaustedByNewer, EXTRACTION_VERSION, false), 0,
+        "a rolled-back adapter was granted reads a newer capability had already given up on");
+    assert.equal(shouldReadInFull(exhaustedByNewer, EXTRACTION_VERSION, false), false);
+
+    // A newer capability still gets its own budget, which is the point of keying by version.
+    assert.equal(remainingExtractionReads(exhaustedByNewer, EXTRACTION_VERSION + 5, false), MAX_EXTRACTION_ATTEMPTS);
 });

@@ -4,17 +4,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="description"
     content="Live tracking of official game resets and updates — no predictions. Track Fortnite, League of Legends, CS2, VALORANT, and more.">
   <meta property="og:title" content="NextReset - Live Game Reset Tracker">
   <meta property="og:description" content="Live tracking of official game resets and updates — no predictions">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://nextreset.co">
-  <meta property="og:image" content="https://nextreset.co/og.png">
+  <meta property="og:image" content="https://nextreset.co/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <title>NextReset - Live Game Reset Tracker</title>
   <link rel="canonical" href="https://nextreset.co/">
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/favicon.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#050812">
 
@@ -27,12 +31,61 @@
   <link rel="stylesheet" href="/assets/styles.v2.css">
 
   <!-- Google Analytics (moved after CSS to not block parsing) -->
+  <!-- Consent Mode v2 defaults, set before any Google tag loads.
+       Without this, Google's tags run with consent assumed and a choice made afterwards arrives too late
+       for the pageview that prompted it. Declared denied, no cookie is set and no advertising or
+       analytics identifier is read or written until the visitor has answered.
+       It is not a block: this is advanced consent mode, so the tags still send a cookieless signal while
+       consent is denied. Blocking outright would mean not loading the Google tag at all, which is also
+       how the consent message itself arrives.
+       Scoped to the EEA, the UK and Switzerland, which is where prior consent is required and where
+       Google's own CMP (configured in AdSense Privacy & messaging) shows its message and issues the
+       update. Elsewhere the defaults stay granted, so this changes who is measured, not whether
+       measurement works. -->
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: 'denied',
+      wait_for_update: 500,
+      region: ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE','IS','LI','NO','GB','CH']
+    });
+    // Denying ad_storage does not stop the ad-click id in the URL being sent with the page location, so
+    // a visitor arriving on a gclid link was identifiable in the very signal the defaults were supposed
+    // to have made anonymous. Redaction strips it while consent is denied, and lifts when it is granted.
+    gtag('set', 'ads_data_redaction', true);
+  </script>
+
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag() { dataLayer.push(arguments); }
     gtag('js', new Date());
-    gtag('config', 'G-YY6V5SR1DN');
+    // Analytics sends the page address, and ads_data_redaction does not reach it: that setting covers
+    // Google Ads pings, not these fields. So an ad-click id in the URL would arrive at Google attached to
+    // a visit whose consent was denied, which is the one thing the defaults were supposed to have
+    // prevented. Stripped here, before the first measurement rather than in a policy footnote.
+    //
+    // Both fields, not only the location. The referrer is the same leak one click later: a visitor
+    // landing on /x/?gclid=A and following any same-origin link hands that whole URL to the next page as
+    // document.referrer, which analytics collects automatically.
+    function nrClean(href) {
+      try {
+        var u = new URL(href);
+        ['gclid', 'dclid', 'gbraid', 'wbraid', 'gclsrc', 'gad_source', 'msclkid', 'fbclid', '_gl']
+          .forEach(function (p) { u.searchParams.delete(p); });
+        return u.href;
+      } catch (e) {
+        // An address that will not parse is left alone rather than guessed at.
+        return href;
+      }
+    }
+    var nrFields = { page_location: nrClean(location.href) };
+    if (document.referrer) nrFields.page_referrer = nrClean(document.referrer);
+    gtag('config', 'G-YY6V5SR1DN', nrFields);
   </script>
 
   <!-- Google AdSense site code -->
@@ -342,7 +395,7 @@
           <li><a href="/genshin/next-banner/">Genshin Impact</a> — Banner end date from HoYoverse news</li>
           <li><a href="/pubg/last-patch/">PUBG</a> — Latest patch from official patch notes</li>
           <li><a href="/red-dead-redemption-2/last-update/">Red Dead Redemption 2</a> — Latest news from Rockstar Newswire</li>
-          <li><a href="/ea-sports-fc/last-title-update/">EA SPORTS FC</a> — Latest title update from EA Forums</li>
+          <li><a href="/ea-sports-fc/last-title-update/">EA SPORTS FC</a> — Latest title update from EA’s own announcements</li>
         </ul>
       </div>
 

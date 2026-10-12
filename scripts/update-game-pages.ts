@@ -52,8 +52,8 @@ export const gamePages: GamePage[] = [
         typeTitle: 'Season End',
         title: 'Fortnite',
         kicker: 'Battle Royale',
-        metaDescription: 'Track the exact countdown to when the current Fortnite season ends and the next one begins. Updated automatically from official Epic Games sources.',
-        aboutTracker: 'This page tracks the official end date for the current Fortnite Battle Pass season. The countdown is sourced directly from the official Fortnite Battle Pass page on fortnite.com, so you always see the real date — not a community guess.',
+        metaDescription: "Fortnite season end, read from Epic's official Battle Pass page - a source that began refusing our servers in April 2026. What that means, and what a season change brings.",
+        aboutTracker: 'This page tracks the end date of the current Fortnite Battle Pass season, read from the official Battle Pass page on fortnite.com. On 5 April 2026 that source began refusing requests from our servers. While it refuses, this page shows no date rather than an estimate.',
         whatIsIt: 'Every few months, Epic Games launches a new Fortnite season with a completely refreshed Battle Pass, new map changes, fresh weapons, and unique gameplay mechanics. Each season typically lasts 10-13 weeks and introduces a new theme that reshapes the entire game experience. Knowing when the current season ends helps you plan your remaining Battle Pass challenges and prepare for whatever comes next.',
         whatChanges: [
             'New Battle Pass with 100+ tiers of cosmetics',
@@ -64,9 +64,9 @@ export const gamePages: GamePage[] = [
             'Competitive ranked season may reset'
         ],
         faq: [
-            { q: 'When does the current Fortnite season end?', a: 'The exact end date is shown in the countdown above. This date is pulled directly from the official Fortnite Battle Pass page and updates automatically.' },
+            { q: "Why does this page sometimes show no season end date?", a: 'Because the only sources we accept are Epic’s own, and since 5 April 2026 they have returned an HTTP 403 challenge to our servers rather than a page. We do not work around that challenge, and we do not take season dates from community trackers or unofficial API mirrors, accurate though those often are. When Epic’s page answers, the date appears here; when it does not, we would rather show nothing than a guess.' },
             { q: 'What happens when a Fortnite season ends?', a: 'When a season ends, your Battle Pass progress resets, the map typically changes, and a new set of weapons and items are introduced. Any unearned Battle Pass rewards from the previous season become unavailable.' },
-            { q: 'Can Fortnite seasons be extended?', a: 'Yes, Epic Games occasionally extends seasons beyond their originally announced end date. Our tracker updates automatically when this happens, so the countdown always reflects the latest official date.' }
+            { q: 'Where can I see the official season end date?', a: 'Epic shows the current season’s end date on the Battle Pass screen inside Fortnite itself, and announces season changes on fortnite.com. Those are the authoritative places. We would rather point you to them than restate a date we cannot verify.' }
         ]
     },
     {
@@ -113,7 +113,7 @@ export const gamePages: GamePage[] = [
         ],
         faq: [
             { q: 'How often does VALORANT get updated?', a: 'VALORANT follows a two-week patch cycle with alternating major and minor patches. Major patches bring bigger gameplay changes while minor patches focus on fixes.' },
-            { q: 'When did the last VALORANT patch come out?', a: 'The exact date of the most recent patch is shown above. This updates automatically whenever Riot releases a new game update.' },
+            { q: 'When did the last VALORANT patch come out?', a: 'Whenever Riot last published patch notes. The date is the publication date Riot gave that patch, not one we derived.' },
             { q: 'Does VALORANT have downtime during patches?', a: 'Yes, VALORANT typically goes offline for a few hours during patch deployment. Riot usually announces the maintenance window in advance on their social media channels.' }
         ]
     },
@@ -137,7 +137,7 @@ export const gamePages: GamePage[] = [
         ],
         faq: [
             { q: 'How often does CS2 get updated?', a: 'CS2 doesn\'t follow a fixed schedule. Valve releases updates as needed — sometimes weekly for bug fixes, sometimes with longer gaps between major content updates.' },
-            { q: 'When was the last CS2 update?', a: 'The date of the most recent update is shown in the tracker above. This data comes from Valve\'s official update announcements.' },
+            { q: 'When was the last CS2 update?', a: 'Whenever Valve last shipped one - it does not announce updates in advance. This page takes the date from Valve’s own update announcements rather than deriving it.' },
             { q: 'Do CS2 updates require a game restart?', a: 'Yes, updates are downloaded automatically through Steam and typically require restarting the game. Major updates may also require a brief matchmaking interruption.' }
         ]
     },
@@ -161,7 +161,7 @@ export const gamePages: GamePage[] = [
         ],
         faq: [
             { q: 'How often does Minecraft get updated?', a: 'Minecraft typically receives 1-2 major updates per year, with smaller bug-fix releases in between. Snapshots (test versions) are released more frequently for community testing.' },
-            { q: 'When was the last Minecraft release?', a: 'The date of the most recent official release is shown above. This tracks stable releases, not snapshots or pre-releases.' },
+            { q: 'When was the last Minecraft release?', a: 'Whenever Mojang last shipped a stable Java Edition release. The date is the release time Mojang records in its own launcher manifest, exact to the second. Snapshots and pre-releases are test builds and are deliberately left out.' },
             { q: 'Do I need to update manually?', a: 'If you\'re using the official Minecraft Launcher, updates are downloaded automatically. You can also choose to play older versions through the launcher\'s version selector.' }
         ]
     },
@@ -208,7 +208,7 @@ export const gamePages: GamePage[] = [
             'Featured Adversary Mode and Survival maps'
         ],
         faq: [
-            { q: 'What time does GTA Online reset each week?', a: 'GTA Online resets every Thursday at exactly 10:00 UTC (6:00 AM Eastern, 3:00 AM Pacific). The countdown above shows the exact time remaining until the next reset.' },
+            { q: 'What time does GTA Online reset each week?', a: 'GTA Online resets every Thursday at exactly 10:00 UTC. In New York that is 6:00 AM while daylight saving is in effect and 5:00 AM once the clocks go back; in Los Angeles, 3:00 AM and then 2:00 AM. UTC does not shift, so the reset itself never moves - only your offset from it does.' },
             { q: 'What changes during the GTA Online weekly reset?', a: 'Each week brings new discounted vehicles and properties, bonus payout activities (double/triple GTA$ and RP), a new podium vehicle, and refreshed weekly challenges.' },
             { q: 'Do I lose anything during the weekly reset?', a: 'No, your character progress, money, vehicles, and properties are never affected by the weekly reset. Only the featured content and discounts change.' }
         ]
@@ -233,7 +233,7 @@ export const gamePages: GamePage[] = [
         ],
         faq: [
             { q: 'How often does Warzone get updated?', a: 'Warzone typically receives updates every 1-2 weeks, with larger seasonal updates arriving roughly every 6 weeks. Mid-season updates often bring balance patches and new content.' },
-            { q: 'When was the last Warzone patch?', a: 'The date of the most recent patch is shown above. This is sourced from the official Call of Duty patch notes page.' },
+            { q: 'When was the last Warzone patch?', a: 'Whenever Activision last updated its patch notes page. The date is the day that page gives the current Warzone patch.' },
             { q: 'Are Warzone updates the same across all platforms?', a: 'Yes, Warzone patches release simultaneously across PlayStation, Xbox, and PC. All platforms receive the same balance changes and content updates.' }
         ]
     },
@@ -256,7 +256,7 @@ export const gamePages: GamePage[] = [
             'Accompanying in-game events and activities'
         ],
         faq: [
-            { q: 'When does the current Genshin banner end?', a: 'The exact end date is shown in the countdown above. Each version typically has two banner phases, each lasting about 3 weeks.' },
+            { q: 'When does the current Genshin banner end?', a: 'Each version has two banner phases, and a phase typically runs about three weeks. When HoYoverse has announced the current phase’s end, this page shows that date at the top — and, because the three server regions reach that local time at different moments, the exact UTC instant for each one.' },
             { q: 'Does my pity reset when the banner changes?', a: 'Pity carries over between banners of the same type (character event wish). If you\'re at 70 pulls on one character banner, you\'ll still be at 70 when the next character banner starts.' },
             { q: 'How do I know which characters are coming next?', a: 'HoYoverse typically announces upcoming banners through the official Genshin Impact social media channels and in-game notices a few days before the current banner ends.' }
         ]
@@ -281,7 +281,7 @@ export const gamePages: GamePage[] = [
         ],
         faq: [
             { q: 'How often does PUBG get patched?', a: 'PUBG typically receives major updates at the start of each season (roughly every 2 months) with smaller fix patches in between as needed.' },
-            { q: 'When was the last PUBG update?', a: 'The date of the most recent patch is displayed above. This is sourced from KRAFTON\'s official patch notes page.' },
+            { q: 'When was the last PUBG update?', a: 'Whenever KRAFTON last published patch notes. This page takes the date from those notes rather than deriving it.' },
             { q: 'Does PUBG have downtime during updates?', a: 'Yes, PUBG servers go offline for several hours during major patch deployments. KRAFTON usually announces maintenance schedules in advance through their official channels.' }
         ]
     },
@@ -316,8 +316,8 @@ export const gamePages: GamePage[] = [
         typeTitle: 'Last Title Update',
         title: 'EA SPORTS FC',
         kicker: 'Sports',
-        metaDescription: 'Track the latest EA SPORTS FC title update and patch notes. Live status sourced from EA Forums Game Info Hub.',
-        aboutTracker: 'This page tracks the most recent EA SPORTS FC title update. Data is sourced from the EA Forums Game Info Hub, where the development team posts official patch notes and update announcements.',
+        metaDescription: 'Track the latest EA SPORTS FC title update. The date comes from EA’s own announcement posts, read at the moment EA published them.',
+        aboutTracker: 'This page tracks the most recent EA SPORTS FC title update, read from EA’s own announcement posts for each title year. EA’s Forums answer automated requests with a challenge and are not used.',
         whatIsIt: 'EA SPORTS FC (formerly FIFA) receives regular title updates throughout its annual cycle. These updates address gameplay balance, fix bugs, and occasionally introduce new features. Title updates are the primary way EA Sports tunes the game after launch, adjusting everything from player movement and shooting mechanics to goalkeeper AI and set-piece behavior.',
         whatChanges: [
             'Gameplay mechanic tuning (shooting, passing, dribbling)',
@@ -329,7 +329,7 @@ export const gamePages: GamePage[] = [
         ],
         faq: [
             { q: 'How often does EA SPORTS FC get title updates?', a: 'Title updates typically arrive every few weeks, with more frequent updates early in the game\'s cycle (October-January) and less frequent updates later in the year.' },
-            { q: 'When was the last EA FC update?', a: 'The date of the most recent title update is shown above. This is sourced from EA\'s official Game Info Hub on the EA Forums.' },
+            { q: 'When was the last EA FC update?', a: 'Whenever EA last published one. EA ships title updates when they are ready rather than on a schedule, so there is no next date until EA names one. Where this tracker has read an announcement, what it shows is its publication time; EA’s own posts are where the title update notes appear.' },
             { q: 'Do title updates affect Ultimate Team?', a: 'Yes, title updates can change gameplay mechanics that affect all modes including Ultimate Team. However, content updates (new promos, SBCs, objectives) happen separately through server-side updates.' }
         ]
     }
@@ -437,15 +437,19 @@ function generatePage(page: GamePage): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="description" content="${page.metaDescription}">
   <meta property="og:title" content="${page.title} ${page.typeTitle} - NextReset">
   <meta property="og:description" content="${page.metaDescription}">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://nextreset.co/og.png">
+  <meta property="og:image" content="https://nextreset.co/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <link rel="canonical" href="https://nextreset.co/${page.game}/${page.type}/">
   <title>${page.title} ${page.typeTitle} - NextReset</title>
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/favicon.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#0b0f14">
 
@@ -483,12 +487,50 @@ function generatePage(page: GamePage): string {
 
   <link rel="stylesheet" href="/assets/styles.v2.css">
 
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: 'denied',
+      wait_for_update: 500,
+      region: ['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE','IS','LI','NO','GB','CH']
+    });
+    // Denying ad_storage does not stop the ad-click id in the URL being sent with the page location, so
+    // a visitor arriving on a gclid link was identifiable in the very signal the defaults were supposed
+    // to have made anonymous. Redaction strips it while consent is denied, and lifts when it is granted.
+    gtag('set', 'ads_data_redaction', true);
+  </script>
+
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag() { dataLayer.push(arguments); }
     gtag('js', new Date());
-    gtag('config', 'G-YY6V5SR1DN');
+    // Analytics sends the page address, and ads_data_redaction does not reach it: that setting covers
+    // Google Ads pings, not these fields. So an ad-click id in the URL would arrive at Google attached to
+    // a visit whose consent was denied, which is the one thing the defaults were supposed to have
+    // prevented. Stripped here, before the first measurement rather than in a policy footnote.
+    //
+    // Both fields, not only the location. The referrer is the same leak one click later: a visitor
+    // landing on /x/?gclid=A and following any same-origin link hands that whole URL to the next page as
+    // document.referrer, which analytics collects automatically.
+    function nrClean(href) {
+      try {
+        var u = new URL(href);
+        ['gclid', 'dclid', 'gbraid', 'wbraid', 'gclsrc', 'gad_source', 'msclkid', 'fbclid', '_gl']
+          .forEach(function (p) { u.searchParams.delete(p); });
+        return u.href;
+      } catch (e) {
+        // An address that will not parse is left alone rather than guessed at.
+        return href;
+      }
+    }
+    var nrFields = { page_location: nrClean(location.href) };
+    if (document.referrer) nrFields.page_referrer = nrClean(document.referrer);
+    gtag('config', 'G-YY6V5SR1DN', nrFields);
   </script>
 
   <!-- Google AdSense site code -->

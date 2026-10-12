@@ -584,6 +584,45 @@ This ensures:
   above), or it is in `EDITORIAL_NOINDEX` (the three trackers above). Built from the pages that exist,
   never authored, so it cannot drift from them.
 
+## 🔒 Consent, analytics and one deliberate gap
+
+Every page that loads a Google tag declares its consent defaults first: `ad_storage`,
+`ad_user_data`, `ad_personalization` and `analytics_storage` all **denied** for the EEA, the UK and
+Switzerland, before the loader and before the `config` call. Google's own CMP, configured account-side
+in AdSense → Privacy & messaging, issues the update that lifts them.
+
+This is *advanced* consent mode, so the tags still send a cookieless signal while consent is denied.
+That is stated plainly in the privacy policy rather than left for "denied" to imply otherwise. Two
+things are stripped before analytics sees them, because `ads_data_redaction` does not reach either:
+
+- `page_location` — the address of the page
+- `page_referrer` — the address the visitor came from, which carries the same click ids one click later
+
+Removed in both: `gclid`, `dclid`, `gbraid`, `wbraid`, `gclsrc`, `gad_source`, `msclkid`, `fbclid`,
+`_gl`. The site buys no advertising, so there is no attribution to lose.
+
+### `/play/` has no analytics, and that is a gap to close
+
+The arcade carries no Google code at all — no ad unit, no loader, no analytics, no consent block.
+
+That is not only an ad-free decision. Google's consent message is delivered **by the AdSense code**,
+and `/play/` has deliberately never carried any. So an EEA visitor landing straight on the game had
+analytics denied with no way, ever, to answer: measured cookielessly in perpetuity without being asked.
+Measuring a page that cannot ask is worse than not measuring it, so the page measures nobody.
+
+**This is a follow-up, not a conclusion.** Arcade usage is worth knowing, and the cost today is that we
+know nothing about it anywhere, not only in the EEA. Restoring it means picking one of:
+
+1. **An independent CMP on `/play/`** — a certified consent platform loaded without the AdSense code,
+   so the page can ask and then measure. Keeps the page ad-free. Most faithful to the intent, and the
+   only option that measures EEA visitors at all.
+2. **Load analytics only after an answer** — same requirement, since something still has to ask.
+3. **A measurement that needs no consent** — a counter that stores nothing on the device and
+   identifies nobody. Cheapest, and much less useful.
+
+Whichever is chosen, the invariant that must not move: **`/play/` stays free of ad code.** A game is a
+bad place to put something a player might hit by accident, and `one-shot.test.ts` asserts it.
+
 ## 📝 License
 
 MIT

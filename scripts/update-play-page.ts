@@ -142,15 +142,19 @@ export function generatePlayPage(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="description" content="${escapeHtml(DESCRIPTION)}">
   <meta property="og:title" content="${escapeHtml(title)}">
   <meta property="og:description" content="Find the courier, stop the armed threat, clear eighty contracts. A free sniper arcade game in the browser.">
   <meta property="og:type" content="website">
-  <meta property="og:image" content="https://nextreset.co/og.png">
+  <meta property="og:image" content="https://nextreset.co/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <link rel="canonical" href="${PLAY_URL}">
   <title>${escapeHtml(title)}</title>
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="apple-touch-icon" href="/favicon.png">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/favicon.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#050812">
 
@@ -158,14 +162,6 @@ export function generatePlayPage(): string {
   <style>
     ${criticalCss("play")}
   </style>
-
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YY6V5SR1DN"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag() { dataLayer.push(arguments); }
-    gtag('js', new Date());
-    gtag('config', 'G-YY6V5SR1DN');
-  </script>
 
   <!-- No AdSense loader on this page. See carriesLoader in scripts/adsense.ts: this is an interactive
        surface, and an Auto ads anchor or vignette over the game is a mis-tap that costs a contract. -->

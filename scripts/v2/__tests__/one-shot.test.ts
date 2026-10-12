@@ -155,7 +155,10 @@ test("/play/ carries no ad code and no site stylesheet, and loads the game after
     // hit by accident, and the loader is not here either -- not only the units.
     assert.ok(!/adsbygoogle|pagead2/.test(PAGE), "the game page carries AdSense");
     assert.equal($('link[href*="styles.v2.css"]').length, 0, "styles.v2.css would override the game's layout");
-    assert.ok(PAGE.includes("G-YY6V5SR1DN"), "analytics");
+    // No analytics either, which follows from there being no ad code: Google's consent message is
+    // delivered by the AdSense script, so on this page there is nothing that could ever ask an EEA
+    // visitor for an answer. Measuring someone who cannot be asked is worse than not measuring them.
+    assert.ok(!PAGE.includes("G-YY6V5SR1DN"), "the arcade measures a visitor it can never ask for consent");
     const scripts = $("script[src]").map((_, el) => $(el).attr("src")).get().filter(src => src.startsWith("/assets/"));
     assert.deepEqual(scripts.map(src => src.split("?")[0]), ["/assets/player.js", "/assets/one-shot.js"]);
     assert.equal($("script[src^='/assets/']").filter((_, el) => $(el).attr("defer") === undefined).length, 0, "a game script blocks parsing");
