@@ -352,6 +352,22 @@ function weeksIn(text: string): number | undefined {
 }
 
 /**
+ * Every sentence on a page that states a cadence, in either form.
+ *
+ * Filtering on the words "how often" or "every" first (Codex, #73) threw away "roughly a two-week patch
+ * cycle" before the parser could read it — which is how an overview could contradict the hub while the
+ * FAQ answer beside it kept the comparison green.
+ */
+function cadenceClaims(page: cheerio.CheerioAPI): string[] {
+    const said: string[] = [];
+    page("details.faq-item, .content-section p, .page p").each((_, el) => {
+        const text = page(el).text().replace(/\s+/g, " ");
+        if (WEEKS.test(text) || MONTHS.test(text)) said.push(text);
+    });
+    return said;
+}
+
+/**
  * A knowledge store with known intervals, so the hub derives a cadence in every environment.
  *
  * `npm test` only ever runs in the PR check, which checks out the repository and nothing else — the
@@ -395,6 +411,36 @@ function cadenceFixture(root: string, spacingDays: Record<string, number>, now: 
         }, null, 2), "utf8");
     }
 }
+test("no tracker page states two different cadences for its own game", () => {
+    // The check that needs neither a knowledge store nor a fixture, and the one that would have caught
+    // what this PR found: the LoL overview said "a consistent two-week patch cycle throughout the year"
+    // four paragraphs above a FAQ answer saying the cycle is not rigid.
+    //
+    // Comparing a page against the hub needs derived data, which only exists where the store does.
+    // Comparing a page against itself needs nothing, so it runs everywhere and cannot be skipped.
+    let checked = 0;
+    for (const entry of trackerManifest()) {
+        const page = cheerio.load(read(entry.page));
+        const claims = cadenceClaims(page);
+        const weeks = new Map<number, string>();
+        for (const text of claims) {
+            const stated = weeksIn(text);
+            if (stated !== undefined && !weeks.has(stated)) weeks.set(stated, text);
+        }
+        if (weeks.size === 0) continue;
+        checked++;
+        assert.equal(weeks.size, 1,
+            `${entry.page} states ${[...weeks.keys()].join(" and ")} weeks in different places:\n  ` +
+            [...weeks.values()].map(text => `"${text.slice(0, 100)}"`).join("\n  "));
+
+        // Months and weeks cannot both be the answer either.
+        const months = claims.filter(text => MONTHS.test(text));
+        assert.deepEqual(months, [],
+            `${entry.page} states a cadence in months as well as weeks: "${months[0]?.slice(0, 100)}"`);
+    }
+    assert.ok(checked > 0, "no tracker page states a cadence at all — this guard is checking nothing");
+});
+
 test("no tracker's prose contradicts the cadence the site derives for it", () => {
     // /resets/ derives a cadence from the stored events; each tracker page also talks about how often
     // its game updates. They were allowed to disagree, and did: PUBG's page said "roughly every 2
@@ -444,11 +490,7 @@ function compareCadence(read: (page: string) => string): void {
         // Collected, then asserted. An assertion thrown inside a cheerio .each callback does not
         // reliably escape it, so an earlier version of this guard reported nothing while two pages were
         // contradicting the hub.
-        const said: string[] = [];
-        page("details.faq-item, .content-section p").each((__, el) => {
-            const text = page(el).text().replace(/\s+/g, " ");
-            if (/how often|every/i.test(text)) said.push(text);
-        });
+        const said = cadenceClaims(page);
         let compared = 0;
         for (const text of said) {
             assert.ok(!MONTHS.test(text),
