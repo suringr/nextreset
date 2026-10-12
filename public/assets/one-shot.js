@@ -57,7 +57,7 @@ function resize(){
  if(!aim.x||aim.x>W) aim={x:W*.55,y:H*.5}; for(const p of civilians){p.x*=sx;p.y*=sy}
 }
 addEventListener('resize',resize);
-function resumeFrom(since){const away=performance.now()-since;started+=away;msgUntil+=away;reloadEnd+=away;for(const p of civilians)if(p.fireAt)p.fireAt+=away}let hiddenAt=document.hidden?performance.now():0;function hold(away){if(away){if(!hiddenAt)hiddenAt=performance.now();return}if(!hiddenAt)return;resumeFrom(hiddenAt);hiddenAt=0}document.addEventListener('visibilitychange',()=>hold(document.hidden));if(window.IntersectionObserver)new IntersectionObserver(es=>hold(!es[0].isIntersecting),{threshold:0}).observe(c);
+function resumeFrom(since){const away=performance.now()-since;started+=away;msgUntil+=away;reloadEnd+=away;for(const p of civilians)if(p.fireAt)p.fireAt+=away}let awayHidden=document.hidden,awayView=false,heldAt=awayHidden?performance.now():0;function hold(){if(awayHidden||awayView){if(!heldAt)heldAt=performance.now();return}if(!heldAt)return;resumeFrom(heldAt);heldAt=0}document.addEventListener('visibilitychange',()=>{awayHidden=document.hidden;hold()});if(window.IntersectionObserver)new IntersectionObserver(es=>{awayView=!es[0].isIntersecting;hold()},{threshold:0}).observe(c);
 function spawn(resetClock=true){enemies=[];civilians=[];shot=false;state='play';message='';levelScore=0;let m=missions[mission];maxAmmo=m.ammo;ammo=maxAmmo;reloading=false;if(resetClock)started=performance.now();let ground=H*.72;for(let i=0;i<m.n;i++){let p={x:W*(.12+Math.random()*.76),y:ground+(Math.random()-.5)*34,vx:(Math.random()<.5?-1:1)*(26+m.level*.8+Math.random()*30),phase:Math.random()*10,hat:Math.random()<.25,phone:Math.random()<.3,case:false,armed:false,hostile:false,aiming:false,fireAt:0,dead:false};civilians.push(p)}let t=civilians[Math.floor(Math.random()*civilians.length)];t.hostile=true;if(m.type==='courier')t.case=true;else{t.armed=true;t.fireAt=started+m.reaction+Math.random()*2500}enemies=[t]}
 function panel(x,y,w,h){ctx.fillStyle='rgba(5,14,22,.88)';ctx.beginPath();ctx.roundRect(x,y,w,h,11);ctx.fill()}
 function background(){
@@ -106,6 +106,7 @@ function overlay(now){
  if(state!=='play'&&now>msgUntil){if(state==='won'){if(mission===79){progress.finish(score);mission=0;score=0;combo=1}else mission++;attempt=1;spawn()}else{combo=1;spawn()}}
 }
 function frame(now){
+ if(heldAt){last=now;requestAnimationFrame(frame);return}
  let dt=Math.min(.035,(now-last)/1000||0);last=now;update(dt,now);ctx.save();if(shake){if(!calm.matches)ctx.translate((Math.random()-.5)*shake,(Math.random()-.5)*shake);shake*=.86}background();civilians.forEach(p=>drawPerson(p,now));scope();ui(now);overlay(now);ctx.restore();let xp=+progress.xp()||0,rank=ranks[Math.min(8,Math.floor(xp/8000))],st=+progress.stars(mission+1)||0;bestEl.textContent=`${rank} • XP ${xp} • L${mission+1}/80 ${'★'.repeat(st)}`;fireBtn.textContent=reloading?'LOAD':(ammo?'FIRE':'RELOAD');requestAnimationFrame(frame)
 }
 function reload(){let m=missions[mission];if(state!=='play'||reloading||ammo===maxAmmo||!m.reload)return;reloading=true;reloadEnd=performance.now()+m.reload;message='RELOADING';setTimeout(()=>{if(reloading&&message==='RELOADING')message=''},500)}

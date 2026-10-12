@@ -80,13 +80,13 @@ test("every approved edit says why, and each is one of the kinds the owner appro
     // prompt — and the resize (after Codex's review of #61).
     const storage = SCRIPT_EDITS.filter(edit => /localStorage/.test(edit.from));
     const reload = SCRIPT_EDITS.filter(edit => /msgUntil|RELOADING|reloading/.test(edit.from));
-    const hidden = SCRIPT_EDITS.filter(edit => /resumeFrom/.test(edit.to));
+    const hidden = SCRIPT_EDITS.filter(edit => /resumeFrom|heldAt/.test(edit.to));
     const resize = SCRIPT_EDITS.filter(edit => /r\.width|spawn\(false\)/.test(edit.from) || /ResizeObserver/.test(edit.to));
     const motion = SCRIPT_EDITS.filter(edit => /shake/.test(edit.from));
     const access = SCRIPT_EDITS.filter(edit => /fireBtn\.addEventListener\('pointerdown'/.test(edit.from));
     assert.equal(storage.length, 5);
     assert.equal(reload.length, 2);
-    assert.equal(hidden.length, 2, "the hidden page and N's prompt");
+    assert.equal(hidden.length, 3, "the hidden page, N's prompt, and the game scrolled out of view");
     assert.equal(resize.length, 3, "the crowd carried across a resize, and the canvas following its own box");
     assert.equal(motion.length, 1);
     assert.equal(access.length, 1, "FIRE for a keyboard and assistive tech");
@@ -791,18 +791,25 @@ test("Space scrolls the guide once the game is off the screen, and still fires w
 
 test("a contract is held while its player is reading about it", () => {
     // The hold the approved edit already applied to a hidden page, extended to a game scrolled off the
-    // screen — a situation that did not exist until /play/ grew an article beneath it (Codex, #72). The
-    // page stays visible, so the loop ran on: the clock advanced, the hostile fired at a crowd nobody
-    // could see, and an attempt could be lost while its player read how to play.
-    assert.match(GAME, /IntersectionObserver\(es=>hold\(!es\[0\]\.isIntersecting\)/,
-        "the game does not notice when it leaves the screen");
-    assert.match(GAME, /\.observe\(c\)/, "the observer watches something other than the canvas");
+    // screen — a situation that did not exist until /play/ grew an article beneath it (Codex, #72).
+    //
+    // Two things had to be true and only the first was, twice over. Recording a timestamp is not a
+    // pause: the loop kept calling update() and overlay(), so the clock could still reach TIME UP and
+    // the overlay could restart the contract before resumeFrom ever ran. And one shared flag meant
+    // restoring a backgrounded tab released the hold while the canvas was still off-screen.
+    const has = (needle: string, why: string) => assert.ok(GAME.includes(needle), why);
 
-    // Both conditions share one hold, so neither can resume a contract the other is still holding.
-    assert.match(GAME, /function hold\(away\)\{if\(away\)\{if\(!hiddenAt\)hiddenAt=performance\.now\(\);return\}if\(!hiddenAt\)return;resumeFrom\(hiddenAt\);hiddenAt=0\}/,
-        "the two ways of being unable to act no longer share one hold");
-    assert.match(GAME, /visibilitychange',\(\)=>hold\(document\.hidden\)/, "a hidden page no longer holds the contract");
+    has("new IntersectionObserver(es=>{awayView=!es[0].isIntersecting;hold()}", "the game does not notice when it leaves the screen");
+    has(".observe(c)", "the observer watches something other than the canvas");
+
+    // Independent conditions, one hold: neither can release while the other still holds.
+    has("let awayHidden=document.hidden,awayView=false,heldAt=", "the two conditions share one flag again");
+    has("function hold(){if(awayHidden||awayView)", "the hold does not consider both conditions");
+    has("'visibilitychange',()=>{awayHidden=document.hidden;hold()}", "a hidden page no longer holds the contract");
+
+    // And the frame actually stops, rather than recording that it should have.
+    has("if(heldAt){last=now;requestAnimationFrame(frame);return}", "the loop keeps updating and drawing while the game is held");
 
     // Guarded, because a browser without it should still play rather than throw.
-    assert.match(GAME, /if\(window\.IntersectionObserver\)/, "the observer is not feature-detected");
+    has("if(window.IntersectionObserver)", "the observer is not feature-detected");
 });
