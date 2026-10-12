@@ -53,6 +53,7 @@ export function generatePlayPage(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="description" content="${escapeHtml(DESCRIPTION)}">
   <meta property="og:title" content="${escapeHtml(title)}">
   <meta property="og:description" content="Find the courier, stop the armed threat, clear eighty contracts. A free sniper arcade game in the browser.">

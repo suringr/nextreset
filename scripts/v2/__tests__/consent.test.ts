@@ -130,6 +130,12 @@ test("the page location analytics receives has no advertising click id in it", (
         assert.ok(strip >= 0, `${page} sends the page location to analytics without removing click ids`);
         assert.ok(strip < config, `${page} strips click ids after the config call, which is too late`);
         assert.match(html, /page_location:/, `${page} does not override the page location it reports`);
+        // The same leak, one click later: a visitor landing on /x/?gclid=A and following a same-origin
+        // link hands that whole URL to the next page as document.referrer, which analytics collects on
+        // its own (Codex, #71). Overriding only the location left it reachable on the second page view.
+        assert.match(html, /page_referrer/, `${page} reports the referrer it was given, click ids and all`);
+        assert.match(html, /<meta name="referrer" content="strict-origin-when-cross-origin">/,
+            `${page} hands the full address to other sites`);
         for (const id of CLICK_IDS) {
             assert.ok(html.includes(`'${id}'`), `${page} does not remove ${id}`);
         }

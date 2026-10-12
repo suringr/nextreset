@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="description" content="Every game reset, patch and season NextReset tracks, in one table: what it is, how often it comes round, the exact time in UTC, and the same moment in your own time zone.">
   <meta property="og:title" content="All game reset times - NextReset">
   <meta property="og:description" content="Every reset, patch and season we track, in one table — in UTC and in your own time zone.">
@@ -54,18 +55,28 @@
     window.dataLayer = window.dataLayer || [];
     function gtag() { dataLayer.push(arguments); }
     gtag('js', new Date());
-    // Analytics sends the page location, and ads_data_redaction does not reach it: that setting covers
-    // Google Ads pings, not GA's page_location. So an ad-click id in the URL would arrive at Google
-    // attached to a visit whose consent was denied, which is the one thing the defaults were supposed to
-    // have prevented. Stripped here, before the first measurement rather than in a policy footnote.
-    var nrLocation = location.href;
-    try {
-      var nrUrl = new URL(nrLocation);
-      ['gclid', 'dclid', 'gbraid', 'wbraid', 'gclsrc', 'gad_source', 'msclkid', 'fbclid', '_gl']
-        .forEach(function (p) { nrUrl.searchParams.delete(p); });
-      nrLocation = nrUrl.href;
-    } catch (e) { /* an unparseable location is left alone rather than guessed at */ }
-    gtag('config', 'G-YY6V5SR1DN', { page_location: nrLocation });
+    // Analytics sends the page address, and ads_data_redaction does not reach it: that setting covers
+    // Google Ads pings, not these fields. So an ad-click id in the URL would arrive at Google attached to
+    // a visit whose consent was denied, which is the one thing the defaults were supposed to have
+    // prevented. Stripped here, before the first measurement rather than in a policy footnote.
+    //
+    // Both fields, not only the location. The referrer is the same leak one click later: a visitor
+    // landing on /x/?gclid=A and following any same-origin link hands that whole URL to the next page as
+    // document.referrer, which analytics collects automatically.
+    function nrClean(href) {
+      try {
+        var u = new URL(href);
+        ['gclid', 'dclid', 'gbraid', 'wbraid', 'gclsrc', 'gad_source', 'msclkid', 'fbclid', '_gl']
+          .forEach(function (p) { u.searchParams.delete(p); });
+        return u.href;
+      } catch (e) {
+        // An address that will not parse is left alone rather than guessed at.
+        return href;
+      }
+    }
+    var nrFields = { page_location: nrClean(location.href) };
+    if (document.referrer) nrFields.page_referrer = nrClean(document.referrer);
+    gtag('config', 'G-YY6V5SR1DN', nrFields);
   </script>
 
   <!-- Google AdSense site code -->
