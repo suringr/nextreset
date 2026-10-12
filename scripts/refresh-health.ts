@@ -65,6 +65,23 @@ export interface AcceptedOutage {
     reason: string;
     /** When it was accepted, so a stale entry is visible as a stale entry. */
     since: string;
+    /**
+     * When the acceptance lapses.
+     *
+     * An entry with no end date silences a tracker for ever, and `since` alone cannot make that visible
+     * because nothing reads it (Codex, #69). After this date the outage reports again until somebody
+     * looks at it and renews the entry, which is the point: an accepted outage should have to be
+     * re-accepted rather than quietly outliving the reason it was accepted for.
+     */
+    until: string;
+    /**
+     * The failure this acceptance covers.
+     *
+     * Fortnite is accepted as *stale* -- a source that answers 403 while the store still holds a value.
+     * A provider that went `unavailable` would be failing in a way nobody has looked at, and should say
+     * so rather than inherit the silence.
+     */
+    expect: ProviderHealth["status"];
 }
 
 export const ACCEPTED_OUTAGES: readonly AcceptedOutage[] = [
@@ -74,13 +91,40 @@ export const ACCEPTED_OUTAGES: readonly AcceptedOutage[] = [
         reason: "every official Epic property answers the publishing environment with a 403 challenge we do " +
             "not circumvent, and no permitted source states the season end. The page says so plainly and is " +
             "withheld from the index; there is nothing a run can report here that is not already known",
-        since: "2026-04-05"
+        since: "2026-04-05",
+        // A year from the outage. If Epic is still refusing then, saying so again is cheap; if the entry
+        // has outlived its reason, this is what surfaces it.
+        until: "2027-04-05",
+        expect: "stale"
     }
 ];
 
-/** Whether this provider's failure is one that has been accepted, and why. */
-export function acceptedOutage(game: string, type: string): AcceptedOutage | undefined {
-    return ACCEPTED_OUTAGES.find(entry => entry.game === game && entry.type === type);
+/**
+ * Whether this provider's failure is one that has been accepted, and why.
+ *
+ * Three things have to line up: the tracker, the kind of failure, and the date. An acceptance that has
+ * lapsed, or one for a different failure than the one happening, does not silence anything.
+ */
+export function acceptedOutage(game: string, type: string, status: ProviderHealth["status"], now: Date = new Date()): AcceptedOutage | undefined {
+    const entry = ACCEPTED_OUTAGES.find(candidate => candidate.game === game && candidate.type === type);
+    if (!entry || entry.expect !== status) return undefined;
+    const until = Date.parse(entry.until);
+    return Number.isFinite(until) && until >= now.getTime() ? entry : undefined;
+}
+
+/**
+ * Makes a string safe to put inside a workflow command.
+ *
+ * The runner reads `::warning ...` out of a step's output, so a provider's own words end up inside a
+ * control line. A newline in an exception truncates the annotation, and a line beginning `::` is read
+ * as another command (Codex, #69).
+ *
+ * It lives here rather than in refresh-all.ts, which calls main() at module load: importing the
+ * helper from there started a second data refresh inside the publish step, which is the opposite of
+ * what this file is for.
+ */
+export function escapeAnnotation(text: string): string {
+    return text.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
 }
 
 /**
@@ -91,10 +135,11 @@ export function acceptedOutage(game: string, type: string): AcceptedOutage | und
  * its provider works perfectly well. Reading the one as the other would silence exactly the regression
  * this exists to catch.
  */
-export function unexpectedlyDegraded(health: RefreshHealth): ProviderHealth[] {
+export function unexpectedlyDegraded(health: RefreshHealth, now: Date = new Date()): ProviderHealth[] {
     return health.providers.filter(provider =>
-        provider.status !== "fresh" && acceptedOutage(provider.game, provider.type) === undefined);
+        provider.status !== "fresh" && acceptedOutage(provider.game, provider.type, provider.status, now) === undefined);
 }
+
 
 export function writeHealth(providers: ProviderHealth[], at: Date = new Date()): void {
     fs.mkdirSync(BUILD, { recursive: true });

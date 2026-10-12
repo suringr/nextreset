@@ -19,7 +19,7 @@ import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
 import { declaresNoindex } from "./indexing";
-import { readHealth, unexpectedlyDegraded } from "./refresh-health";
+import { escapeAnnotation, readHealth, unexpectedlyDegraded } from "./refresh-health";
 import { pagePaths, trackerPages } from "./site-map";
 
 /** Strings that mean the renderer did not finish. None of them should ever reach a reader. */
@@ -194,8 +194,8 @@ if (require.main === module) {
 
     console.log(`  publish gate: ${report.pages} page(s), ${report.indexable.length} indexable, ${report.noindex.length} noindex, ${report.sitemap.length} in the sitemap`);
     // GitHub reads these annotations; locally they are just a line of text.
-    for (const warning of warnings) console.warn(`::warning title=Publish gate::${warning.message}`);
-    for (const refusal of refusals) console.error(`::error title=Publish gate::${refusal.message}`);
+    for (const warning of warnings) console.warn(`::warning title=Publish gate::${escapeAnnotation(warning.message)}`);
+    for (const refusal of refusals) console.error(`::error title=Publish gate::${escapeAnnotation(refusal.message)}`);
 
     if (refusals.length > 0) {
         console.error(`❌ Publish gate refused this build: ${refusals.length} problem(s) above. dist/ was not published.`);

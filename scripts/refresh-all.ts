@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import { FailureType, ProviderResult, StaleResult, UnavailableResult, Provider } from "./types";
 import { writeLiveJson, writeLkgJson, readLkgData, ensureDataDirs } from "./lib/data-output";
-import { ProviderHealth, clearRefreshHealth, writeHealth } from "./refresh-health";
+import { ProviderHealth, clearRefreshHealth, escapeAnnotation, writeHealth } from "./refresh-health";
 import { JsonKnowledgeStore } from "./v2/store";
 import { runV2Tracker } from "./v2/pipeline";
 import { AiGate } from "./v2/cost/budget";
@@ -100,7 +100,6 @@ function logAdapterReport(entry: RegistryEntry, report: Record<string, unknown> 
     if (ai && ai.calls > 0) console.log(`  [${entry.id}] AI ${ai.model ?? ""}: ${ai.calls} call(s), ${ai.inputTokens} in / ${ai.outputTokens} out tokens${ai.estimatedCostUsd !== undefined ? `, est. $${ai.estimatedCostUsd.toFixed(4)}` : ""}`);
 }
 
-const escapeAnnotation = (s: string) => s.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
 
 async function runV2(entry: RegistryEntry, store: JsonKnowledgeStore, startTime: number, gate: AiGate): Promise<{ result: ProviderResult; line: TrackerCostLine }> {
     let result: ProviderResult;

@@ -13,7 +13,7 @@
  * Exits 0 whatever it finds. Deciding what a degraded run *means* is the workflow's job; this only
  * reports, and a reporter that can fail the step it reports from is a reporter that hides its subject.
  */
-import { readHealth, unexpectedlyDegraded } from "./refresh-health";
+import { escapeAnnotation, readHealth, unexpectedlyDegraded } from "./refresh-health";
 
 if (require.main === module) {
     const health = readHealth();
@@ -27,7 +27,7 @@ if (require.main === module) {
     for (const provider of unexpected) {
         const detail = provider.detail ? `: ${provider.detail}` : "";
         // stderr: the runner parses workflow commands from it, and the caller does not redirect it.
-        console.error(`::warning title=Provider degraded::${provider.game}/${provider.type} is ${provider.status} and nobody has accepted this outage${detail}`);
+        console.error(`::warning title=Provider degraded::${escapeAnnotation(`${provider.game}/${provider.type} is ${provider.status} and nobody has accepted this outage${detail}`)}`);
     }
     console.log(`degraded=${unexpected.length}`);
 }
