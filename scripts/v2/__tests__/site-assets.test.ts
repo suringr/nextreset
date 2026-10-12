@@ -68,6 +68,34 @@ function identify(bytes: Buffer): Picture {
 }
 
 /**
+ * Whether a buffer is a complete PNG of exactly these dimensions.
+ *
+ * Walks every chunk to the end rather than reading the header and stopping, because a truncated file has
+ * a perfectly good header. Returns false rather than throwing: the caller is counting entries that
+ * survive, and a malformed one is simply one that does not.
+ */
+function wholePng(bytes: Buffer, width: number, height: number): boolean {
+    if (bytes.slice(0, 8).toString("hex") !== "89504e470d0a1a0a") return false;
+    let at = 8;
+    let sawHeader = false;
+    let sawData = false;
+    while (at + 12 <= bytes.length) {
+        const length = bytes.readUInt32BE(at);
+        const type = bytes.slice(at + 4, at + 8).toString("ascii");
+        const next = at + 12 + length;
+        if (next > bytes.length) return false;
+        if (type === "IHDR") {
+            if (length < 8 || bytes.readUInt32BE(at + 8) !== width || bytes.readUInt32BE(at + 12) !== height) return false;
+            sawHeader = true;
+        }
+        if (type === "IDAT") sawData = true;
+        if (type === "IEND") return sawHeader && sawData && next === bytes.length;
+        at = next;
+    }
+    return false;
+}
+
+/**
  * The sizes an .ico actually contains, read from its directory.
  *
  * Accepting the file on its four-byte signature alone (Codex, #70) would pass an icon with an empty or
@@ -88,22 +116,19 @@ function icoEntries(bytes: Buffer): { entries: Array<{ width: number; height: nu
         const offset = bytes.readUInt32LE(at + 12);
         if (size === 0 || offset < 6 || offset + size > bytes.length) break;
 
-        // And the payload has to be an image of the size the directory claims. Bounds alone were not
-        // enough (Codex, #70): pointing every entry at offset 0 with size 1 passed, because each one was
-        // inside the file and the dimensions came from the directory record rather than from the data.
-        // A directory is a claim about the payload, so the payload is what settles it.
+        // And the payload has to be a whole image of the size the directory claims.
+        //
+        // Headers alone were not enough either (Codex, #70): truncating a 610-byte PNG entry to 24 bytes
+        // still passed, because the signature and IHDR were intact and nothing asked whether the rest of
+        // the file was there. So the chunks are walked to the end -- IHDR first, at least one IDAT, a
+        // terminating IEND, and the lengths adding up to exactly the declared size.
+        //
+        // Every entry this project writes is PNG-backed, so a DIB payload is rejected rather than
+        // half-checked. If that ever changes this fails loudly, which is the right way to find out.
         const payload = bytes.subarray(offset, offset + size);
         const declaredWidth = bytes[at] === 0 ? 256 : bytes[at];
         const declaredHeight = bytes[at + 1] === 0 ? 256 : bytes[at + 1];
-        const actual = identify(payload);
-        if (actual.format === "png") {
-            if (actual.width !== declaredWidth || actual.height !== declaredHeight) break;
-        } else {
-            // The other legal payload is a DIB: a 40-byte BITMAPINFOHEADER whose height counts the image
-            // and its mask together, hence the doubling.
-            if (payload.length < 40 || payload.readUInt32LE(0) !== 40) break;
-            if (payload.readInt32LE(4) !== declaredWidth || payload.readInt32LE(8) !== declaredHeight * 2) break;
-        }
+        if (!wholePng(payload, declaredWidth, declaredHeight)) break;
         entries.push({ width: declaredWidth, height: declaredHeight, bytes: size });
     }
     return { entries, declared };
