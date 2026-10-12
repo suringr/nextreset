@@ -30,7 +30,8 @@ for (const page of gamePages) {
     if (!content.includes('og:image')) {
         content = content.replace(
             /<meta property="og:type" content="website">/,
-            '<meta property="og:type" content="website">\n  <meta property="og:image" content="https://nextreset.co/og.png">'
+            '<meta property="og:type" content="website">\n  <meta property="og:image" content="https://nextreset.co/og.jpg">' +
+            '\n  <meta property="og:image:width" content="1200">\n  <meta property="og:image:height" content="630">'
         );
     }
 

@@ -242,6 +242,83 @@ test("no page promises a check frequency or invents a community", () => {
     }
 });
 
+// The Fortnite page told readers its date "is pulled directly from the official Fortnite Battle Pass
+// page and updates automatically", in prose and inside FAQPage schema, for the six months after that
+// source began answering 403. Promising future automatic behaviour is the same class of claim as
+// promising a check frequency, and it is a promise no source lets us keep: any publisher can go dark
+// tomorrow exactly as Epic did. A page may say where a value came from; it may not say what will
+// happen next.
+test("no page promises that it updates itself", () => {
+    for (const page of site.pages) {
+        const html = read(page);
+        for (const promise of [/updates? automatically/i, /updated automatically/i, /always reflects/i]) {
+            assert.ok(!promise.test(html), `${page} promises automatic updating, which no source guarantees`);
+        }
+    }
+});
+
+// The same page referred readers to "the countdown above" while displaying no date at all. A page that
+// cannot answer its question must not describe an answer it is not showing -- in the document or in the
+// structured data, which is the copy that outlives the page in search results.
+/** Ways a page can tell a reader that a value is on display. Same claim, different word orders. */
+const DESCRIBES_A_VALUE = [
+    /countdown above/i,
+    /shown in the countdown/i,
+    /is shown above/i,
+    /is displayed above/i,
+    /is shown in the tracker/i,
+    /date is shown in the/i,
+    // Added after the rewrite introduced its own version of the same claim (Codex, #67). "The date here
+    // is X" asserts a date is here just as plainly as "shown above" did, and three of the six answers I
+    // wrote to fix the first phrasing had quietly reintroduced it in the second.
+    /date here is/i,
+    /the date here/i
+];
+
+test("no tracker describes a value it is not showing — checked against every one of them", () => {
+    // Rendered with no data at all, rather than judged against whichever fixtures happen to be valid.
+    //
+    // Two weaker versions of this guard shipped before this one. The first skipped trackers whose data
+    // file was absent, which is precisely the state it existed to catch. The second fixed that but still
+    // only examined trackers that were unanswered *in this build*, so a page with state-dependent prose
+    // was excused for as long as its fixture held — and `checked > 0` passed on one unrelated tracker
+    // (Codex, #67). The population now is every tracker there is, in the state where the claim is wrong.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nextreset-novalue-"));
+    try {
+        const copy = (from: string, to: string) => {
+            fs.mkdirSync(to, { recursive: true });
+            for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+                const a = path.join(from, entry.name);
+                const b = path.join(to, entry.name);
+                if (entry.isDirectory()) copy(a, b);
+                else fs.copyFileSync(a, b);
+            }
+        };
+        copy(path.join(ROOT, "public"), dir);
+        // Every tracker unanswered at once: no live data, and no vault to fall back to.
+        fs.rmSync(path.join(dir, "data"), { recursive: true, force: true });
+        fs.mkdirSync(path.join(dir, "data"), { recursive: true });
+        renderSite(dir, NOW, ROOT);
+
+        const exercised: string[] = [];
+        for (const entry of trackerManifest()) {
+            const html = fs.readFileSync(path.join(dir, entry.page), "utf8");
+            const headline = cheerio.load(html)(".countdown-value").first().text().trim();
+            assert.match(headline, /No official date announced|Data unavailable/,
+                `${entry.page} was supposed to have no value in this render, but reads "${headline}"`);
+            for (const describes of DESCRIBES_A_VALUE) {
+                assert.ok(!describes.test(html), `${entry.page} has no value to show but still points at one: ${describes}`);
+            }
+            exercised.push(entry.page);
+        }
+        // The population is the manifest, not "more than none". A guard whose coverage can quietly shrink
+        // to one page is a guard that will pass on the day it matters.
+        assert.deepEqual(exercised.sort(), trackerManifest().map(entry => entry.page).sort());
+    } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+    }
+});
+
 test("the privacy policy still describes the site that exists", () => {
     const privacy = read("privacy/index.html");
     assert.match(privacy, /includes the Google AdSense site code/);
