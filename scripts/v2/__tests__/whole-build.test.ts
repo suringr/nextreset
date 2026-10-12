@@ -46,19 +46,21 @@ function seedFromLastKnownGood(data: string): string[] {
     return seeded;
 }
 
+/** Copies a directory tree. */
+function copyTree(from: string, to: string): void {
+    fs.mkdirSync(to, { recursive: true });
+    for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+        const a = path.join(from, entry.name);
+        const b = path.join(to, entry.name);
+        if (entry.isDirectory()) copyTree(a, b);
+        else fs.copyFileSync(a, b);
+    }
+}
+
 /** Builds the site into a temporary directory, exactly as export:site + render:pages do. */
 function build(): { dir: string; pages: string[]; cleanup(): void } {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nextreset-whole-"));
-    const copy = (from: string, to: string) => {
-        fs.mkdirSync(to, { recursive: true });
-        for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
-            const a = path.join(from, entry.name);
-            const b = path.join(to, entry.name);
-            if (entry.isDirectory()) copy(a, b);
-            else fs.copyFileSync(a, b);
-        }
-    };
-    copy(path.join(ROOT, "public"), dir);
+    copyTree(path.join(ROOT, "public"), dir);
     const debug = path.join(dir, "data", "_debug");
     if (fs.existsSync(debug)) fs.rmSync(debug, { recursive: true, force: true });
     seedFromLastKnownGood(path.join(dir, "data"));
@@ -329,3 +331,179 @@ test("the privacy policy still describes the site that exists", () => {
     // does not need to claim otherwise — but it must not have become wrong either.
     assert.ok(!privacy.includes("No advertising code is served"));
 });
+
+/** Number words a page might reasonably use for a cadence, plus the digits the hub uses. */
+const NUMBER_WORDS: Record<string, number> = {
+    one: 1, two: 2, three: 3, four: 4, five: 5, six: 6,
+    seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12
+};
+
+const COUNT = `(\\d+|${Object.keys(NUMBER_WORDS).join("|")})`;
+// "every two weeks" and "a two-week patch cycle" are the same claim, and the pages use both (Codex, #73).
+const WEEKS = new RegExp(`(?:every ${COUNT} weeks?|${COUNT}[- ]week\\b)`, "i");
+const MONTHS = new RegExp(`(?:every ${COUNT} months?|${COUNT}[- ]month\\b)`, "i");
+
+/** The cadence a sentence states, in weeks, or undefined where it states none. */
+function weeksIn(text: string): number | undefined {
+    const found = WEEKS.exec(text);
+    if (!found) return undefined;
+    const word = (found[1] ?? found[2]).toLowerCase();
+    return NUMBER_WORDS[word] ?? Number(word);
+}
+
+/**
+ * Every sentence on a page that states a cadence, in either form.
+ *
+ * Filtering on the words "how often" or "every" first (Codex, #73) threw away "roughly a two-week patch
+ * cycle" before the parser could read it — which is how an overview could contradict the hub while the
+ * FAQ answer beside it kept the comparison green.
+ */
+function cadenceClaims(page: cheerio.CheerioAPI): string[] {
+    const said: string[] = [];
+    page("details.faq-item, .content-section p, .page p").each((_, el) => {
+        const text = page(el).text().replace(/\s+/g, " ");
+        if (WEEKS.test(text) || MONTHS.test(text)) said.push(text);
+    });
+    return said;
+}
+
+/**
+ * A knowledge store with known intervals, so the hub derives a cadence in every environment.
+ *
+ * `npm test` only ever runs in the PR check, which checks out the repository and nothing else — the
+ * `knowledge/` worktree is created by the publish job. A guard that reads the real store therefore
+ * compares nothing in the one place it would have caught something (Codex, #73).
+ *
+ * The spacing is chosen to match what each page claims, which is the point: the comparison asserts
+ * the pages agree with a cadence derived exactly the way production derives it, so changing either
+ * side breaks it.
+ */
+function cadenceFixture(root: string, spacingDays: Record<string, number>, now: Date): void {
+    const games = path.join(root, "knowledge", "games");
+    fs.mkdirSync(games, { recursive: true });
+    for (const entry of trackerManifest()) {
+        const days = spacingDays[entry.tracker!.game];
+        if (days === undefined) continue;
+        // cadenceOf needs four events and at least three gaps before it will call a rhythm regular.
+        const events = Array.from({ length: 6 }, (_unused, i) => {
+            const at = new Date(now.getTime() - (5 - i) * days * 86_400_000).toISOString();
+            return {
+                key: entry.tracker!.game + "/" + entry.tracker!.type + "/fixture-" + i,
+                game: entry.tracker!.game,
+                topic: entry.tracker!.type,
+                kind: "version",
+                label: "Fixture " + i,
+                status: "observed",
+                at,
+                precision: "exact",
+                timezone: "UTC",
+                firstSeen: at,
+                lastVerified: now.toISOString(),
+                publishState: "published"
+            };
+        });
+        fs.writeFileSync(path.join(games, entry.tracker!.game + ".json"), JSON.stringify({
+            schemaVersion: 1,
+            game: entry.tracker!.game,
+            updatedAt: now.toISOString(),
+            events,
+            changes: [], overrides: [], documents: [], claims: [], sources: [], discovered: [], topicStates: []
+        }, null, 2), "utf8");
+    }
+}
+test("no tracker page states two different cadences for its own game", () => {
+    // The check that needs neither a knowledge store nor a fixture, and the one that would have caught
+    // what this PR found: the LoL overview said "a consistent two-week patch cycle throughout the year"
+    // four paragraphs above a FAQ answer saying the cycle is not rigid.
+    //
+    // Comparing a page against the hub needs derived data, which only exists where the store does.
+    // Comparing a page against itself needs nothing, so it runs everywhere and cannot be skipped.
+    let checked = 0;
+    for (const entry of trackerManifest()) {
+        const page = cheerio.load(read(entry.page));
+        const claims = cadenceClaims(page);
+        const weeks = new Map<number, string>();
+        for (const text of claims) {
+            const stated = weeksIn(text);
+            if (stated !== undefined && !weeks.has(stated)) weeks.set(stated, text);
+        }
+        if (weeks.size === 0) continue;
+        checked++;
+        assert.equal(weeks.size, 1,
+            `${entry.page} states ${[...weeks.keys()].join(" and ")} weeks in different places:\n  ` +
+            [...weeks.values()].map(text => `"${text.slice(0, 100)}"`).join("\n  "));
+
+        // Months and weeks cannot both be the answer either.
+        const months = claims.filter(text => MONTHS.test(text));
+        assert.deepEqual(months, [],
+            `${entry.page} states a cadence in months as well as weeks: "${months[0]?.slice(0, 100)}"`);
+    }
+    assert.ok(checked > 0, "no tracker page states a cadence at all — this guard is checking nothing");
+});
+
+test("no tracker's prose contradicts the cadence the site derives for it", () => {
+    // /resets/ derives a cadence from the stored events; each tracker page also talks about how often
+    // its game updates. They were allowed to disagree, and did: PUBG's page said "roughly every 2
+    // months" while the hub published "About every 4 weeks" from that game's own patch history.
+    //
+    // Two pages of one site disagreeing about one fact is worse than either being vague, because a
+    // reader who checks both learns they cannot trust either.
+    // Its own render, against the seeded store, so the comparison happens everywhere rather than only
+    // where someone has a knowledge worktree.
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "nextreset-cadence-root-"));
+    const dist = fs.mkdtempSync(path.join(os.tmpdir(), "nextreset-cadence-"));
+    try {
+        copyTree(path.join(ROOT, "public"), dist);
+        seedFromLastKnownGood(path.join(dist, "data"));
+        // The spacing each page states in its own words, so agreement is what passes.
+        cadenceFixture(root, { lol: 14, pubg: 28 }, NOW);
+        renderSite(dist, NOW, root);
+        compareCadence((page: string) => fs.readFileSync(path.join(dist, page), "utf8"));
+    } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+        fs.rmSync(dist, { recursive: true, force: true });
+    }
+});
+
+/** The comparison itself, over whichever build it is handed. */
+function compareCadence(read: (page: string) => string): void {
+    const hub = cheerio.load(read("resets/index.html"));
+    const stated = new Map<string, string>();
+    hub("table tbody tr").each((_, row) => {
+        const cells = hub(row).find("td,th").map((__, cell) => hub(cell).text().replace(/\s+/g, " ").trim()).get();
+        if (cells.length >= 3 && WEEKS.exec(cells[2])) stated.set(cells[0], cells[2]);
+    });
+
+    // Seeded rather than borrowed. A derived cadence needs the knowledge store, and `npm test` only ever
+    // runs in the PR check, which never creates the `knowledge/` worktree — so a guard that depends on the
+    // real store exits without comparing anything in the one place it would have caught something
+    // (Codex, #73). `cadenceFixture` builds a store with known intervals, so the hub has rows every time.
+    assert.ok(stated.size > 0, "the hub derived no cadence from the seeded store");
+
+    for (const entry of trackerManifest()) {
+        const page = cheerio.load(read(entry.page));
+        const title = page("h1").first().text().replace(/\s+/g, " ").trim();
+        const hubRow = [...stated.entries()].find(([game]) => title.toLowerCase().startsWith(game.toLowerCase()));
+        if (!hubRow) continue;
+        const derived = weeksIn(hubRow[1])!;
+
+        // Collected, then asserted. An assertion thrown inside a cheerio .each callback does not
+        // reliably escape it, so an earlier version of this guard reported nothing while two pages were
+        // contradicting the hub.
+        const said = cadenceClaims(page);
+        let compared = 0;
+        for (const text of said) {
+            assert.ok(!MONTHS.test(text),
+                `${entry.page} describes a cadence in months while /resets/ publishes "${hubRow[1]}": "${text.slice(0, 110)}"`);
+            const claimed = weeksIn(text);
+            if (claimed === undefined) continue;
+            compared++;
+            assert.equal(claimed, derived,
+                `${entry.page} says every ${claimed} weeks, /resets/ publishes "${hubRow[1]}"`);
+        }
+        // Both pages this guard was written for state their cadence in words, so a digits-only parser
+        // read neither of them and the comparison never happened (Codex, #73). Requiring a comparison
+        // per matched game is what stops that being invisible.
+        assert.ok(compared > 0, `${entry.page} states no cadence this guard can read, so nothing was compared against "${hubRow[1]}"`);
+    }
+}

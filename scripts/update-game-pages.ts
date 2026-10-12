@@ -78,7 +78,7 @@ export const gamePages: GamePage[] = [
         kicker: 'MOBA',
         metaDescription: 'Track the next League of Legends patch release date. Live countdown sourced from Riot Games official patch schedule.',
         aboutTracker: 'This page tracks the next scheduled League of Legends patch release date. The data comes directly from Riot Games\' official patch schedule page, ensuring accuracy down to the exact day.',
-        whatIsIt: 'League of Legends follows a consistent two-week patch cycle throughout the year. Each patch brings balance changes to champions, items, and runes, along with occasional new features, visual updates, and gameplay adjustments. Riot Games publishes their patch schedule at the start of each season, making LoL one of the most predictable games to track.',
+        whatIsIt: 'League of Legends runs on roughly a two-week patch cycle, give or take a few days, with longer breaks at a couple of points in the year. Each patch brings balance changes to champions, items, and runes, along with occasional new features, visual updates, and gameplay adjustments. Riot Games publishes their patch schedule at the start of each season, making LoL one of the most predictable games to track.',
         whatChanges: [
             'Champion balance adjustments (buffs, nerfs, reworks)',
             'Item stat changes and new item additions',
@@ -88,8 +88,8 @@ export const gamePages: GamePage[] = [
             'Ranked split transitions and seasonal events'
         ],
         faq: [
-            { q: 'How often does League of Legends get patched?', a: 'LoL follows a strict two-week patch cycle. Riot Games publishes the full year\'s patch schedule in advance, so you always know when the next update is coming.' },
-            { q: 'What time do LoL patches go live?', a: 'Patches typically deploy during early morning hours in each region. NA patches usually go live around 3:00 AM PT, while EUW patches deploy around 5:00 AM GMT.' },
+            { q: 'How often does League of Legends get patched?', a: 'About every two weeks. Riot publishes the full year’s schedule in advance, which is where the dates on this page come from, so the next one is usually known well ahead. The cycle is not rigid, though: the published gaps vary by a day or two either way, and stretch to about three weeks around breaks.' },
+            { q: 'What time do LoL patches go live?', a: 'Riot’s annual patch schedule gives a day rather than a time, so a day is what this page publishes — putting a clock on it would mean inventing one. Riot does announce the deployment window closer to the day, on its service status page, with the hour for each region and how long the game will be unavailable.' },
             { q: 'Where can I read the patch notes?', a: 'Official patch notes are published on the League of Legends website at leagueoflegends.com and are usually available the day before the patch deploys.' }
         ]
     },
@@ -112,7 +112,7 @@ export const gamePages: GamePage[] = [
             'New Battle Pass and cosmetic bundles'
         ],
         faq: [
-            { q: 'How often does VALORANT get updated?', a: 'VALORANT follows a two-week patch cycle with alternating major and minor patches. Major patches bring bigger gameplay changes while minor patches focus on fixes.' },
+            { q: 'How often does VALORANT get updated?', a: 'VALORANT runs on roughly a two-week patch cycle, alternating major and minor patches. Major patches bring bigger gameplay changes while minor patches focus on fixes.' },
             { q: 'When did the last VALORANT patch come out?', a: 'Whenever Riot last published patch notes. The date is the publication date Riot gave that patch, not one we derived.' },
             { q: 'Does VALORANT have downtime during patches?', a: 'Yes, VALORANT typically goes offline for a few hours during patch deployment. Riot usually announces the maintenance window in advance on their social media channels.' }
         ]
@@ -280,7 +280,7 @@ export const gamePages: GamePage[] = [
             'New survivor pass and cosmetic content'
         ],
         faq: [
-            { q: 'How often does PUBG get patched?', a: 'PUBG typically receives major updates at the start of each season (roughly every 2 months) with smaller fix patches in between as needed.' },
+            { q: 'How often does PUBG get patched?', a: 'About every four weeks, going by the patches KRAFTON has actually published — which is where the cadence on this site’s reset times page comes from. Season starts bring the larger updates; the ones in between are usually fixes.' },
             { q: 'When was the last PUBG update?', a: 'Whenever KRAFTON last published patch notes. This page takes the date from those notes rather than deriving it.' },
             { q: 'Does PUBG have downtime during updates?', a: 'Yes, PUBG servers go offline for several hours during major patch deployments. KRAFTON usually announces maintenance schedules in advance through their official channels.' }
         ]
