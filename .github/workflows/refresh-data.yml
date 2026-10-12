@@ -77,6 +77,7 @@ jobs:
       # V2 trackers read/write knowledge/games/<game>.json. Check the `knowledge` branch out
       # as a git worktree at ./knowledge (gitignored on main); bootstraps the branch on first run.
       - name: Check out knowledge branch
+        id: knowledge
         continue-on-error: true
         run: bash .github/scripts/knowledge-checkout.sh
 
@@ -99,8 +100,26 @@ jobs:
       # Commit and push knowledge changes (fast-forward only, never force) and detach the
       # worktree. Must run before the publish step, which wipes the working tree.
       - name: Persist knowledge branch
+        id: persist
         continue-on-error: true
         run: bash .github/scripts/knowledge-persist.sh
+
+      # The publish step wipes the working tree, and build/ goes with it. Whatever this run needs to
+      # report has to be read off disk before that happens.
+      - name: Record how this run went
+        id: health
+        if: always()
+        run: |
+          if [ -f build/refresh.failed ]; then
+            echo "refresh=failed" >> "$GITHUB_OUTPUT"
+          else
+            echo "refresh=ok" >> "$GITHUB_OUTPUT"
+          fi
+          # Degradation nobody has accepted: a provider that is not fresh while its page is still
+          # offered to readers. A topic already written down as stopped in EDITORIAL_NOINDEX is
+          # excluded, so Fortnite being unreachable does not hold the run red for ever and drown out
+          # the next real regression. Annotations naming each one are printed here too.
+          node build/refresh-health-report.js >> "$GITHUB_OUTPUT" || echo "degraded=0" >> "$GITHUB_OUTPUT"
 
       # Failed browser fetches write screenshots/HTML to build/debug (never under public/).
       # Must run before the publish step, which wipes the working tree.
@@ -135,3 +154,45 @@ jobs:
           git add -A
           git commit -m "chore(site): publish dist" || echo "No changes to commit"
           git push -f origin gh-pages
+
+      # Deploy, then complain -- not complain instead of deploying.
+      #
+      # A failed refresh or a knowledge branch that would not persist are both survivable: the static
+      # site, the arcade and every stored value still publish, and the pages say honestly what they do
+      # not know. What is not survivable is nobody finding out. `refresh:data || true` kept this job
+      # green while Fortnite's data sat stale from 2026-04-05, and a knowledge push that silently fails
+      # makes every run re-read sources it has already read.
+      #
+      # So the publish happens first and the run goes red afterwards, which is the only combination that
+      # keeps visitors served and the owner informed.
+      - name: Fail the run if it was degraded
+        if: always()
+        run: |
+          bad=0
+          if [ "${{ steps.health.outputs.refresh }}" = "failed" ]; then
+            echo "::error title=Degraded publish::the data refresh did not finish; the site published its last known good values"
+            bad=1
+          fi
+          if [ "${{ steps.persist.outcome }}" = "failure" ]; then
+            echo "::error title=Degraded publish::the knowledge branch did not persist; this run's learning is lost and sources will be re-read"
+            bad=1
+          fi
+          # A checkout that failed leaves a plain directory where the worktree should be. The persist
+          # step then warns that it is not a worktree and exits 0, so its outcome is `success` and the
+          # line above sees nothing -- while every event, every claim and the AI usage ledger were
+          # written into that directory, thrown away with the working tree, and rebuilt from nothing on
+          # the next run. Silently, and on every run.
+          if [ "${{ steps.knowledge.outcome }}" = "failure" ]; then
+            echo "::error title=Degraded publish::the knowledge branch was not checked out; nothing this run learned can be kept"
+            bad=1
+          fi
+          # The case the exit code cannot see. `refresh-all` returns 0 unless more than half of all
+          # providers are unavailable, and a *stale* provider never counts at all -- so a tracker
+          # quietly serving last-known-good data for six months left every run green, which is exactly
+          # how Fortnite went unnoticed from 2026-04-05.
+          count="${{ steps.health.outputs.degraded }}"
+          if [ -n "$count" ] && [ "$count" != "0" ]; then
+            echo "::error title=Degraded publish::$count provider(s) are not fresh while their pages are still offered to readers; see the warnings above"
+            bad=1
+          fi
+          exit $bad

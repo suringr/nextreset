@@ -58,8 +58,14 @@ export interface EditorialExclusion {
 export const EDITORIAL_NOINDEX: readonly EditorialExclusion[] = [
     {
         page: "fortnite/next-season/index.html",
-        reason: "the topic is stopped: fortnite.com is behind a challenge we do not circumvent, and no " +
-            "permitted source states the season end, so the page cannot answer its question at all"
+        reason: "the topic is stopped in production: every official Epic property we could treat as a " +
+            "source -- the Battle Pass page, fortnite.com news, the Epic news site and the Fortnite store " +
+            "page -- answers the publishing environment with a 403 challenge we do not circumvent, and " +
+            "Epic's robots.txt sits behind the same challenge. The one endpoint still answering is the " +
+            "service status API, which reports whether Fortnite is up, not when the season ends. The block " +
+            "follows the caller rather than the request -- the same fetch can succeed from elsewhere -- so " +
+            "this is a judgement about what the published page can actually show, not a claim that the date " +
+            "is unknowable. While the page cannot answer the question it is named for, it stays out of the index"
     },
     {
         page: "roblox/status/index.html",

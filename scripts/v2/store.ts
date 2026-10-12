@@ -160,7 +160,12 @@ function canonicalSourceState(s: SourceState): SourceState {
         lastUsableAt: s.lastUsableAt,
         lastVerdict: s.lastVerdict,
         lastMode: s.lastMode,
-        consecutiveFailures: s.consecutiveFailures
+        consecutiveFailures: s.consecutiveFailures,
+        // Rebuilt field by field so the bytes are stable, which also means a field missing from this list
+        // is silently dropped on every save. Leaving this one out made the adapter re-arm its one
+        // unconditional fetch on every run, because the record of having spent it never survived.
+        extractionVersion: s.extractionVersion,
+        extractionAttempts: s.extractionAttempts ? { version: s.extractionAttempts.version, tries: s.extractionAttempts.tries } : undefined
     });
 }
 
