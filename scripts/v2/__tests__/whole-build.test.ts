@@ -329,3 +329,47 @@ test("the privacy policy still describes the site that exists", () => {
     // does not need to claim otherwise — but it must not have become wrong either.
     assert.ok(!privacy.includes("No advertising code is served"));
 });
+
+test("no tracker's prose contradicts the cadence the site derives for it", () => {
+    // /resets/ derives a cadence from the stored events; each tracker page also talks about how often
+    // its game updates. They were allowed to disagree, and did: PUBG's page said "roughly every 2
+    // months" while the hub published "About every 4 weeks" from that game's own patch history.
+    //
+    // Two pages of one site disagreeing about one fact is worse than either being vague, because a
+    // reader who checks both learns they cannot trust either.
+    const hub = cheerio.load(read("resets/index.html"));
+    const stated = new Map<string, string>();
+    hub("table tbody tr").each((_, row) => {
+        const cells = hub(row).find("td,th").map((__, cell) => hub(cell).text().replace(/\s+/g, " ").trim()).get();
+        if (cells.length >= 3 && /^About every (\d+) weeks?$/.test(cells[2])) stated.set(cells[0], cells[2]);
+    });
+    assert.ok(stated.size > 0, "the hub publishes no derived cadence — this guard is checking nothing");
+
+    // "About every N weeks" and a page claiming months, or a different number of weeks, cannot both be
+    // right about the same game.
+    const WEEKS = /every (\d+) weeks?/i;
+    for (const entry of trackerManifest()) {
+        const html = read(entry.page);
+        const page = cheerio.load(html);
+        const title = page("h1").first().text().replace(/\s+/g, " ").trim();
+        const hubRow = [...stated.entries()].find(([game]) => title.toLowerCase().startsWith(game.toLowerCase()));
+        if (!hubRow) continue;
+        const derived = Number(WEEKS.exec(hubRow[1])![1]);
+
+        // Collected, then asserted. An assertion thrown inside a cheerio .each callback does not
+        // reliably escape it, so the first version of this guard reported nothing while two pages were
+        // contradicting the hub — a guard that cannot fail is the same as no guard.
+        const said: string[] = [];
+        page("details.faq-item, .content-section p").each((__, el) => {
+            const text = page(el).text().replace(/\s+/g, " ");
+            if (/how often|every/i.test(text)) said.push(text);
+        });
+        for (const text of said) {
+            assert.ok(!/every \d+ months?/i.test(text),
+                `${entry.page} describes a cadence in months while /resets/ publishes "${hubRow[1]}": "${text.slice(0, 110)}"`);
+            const claimed = WEEKS.exec(text);
+            assert.ok(!claimed || Number(claimed[1]) === derived,
+                `${entry.page} says every ${claimed?.[1]} weeks, /resets/ publishes "${hubRow[1]}"`);
+        }
+    }
+});

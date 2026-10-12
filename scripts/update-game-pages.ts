@@ -88,8 +88,8 @@ export const gamePages: GamePage[] = [
             'Ranked split transitions and seasonal events'
         ],
         faq: [
-            { q: 'How often does League of Legends get patched?', a: 'LoL follows a strict two-week patch cycle. Riot Games publishes the full year\'s patch schedule in advance, so you always know when the next update is coming.' },
-            { q: 'What time do LoL patches go live?', a: 'Patches typically deploy during early morning hours in each region. NA patches usually go live around 3:00 AM PT, while EUW patches deploy around 5:00 AM GMT.' },
+            { q: 'How often does League of Legends get patched?', a: 'About every two weeks. Riot publishes the full year’s schedule in advance, which is where the dates on this page come from, so the next one is usually known well ahead — but the cycle is not rigid: this year’s published schedule runs from thirteen days to twenty-one, with the longest gaps around breaks.' },
+            { q: 'What time do LoL patches go live?', a: 'Riot’s schedule gives a day rather than a time, so a day is what this page publishes. Deployment usually begins in the early morning in each region and the game is unavailable while it runs, but Riot does not commit to an hour in advance and we are not going to invent one.' },
             { q: 'Where can I read the patch notes?', a: 'Official patch notes are published on the League of Legends website at leagueoflegends.com and are usually available the day before the patch deploys.' }
         ]
     },
@@ -280,7 +280,7 @@ export const gamePages: GamePage[] = [
             'New survivor pass and cosmetic content'
         ],
         faq: [
-            { q: 'How often does PUBG get patched?', a: 'PUBG typically receives major updates at the start of each season (roughly every 2 months) with smaller fix patches in between as needed.' },
+            { q: 'How often does PUBG get patched?', a: 'About every four weeks, going by the patches KRAFTON has actually published — which is where the cadence on this site’s reset times page comes from. Season starts bring the larger updates; the ones in between are usually fixes.' },
             { q: 'When was the last PUBG update?', a: 'Whenever KRAFTON last published patch notes. This page takes the date from those notes rather than deriving it.' },
             { q: 'Does PUBG have downtime during updates?', a: 'Yes, PUBG servers go offline for several hours during major patch deployments. KRAFTON usually announces maintenance schedules in advance through their official channels.' }
         ]
