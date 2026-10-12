@@ -16,7 +16,7 @@
  * account's discretion — which this repository cannot see or control. `carriesLoader` excludes it by
  * name, next to the 404 page, for reasons that are written down in adsense.ts.
  *
- * It declares `noindex, follow`. It is one canvas and one line of text, which is thin by the only measure
+ * It used to declare `noindex, follow`, because it was one canvas and one line of text, which is thin by any measure
  * an index applies, and the site was rejected once for thin content.
  *
  * It has no breadcrumb and no footer. Every other page carries both; this one is a full-screen game that
@@ -46,6 +46,95 @@ function escapeHtml(value: string): string {
     return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+
+/**
+ * What the page says about the game, below it.
+ *
+ * Here as well as in the checked-in page, because `play:apply` regenerates that file wholesale: a
+ * version of this that lived only in the output would be deleted the next time anyone ran the
+ * documented command, silently and completely (Codex, #72).
+ */
+const PROSE = `  <!-- Below the game, so the game is still the whole of the first screen. This is for the questions a
+       player has once they have put it down. Every number here comes from one-shot.js and player.js
+       rather than from memory, and a test holds the two together so the page cannot go on describing a
+       game that has changed. -->
+  <div class="play-page" id="how-to-play">
+      <h2>What ONE SHOT is</h2>
+      <p>A sniper arcade game that lives on this site. You watch a street crowd through a scope, and each
+        contract gives you one job: find the right person and take the shot before the clock runs out.
+        There are eighty of them. It is free, it runs in the browser, and there is no account to make and
+        nothing to install.</p>
+      <p>It was built for this site rather than licensed into it, which is also why it carries no
+        advertising of any kind &mdash; not a banner, not a unit, not even the loader script. A game is a
+        bad place to put something a player might hit by accident.</p>
+
+      <h2>Controls</h2>
+      <ul>
+        <li><strong>Aim</strong> &mdash; move the mouse, or drag with a finger on a touchscreen.</li>
+        <li><strong>Shoot</strong> &mdash; click, press <kbd>Space</kbd>, or use the round <strong>FIRE</strong> button.</li>
+        <li><strong>Reload</strong> &mdash; press <kbd>R</kbd>. From contract 11 you carry more than one
+          round, and running dry halfway through is the usual way to lose one.</li>
+      </ul>
+
+      <h2>What the eighty contracts ask</h2>
+      <p>They are not eighty variations of the same thing. What you are hunting changes, and so does how
+        much room you have to find it:</p>
+      <ul>
+        <li><strong>1&ndash;10</strong> &mdash; find the courier carrying the red case. One round only: no
+          reload, no second chance.</li>
+        <li><strong>11&ndash;30</strong> &mdash; track the moving target, and reload when you run empty.
+          Three rounds.</li>
+        <li><strong>31&ndash;40</strong> &mdash; find the armed hostile before he fires at you. Three rounds.</li>
+        <li><strong>41&ndash;60</strong> &mdash; precision under pressure. Four rounds.</li>
+        <li><strong>61&ndash;70</strong> &mdash; elite contracts, with faster targets.</li>
+        <li><strong>71&ndash;80</strong> &mdash; master contracts: survive, then clear the threat.</li>
+      </ul>
+      <p>Three things tighten as you go, which is what makes the late contracts hard rather than merely
+        longer. The time limit falls from twenty seconds to fourteen. The crowd grows from five people to
+        eleven, so there is more to look through. And from contract 31 the hostile shoots back, sooner and
+        sooner: early on he takes roughly six to eight seconds, and by the last contracts between three
+        and six. He does not take the same time twice, so late contracts are a question of being ready
+        rather than of counting.</p>
+
+      <h2>Stars, XP and ranks</h2>
+      <p>Each contract is worth up to three stars, and the game keeps the best you have managed on each
+        one, so going back to a contract you scraped through is worth doing. XP accumulates across
+        everything you play, and a rank arrives every 8,000 XP:</p>
+      <p><strong>Recruit &rarr; Rookie &rarr; Marksman &rarr; Sharpshooter &rarr; Hunter &rarr; Operative
+        &rarr; Elite &rarr; Ghost &rarr; Master Sniper.</strong></p>
+      <p>For scale: clearing contract 80 on a streak is worth roughly 100,000 XP, and a perfect run of all
+        eighty about four million.</p>
+
+      <h2>Where your progress is kept</h2>
+      <p>On your device, in this browser, and nowhere else. There is no account and no save to the cloud,
+        so the game picks up at the highest contract you have unlocked whenever you come back to it in the
+        same browser.</p>
+      <p>The other side of that is worth knowing before you sink an evening into it: clearing this site's
+        data, playing in a private window, or opening the game on another device starts you again at
+        contract one. Nothing is lost from anywhere else, because it was never anywhere else.</p>
+  </div>`;
+
+/** VideoGame, beside the breadcrumb rather than instead of it. */
+const GAME_SCHEMA = `  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "VideoGame",
+      "name": "ONE SHOT // 80 CONTRACTS",
+      "url": "https://nextreset.co/play/",
+      "description": "A free sniper arcade game in the browser. Find the courier with the red case, stop the armed hostile before he fires, and work through eighty contracts. Progress is kept on your own device.",
+      "genre": ["Arcade", "Shooter"],
+      "gamePlatform": "Web browser",
+      "playMode": "SinglePlayer",
+      "applicationCategory": "Game",
+      "operatingSystem": "Any",
+      "inLanguage": "en",
+      "isAccessibleForFree": true,
+      "author": { "@type": "Organization", "name": "NextReset", "url": "https://nextreset.co/" },
+      "publisher": { "@type": "Organization", "name": "NextReset", "url": "https://nextreset.co/" },
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD", "availability": "https://schema.org/InStock" }
+    }
+  </script>`;
+
 export function generatePlayPage(): string {
     const title = `${ONE_SHOT_NAME} - NextReset Arcade`;
     return `<!DOCTYPE html>
@@ -62,7 +151,6 @@ export function generatePlayPage(): string {
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <link rel="canonical" href="${PLAY_URL}">
-  <meta name="robots" content="noindex, follow">
   <title>${escapeHtml(title)}</title>
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/favicon.png" sizes="32x32">
@@ -77,15 +165,18 @@ export function generatePlayPage(): string {
 
   <!-- No AdSense loader on this page. See carriesLoader in scripts/adsense.ts: this is an interactive
        surface, and an Auto ads anchor or vignette over the game is a mis-tap that costs a contract. -->
+${GAME_SCHEMA}
 </head>
 <body>
   <div id="app">
 ${chromeHtml({ section: "arcade", title: ONE_SHOT_NAME, indent: "    " })}
     <canvas id="game" role="img" aria-label="ONE SHOT game: a street crowd at dusk seen through a rifle scope. Aim with the mouse or a finger, and shoot with FIRE, a click or Space."></canvas>
+    <button id="fire">FIRE</button>
+    <div id="hint">${escapeHtml(HINT)}</div>
+    <div id="best"></div>
   </div>
-  <button id="fire">FIRE</button>
-  <div id="hint">${escapeHtml(HINT)}</div>
-  <div id="best"></div>
+  <a class="play-more" href="#how-to-play">How to play &darr;</a>
+${PROSE}
 
   <noscript>
     <div class="noscript-note">
@@ -93,6 +184,20 @@ ${chromeHtml({ section: "arcade", title: ONE_SHOT_NAME, indent: "    " })}
       <a href="/">the trackers</a> carry their verified dates in the page itself.</p>
     </div>
   </noscript>
+
+  <!-- The game listens for Space in the capture phase and fires. That was right when this page was only
+       a game; with an article under it, a keyboard reader pressing Space to page down would shoot at an
+       off-screen crowd and stay where they were (Codex, #72).
+       This runs while the document is parsed and one-shot.js is deferred, so this listener is registered
+       first and sees the key first. It only intervenes once the game has scrolled off the top, so the
+       game keeps every key it had while it is the thing on screen. -->
+  <script>
+    addEventListener('keydown', function (e) {
+      if (e.code !== 'Space') return;
+      var game = document.getElementById('app');
+      if (game && game.getBoundingClientRect().bottom <= 0) e.stopImmediatePropagation();
+    }, true);
+  </script>
 
   <script src="/assets/player.js" defer></script>
   <script src="/assets/one-shot.js" defer></script>

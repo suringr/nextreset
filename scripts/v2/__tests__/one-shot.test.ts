@@ -80,13 +80,13 @@ test("every approved edit says why, and each is one of the kinds the owner appro
     // prompt — and the resize (after Codex's review of #61).
     const storage = SCRIPT_EDITS.filter(edit => /localStorage/.test(edit.from));
     const reload = SCRIPT_EDITS.filter(edit => /msgUntil|RELOADING|reloading/.test(edit.from));
-    const hidden = SCRIPT_EDITS.filter(edit => /resumeFrom/.test(edit.to));
+    const hidden = SCRIPT_EDITS.filter(edit => /resumeFrom|heldAt/.test(edit.to));
     const resize = SCRIPT_EDITS.filter(edit => /r\.width|spawn\(false\)/.test(edit.from) || /ResizeObserver/.test(edit.to));
     const motion = SCRIPT_EDITS.filter(edit => /shake/.test(edit.from));
     const access = SCRIPT_EDITS.filter(edit => /fireBtn\.addEventListener\('pointerdown'/.test(edit.from));
     assert.equal(storage.length, 5);
     assert.equal(reload.length, 2);
-    assert.equal(hidden.length, 2, "the hidden page and N's prompt");
+    assert.equal(hidden.length, 3, "the hidden page, N's prompt, and the game scrolled out of view");
     assert.equal(resize.length, 3, "the crowd carried across a resize, and the canvas following its own box");
     assert.equal(motion.length, 1);
     assert.equal(access.length, 1, "FIRE for a keyboard and assistive tech");
@@ -96,7 +96,9 @@ test("every approved edit says why, and each is one of the kinds the owner appro
 
 test("the stylesheet is the prototype's, with the approved header edits, and the site's additions are named", () => {
     assert.equal(ONE_SHOT_CSS, applyEdits(prototypeCss(), CSS_EDITS));
-    assert.ok(criticalCss("play").endsWith(ONE_SHOT_CSS + PLAY_ADDITIONS), "the /play/ first-paint CSS is not the game's plus the additions");
+    // The game's CSS and the approved additions still arrive in that order and untouched; the prose
+    // rules follow them, because the page now has prose under the game.
+    assert.ok(criticalCss("play").includes(ONE_SHOT_CSS + PLAY_ADDITIONS), "the /play/ first-paint CSS is not the game's plus the additions");
     // The game's own rules, carried over untouched.
     for (const rule of ["#app{height:100dvh;display:flex;flex-direction:column}", "canvas{display:block;flex:1;width:100%;min-height:0;touch-action:none;cursor:none}",
         "#fire{position:fixed;right:20px;bottom:22px;width:106px;height:106px;", "#hint{position:fixed;left:14px;bottom:12px;"]) {
@@ -141,11 +143,16 @@ test("the name, the eighty contracts and the ranks are the game's own", () => {
 
 // === The page ===
 
-test("/play/ is noindex, carries no ad code and no site stylesheet, and loads the game after the record", () => {
+test("/play/ carries no ad code and no site stylesheet, and loads the game after the record", () => {
     const $ = cheerio.load(PAGE);
-    assert.equal($('meta[name="robots"]').attr("content"), "noindex, follow");
-    assert.equal(staticPageDecision(PAGE).state, "noindex");
+    // It used to ask not to be indexed, and that was right while it was a canvas and nothing else: a page
+    // with no words is not one to offer a search engine. It describes the game now -- the controls, what
+    // the eighty contracts ask, the rank ladder, where a save lives -- so it is offered like any other.
+    assert.equal($('meta[name="robots"]').length, 0, "the page asks not to be indexed, but it has something to say now");
+    assert.equal(staticPageDecision(PAGE).state, "index");
     assert.equal($('link[rel="canonical"]').attr("href"), PLAY_URL);
+    // Being indexable changes nothing about this. A game is a bad place to put something a player might
+    // hit by accident, and the loader is not here either -- not only the units.
     assert.ok(!/adsbygoogle|pagead2/.test(PAGE), "the game page carries AdSense");
     assert.equal($('link[href*="styles.v2.css"]').length, 0, "styles.v2.css would override the game's layout");
     // No analytics either, which follows from there being no ad code: Google's consent message is
@@ -641,4 +648,171 @@ test("the canvas follows its own box when the header grows, not only when the wi
     game.shootAt(game.frame.people.find(p => p.courier)!);
     game.step(16);
     assert.ok(game.says("MISSION CLEAR"), "a tap on the drawn courier missed after the header grew");
+});
+
+test("what the page says about the game is what the game does", () => {
+    // The page now describes the game: eighty contracts, the rank ladder, the XP step, where a save
+    // lives. Prose like that rots the moment someone tunes the game and forgets the page, and a reader
+    // has no way to tell. So the description is held against the constants rather than against my
+    // memory of them.
+    const $ = cheerio.load(PAGE);
+    const prose = $(".play-page").text().replace(/\s+/g, " ");
+    assert.ok(prose.length > 0, "the page has no description of the game");
+
+    // The number of contracts, written out and in the ranges.
+    assert.ok(prose.includes("eighty"), `the page does not say how many contracts there are`);
+    assert.equal(ONE_SHOT_CONTRACTS, 80, "the contract count changed and the page still says eighty");
+    assert.ok(prose.includes(`71–${ONE_SHOT_CONTRACTS}`), "the last contract range does not end at the last contract");
+
+    // Every rank, in the game's own order.
+    const named = [...ONE_SHOT_RANKS];
+    let at = -1;
+    for (const rank of named) {
+        const found = prose.indexOf(rank, at + 1);
+        assert.ok(found > at, `the page does not name ${rank} after the rank before it`);
+        at = found;
+    }
+
+    // The step between them.
+    assert.ok(prose.includes(ONE_SHOT_RANK_XP.toLocaleString("en-US")), `the page does not state the ${ONE_SHOT_RANK_XP} XP rank step`);
+
+    // And the thing a player most needs to know before investing an evening.
+    assert.match(prose, /on your device|private window/i, "the page does not say where progress is kept");
+});
+
+test("the difficulty the page describes is the difficulty the game applies", () => {
+    // I got these wrong first time and Codex (#72) caught it. I read the `Math.max` floors as the values
+    // at the last contract -- the 11-second floor needs contract 108 and is never reached -- and missed
+    // the random term on the hostile's reaction entirely. The page told players the clock fell to eleven
+    // seconds and the hostile fired in "a little over two and a half", when it is fourteen and between
+    // three and six.
+    //
+    // So the numbers are computed from the game's own formulas here rather than read back from prose.
+    // Read to the matching bracket rather than to the next comma: `Math.max(11,20-Math.floor(L/12))`
+    // has commas inside it, and stopping at the first one yields `Math.max(11`, which does not parse.
+    const formula = (name: string) => {
+        const at = GAME.indexOf(`${name}:Math.`);
+        assert.ok(at >= 0, `the game no longer has a ${name} formula, so the page cannot be checked against it`);
+        let depth = 0;
+        let end = at + name.length + 1;
+        for (; end < GAME.length; end++) {
+            const ch = GAME[end];
+            if (ch === "(") depth++;
+            else if (ch === ")") depth--;
+            else if (depth === 0 && (ch === "," || ch === "}")) break;
+        }
+        const expression = GAME.slice(at + name.length + 1, end);
+        return (L: number) => Function("L", `return ${expression}`)(L) as number;
+    };
+    const seconds = formula("time");
+    const crowd = formula("n");
+    const reaction = formula("reaction");
+    const spread = Number(/reaction\+Math\.random\(\)\*(\d+)/.exec(GAME)?.[1] ?? 0);
+    assert.ok(spread > 0, "the hostile's reaction no longer has a random spread");
+
+    const last = ONE_SHOT_CONTRACTS;
+    const prose = cheerio.load(PAGE)(".play-page").text().replace(/\s+/g, " ");
+
+    // The clock: twenty at the first contract, and whatever it really is at the last.
+    assert.equal(seconds(1), 20, "the opening time limit changed");
+    const words = ["eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"];
+    const lastWord = words[seconds(last) - 11];
+    assert.ok(prose.includes(`from twenty seconds to ${lastWord}`),
+        `the page does not say the clock falls from twenty seconds to ${lastWord} (${seconds(last)}s at contract ${last})`);
+
+    // The crowd: five to eleven.
+    assert.deepEqual([crowd(1), crowd(last)], [5, 11], "the crowd size changed");
+    assert.ok(prose.includes("from five people to eleven"), "the page does not describe the crowd correctly");
+
+    // The hostile: a range at each end, because of the spread.
+    //
+    // The phrases are built from the computed numbers rather than written out. My first version of this
+    // calculated the band correctly, interpolated it into the *failure message*, and then asserted a
+    // hard-coded phrase that did not match it — so it passed while the page said "seven to nine" and the
+    // game meant six to eight (Codex, #72). A test that computes the right answer and asserts a
+    // different one is worse than no test, because it reads as coverage.
+    const FIRST_HOSTILE_CONTRACT = 31;
+    const small = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+    const said = (n: number) => small[n] ?? words[n - 11] ?? String(n);
+    const band = (L: number) => [Math.round(reaction(L) / 1000), Math.round((reaction(L) + spread) / 1000)];
+    const [earlyLow, earlyHigh] = band(FIRST_HOSTILE_CONTRACT);
+    const [lateLow, lateHigh] = band(last);
+    assert.ok(prose.includes(`roughly ${said(earlyLow)} to ${said(earlyHigh)} seconds`),
+        `the page does not say roughly ${said(earlyLow)} to ${said(earlyHigh)} seconds (${earlyLow}-${earlyHigh}s at contract ${FIRST_HOSTILE_CONTRACT})`);
+    assert.ok(prose.includes(`between ${said(lateLow)} and ${said(lateHigh)}`),
+        `the page does not say between ${said(lateLow)} and ${said(lateHigh)} (${lateLow}-${lateHigh}s at contract ${last})`);
+});
+
+test("Space scrolls the guide once the game is off the screen, and still fires while it is on it", () => {
+    // The game listens for Space in the capture phase and fires. Harmless while the page was only a
+    // game; with an article under it, a keyboard reader pressing Space to page down would shoot at an
+    // off-screen crowd and stay where they were (Codex, #72). An accessibility regression my own change
+    // introduced, since there was nothing to scroll before.
+    //
+    // Run rather than grepped for: the guard is three lines of logic and the thing that matters is which
+    // way it goes.
+    const inline = /<script>\s*(addEventListener\('keydown'[\s\S]*?)<\/script>/.exec(PAGE);
+    assert.ok(inline, "the page carries no Space guard");
+
+    const run = (gameBottom: number) => {
+        let registered: ((e: Record<string, unknown>) => void) | undefined;
+        let capture = false;
+        let stopped = false;
+        const context = {
+            addEventListener: (type: string, fn: (e: Record<string, unknown>) => void, useCapture?: boolean) => {
+                assert.equal(type, "keydown");
+                registered = fn;
+                capture = useCapture === true;
+            },
+            document: { getElementById: (id: string) => id === "app" ? { getBoundingClientRect: () => ({ bottom: gameBottom }) } : null }
+        };
+        vm.createContext(context);
+        vm.runInContext(inline![1], context);
+        assert.ok(registered, "the guard registered no listener");
+        // Capture, so it is seen before the game's own capture listener — which is only true because
+        // this runs at parse time and one-shot.js is deferred.
+        assert.equal(capture, true, "the guard does not listen in the capture phase, so the game sees Space first");
+        registered!({ code: "Space", stopImmediatePropagation: () => { stopped = true; } });
+        return stopped;
+    };
+
+    assert.equal(run(-120), true, "the game is scrolled past and Space still reaches it instead of scrolling");
+    assert.equal(run(640), false, "the game is on screen and Space no longer fires");
+
+    // And a key the game does not own is never touched.
+    let other = false;
+    const context = {
+        addEventListener: (_t: string, fn: (e: Record<string, unknown>) => void) => {
+            fn({ code: "KeyR", stopImmediatePropagation: () => { other = true; } });
+        },
+        document: { getElementById: () => ({ getBoundingClientRect: () => ({ bottom: -500 }) }) }
+    };
+    vm.createContext(context);
+    vm.runInContext(inline![1], context);
+    assert.equal(other, false, "the guard swallows keys the game needs");
+});
+
+test("a contract is held while its player is reading about it", () => {
+    // The hold the approved edit already applied to a hidden page, extended to a game scrolled off the
+    // screen — a situation that did not exist until /play/ grew an article beneath it (Codex, #72).
+    //
+    // Two things had to be true and only the first was, twice over. Recording a timestamp is not a
+    // pause: the loop kept calling update() and overlay(), so the clock could still reach TIME UP and
+    // the overlay could restart the contract before resumeFrom ever ran. And one shared flag meant
+    // restoring a backgrounded tab released the hold while the canvas was still off-screen.
+    const has = (needle: string, why: string) => assert.ok(GAME.includes(needle), why);
+
+    has("new IntersectionObserver(es=>{awayView=!es[0].isIntersecting;hold()}", "the game does not notice when it leaves the screen");
+    has(".observe(c)", "the observer watches something other than the canvas");
+
+    // Independent conditions, one hold: neither can release while the other still holds.
+    has("let awayHidden=document.hidden,awayView=false,heldAt=", "the two conditions share one flag again");
+    has("function hold(){if(awayHidden||awayView)", "the hold does not consider both conditions");
+    has("'visibilitychange',()=>{awayHidden=document.hidden;hold()}", "a hidden page no longer holds the contract");
+
+    // And the frame actually stops, rather than recording that it should have.
+    has("if(heldAt){last=now;requestAnimationFrame(frame);return}", "the loop keeps updating and drawing while the game is held");
+
+    // Guarded, because a browser without it should still play rather than throw.
+    has("if(window.IntersectionObserver)", "the observer is not feature-detected");
 });
