@@ -46,19 +46,21 @@ function seedFromLastKnownGood(data: string): string[] {
     return seeded;
 }
 
+/** Copies a directory tree. */
+function copyTree(from: string, to: string): void {
+    fs.mkdirSync(to, { recursive: true });
+    for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+        const a = path.join(from, entry.name);
+        const b = path.join(to, entry.name);
+        if (entry.isDirectory()) copyTree(a, b);
+        else fs.copyFileSync(a, b);
+    }
+}
+
 /** Builds the site into a temporary directory, exactly as export:site + render:pages do. */
 function build(): { dir: string; pages: string[]; cleanup(): void } {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nextreset-whole-"));
-    const copy = (from: string, to: string) => {
-        fs.mkdirSync(to, { recursive: true });
-        for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
-            const a = path.join(from, entry.name);
-            const b = path.join(to, entry.name);
-            if (entry.isDirectory()) copy(a, b);
-            else fs.copyFileSync(a, b);
-        }
-    };
-    copy(path.join(ROOT, "public"), dir);
+    copyTree(path.join(ROOT, "public"), dir);
     const debug = path.join(dir, "data", "_debug");
     if (fs.existsSync(debug)) fs.rmSync(debug, { recursive: true, force: true });
     seedFromLastKnownGood(path.join(dir, "data"));
@@ -336,17 +338,63 @@ const NUMBER_WORDS: Record<string, number> = {
     seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12
 };
 
-const WEEKS = new RegExp(`every (\\d+|${Object.keys(NUMBER_WORDS).join("|")}) weeks?`, "i");
-const MONTHS = new RegExp(`every (\\d+|${Object.keys(NUMBER_WORDS).join("|")}) months?`, "i");
+const COUNT = `(\\d+|${Object.keys(NUMBER_WORDS).join("|")})`;
+// "every two weeks" and "a two-week patch cycle" are the same claim, and the pages use both (Codex, #73).
+const WEEKS = new RegExp(`(?:every ${COUNT} weeks?|${COUNT}[- ]week\\b)`, "i");
+const MONTHS = new RegExp(`(?:every ${COUNT} months?|${COUNT}[- ]month\\b)`, "i");
 
 /** The cadence a sentence states, in weeks, or undefined where it states none. */
 function weeksIn(text: string): number | undefined {
     const found = WEEKS.exec(text);
     if (!found) return undefined;
-    const word = found[1].toLowerCase();
+    const word = (found[1] ?? found[2]).toLowerCase();
     return NUMBER_WORDS[word] ?? Number(word);
 }
 
+/**
+ * A knowledge store with known intervals, so the hub derives a cadence in every environment.
+ *
+ * `npm test` only ever runs in the PR check, which checks out the repository and nothing else — the
+ * `knowledge/` worktree is created by the publish job. A guard that reads the real store therefore
+ * compares nothing in the one place it would have caught something (Codex, #73).
+ *
+ * The spacing is chosen to match what each page claims, which is the point: the comparison asserts
+ * the pages agree with a cadence derived exactly the way production derives it, so changing either
+ * side breaks it.
+ */
+function cadenceFixture(root: string, spacingDays: Record<string, number>, now: Date): void {
+    const games = path.join(root, "knowledge", "games");
+    fs.mkdirSync(games, { recursive: true });
+    for (const entry of trackerManifest()) {
+        const days = spacingDays[entry.tracker!.game];
+        if (days === undefined) continue;
+        // cadenceOf needs four events and at least three gaps before it will call a rhythm regular.
+        const events = Array.from({ length: 6 }, (_unused, i) => {
+            const at = new Date(now.getTime() - (5 - i) * days * 86_400_000).toISOString();
+            return {
+                key: entry.tracker!.game + "/" + entry.tracker!.type + "/fixture-" + i,
+                game: entry.tracker!.game,
+                topic: entry.tracker!.type,
+                kind: "version",
+                label: "Fixture " + i,
+                status: "observed",
+                at,
+                precision: "exact",
+                timezone: "UTC",
+                firstSeen: at,
+                lastVerified: now.toISOString(),
+                publishState: "published"
+            };
+        });
+        fs.writeFileSync(path.join(games, entry.tracker!.game + ".json"), JSON.stringify({
+            schemaVersion: 1,
+            game: entry.tracker!.game,
+            updatedAt: now.toISOString(),
+            events,
+            changes: [], overrides: [], documents: [], claims: [], sources: [], discovered: [], topicStates: []
+        }, null, 2), "utf8");
+    }
+}
 test("no tracker's prose contradicts the cadence the site derives for it", () => {
     // /resets/ derives a cadence from the stored events; each tracker page also talks about how often
     // its game updates. They were allowed to disagree, and did: PUBG's page said "roughly every 2
@@ -354,6 +402,25 @@ test("no tracker's prose contradicts the cadence the site derives for it", () =>
     //
     // Two pages of one site disagreeing about one fact is worse than either being vague, because a
     // reader who checks both learns they cannot trust either.
+    // Its own render, against the seeded store, so the comparison happens everywhere rather than only
+    // where someone has a knowledge worktree.
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "nextreset-cadence-root-"));
+    const dist = fs.mkdtempSync(path.join(os.tmpdir(), "nextreset-cadence-"));
+    try {
+        copyTree(path.join(ROOT, "public"), dist);
+        seedFromLastKnownGood(path.join(dist, "data"));
+        // The spacing each page states in its own words, so agreement is what passes.
+        cadenceFixture(root, { lol: 14, pubg: 28 }, NOW);
+        renderSite(dist, NOW, root);
+        compareCadence((page: string) => fs.readFileSync(path.join(dist, page), "utf8"));
+    } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+        fs.rmSync(dist, { recursive: true, force: true });
+    }
+});
+
+/** The comparison itself, over whichever build it is handed. */
+function compareCadence(read: (page: string) => string): void {
     const hub = cheerio.load(read("resets/index.html"));
     const stated = new Map<string, string>();
     hub("table tbody tr").each((_, row) => {
@@ -361,14 +428,11 @@ test("no tracker's prose contradicts the cadence the site derives for it", () =>
         if (cells.length >= 3 && WEEKS.exec(cells[2])) stated.set(cells[0], cells[2]);
     });
 
-    // A derived cadence needs the knowledge store, and the PR check runs on a bare checkout where the
-    // `knowledge/` worktree is not present — so the hub there shows a rule for GTA and a dash for
-    // everything else. Requiring rows unconditionally (Codex, #73) would have failed every clean CI run
-    // rather than catching anything. Where the store is present the population is still required, so the
-    // guard cannot quietly shrink to nothing on the machine that has the data.
-    const haveKnowledge = fs.existsSync(path.join(ROOT, "knowledge", "games"));
-    if (!haveKnowledge && stated.size === 0) return;
-    assert.ok(stated.size > 0, "the knowledge store is present but the hub derived no cadence at all");
+    // Seeded rather than borrowed. A derived cadence needs the knowledge store, and `npm test` only ever
+    // runs in the PR check, which never creates the `knowledge/` worktree — so a guard that depends on the
+    // real store exits without comparing anything in the one place it would have caught something
+    // (Codex, #73). `cadenceFixture` builds a store with known intervals, so the hub has rows every time.
+    assert.ok(stated.size > 0, "the hub derived no cadence from the seeded store");
 
     for (const entry of trackerManifest()) {
         const page = cheerio.load(read(entry.page));
@@ -400,4 +464,4 @@ test("no tracker's prose contradicts the cadence the site derives for it", () =>
         // per matched game is what stops that being invisible.
         assert.ok(compared > 0, `${entry.page} states no cadence this guard can read, so nothing was compared against "${hubRow[1]}"`);
     }
-});
+}

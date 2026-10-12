@@ -78,7 +78,7 @@ export const gamePages: GamePage[] = [
         kicker: 'MOBA',
         metaDescription: 'Track the next League of Legends patch release date. Live countdown sourced from Riot Games official patch schedule.',
         aboutTracker: 'This page tracks the next scheduled League of Legends patch release date. The data comes directly from Riot Games\' official patch schedule page, ensuring accuracy down to the exact day.',
-        whatIsIt: 'League of Legends follows a consistent two-week patch cycle throughout the year. Each patch brings balance changes to champions, items, and runes, along with occasional new features, visual updates, and gameplay adjustments. Riot Games publishes their patch schedule at the start of each season, making LoL one of the most predictable games to track.',
+        whatIsIt: 'League of Legends runs on roughly a two-week patch cycle, give or take a few days, with longer breaks at a couple of points in the year. Each patch brings balance changes to champions, items, and runes, along with occasional new features, visual updates, and gameplay adjustments. Riot Games publishes their patch schedule at the start of each season, making LoL one of the most predictable games to track.',
         whatChanges: [
             'Champion balance adjustments (buffs, nerfs, reworks)',
             'Item stat changes and new item additions',
@@ -112,7 +112,7 @@ export const gamePages: GamePage[] = [
             'New Battle Pass and cosmetic bundles'
         ],
         faq: [
-            { q: 'How often does VALORANT get updated?', a: 'VALORANT follows a two-week patch cycle with alternating major and minor patches. Major patches bring bigger gameplay changes while minor patches focus on fixes.' },
+            { q: 'How often does VALORANT get updated?', a: 'VALORANT runs on roughly a two-week patch cycle, alternating major and minor patches. Major patches bring bigger gameplay changes while minor patches focus on fixes.' },
             { q: 'When did the last VALORANT patch come out?', a: 'Whenever Riot last published patch notes. The date is the publication date Riot gave that patch, not one we derived.' },
             { q: 'Does VALORANT have downtime during patches?', a: 'Yes, VALORANT typically goes offline for a few hours during patch deployment. Riot usually announces the maintenance window in advance on their social media channels.' }
         ]
