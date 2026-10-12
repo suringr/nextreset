@@ -1,8 +1,151 @@
 {
   "schemaVersion": 1,
   "game": "warzone",
-  "updatedAt": "2026-10-12T13:53:32.083Z",
+  "updatedAt": "2026-10-12T13:55:35.516Z",
   "events": [
+    {
+      "key": "warzone/last-patch/call-of-duty-bo6-warzone-season-05-patch-notes-2025-09-03",
+      "game": "warzone",
+      "topic": "last-patch",
+      "kind": "occurrence",
+      "label": "Call of Duty: Warzone Season 05 Patch Notes",
+      "status": "observed",
+      "at": "2025-09-03T00:00:00.000Z",
+      "precision": "day",
+      "firstSeen": "2026-10-12T13:55:35.516Z",
+      "lastVerified": "2026-10-12T13:55:35.516Z",
+      "publishState": "published"
+    },
+    {
+      "key": "warzone/last-patch/call-of-duty-bo6-warzone-season-06-patch-notes-2025-10-08",
+      "game": "warzone",
+      "topic": "last-patch",
+      "kind": "occurrence",
+      "label": "Call of Duty: Warzone Season 06 Patch Notes",
+      "status": "observed",
+      "at": "2025-10-08T00:00:00.000Z",
+      "precision": "day",
+      "firstSeen": "2026-10-12T13:55:35.516Z",
+      "lastVerified": "2026-10-12T13:55:35.516Z",
+      "publishState": "published"
+    },
+    {
+      "key": "warzone/last-patch/call-of-duty-bo7-warzone-season-01-patch-notes-2025-12-16",
+      "game": "warzone",
+      "topic": "last-patch",
+      "kind": "occurrence",
+      "label": "Call of Duty: Warzone Season 01 Patch Notes",
+      "status": "observed",
+      "at": "2025-12-16T00:00:00.000Z",
+      "precision": "day",
+      "firstSeen": "2026-10-12T13:55:35.516Z",
+      "lastVerified": "2026-10-12T13:55:35.516Z",
+      "publishState": "published"
+    },
+    {
+      "key": "warzone/last-patch/call-of-duty-bo7-warzone-season-01-reloaded-patch-notes-2026-01-08",
+      "game": "warzone",
+      "topic": "last-patch",
+      "kind": "occurrence",
+      "label": "Call of Duty: Warzone Season 01 Reloaded Patch Notes",
+      "status": "observed",
+      "at": "2026-01-08T00:00:00.000Z",
+      "precision": "day",
+      "firstSeen": "2026-10-12T13:55:35.516Z",
+      "lastVerified": "2026-10-12T13:55:35.516Z",
+      "publishState": "published"
+    },
+    {
+      "key": "warzone/last-patch/call-of-duty-bo7-warzone-season-02-patch-notes-2026-03-03",
+      "game": "warzone",
+      "topic": "last-patch",
+      "kind": "occurrence",
+      "label": "Call of Duty: Warzone Season 02 Patch Notes",
+      "status": "observed",
+      "at": "2026-03-03T00:00:00.000Z",
+      "precision": "day",
+      "firstSeen": "2026-10-12T13:55:35.516Z",
+      "lastVerified": "2026-10-12T13:55:35.516Z",
+      "publishState": "published"
+    },
+    {
+      "key": "warzone/last-patch/call-of-duty-bo7-warzone-season-02-reloaded-patch-notes-2026-03-10",
+      "game": "warzone",
+      "topic": "last-patch",
+      "kind": "occurrence",
+      "label": "Call of Duty: Warzone Season 02 Reloaded Patch Notes",
+      "status": "observed",
+      "at": "2026-03-10T00:00:00.000Z",
+      "precision": "day",
+      "firstSeen": "2026-10-12T13:55:35.516Z",
+      "lastVerified": "2026-10-12T13:55:35.516Z",
+      "publishState": "published"
+    },
+    {
+      "key": "warzone/last-patch/call-of-duty-bo7-warzone-season-03-patch-notes-2026-04-21",
+      "game": "warzone",
+      "topic": "last-patch",
+      "kind": "occurrence",
+      "label": "Call of Duty: Warzone Season 03 Patch Notes",
+      "status": "observed",
+      "at": "2026-04-21T00:00:00.000Z",
+      "precision": "day",
+      "firstSeen": "2026-10-12T13:55:35.516Z",
+      "lastVerified": "2026-10-12T13:55:35.516Z",
+      "publishState": "published"
+    },
+    {
+      "key": "warzone/last-patch/call-of-duty-bo7-warzone-season-03-reloaded-patch-notes-2026-05-21",
+      "game": "warzone",
+      "topic": "last-patch",
+      "kind": "occurrence",
+      "label": "Call of Duty: Warzone Season 03 Reloaded Patch Notes",
+      "status": "observed",
+      "at": "2026-05-21T00:00:00.000Z",
+      "precision": "day",
+      "firstSeen": "2026-10-12T13:55:35.516Z",
+      "lastVerified": "2026-10-12T13:55:35.516Z",
+      "publishState": "published"
+    },
+    {
+      "key": "warzone/last-patch/call-of-duty-bo7-warzone-season-04-patch-notes-2026-06-16",
+      "game": "warzone",
+      "topic": "last-patch",
+      "kind": "occurrence",
+      "label": "Call of Duty: Warzone Season 04 Patch Notes",
+      "status": "observed",
+      "at": "2026-06-16T00:00:00.000Z",
+      "precision": "day",
+      "firstSeen": "2026-10-12T13:55:35.516Z",
+      "lastVerified": "2026-10-12T13:55:35.516Z",
+      "publishState": "published"
+    },
+    {
+      "key": "warzone/last-patch/call-of-duty-bo7-warzone-season-04-reloaded-patch-notes-2026-07-15",
+      "game": "warzone",
+      "topic": "last-patch",
+      "kind": "occurrence",
+      "label": "Call of Duty: Warzone Season 04 Reloaded Patch Notes",
+      "status": "observed",
+      "at": "2026-07-15T00:00:00.000Z",
+      "precision": "day",
+      "firstSeen": "2026-10-12T13:55:35.516Z",
+      "lastVerified": "2026-10-12T13:55:35.516Z",
+      "publishState": "published"
+    },
+    {
+      "key": "warzone/last-patch/call-of-duty-bo7-warzone-season-05-patch-notes-2026-08-12",
+      "game": "warzone",
+      "topic": "last-patch",
+      "kind": "occurrence",
+      "label": "Call of Duty: Warzone Season 05 Patch Notes",
+      "status": "observed",
+      "at": "2026-08-12T00:00:00.000Z",
+      "precision": "day",
+      "firstSeen": "2026-10-12T13:55:35.516Z",
+      "lastVerified": "2026-10-12T13:55:35.516Z",
+      "publishState": "published"
+    },
     {
       "key": "warzone/last-patch/call-of-duty-bo7-warzone-season-05-reloaded-patch-notes-2026-08-28",
       "game": "warzone",
@@ -13,7 +156,7 @@
       "at": "2026-08-28T00:00:00.000Z",
       "precision": "day",
       "firstSeen": "2026-09-15T22:41:25.137Z",
-      "lastVerified": "2026-09-16T19:35:51.458Z",
+      "lastVerified": "2026-10-12T13:55:35.516Z",
       "publishState": "published"
     },
     {
@@ -52,7 +195,7 @@
       "at": "2026-09-30T00:00:00.000Z",
       "precision": "day",
       "firstSeen": "2026-10-02T11:34:50.813Z",
-      "lastVerified": "2026-10-12T13:53:32.083Z",
+      "lastVerified": "2026-10-12T13:55:35.516Z",
       "publishState": "published"
     }
   ],
@@ -92,6 +235,105 @@
       "at": "2026-10-02T11:34:50.813Z",
       "reason": "observed by warzone-patch-notes-page",
       "decision": "applied"
+    },
+    {
+      "entityKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-05-patch-notes-2026-08-12",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Call of Duty: Warzone Season 05 Patch Notes @ 2026-08-12T00:00:00.000Z",
+      "at": "2026-10-12T13:55:35.516Z",
+      "reason": "observed by warzone-patch-notes-page",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-04-reloaded-patch-notes-2026-07-15",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Call of Duty: Warzone Season 04 Reloaded Patch Notes @ 2026-07-15T00:00:00.000Z",
+      "at": "2026-10-12T13:55:35.516Z",
+      "reason": "observed by warzone-patch-notes-page",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-04-patch-notes-2026-06-16",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Call of Duty: Warzone Season 04 Patch Notes @ 2026-06-16T00:00:00.000Z",
+      "at": "2026-10-12T13:55:35.516Z",
+      "reason": "observed by warzone-patch-notes-page",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-03-reloaded-patch-notes-2026-05-21",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Call of Duty: Warzone Season 03 Reloaded Patch Notes @ 2026-05-21T00:00:00.000Z",
+      "at": "2026-10-12T13:55:35.516Z",
+      "reason": "observed by warzone-patch-notes-page",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-03-patch-notes-2026-04-21",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Call of Duty: Warzone Season 03 Patch Notes @ 2026-04-21T00:00:00.000Z",
+      "at": "2026-10-12T13:55:35.516Z",
+      "reason": "observed by warzone-patch-notes-page",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-02-reloaded-patch-notes-2026-03-10",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Call of Duty: Warzone Season 02 Reloaded Patch Notes @ 2026-03-10T00:00:00.000Z",
+      "at": "2026-10-12T13:55:35.516Z",
+      "reason": "observed by warzone-patch-notes-page",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-02-patch-notes-2026-03-03",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Call of Duty: Warzone Season 02 Patch Notes @ 2026-03-03T00:00:00.000Z",
+      "at": "2026-10-12T13:55:35.516Z",
+      "reason": "observed by warzone-patch-notes-page",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-01-reloaded-patch-notes-2026-01-08",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Call of Duty: Warzone Season 01 Reloaded Patch Notes @ 2026-01-08T00:00:00.000Z",
+      "at": "2026-10-12T13:55:35.516Z",
+      "reason": "observed by warzone-patch-notes-page",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-01-patch-notes-2025-12-16",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Call of Duty: Warzone Season 01 Patch Notes @ 2025-12-16T00:00:00.000Z",
+      "at": "2026-10-12T13:55:35.516Z",
+      "reason": "observed by warzone-patch-notes-page",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "warzone/last-patch/call-of-duty-bo6-warzone-season-06-patch-notes-2025-10-08",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Call of Duty: Warzone Season 06 Patch Notes @ 2025-10-08T00:00:00.000Z",
+      "at": "2026-10-12T13:55:35.516Z",
+      "reason": "observed by warzone-patch-notes-page",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "warzone/last-patch/call-of-duty-bo6-warzone-season-05-patch-notes-2025-09-03",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Call of Duty: Warzone Season 05 Patch Notes @ 2025-09-03T00:00:00.000Z",
+      "at": "2026-10-12T13:55:35.516Z",
+      "reason": "observed by warzone-patch-notes-page",
+      "decision": "applied"
     }
   ],
   "overrides": [],
@@ -128,6 +370,15 @@
       "url": "https://www.callofduty.com/patchnotes",
       "sourceId": "warzone-patch-notes-page",
       "fetchedAt": "2026-10-02T11:34:50.813Z",
+      "title": "Call of Duty patch notes",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "57f0565aefecd3b182016e3ffb50c8f64a338b47dfe324a3d5dfaf1d2b7ffec8",
+      "url": "https://www.callofduty.com/patchnotes",
+      "sourceId": "warzone-patch-notes-page",
+      "fetchedAt": "2026-10-12T13:55:35.516Z",
       "title": "Call of Duty patch notes",
       "fetchMode": "http",
       "confidence": "high"
@@ -177,20 +428,131 @@
       "quote": "<li class=\"game-tile warzone\">\n\n\t\t\t\n            \n\n            \n            \n\n            \n            <a href=\"https://www.callofduty.com/blog/warzone\">WZ</a>\n\n            \n            \n\n            \n            \n\n            \n            \n\n            \n            \n    \n            \n            \n    \n            \n            \n    \n            \n            \n\n            \n            \n\n            \n            \n    \n            \n            \n    \n            \n            \n    \n        </li>\n    </ul>\n\n\n                \t\t\n\n    <ul class=\"tag-list\">\n        <li class=\"tag-item\" data-value=\"patch-notes\">\n            \n            Patch Notes\n        </li>\n    \n        <li class=\"tag-item\" data-value=\"season-six\">\n            \n            Season 06\n        </li>\n    </ul>\n\n\n\t\t\t\t\t</div>\n\t\t\t\t\t\n\n    \n         \n    \n        \n\n        <div data-month=\"09\" data-date=\"September 30, 2026\" class=\"news-published\">",
       "linkUrl": "https://www.callofduty.com/patchnotes/2026/09/call-of-duty-bo7-warzone-season-06-patch-notes",
       "extractedAt": "2026-10-02T11:34:50.813Z"
+    },
+    {
+      "id": "fd3d67f2deaff11536cf79c4",
+      "documentId": "57f0565aefecd3b182016e3ffb50c8f64a338b47dfe324a3d5dfaf1d2b7ffec8",
+      "eventKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-05-patch-notes-2026-08-12",
+      "field": "at",
+      "value": "2026-08-12T00:00:00.000Z",
+      "method": "deterministic",
+      "linkUrl": "https://www.callofduty.com/patchnotes/2026/07/call-of-duty-bo7-warzone-season-05-patch-notes",
+      "extractedAt": "2026-10-12T13:55:35.516Z"
+    },
+    {
+      "id": "8dc89086ebad8f6ca8bf4cc4",
+      "documentId": "57f0565aefecd3b182016e3ffb50c8f64a338b47dfe324a3d5dfaf1d2b7ffec8",
+      "eventKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-04-reloaded-patch-notes-2026-07-15",
+      "field": "at",
+      "value": "2026-07-15T00:00:00.000Z",
+      "method": "deterministic",
+      "linkUrl": "https://www.callofduty.com/patchnotes/2026/06/call-of-duty-bo7-warzone-season-04-reloaded-patch-notes",
+      "extractedAt": "2026-10-12T13:55:35.516Z"
+    },
+    {
+      "id": "b793c8ea2cb189d15bb9ebef",
+      "documentId": "57f0565aefecd3b182016e3ffb50c8f64a338b47dfe324a3d5dfaf1d2b7ffec8",
+      "eventKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-04-patch-notes-2026-06-16",
+      "field": "at",
+      "value": "2026-06-16T00:00:00.000Z",
+      "method": "deterministic",
+      "linkUrl": "https://www.callofduty.com/patchnotes/2026/06/call-of-duty-bo7-warzone-season-04-patch-notes",
+      "extractedAt": "2026-10-12T13:55:35.516Z"
+    },
+    {
+      "id": "250d48f3b2bd3d75c534ef1c",
+      "documentId": "57f0565aefecd3b182016e3ffb50c8f64a338b47dfe324a3d5dfaf1d2b7ffec8",
+      "eventKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-03-reloaded-patch-notes-2026-05-21",
+      "field": "at",
+      "value": "2026-05-21T00:00:00.000Z",
+      "method": "deterministic",
+      "linkUrl": "https://www.callofduty.com/patchnotes/2026/04/call-of-duty-bo7-warzone-season-03-reloaded-patch-notes",
+      "extractedAt": "2026-10-12T13:55:35.516Z"
+    },
+    {
+      "id": "d1aaaba8bd1096609c25de18",
+      "documentId": "57f0565aefecd3b182016e3ffb50c8f64a338b47dfe324a3d5dfaf1d2b7ffec8",
+      "eventKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-03-patch-notes-2026-04-21",
+      "field": "at",
+      "value": "2026-04-21T00:00:00.000Z",
+      "method": "deterministic",
+      "linkUrl": "https://www.callofduty.com/patchnotes/2026/04/call-of-duty-bo7-warzone-season-03-patch-notes",
+      "extractedAt": "2026-10-12T13:55:35.516Z"
+    },
+    {
+      "id": "5cb8980a995c5e04f00bae67",
+      "documentId": "57f0565aefecd3b182016e3ffb50c8f64a338b47dfe324a3d5dfaf1d2b7ffec8",
+      "eventKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-02-reloaded-patch-notes-2026-03-10",
+      "field": "at",
+      "value": "2026-03-10T00:00:00.000Z",
+      "method": "deterministic",
+      "linkUrl": "https://www.callofduty.com/patchnotes/2026/03/call-of-duty-bo7-warzone-season-02-reloaded-patch-notes",
+      "extractedAt": "2026-10-12T13:55:35.516Z"
+    },
+    {
+      "id": "b14e0283c4f0d3c53d7bc985",
+      "documentId": "57f0565aefecd3b182016e3ffb50c8f64a338b47dfe324a3d5dfaf1d2b7ffec8",
+      "eventKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-02-patch-notes-2026-03-03",
+      "field": "at",
+      "value": "2026-03-03T00:00:00.000Z",
+      "method": "deterministic",
+      "linkUrl": "https://www.callofduty.com/patchnotes/2026/02/call-of-duty-bo7-warzone-season-02-patch-notes",
+      "extractedAt": "2026-10-12T13:55:35.516Z"
+    },
+    {
+      "id": "fab23cc45b88a53837ab40c8",
+      "documentId": "57f0565aefecd3b182016e3ffb50c8f64a338b47dfe324a3d5dfaf1d2b7ffec8",
+      "eventKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-01-reloaded-patch-notes-2026-01-08",
+      "field": "at",
+      "value": "2026-01-08T00:00:00.000Z",
+      "method": "deterministic",
+      "linkUrl": "https://www.callofduty.com/patchnotes/2026/01/call-of-duty-bo7-warzone-season-01-reloaded-patch-notes",
+      "extractedAt": "2026-10-12T13:55:35.516Z"
+    },
+    {
+      "id": "1d7438ef683ae4da72aaa5d3",
+      "documentId": "57f0565aefecd3b182016e3ffb50c8f64a338b47dfe324a3d5dfaf1d2b7ffec8",
+      "eventKey": "warzone/last-patch/call-of-duty-bo7-warzone-season-01-patch-notes-2025-12-16",
+      "field": "at",
+      "value": "2025-12-16T00:00:00.000Z",
+      "method": "deterministic",
+      "linkUrl": "https://www.callofduty.com/patchnotes/2025/12/call-of-duty-bo7-warzone-season-01-patch-notes",
+      "extractedAt": "2026-10-12T13:55:35.516Z"
+    },
+    {
+      "id": "5eb92193fd8d07042c52ec7b",
+      "documentId": "57f0565aefecd3b182016e3ffb50c8f64a338b47dfe324a3d5dfaf1d2b7ffec8",
+      "eventKey": "warzone/last-patch/call-of-duty-bo6-warzone-season-06-patch-notes-2025-10-08",
+      "field": "at",
+      "value": "2025-10-08T00:00:00.000Z",
+      "method": "deterministic",
+      "linkUrl": "https://www.callofduty.com/patchnotes/2025/10/call-of-duty-bo6-warzone-season-06-patch-notes",
+      "extractedAt": "2026-10-12T13:55:35.516Z"
+    },
+    {
+      "id": "81adcb50df7e5b1801b30e0c",
+      "documentId": "57f0565aefecd3b182016e3ffb50c8f64a338b47dfe324a3d5dfaf1d2b7ffec8",
+      "eventKey": "warzone/last-patch/call-of-duty-bo6-warzone-season-05-patch-notes-2025-09-03",
+      "field": "at",
+      "value": "2025-09-03T00:00:00.000Z",
+      "method": "deterministic",
+      "linkUrl": "https://www.callofduty.com/patchnotes/2025/08/call-of-duty-bo6-warzone-season-05-patch-notes",
+      "extractedAt": "2026-10-12T13:55:35.516Z"
     }
   ],
   "sources": [
     {
       "id": "warzone-patch-notes-page",
       "url": "https://www.callofduty.com/patchnotes",
-      "etag": "\"27b5a-65cc188aaf56b-gzip\"",
-      "lastModified": "Thu, 01 Oct 2026 06:29:11 GMT",
-      "textHash": "d3eea1eda78ea988115f478f037d4f6e4e0f4f41cb1927aa4279622fd2355723",
-      "lastFetchedAt": "2026-10-12T13:53:32.083Z",
-      "lastUsableAt": "2026-10-08T12:28:16.279Z",
+      "etag": "\"27b5a-65cb94889589e-gzip\"",
+      "lastModified": "Wed, 30 Sep 2026 20:38:35 GMT",
+      "textHash": "57f0565aefecd3b182016e3ffb50c8f64a338b47dfe324a3d5dfaf1d2b7ffec8",
+      "lastFetchedAt": "2026-10-12T13:55:35.516Z",
+      "lastUsableAt": "2026-10-12T13:55:35.516Z",
       "lastVerdict": "usable",
       "lastMode": "http",
-      "consecutiveFailures": 0
+      "consecutiveFailures": 0,
+      "extractionVersion": 1
     }
   ],
   "discovered": [],
