@@ -88,8 +88,8 @@ export const gamePages: GamePage[] = [
             'Ranked split transitions and seasonal events'
         ],
         faq: [
-            { q: 'How often does League of Legends get patched?', a: 'About every two weeks. Riot publishes the full year’s schedule in advance, which is where the dates on this page come from, so the next one is usually known well ahead — but the cycle is not rigid: this year’s published schedule runs from thirteen days to twenty-one, with the longest gaps around breaks.' },
-            { q: 'What time do LoL patches go live?', a: 'Riot’s schedule gives a day rather than a time, so a day is what this page publishes. Deployment usually begins in the early morning in each region and the game is unavailable while it runs, but Riot does not commit to an hour in advance and we are not going to invent one.' },
+            { q: 'How often does League of Legends get patched?', a: 'About every two weeks. Riot publishes the full year’s schedule in advance, which is where the dates on this page come from, so the next one is usually known well ahead. The cycle is not rigid, though: the published gaps vary by a day or two either way, and stretch to about three weeks around breaks.' },
+            { q: 'What time do LoL patches go live?', a: 'Riot’s annual patch schedule gives a day rather than a time, so a day is what this page publishes — putting a clock on it would mean inventing one. Riot does announce the deployment window closer to the day, on its service status page, with the hour for each region and how long the game will be unavailable.' },
             { q: 'Where can I read the patch notes?', a: 'Official patch notes are published on the League of Legends website at leagueoflegends.com and are usually available the day before the patch deploys.' }
         ]
     },

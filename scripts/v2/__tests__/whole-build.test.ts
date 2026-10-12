@@ -330,6 +330,23 @@ test("the privacy policy still describes the site that exists", () => {
     assert.ok(!privacy.includes("No advertising code is served"));
 });
 
+/** Number words a page might reasonably use for a cadence, plus the digits the hub uses. */
+const NUMBER_WORDS: Record<string, number> = {
+    one: 1, two: 2, three: 3, four: 4, five: 5, six: 6,
+    seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12
+};
+
+const WEEKS = new RegExp(`every (\\d+|${Object.keys(NUMBER_WORDS).join("|")}) weeks?`, "i");
+const MONTHS = new RegExp(`every (\\d+|${Object.keys(NUMBER_WORDS).join("|")}) months?`, "i");
+
+/** The cadence a sentence states, in weeks, or undefined where it states none. */
+function weeksIn(text: string): number | undefined {
+    const found = WEEKS.exec(text);
+    if (!found) return undefined;
+    const word = found[1].toLowerCase();
+    return NUMBER_WORDS[word] ?? Number(word);
+}
+
 test("no tracker's prose contradicts the cadence the site derives for it", () => {
     // /resets/ derives a cadence from the stored events; each tracker page also talks about how often
     // its game updates. They were allowed to disagree, and did: PUBG's page said "roughly every 2
@@ -341,35 +358,46 @@ test("no tracker's prose contradicts the cadence the site derives for it", () =>
     const stated = new Map<string, string>();
     hub("table tbody tr").each((_, row) => {
         const cells = hub(row).find("td,th").map((__, cell) => hub(cell).text().replace(/\s+/g, " ").trim()).get();
-        if (cells.length >= 3 && /^About every (\d+) weeks?$/.test(cells[2])) stated.set(cells[0], cells[2]);
+        if (cells.length >= 3 && WEEKS.exec(cells[2])) stated.set(cells[0], cells[2]);
     });
-    assert.ok(stated.size > 0, "the hub publishes no derived cadence — this guard is checking nothing");
 
-    // "About every N weeks" and a page claiming months, or a different number of weeks, cannot both be
-    // right about the same game.
-    const WEEKS = /every (\d+) weeks?/i;
+    // A derived cadence needs the knowledge store, and the PR check runs on a bare checkout where the
+    // `knowledge/` worktree is not present — so the hub there shows a rule for GTA and a dash for
+    // everything else. Requiring rows unconditionally (Codex, #73) would have failed every clean CI run
+    // rather than catching anything. Where the store is present the population is still required, so the
+    // guard cannot quietly shrink to nothing on the machine that has the data.
+    const haveKnowledge = fs.existsSync(path.join(ROOT, "knowledge", "games"));
+    if (!haveKnowledge && stated.size === 0) return;
+    assert.ok(stated.size > 0, "the knowledge store is present but the hub derived no cadence at all");
+
     for (const entry of trackerManifest()) {
-        const html = read(entry.page);
-        const page = cheerio.load(html);
+        const page = cheerio.load(read(entry.page));
         const title = page("h1").first().text().replace(/\s+/g, " ").trim();
         const hubRow = [...stated.entries()].find(([game]) => title.toLowerCase().startsWith(game.toLowerCase()));
         if (!hubRow) continue;
-        const derived = Number(WEEKS.exec(hubRow[1])![1]);
+        const derived = weeksIn(hubRow[1])!;
 
         // Collected, then asserted. An assertion thrown inside a cheerio .each callback does not
-        // reliably escape it, so the first version of this guard reported nothing while two pages were
-        // contradicting the hub — a guard that cannot fail is the same as no guard.
+        // reliably escape it, so an earlier version of this guard reported nothing while two pages were
+        // contradicting the hub.
         const said: string[] = [];
         page("details.faq-item, .content-section p").each((__, el) => {
             const text = page(el).text().replace(/\s+/g, " ");
             if (/how often|every/i.test(text)) said.push(text);
         });
+        let compared = 0;
         for (const text of said) {
-            assert.ok(!/every \d+ months?/i.test(text),
+            assert.ok(!MONTHS.test(text),
                 `${entry.page} describes a cadence in months while /resets/ publishes "${hubRow[1]}": "${text.slice(0, 110)}"`);
-            const claimed = WEEKS.exec(text);
-            assert.ok(!claimed || Number(claimed[1]) === derived,
-                `${entry.page} says every ${claimed?.[1]} weeks, /resets/ publishes "${hubRow[1]}"`);
+            const claimed = weeksIn(text);
+            if (claimed === undefined) continue;
+            compared++;
+            assert.equal(claimed, derived,
+                `${entry.page} says every ${claimed} weeks, /resets/ publishes "${hubRow[1]}"`);
         }
+        // Both pages this guard was written for state their cadence in words, so a digits-only parser
+        // read neither of them and the comparison never happened (Codex, #73). Requiring a comparison
+        // per matched game is what stops that being invisible.
+        assert.ok(compared > 0, `${entry.page} states no cadence this guard can read, so nothing was compared against "${hubRow[1]}"`);
     }
 });
