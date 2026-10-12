@@ -11,10 +11,15 @@ import assert from "node:assert/strict";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import * as cheerio from "cheerio";
 import { inspect, sitemapPaths } from "../../publish-gate";
+import { renderSite } from "../../render-pages";
+import { urlPathOf } from "../../render-sitemap";
 import { pagePaths, trackerPages } from "../../site-map";
 
 const NOINDEX = `<meta name="robots" content="noindex, follow">`;
+const ROOT = path.resolve(__dirname, "..", "..", "..");
+const NOW = new Date("2026-10-12T12:00:00.000Z");
 
 /**
  * A minimal build that the gate should accept: every declared page present, trackers indexable, and a
@@ -217,5 +222,65 @@ test("a page the manifest does not declare is refused", () => {
         assert.match(refusals(build.dir).join(" | "), /the manifest does not declare: scratch\/index\.html/);
     } finally {
         build.cleanup();
+    }
+});
+
+test("a partial failure publishes, and the stale tracker is never dressed as fresh", () => {
+    // The two halves of what this PR is for, asserted together against a real render.
+    //
+    // One provider fails while the rest are fine. That must still publish — the static site, the arcade
+    // and eleven working trackers are worth more than a blocked deploy — and the one that failed must
+    // say so everywhere it appears, rather than showing a two-month-old value as though it were today's.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nextreset-partial-"));
+    try {
+        const copy = (from: string, to: string) => {
+            fs.mkdirSync(to, { recursive: true });
+            for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
+                const a = path.join(from, entry.name);
+                const b = path.join(to, entry.name);
+                if (entry.isDirectory()) copy(a, b);
+                else fs.copyFileSync(a, b);
+            }
+        };
+        copy(path.join(ROOT, "public"), dir);
+        const vault = path.join(dir, "data", "_lkg");
+        for (const name of fs.readdirSync(vault).filter(f => f.endsWith(".json"))) {
+            const target = path.join(dir, "data", name);
+            if (!fs.existsSync(target)) fs.copyFileSync(path.join(vault, name), target);
+        }
+
+        const tracker = trackerPages().find(entry => entry.tracker && fs.existsSync(
+            path.join(dir, "data", `${entry.tracker.game}.${entry.tracker.type}.json`)))!;
+        const file = path.join(dir, "data", `${tracker.tracker!.game}.${tracker.tracker!.type}.json`);
+        const data = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
+        const VERIFIED = "2026-08-12T22:50:00.000Z";
+        fs.writeFileSync(file, JSON.stringify({
+            ...data, status: "stale", last_success_at_utc: VERIFIED,
+            fetched_at_utc: NOW.toISOString(), reason: "Fetch failed: connect ETIMEDOUT"
+        }, null, 2));
+
+        renderSite(dir, NOW, ROOT);
+
+        // It publishes.
+        const refusals = inspect(dir).findings.filter(finding => finding.level === "refuse");
+        assert.deepEqual(refusals, [], "one failing provider blocked the whole publish");
+
+        // And it is labelled, on its own page...
+        const page = cheerio.load(fs.readFileSync(path.join(dir, tracker.page), "utf8"));
+        assert.match(page(".countdown-value").first().attr("class") ?? "", /\bstale\b/,
+            "the stale value is styled exactly like a fresh one");
+        const text = page(".evidence").text().replace(/\s+/g, " ");
+        assert.match(text, /the official source could not be checked/, "the page does not say the source failed");
+        // The two dates that must never be conflated: when the value was last confirmed, and when we
+        // last tried. Showing only the second is how a two-month-old value reads as today's.
+        assert.ok(text.includes("August 12, 2026"), "the page does not say when the value was last verified");
+        assert.ok(text.includes("October 12, 2026"), "the page does not say when it was last checked");
+
+        // ...and on the homepage, which is where most readers meet it.
+        const home = cheerio.load(fs.readFileSync(path.join(dir, "index.html"), "utf8"));
+        const card = home(`a[href="${urlPathOf(tracker.page)}"]`).first().text().replace(/\s+/g, " ");
+        assert.match(card, /STALE/i, `the homepage card reads "${card.trim()}" with no sign the value is stale`);
+    } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
     }
 });
