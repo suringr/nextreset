@@ -278,7 +278,12 @@ test("a partial failure publishes, and the stale tracker is never dressed as fre
 
         // ...and on the homepage, which is where most readers meet it.
         const home = cheerio.load(fs.readFileSync(path.join(dir, "index.html"), "utf8"));
-        const card = home(`a[href="${urlPathOf(tracker.page)}"]`).first().text().replace(/\s+/g, " ");
+        // `a.card`, not the first anchor with that href: the homepage links each tracker twice — the
+        // card in the grid, and a plain entry in the all-games list below it. Taking the first matched
+        // the card locally and the list entry in CI, so the test passed here and failed there, which is
+        // the least useful way for a test to be wrong.
+        const card = home(`a.card[href="${urlPathOf(tracker.page)}"]`).first().text().replace(/\s+/g, " ");
+        assert.ok(card.length > 0, "this tracker has no card on the homepage");
         assert.match(card, /STALE/i, `the homepage card reads "${card.trim()}" with no sign the value is stale`);
     } finally {
         fs.rmSync(dir, { recursive: true, force: true });
