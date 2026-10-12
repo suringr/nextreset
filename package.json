@@ -15,11 +15,12 @@
     "refresh:data": "node build/refresh-all.js",
     "export:site": "node build/export-site.js",
     "render:pages": "node build/render-pages.js",
-    "build:site": "npm run build && (npm run refresh:data || true) && npm run export:site && npm run render:pages",
+    "build:site": "npm run build && (npm run refresh:data || node build/refresh-health.js) && npm run export:site && npm run render:pages && npm run publish:gate",
     "dev": "npm run build && npm run refresh:data",
     "design:apply": "node build/update-design.js",
     "chrome:apply": "node build/update-chrome.js",
-    "play:apply": "node build/update-play-page.js"
+    "play:apply": "node build/update-play-page.js",
+    "publish:gate": "node build/publish-gate.js"
   },
   "keywords": [
     "gaming",

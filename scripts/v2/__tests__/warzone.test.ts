@@ -201,3 +201,35 @@ test("an unchanged response is still read when its body came down with it", asyn
     assert.equal(again.gets.length, 1, "the backfill cost an extra request");
     assert.equal(store.load("warzone").events.length, parseWarzoneArchive(PAGE).length + 1, "the history was not backfilled");
 });
+
+test("a quiet patch notes page is still read once when the adapter learns to read the archive", async () => {
+    // Same lifecycle as Minecraft's, and the same reason: the rescue that taught this adapter to read the
+    // "View past patch notes" accordion could only ever apply to a page that changed, and the live store
+    // sat at four events because the page had not. One validator-free request per capability, spent only
+    // while there is something to learn.
+    const { store } = tempStore();
+
+    // A store as the old adapter left it: the current card only, with a validator held for next time.
+    const seed = fakeTransport({ http: [{ body: PAGE, headers: { "content-type": "text/html", etag: '"quiet"' } }] });
+    await runTracker(game, topic, createWarzonePatchAdapter(seed), store, NOW);
+    const seeded = store.load("warzone");
+    store.save({
+        ...seeded,
+        events: seeded.events.slice(0, 1),
+        sources: seeded.sources.map(s => ({ ...s, extractionVersion: undefined }))
+    });
+    assert.equal(store.load("warzone").sources[0].etag, '"quiet"', "the store needs a validator for this test to mean anything");
+
+    const again = fakeTransport({ http: [{ body: PAGE, headers: { "content-type": "text/html", etag: '"quiet"' } }] });
+    await runTracker(game, topic, createWarzonePatchAdapter(again), store, new Date("2026-09-17T00:00:00Z"));
+
+    assert.equal(again.gets.length, 1, "the backfill cost more than the request the schedule was making anyway");
+    assert.deepEqual([again.gets[0].etag, again.gets[0].lastModified], [undefined, undefined],
+        "the request carried validators, so a real server would have answered 304 and the archive would still be unread");
+    const after = store.load("warzone");
+    assert.ok(after.events.length > 1, "the archive did not arrive");
+    for (const event of after.events) {
+        assert.ok(after.claims.some(c => c.eventKey === event.key && c.field === "at" && !!c.linkUrl),
+            `${event.key} has no article link for the reader`);
+    }
+});
