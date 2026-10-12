@@ -739,3 +739,52 @@ test("the difficulty the page describes is the difficulty the game applies", () 
     assert.ok(prose.includes(`between ${said(lateLow)} and ${said(lateHigh)}`),
         `the page does not say between ${said(lateLow)} and ${said(lateHigh)} (${lateLow}-${lateHigh}s at contract ${last})`);
 });
+
+test("Space scrolls the guide once the game is off the screen, and still fires while it is on it", () => {
+    // The game listens for Space in the capture phase and fires. Harmless while the page was only a
+    // game; with an article under it, a keyboard reader pressing Space to page down would shoot at an
+    // off-screen crowd and stay where they were (Codex, #72). An accessibility regression my own change
+    // introduced, since there was nothing to scroll before.
+    //
+    // Run rather than grepped for: the guard is three lines of logic and the thing that matters is which
+    // way it goes.
+    const inline = /<script>\s*(addEventListener\('keydown'[\s\S]*?)<\/script>/.exec(PAGE);
+    assert.ok(inline, "the page carries no Space guard");
+
+    const run = (gameBottom: number) => {
+        let registered: ((e: Record<string, unknown>) => void) | undefined;
+        let capture = false;
+        let stopped = false;
+        const context = {
+            addEventListener: (type: string, fn: (e: Record<string, unknown>) => void, useCapture?: boolean) => {
+                assert.equal(type, "keydown");
+                registered = fn;
+                capture = useCapture === true;
+            },
+            document: { getElementById: (id: string) => id === "app" ? { getBoundingClientRect: () => ({ bottom: gameBottom }) } : null }
+        };
+        vm.createContext(context);
+        vm.runInContext(inline![1], context);
+        assert.ok(registered, "the guard registered no listener");
+        // Capture, so it is seen before the game's own capture listener — which is only true because
+        // this runs at parse time and one-shot.js is deferred.
+        assert.equal(capture, true, "the guard does not listen in the capture phase, so the game sees Space first");
+        registered!({ code: "Space", stopImmediatePropagation: () => { stopped = true; } });
+        return stopped;
+    };
+
+    assert.equal(run(-120), true, "the game is scrolled past and Space still reaches it instead of scrolling");
+    assert.equal(run(640), false, "the game is on screen and Space no longer fires");
+
+    // And a key the game does not own is never touched.
+    let other = false;
+    const context = {
+        addEventListener: (_t: string, fn: (e: Record<string, unknown>) => void) => {
+            fn({ code: "KeyR", stopImmediatePropagation: () => { other = true; } });
+        },
+        document: { getElementById: () => ({ getBoundingClientRect: () => ({ bottom: -500 }) }) }
+    };
+    vm.createContext(context);
+    vm.runInContext(inline![1], context);
+    assert.equal(other, false, "the guard swallows keys the game needs");
+});

@@ -189,6 +189,20 @@ ${PROSE}
     </div>
   </noscript>
 
+  <!-- The game listens for Space in the capture phase and fires. That was right when this page was only
+       a game; with an article under it, a keyboard reader pressing Space to page down would shoot at an
+       off-screen crowd and stay where they were (Codex, #72).
+       This runs while the document is parsed and one-shot.js is deferred, so this listener is registered
+       first and sees the key first. It only intervenes once the game has scrolled off the top, so the
+       game keeps every key it had while it is the thing on screen. -->
+  <script>
+    addEventListener('keydown', function (e) {
+      if (e.code !== 'Space') return;
+      var game = document.getElementById('app');
+      if (game && game.getBoundingClientRect().bottom <= 0) e.stopImmediatePropagation();
+    }, true);
+  </script>
+
   <script src="/assets/player.js" defer></script>
   <script src="/assets/one-shot.js" defer></script>
 </body>
