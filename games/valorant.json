@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "valorant",
-  "updatedAt": "2026-10-15T10:33:37.095Z",
+  "updatedAt": "2026-10-15T15:58:24.499Z",
   "events": [
     {
       "key": "valorant/last-patch/12.07",
@@ -168,7 +168,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-13T13:10:52.208Z",
-      "lastVerified": "2026-10-15T10:33:37.095Z",
+      "lastVerified": "2026-10-15T15:58:24.499Z",
       "publishState": "published"
     }
   ],
@@ -452,8 +452,8 @@
       "url": "https://playvalorant.com/en-us/news/tags/patch-notes/",
       "etag": "W/\"uqthm7wmcu9fbr-df\"",
       "textHash": "5fec7c8f2fbbdba03e3f53017c180c2dcba69ced1da5807566a4d272fc1a67fc",
-      "lastFetchedAt": "2026-10-15T10:33:37.095Z",
-      "lastUsableAt": "2026-10-15T10:33:37.095Z",
+      "lastFetchedAt": "2026-10-15T15:58:24.499Z",
+      "lastUsableAt": "2026-10-15T15:58:24.499Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
