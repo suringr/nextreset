@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "minecraft",
-  "updatedAt": "2026-10-20T10:39:03.412Z",
+  "updatedAt": "2026-10-20T16:01:39.971Z",
   "events": [
     {
       "key": "minecraft/last-release/1.21.10",
@@ -14,7 +14,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-12T13:55:35.420Z",
-      "lastVerified": "2026-10-13T22:04:59.800Z",
+      "lastVerified": "2026-10-20T16:01:39.971Z",
       "publishState": "published"
     },
     {
@@ -28,7 +28,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-12T13:55:35.420Z",
-      "lastVerified": "2026-10-13T22:04:59.800Z",
+      "lastVerified": "2026-10-20T16:01:39.971Z",
       "publishState": "published"
     },
     {
@@ -42,7 +42,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-12T13:55:35.420Z",
-      "lastVerified": "2026-10-13T22:04:59.800Z",
+      "lastVerified": "2026-10-20T16:01:39.971Z",
       "publishState": "published"
     },
     {
@@ -56,7 +56,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-12T13:55:35.420Z",
-      "lastVerified": "2026-10-13T22:04:59.800Z",
+      "lastVerified": "2026-10-20T16:01:39.971Z",
       "publishState": "published"
     },
     {
@@ -70,7 +70,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-12T13:55:35.420Z",
-      "lastVerified": "2026-10-13T22:04:59.800Z",
+      "lastVerified": "2026-10-20T16:01:39.971Z",
       "publishState": "published"
     },
     {
@@ -84,7 +84,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-12T13:55:35.420Z",
-      "lastVerified": "2026-10-13T22:04:59.800Z",
+      "lastVerified": "2026-10-20T16:01:39.971Z",
       "publishState": "published"
     },
     {
@@ -98,7 +98,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-12T13:55:35.420Z",
-      "lastVerified": "2026-10-13T22:04:59.800Z",
+      "lastVerified": "2026-10-20T16:01:39.971Z",
       "publishState": "published"
     },
     {
@@ -112,7 +112,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-12T13:55:35.420Z",
-      "lastVerified": "2026-10-13T22:04:59.800Z",
+      "lastVerified": "2026-10-20T16:01:39.971Z",
       "publishState": "published"
     },
     {
@@ -126,7 +126,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-12T13:55:35.420Z",
-      "lastVerified": "2026-10-13T22:04:59.800Z",
+      "lastVerified": "2026-10-20T16:01:39.971Z",
       "publishState": "published"
     },
     {
@@ -140,7 +140,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-12T13:55:35.420Z",
-      "lastVerified": "2026-10-13T22:04:59.800Z",
+      "lastVerified": "2026-10-20T16:01:39.971Z",
       "publishState": "published"
     },
     {
@@ -154,7 +154,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-12T13:55:35.420Z",
-      "lastVerified": "2026-10-13T22:04:59.800Z",
+      "lastVerified": "2026-10-20T16:01:39.971Z",
       "publishState": "published"
     },
     {
@@ -168,7 +168,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:01:55.174Z",
-      "lastVerified": "2026-10-20T10:39:03.412Z",
+      "lastVerified": "2026-10-20T16:01:39.971Z",
       "publishState": "published"
     }
   ],
@@ -451,10 +451,10 @@
     {
       "id": "minecraft-java-manifest",
       "url": "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json",
-      "lastModified": "Tue, 13 Oct 2026 14:00:39 GMT",
-      "textHash": "ac37f92737df1a9d7660047136fedd3edebd90bd6e552f53ddc3f222079bc8fa",
-      "lastFetchedAt": "2026-10-20T10:39:03.412Z",
-      "lastUsableAt": "2026-10-13T22:04:59.800Z",
+      "lastModified": "Tue, 20 Oct 2026 14:02:30 GMT",
+      "textHash": "1e9f0052c6f385576f0effac072f2b32278346ce647d681e396dcf7b6f7d738a",
+      "lastFetchedAt": "2026-10-20T16:01:39.971Z",
+      "lastUsableAt": "2026-10-20T16:01:39.971Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0,
