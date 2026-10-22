@@ -216,7 +216,11 @@ function updateCountdown(data) {
     }
 
     // Update source. A computed value names its rule, written by the build; there is no source to link.
-    if (sourceEl && !(sourceEl.dataset && sourceEl.dataset.basis === 'rule')) {
+    // A link the build already wrote names the source itself ("Steam", "Riot Games"), from the same
+    // published file, so it is left alone. Rewriting it with the tracker's title put "Counter-Strike 2
+    // Last Update" in a field labelled Source. Only a page the build left without a link is filled in.
+    const builtLink = sourceEl && typeof sourceEl.querySelector === 'function' ? sourceEl.querySelector('a') : null;
+    if (sourceEl && !builtLink && !(sourceEl.dataset && sourceEl.dataset.basis === 'rule')) {
         const sourceUrl = data.source_url || data.source?.url;
         const sourceName = data.sourceName || data.title || data.source?.name || 'Official Source';
         if (sourceUrl) {

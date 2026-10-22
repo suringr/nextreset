@@ -325,3 +325,26 @@ test("the privacy policy describes the site that actually exists", () => {
     assert.ok(privacy.includes("no ad placements of its own"), "while staying true about what is not there");
     assert.ok(privacy.includes("Google Analytics 4"), "the analytics disclosure is kept");
 });
+
+test("the browser keeps the source the build named, instead of putting the tracker's title in its place", () => {
+    const els = stubPage("event-title", "countdown", "source", "confidence", "last-updated", "notes");
+    const link = { href: "https://store.steampowered.com/news/app/730", textContent: "Steam" };
+    els.source.innerHTML = `<a href="${link.href}">Steam</a>`;
+    els.source.querySelector = (selector: string) => (selector === "a" ? link : null);
+    app.updateCountdown({
+        game: "cs2", type: "last-update", title: "Counter-Strike 2 Last Update", status: "fresh",
+        nextEventUtc: "2026-10-14T23:02:48.000Z", precision: "exact", fetched_at_utc: NOW.toISOString(),
+        last_success_at_utc: NOW.toISOString(), source_url: link.href, confidence: "high", notes: "Counter-Strike 2 Update"
+    });
+    assert.equal(els.source.innerHTML, `<a href="${link.href}">Steam</a>`, "the build's source name stays");
+
+    // Where the build wrote no link, the browser still fills one in.
+    const bare = stubPage("event-title", "countdown", "source", "confidence", "last-updated", "notes");
+    bare.source.querySelector = () => null;
+    app.updateCountdown({
+        game: "cs2", type: "last-update", title: "Counter-Strike 2 Last Update", status: "fresh",
+        nextEventUtc: "2026-10-14T23:02:48.000Z", precision: "exact", fetched_at_utc: NOW.toISOString(),
+        last_success_at_utc: NOW.toISOString(), source_url: link.href, confidence: "high"
+    });
+    assert.match(bare.source.innerHTML, /<a href="https:\/\/store\.steampowered\.com\/news\/app\/730"/);
+});
