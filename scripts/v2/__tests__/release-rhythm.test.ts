@@ -174,3 +174,22 @@ test("a schedule keeps its numbers before its first date and after its last, whe
     const feed: GameKnowledge = { events: [event("1", "2026-09-01T10:00:00Z"), event("2", "2026-10-01T10:00:00Z")] };
     assert.equal(rhythmFor(feed, "last-patch", options())?.title, "Patches in numbers");
 });
+
+test("with an unanswered headline, the schedule's numbers use past dates only", () => {
+    const days = [-40, -26, -12, 2, 16, 30];
+    const k: GameKnowledge = { events: days.map((d, i) => ({
+        key: `lol/next-patch/26.${20 + i}`, game: "lol", topic: "next-patch", kind: "version", label: `26.${20 + i}`,
+        status: d > 0 ? "scheduled" : "observed", at: new Date(NOW.getTime() + d * DAY).toISOString().slice(0, 10) + "T00:00:00.000Z",
+        precision: "day", publishState: "published"
+    })) };
+    const answered = scheduleRhythm(k, "next-patch", options({ headlineAnswered: true, currentKey: "lol/next-patch/26.23" }))!;
+    assert.match(row(answered, "Counted from")!, /^6 dates/);
+    // Three past dates are too few for the block: it is left out rather than built from the hidden future.
+    assert.equal(scheduleRhythm(k, "next-patch", options({ headlineAnswered: false })), undefined);
+    const longer: GameKnowledge = { events: [...k.events!, ...[-54, -68].map((d, i) => ({ ...k.events![0], key: `lol/next-patch/26.1${8 - i}`, label: `26.1${8 - i}`, at: new Date(NOW.getTime() + d * DAY).toISOString().slice(0, 10) + "T00:00:00.000Z" }))] };
+    const unanswered = scheduleRhythm(longer, "next-patch", options({ headlineAnswered: false }))!;
+    const counted = row(unanswered, "Counted from")!;
+    assert.match(counted, /^5 dates/);
+    assert.ok(!/November|December/.test(counted), `no future date named: ${counted}`);
+    assert.equal(row(unanswered, "Next scheduled"), undefined);
+});

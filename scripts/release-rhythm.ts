@@ -216,7 +216,13 @@ export function releaseRhythm(knowledge: GameKnowledge | undefined, topic: strin
 export function scheduleRhythm(knowledge: GameKnowledge | undefined, topic: string, options: RhythmOptions): Block | undefined {
     if (!knowledge) return undefined;
     const nowMs = options.now.getTime();
-    const events = publishedEvents(knowledge.events, topic).sort((a, b) => Date.parse(a.at!) - Date.parse(b.at!));
+    // A page that cannot answer its question lists nothing after the answer it does not have. The
+    // timeline already drops future rows then; these numbers drop the future dates too, rather than
+    // describing a schedule the page has just said it cannot vouch for (Codex, #78).
+    const answered = options.headlineAnswered !== false;
+    const events = publishedEvents(knowledge.events, topic)
+        .filter(e => answered || Date.parse(e.at!) + (e.precision === "exact" ? 0 : DAY_MS) <= nowMs)
+        .sort((a, b) => Date.parse(a.at!) - Date.parse(b.at!));
     const instants = distinctInstants(events);
     if (instants.length < 4) return undefined;
     const gaps = gapsOf(instants);
