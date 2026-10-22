@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "lol",
-  "updatedAt": "2026-10-21T21:01:31.642Z",
+  "updatedAt": "2026-10-22T02:28:59.261Z",
   "events": [
     {
       "key": "lol/next-patch/26.01",
@@ -289,12 +289,12 @@
       "topic": "next-patch",
       "kind": "version",
       "label": "26.21",
-      "status": "scheduled",
+      "status": "ended",
       "at": "2026-10-21T00:00:00.000Z",
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-21T21:01:31.642Z",
+      "lastVerified": "2026-10-22T02:28:59.261Z",
       "publishState": "published"
     },
     {
@@ -308,7 +308,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-14T21:06:16.745Z",
+      "lastVerified": "2026-10-22T02:28:59.261Z",
       "publishState": "published"
     },
     {
@@ -582,6 +582,15 @@
       "newValue": "observed",
       "at": "2026-10-08T03:35:41.403Z",
       "reason": "observed by lol-patch-schedule",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "lol/next-patch/26.21",
+      "field": "status",
+      "oldValue": "scheduled",
+      "newValue": "ended",
+      "at": "2026-10-22T02:28:59.261Z",
+      "reason": "scheduled instant has passed",
       "decision": "applied"
     }
   ],
@@ -2089,8 +2098,8 @@
       "id": "lol-patch-schedule",
       "url": "https://support-leagueoflegends.riotgames.com/hc/en-us/articles/360018987893-League-of-Legends-Patch-Schedule",
       "textHash": "75c1059d255b7ce93161e5b8fea1a9c9be3b9e3fe6524d28cb1038ada7075640",
-      "lastFetchedAt": "2026-10-21T21:01:31.642Z",
-      "lastUsableAt": "2026-10-21T21:01:31.642Z",
+      "lastFetchedAt": "2026-10-22T02:28:59.261Z",
+      "lastUsableAt": "2026-10-22T02:28:59.261Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
