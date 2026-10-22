@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "pubg",
-  "updatedAt": "2026-10-22T16:17:22.034Z",
+  "updatedAt": "2026-10-22T20:16:55.518Z",
   "events": [
     {
       "key": "pubg/last-patch/42.1",
@@ -70,7 +70,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-13T13:10:54.614Z",
-      "lastVerified": "2026-10-22T16:17:22.034Z",
+      "lastVerified": "2026-10-22T20:16:55.518Z",
       "publishState": "published"
     }
   ],
@@ -204,8 +204,8 @@
       "id": "pubg-steam-announcements",
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=578080&count=100&maxlength=240&feeds=steam_community_announcements",
       "textHash": "4133525dc25550d946c239bda8cda241b0cae7ab6e6525bada10432e929f7d78",
-      "lastFetchedAt": "2026-10-22T16:17:22.034Z",
-      "lastUsableAt": "2026-10-22T16:17:22.034Z",
+      "lastFetchedAt": "2026-10-22T20:16:55.518Z",
+      "lastUsableAt": "2026-10-22T20:16:55.518Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
