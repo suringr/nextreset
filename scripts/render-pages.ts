@@ -25,6 +25,7 @@ import { cadenceFor, rhythmFor } from "./release-rhythm";
 import { CardGroup, renderHomeHtml } from "./render-home";
 import { SitemapEntry, SitemapInput, renderSitemap } from "./render-sitemap";
 import { renderResetsHtml, resetRows } from "./render-resets";
+import { activityFor, renderActivityHtml } from "./render-activity";
 import { pageAtUrlPath, pageEntry } from "./site-map";
 import { minifyCss } from "./minify-css";
 import { replaceSlot } from "./render-slots";
@@ -647,7 +648,10 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
                     knowledge: game => knowledgeFor(game),
                     now
                 });
-                fs.writeFileSync(file, renderResetsHtml(html, rows, page), "utf8");
+                // What was published lately and what is officially scheduled, across every game, from the
+                // same recorded history and the same rule about what the pages may say.
+                const activity = activityFor({ read: (game, type) => readData(dataDir, game, type), knowledge: game => knowledgeFor(game), now });
+                fs.writeFileSync(file, renderActivityHtml(renderResetsHtml(html, rows, page), activity, page), "utf8");
                 summary.resets = rows.length;
             } else {
                 summary.skipped++;

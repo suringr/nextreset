@@ -182,6 +182,11 @@ function evidenceFor(event: KnowledgeEvent, knowledge: GameKnowledge): { href?: 
     return {};
 }
 
+/** The link and readable quote an event carries from its official source, where it has them. */
+export function evidenceOf(event: KnowledgeEvent, knowledge: GameKnowledge): { href?: string; quote?: string } {
+    return evidenceFor(event, knowledge);
+}
+
 /** Whether an event carries a link or a readable quote from its official source. */
 export function isEvidenced(event: KnowledgeEvent, knowledge: GameKnowledge): boolean {
     const evidence = evidenceFor(event, knowledge);
