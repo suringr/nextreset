@@ -110,6 +110,9 @@ test("a live evaluation refuses to start without its confirmation and an approve
     assert.equal(liveEvalRefusal({ AI_LIVE_EVAL_CONFIRMED: "1", AI_MODEL: "gemini-3.5-flash" }), undefined);
     assert.match(liveEvalRefusal({ AI_LIVE_EVAL_CONFIRMED: "true", AI_MODEL: "gemini-3.5-flash" })!, /AI_LIVE_EVAL_CONFIRMED=1/, "only the exact value confirms");
     assert.match(liveEvalRefusal({ AI_LIVE_EVAL_CONFIRMED: "1", AI_MODEL: "gemini-9-ultra" })!, /not approved/);
+    // AI_MODEL unset or blank means the provider's default, which is what would actually be called.
+    assert.equal(liveEvalRefusal({ AI_LIVE_EVAL_CONFIRMED: "1" }), undefined);
+    assert.equal(liveEvalRefusal({ AI_LIVE_EVAL_CONFIRMED: "1", AI_MODEL: "  " }), undefined);
     assert.match(modelRefusal("")!, /no model/);
     assert.match(modelRefusal(undefined)!, /no model/);
     for (const model of APPROVED_LIVE_EVAL_MODELS) assert.equal(modelRefusal(model), undefined, `${model} must be priced`);
