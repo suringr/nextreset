@@ -39,6 +39,28 @@ function titleCase(heading: string): string {
     return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+/**
+ * The changes a section lists: items of its own lists, not the steps nested under one of them.
+ *
+ * Valve sometimes explains a change with a list inside its item — the 22 September 2026 post describes
+ * the new map selection in seven nested steps. Those are one change, not eight (Codex, #81). Undefined
+ * where the lists do not balance, or an item stands outside any list: a shape this cannot count.
+ */
+export function topLevelItems(body: string): number | undefined {
+    let depth = 0;
+    let items = 0;
+    for (const token of body.matchAll(/\[(\/?)(o?list)\b[^\]]*\]|\[\*\]/gi)) {
+        if (token[0] === "[*]") {
+            if (depth === 0) return undefined;
+            if (depth === 1) items++;
+            continue;
+        }
+        depth += token[1] ? -1 : 1;
+        if (depth < 0) return undefined;
+    }
+    return depth === 0 ? items : undefined;
+}
+
 /** The sections of one post's BBCode, or undefined where its shape is not one this can count honestly. */
 export function sectionsOf(contents: string): NoteSection[] | undefined {
     const marks = [...contents.matchAll(HEADING)].map(m => ({ name: m[1], start: m.index!, end: m.index! + m[0].length }));
@@ -48,8 +70,8 @@ export function sectionsOf(contents: string): NoteSection[] | undefined {
     const sections: NoteSection[] = [];
     for (let i = 0; i < marks.length; i++) {
         const body = contents.slice(marks[i].end, i + 1 < marks.length ? marks[i + 1].start : contents.length);
-        const items = (body.match(/\[\*\]/g) ?? []).length;
-        if (items === 0) return undefined;
+        const items = topLevelItems(body);
+        if (items === undefined || items === 0) return undefined;
         sections.push({ name: titleCase(marks[i].name), items });
     }
     return sections;

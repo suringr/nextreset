@@ -14,7 +14,7 @@ import { fakeTransport, fixture } from "./fake-transport";
 import { tempStore } from "./helpers";
 import { blocksFor, renderBlocks } from "../../render-data-blocks";
 import { formatDate } from "../../render-pages";
-import { isWholePostRead, noteSectionsFor, sectionsOf } from "../../patch-notes";
+import { isWholePostRead, noteSectionsFor, sectionsOf, topLevelItems } from "../../patch-notes";
 
 const game = findGame("cs2");
 const topic = findTopic(game, "last-update");
@@ -31,20 +31,47 @@ test("the source asks for whole posts, and only a whole-post read counts as one"
     assert.equal(isWholePostRead("not a url"), false);
 });
 
-test("every update post in the real response has sections whose counts add up to its list items", () => {
+test("every update post in the real response has sections, counted by its top-level changes", () => {
     const items = JSON.parse(FULL).appnews.newsitems as Array<{ title: string; contents: string; date: number }>;
     const updates = items.filter(i => i.title === "Counter-Strike 2 Update");
     assert.equal(updates.length, 19);
     for (const post of updates) {
+        const day = new Date(post.date * 1000).toISOString().slice(0, 10);
         const sections = sectionsOf(post.contents);
-        assert.ok(sections, `no sections read from the ${new Date(post.date * 1000).toISOString().slice(0, 10)} post`);
-        const total = (post.contents.match(/\[\*\]/g) ?? []).length;
-        assert.equal(sections!.reduce((n, s) => n + s.items, 0), total, `counts do not add up for ${new Date(post.date * 1000).toISOString().slice(0, 10)}`);
+        assert.ok(sections, `no sections read from the ${day} post`);
+        const counted = sections!.reduce((n, s) => n + s.items, 0);
+        const allItems = (post.contents.match(/\[\*\]/g) ?? []).length;
+        assert.ok(counted <= allItems, `${day}: more changes than list items`);
     }
     const newest = sectionsOf(updates[0].contents)!;
     assert.deepEqual(newest.map(s => [s.name, s.items]), [["UI", 4], ["Misc", 5]]);
     const big = sectionsOf(updates.find(u => u.contents.includes("PREMIER"))!.contents)!;
     assert.deepEqual(big.map(s => s.name), ["Premier", "Rush", "Gameplay", "Settings", "Engine", "Maps", "Misc", "Workshop", "Scripting"]);
+    // Codex, #81: that post explains the new map selection in seven nested steps. They are one change.
+    assert.equal(big.reduce((n, s) => n + s.items, 0), 33);
+    assert.equal(topLevelItems("[list][*]a[list][*]x[/*][*]y[/*][/list][/*][*]b[/*][/list]"), 2);
+    assert.equal(topLevelItems("[list][*]a[/*]"), undefined, "an unclosed list is not counted");
+    assert.equal(topLevelItems("[*]a[/*]"), undefined, "an item outside any list is not counted");
+});
+
+test("a post Valve edits after it was stored whole gets its new notes, and an unchanged one adds nothing", async () => {
+    const { store } = tempStore();
+    await runTracker(game, topic, createCs2UpdatesAdapter(fakeTransport({ http: [json(FULL)] })), store, NOW);
+    const claims = store.load("cs2").claims.length;
+    // The same response again: nothing new.
+    await runTracker(game, topic, createCs2UpdatesAdapter(fakeTransport({ http: [json(FULL.replace('"count":20', '"count": 20'))] })), store, new Date("2026-10-22T13:00:00Z"));
+    assert.equal(store.load("cs2").claims.length, claims);
+
+    // Valve adds a section to the newest post, keeping its gid and publication time.
+    const data = JSON.parse(FULL);
+    const newest = data.appnews.newsitems[0];
+    newest.contents += "[p]\\[ MAPS ][/p][list][*][p]Fixed a spot on Mirage[/p][/*][/list]";
+    await runTracker(game, topic, createCs2UpdatesAdapter(fakeTransport({ http: [json(JSON.stringify(data))] })), store, new Date("2026-10-22T14:00:00Z"));
+    const k = store.load("cs2") as any;
+    assert.equal(k.claims.length, claims + 1, "one claim for the edited post");
+    const event = k.events.find((e: any) => e.key.endsWith(newest.gid));
+    assert.deepEqual(noteSectionsFor(event, k)!.map(s => [s.name, s.items]), [["UI", 4], ["Misc", 5], ["Maps", 1]], "the page reads the edited notes");
+    assert.equal(event.at, new Date(newest.date * 1000).toISOString(), "the fact itself did not move");
 });
 
 test("a shape that cannot be counted honestly is not summarised at all", () => {
