@@ -10,7 +10,7 @@
  * a provider-side cap is set in Google Cloud billing, by the owner.
  */
 import { knownModelPrice } from "../cost/pricing";
-import { DEFAULT_AI_MODEL } from "./provider";
+import { configuredModel } from "./provider";
 
 /** Models a live evaluation may use. Adding one is a deliberate edit, reviewed like any other. */
 export const APPROVED_LIVE_EVAL_MODELS: readonly string[] = ["gemini-3.5-flash"];
@@ -20,9 +20,9 @@ export function liveEvalRefusal(env: NodeJS.ProcessEnv): string | undefined {
     if (env.AI_LIVE_EVAL_CONFIRMED !== "1") {
         return "a live evaluation makes billed model calls; set AI_LIVE_EVAL_CONFIRMED=1 to confirm (the workflow does this only after a manual dispatch with confirm_paid_run ticked)";
     }
-    // The same default the provider applies (readAiConfig), so `npm run ai:eval:live` with AI_MODEL unset
-    // checks the model it is actually about to call.
-    return modelRefusal(env.AI_MODEL?.trim() || DEFAULT_AI_MODEL);
+    // Resolved exactly as the provider resolves it (readAiConfig), so the model approved here is the model
+    // about to be called: unset means the default, and a whitespace-only value means no model at all.
+    return modelRefusal(configuredModel(env));
 }
 
 /** Why this model may not be used for a live evaluation, or undefined when it may. */

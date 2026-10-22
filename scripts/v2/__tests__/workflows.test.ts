@@ -15,6 +15,7 @@ import assert from "node:assert/strict";
 import * as fs from "fs";
 import * as path from "path";
 import { APPROVED_LIVE_EVAL_MODELS, liveEvalRefusal, modelRefusal } from "../ai/eval-guard";
+import { readAiConfig } from "../ai/provider";
 
 const WORKFLOWS = path.join(__dirname, "..", "..", "..", ".github", "workflows");
 const read = (name: string) => fs.readFileSync(path.join(WORKFLOWS, name), "utf8").replace(/\r\n/g, "\n");
@@ -110,9 +111,16 @@ test("a live evaluation refuses to start without its confirmation and an approve
     assert.equal(liveEvalRefusal({ AI_LIVE_EVAL_CONFIRMED: "1", AI_MODEL: "gemini-3.5-flash" }), undefined);
     assert.match(liveEvalRefusal({ AI_LIVE_EVAL_CONFIRMED: "true", AI_MODEL: "gemini-3.5-flash" })!, /AI_LIVE_EVAL_CONFIRMED=1/, "only the exact value confirms");
     assert.match(liveEvalRefusal({ AI_LIVE_EVAL_CONFIRMED: "1", AI_MODEL: "gemini-9-ultra" })!, /not approved/);
-    // AI_MODEL unset or blank means the provider's default, which is what would actually be called.
+    // The guard resolves the model exactly as the provider does: unset or empty is the default, which is
+    // what would be called; whitespace-only resolves to no model in both, so it is refused here too.
     assert.equal(liveEvalRefusal({ AI_LIVE_EVAL_CONFIRMED: "1" }), undefined);
-    assert.equal(liveEvalRefusal({ AI_LIVE_EVAL_CONFIRMED: "1", AI_MODEL: "  " }), undefined);
+    assert.equal(liveEvalRefusal({ AI_LIVE_EVAL_CONFIRMED: "1", AI_MODEL: "" }), undefined);
+    for (const AI_MODEL of [undefined, "", "  ", " gemini-3.5-flash "]) {
+        const env = { AI_LIVE_EVAL_CONFIRMED: "1", AI_MODEL, GEMINI_API_KEY: "k-123456789" };
+        const called = readAiConfig(env)!.model;
+        assert.equal(liveEvalRefusal(env) === undefined, modelRefusal(called) === undefined, `AI_MODEL=${JSON.stringify(AI_MODEL)}: guard and provider disagree`);
+    }
+    assert.match(liveEvalRefusal({ AI_LIVE_EVAL_CONFIRMED: "1", AI_MODEL: "  " })!, /no model/);
     assert.match(modelRefusal("")!, /no model/);
     assert.match(modelRefusal(undefined)!, /no model/);
     for (const model of APPROVED_LIVE_EVAL_MODELS) assert.equal(modelRefusal(model), undefined, `${model} must be priced`);
