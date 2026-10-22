@@ -20,7 +20,8 @@ import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
 import { IndexDecision, NOINDEX_TAG, staticPageDecision, trackerDecision } from "./indexing";
-import { GameKnowledge, blocksFor as dataBlocksFor, loadKnowledge, renderBlocks } from "./render-data-blocks";
+import { GameKnowledge, KnowledgeEvent, blocksFor as dataBlocksFor, isEvidenced, loadKnowledge, renderBlocks } from "./render-data-blocks";
+import { cadenceOf, releaseRhythm, scheduleRhythm } from "./release-rhythm";
 import { CardGroup, renderHomeHtml } from "./render-home";
 import { SitemapEntry, SitemapInput, renderSitemap } from "./render-sitemap";
 import { renderResetsHtml, resetRows } from "./render-resets";
@@ -701,7 +702,21 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
             const currentKey = knowledge?.events?.find(e => e.topic === tracker.type && e.at === data?.nextEventUtc)?.key;
             // A page that is not publishing a value must not list upcoming dates below that headline.
             const headlineAnswered = hasVerifiedValue(data) && !isUnanswered(data, now);
-            blocksHtml = renderBlocks(dataBlocksFor(knowledge, tracker.type, { format: readable, now, currentKey, headlineAnswered }));
+            const blocks = dataBlocksFor(knowledge, tracker.type, { format: readable, now, currentKey, headlineAnswered });
+            // The recorded history in numbers, after the rows it is counted from. "How often" is the
+            // figure /resets/ publishes, from the same function, so the two pages cannot disagree.
+            if (knowledge) {
+                const rhythmOptions = {
+                    format: readable, now, currentKey, headlineAnswered,
+                    cadence: cadenceOf(knowledge, tracker.type, undefined, now),
+                    evidenced: (event: KnowledgeEvent) => isEvidenced(event, knowledge)
+                };
+                const rhythm = blocks.some(block => block.shape === "timeline")
+                    ? scheduleRhythm(knowledge, tracker.type, rhythmOptions)
+                    : releaseRhythm(knowledge, tracker.type, tracker.type, rhythmOptions);
+                if (rhythm) blocks.push(rhythm);
+            }
+            blocksHtml = renderBlocks(blocks);
         } catch (error) {
             console.warn(`  ⚠ ${page}: knowledge unusable, publishing without data blocks (${error instanceof Error ? error.message : String(error)})`);
         }
