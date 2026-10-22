@@ -82,3 +82,13 @@ test("every row has a cell for every column, and the explanation names both new 
     assert.match(text, /From today is how many days away the value is, counted in UTC calendar days/);
     assert.match(text, /not a guarantee that nothing else was released/);
 });
+
+test("an observed update a little past the clock is not described as still ahead", () => {
+    // 23:59:30 on 22 October, and the source stamped the update 00:00:20 on the 23rd: skew across midnight.
+    const now = new Date("2026-10-22T23:59:30.000Z");
+    const built = resetRows({ read: (game, type) => (game === "cs2" ? answered(game, type, "2026-10-23T00:00:20.000Z") : undefined), knowledge: () => undefined, now });
+    assert.equal(built.find(r => r.game === "cs2")!.distance, "Today");
+    // A genuinely upcoming value still counts forward.
+    const upcoming = resetRows({ read: (game, type) => (game === "gta" ? answered(game, type, "2026-10-29T10:00:00.000Z") : undefined), knowledge: () => undefined, now });
+    assert.equal(upcoming.find(r => r.game === "gta")!.distance, "in 7 days");
+});

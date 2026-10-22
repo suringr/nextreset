@@ -117,7 +117,11 @@ export function resetRows(input: ResetsInput): ResetRow[] {
             : value.value;
         // Counted in UTC calendar days, like every other day count on the site, so a clock change
         // cannot move it. A day-precision value is a day, and a day has no hours to be "in 0.6 days".
-        const offset = value.at !== undefined && !value.unanswered ? utcDaysBetween(input.now.getTime(), value.at) : undefined;
+        const raw = value.at !== undefined && !value.unanswered ? utcDaysBetween(input.now.getTime(), value.at) : undefined;
+        // An observation is never ahead, whatever its timestamp says. The pipeline keeps a just-published
+        // update whose time is a little past the clock (source skew, or a change mid-request); across UTC
+        // midnight that would read "in 1 day" for an update that has already shipped (Codex, #79).
+        const offset = raw !== undefined && raw > 0 && value.group !== "upcoming" ? 0 : raw;
         const distance = offset === undefined ? undefined
             : offset === 0 ? "Today"
             : offset > 0 ? `in ${offset} ${offset === 1 ? "day" : "days"}`
