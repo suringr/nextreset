@@ -243,3 +243,18 @@ export function scheduleRhythm(knowledge: GameKnowledge | undefined, topic: stri
 function capitalize(value: string): string {
     return value.charAt(0).toUpperCase() + value.slice(1);
 }
+
+/**
+ * Whether a topic is a published schedule rather than a release feed: a "next-" topic whose events are
+ * versions (League of Legends' patch schedule). Decided by the topic, not by whether a timeline happens
+ * to render today — before a year's first scheduled patch, or after its last, there is no timeline, and
+ * the schedule is still a schedule (Codex, #78).
+ */
+export function isScheduleTopic(knowledge: GameKnowledge | undefined, topic: string): boolean {
+    return topic.startsWith("next-") && publishedEvents(knowledge?.events, topic).some(event => event.kind === "version");
+}
+
+/** The numbers block a tracker's history supports: a schedule's, a release feed's, or none. */
+export function rhythmFor(knowledge: GameKnowledge | undefined, topic: string, options: RhythmOptions): Block | undefined {
+    return isScheduleTopic(knowledge, topic) ? scheduleRhythm(knowledge, topic, options) : releaseRhythm(knowledge, topic, topic, options);
+}

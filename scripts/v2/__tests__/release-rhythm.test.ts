@@ -10,7 +10,7 @@ import * as os from "os";
 import * as path from "path";
 import { KnowledgeEvent, GameKnowledge } from "../../render-data-blocks";
 import { formatDate, renderSite } from "../../render-pages";
-import { RhythmOptions, cadenceOf, releaseRhythm, scheduleRhythm, seriesOf, utcDaysBetween } from "../../release-rhythm";
+import { RhythmOptions, cadenceOf, isScheduleTopic, releaseRhythm, rhythmFor, scheduleRhythm, seriesOf, utcDaysBetween } from "../../release-rhythm";
 
 const DAY = 86_400_000;
 const NOW = new Date("2026-10-22T12:00:00Z");
@@ -157,4 +157,20 @@ test("on a built site, each page's \"How often\" is exactly what /resets/ publis
         fs.rmSync(root, { recursive: true, force: true });
         fs.rmSync(dist, { recursive: true, force: true });
     }
+});
+
+test("a schedule keeps its numbers before its first date and after its last, when no timeline renders", () => {
+    const schedule = (offsets: number[]): GameKnowledge => ({ events: offsets.map((d, i) => ({
+        key: `lol/next-patch/27.0${i + 1}`, game: "lol", topic: "next-patch", kind: "version", label: `27.0${i + 1}`,
+        status: d > 0 ? "scheduled" : "observed", at: new Date(NOW.getTime() + d * DAY).toISOString().slice(0, 10) + "T00:00:00.000Z",
+        precision: "day", publishState: "published"
+    })) });
+    for (const k of [schedule([20, 34, 48, 62]), schedule([-62, -48, -34, -20])]) {
+        assert.equal(isScheduleTopic(k, "next-patch"), true);
+        assert.equal(rhythmFor(k, "next-patch", options())?.title, "The schedule in numbers");
+    }
+    // A next-banner topic is not a schedule of versions, and a release feed stays a release feed.
+    assert.equal(isScheduleTopic({ events: [event("x", "2026-11-03T06:59:00Z", { topic: "next-banner", kind: "occurrence", key: "g/next-banner/x" })] }, "next-banner"), false);
+    const feed: GameKnowledge = { events: [event("1", "2026-09-01T10:00:00Z"), event("2", "2026-10-01T10:00:00Z")] };
+    assert.equal(rhythmFor(feed, "last-patch", options())?.title, "Patches in numbers");
 });
