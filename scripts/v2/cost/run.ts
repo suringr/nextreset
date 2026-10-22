@@ -19,6 +19,20 @@ export function usageLedgerDir(knowledgeRoot: string): string {
     return path.join(knowledgeRoot, "usage", "ai");
 }
 
+/**
+ * Why a run outside CI may not call the model, or undefined when it may.
+ *
+ * The production ledger lives on the knowledge branch and only the publish workflow reads and pushes it.
+ * A refresh run on a developer machine writes a ledger of its own, so it would get a second daily budget
+ * that production never sees, and its calls would be billed to the same key. Local model calls are
+ * therefore refused unless someone opts in with `AI_ALLOW_LOCAL=1`, knowing the spend is counted only in
+ * that local ledger. Without a key nothing is called either way.
+ */
+export function localAiRefusal(env: NodeJS.ProcessEnv): string | undefined {
+    if (env.GITHUB_ACTIONS === "true" || env.AI_ALLOW_LOCAL === "1") return undefined;
+    return "AI calls run only in the production workflow, where the shared usage ledger is kept; set AI_ALLOW_LOCAL=1 to call the model locally (counted only in the local ledger)";
+}
+
 export interface RunAiGateOptions {
     knowledgeRoot: string;
     env?: NodeJS.ProcessEnv;
@@ -37,6 +51,7 @@ export function createRunAiGate(options: RunAiGateOptions): { gate: AiGate; unav
     if (!unavailable && env.GITHUB_ACTIONS === "true" && !fs.existsSync(path.join(options.knowledgeRoot, ".git"))) {
         unavailable = "the knowledge branch is not checked out, so today's AI usage cannot be tracked across runs and extracted knowledge would not be kept";
     }
+    if (!unavailable) unavailable = localAiRefusal(env);
     const gate = createAiGate({
         ledger: AiUsageLedger.inDirectory(usageLedgerDir(options.knowledgeRoot)),
         limits,

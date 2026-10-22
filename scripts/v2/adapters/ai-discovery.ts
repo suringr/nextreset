@@ -37,6 +37,7 @@ import { versionOf } from "../discovery/queries";
 import { canonicalUrl, isOfficialUrl } from "../discovery/urls";
 import { Claim, DiscoveryVia, Document, EventStatus, Game, SourceState, Topic } from "../domain";
 import { FetchedDocument, smartFetch } from "../fetch/smart-fetch";
+import { contentFingerprint } from "../fetch/text";
 import { Transport, defaultTransport } from "../fetch/transport";
 import { eventKey } from "../identity";
 import { FailureKind, failureKindFromFetch } from "../reasons";
@@ -49,6 +50,12 @@ export interface AiTopicSpec {
     docTypes: DocType[];
     /** Item kinds accepted from the extraction. */
     itemKinds: ItemKind[];
+    /**
+     * Text that starts trailing material which is not the page's own (a rotating "Related Articles" list).
+     * A page whose text changed only after such a marker is treated as unchanged and not sent to the model
+     * again; see `contentFingerprint` for where a marker may cut.
+     */
+    trailingBoilerplate?: readonly string[];
 }
 
 export interface AiDiscoveryDeps {
@@ -313,8 +320,16 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
 
             const stored = ctx.getSourceState(stateId);
             const previous = stored && stored.url === url ? stored : undefined;
-            const fetched = await smartFetch(url, { expect: { kind: "html", allowDomains: domains, minWords: 120 }, allowRender: true, previous, transport, label: `${game.id}-${topic.type}`, now });
-            const state: SourceState = { id: stateId, url, ...fetched.state };
+            // A source stored before fingerprints existed needs one body to fingerprint. A conditional request
+            // can answer 304 with none, and then the first trailing-list rotation would still reach the model,
+            // so that one request goes out without validators. It replaces the conditional request rather than
+            // adding one, and happens once per source: every read with a body records the fingerprint.
+            const migrating = (spec.trailingBoilerplate?.length ?? 0) > 0 && previous !== undefined && previous.contentFingerprint === undefined;
+            const fetched = await smartFetch(url, { expect: { kind: "html", allowDomains: domains, minWords: 120 }, allowRender: true, previous, transport, label: `${game.id}-${topic.type}`, now, ...(migrating ? { unconditional: true } : {}) });
+            // Whenever this fetch returned a body, its fingerprint is recorded with it — including on the
+            // unchanged path, so a source first seen before fingerprints existed gains one without a model call.
+            const fingerprint = fetched.document ? contentFingerprint(fetched.document.text, spec.trailingBoilerplate) : undefined;
+            const state: SourceState = { id: stateId, url, ...fetched.state, ...(fingerprint ? { contentFingerprint: fingerprint } : {}) };
             const last = fetched.attempts[fetched.attempts.length - 1];
             entry.fetch = { mode: last?.mode ?? "http", status: last?.status ?? 0, verdict: fetched.verdict?.code, attempts: fetched.attempts.length };
             if (fetched.outcome === "unusable") {
@@ -336,6 +351,15 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
                 entry.outcome = "not-official";
                 entry.reason = `final URL ${document.finalUrl} is not on an official domain`;
                 return finish({ ok: false, reason: entry.reason });
+            }
+            if (fingerprint !== undefined && previous?.contentFingerprint === fingerprint) {
+                // The full text changed, but only after the page's own content ended. The new state (with the
+                // new full-text hash) is kept, so the same trailing change is not looked at twice.
+                sourceStates.push(state);
+                work.unchanged++;
+                entry.outcome = "unchanged";
+                entry.reason = "only text after the page's own content changed";
+                return finish({ ok: true, unchanged: true, fetch });
             }
             if (document.textHash === latestEvidence) {
                 sourceStates.push(state);

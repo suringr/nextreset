@@ -273,11 +273,13 @@ export const GAMES: Game[] = [
 export const LOL_NEXT_PATCH_SPEC = {
     description: "the scheduled release date of each League of Legends patch (version numbers like 26.19), especially the next one",
     docTypes: ["patch-schedule", "patch-notes"] as const,
-    itemKinds: ["version"] as const
+    itemKinds: ["version"] as const,
+    // Riot's support articles end with a "Related Articles" list that changes whenever other articles do.
+    trailingBoilerplate: ["Related Articles"] as const
 };
 
 const ADAPTERS: Record<string, Adapter> = {
-    "lol/next-patch": createAiDiscoveryAdapter({ description: LOL_NEXT_PATCH_SPEC.description, docTypes: [...LOL_NEXT_PATCH_SPEC.docTypes], itemKinds: [...LOL_NEXT_PATCH_SPEC.itemKinds] }),
+    "lol/next-patch": createAiDiscoveryAdapter({ description: LOL_NEXT_PATCH_SPEC.description, docTypes: [...LOL_NEXT_PATCH_SPEC.docTypes], itemKinds: [...LOL_NEXT_PATCH_SPEC.itemKinds], trailingBoilerplate: LOL_NEXT_PATCH_SPEC.trailingBoilerplate }),
     "cs2/last-update": createCs2UpdatesAdapter(),
     "minecraft/last-release": createMinecraftJavaAdapter(),
     "pubg/last-patch": createPubgPatchAdapter(),

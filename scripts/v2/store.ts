@@ -156,6 +156,9 @@ function canonicalSourceState(s: SourceState): SourceState {
         etag: s.etag,
         lastModified: s.lastModified,
         textHash: s.textHash,
+        // Same trap as extractionVersion below: dropped here, every rotation of a page's trailing list would
+        // send it back to the model, which is exactly the spend the fingerprint exists to stop.
+        contentFingerprint: s.contentFingerprint,
         lastFetchedAt: s.lastFetchedAt,
         lastUsableAt: s.lastUsableAt,
         lastVerdict: s.lastVerdict,

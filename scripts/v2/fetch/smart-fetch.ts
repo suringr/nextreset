@@ -18,6 +18,8 @@ export interface SourceFetchState {
     lastModified?: string;
     /** Hash of the normalized text of the last usable fetch. */
     textHash?: string;
+    /** See `SourceState.contentFingerprint`; computed by the caller, carried here. */
+    contentFingerprint?: string;
     lastFetchedAt?: string;
     lastUsableAt?: string;
     /** A VerdictCode; typed as string because it is persisted in knowledge files. */
@@ -272,7 +274,9 @@ export async function smartFetch(url: string, options: SmartFetchOptions): Promi
                 // field smartFetch does not know about is a field it silently drops — and dropping either
                 // of these would re-arm the unconditional fetch on every single run.
                 extractionVersion: previous.extractionVersion,
-                extractionAttempts: previous.extractionAttempts
+                extractionAttempts: previous.extractionAttempts,
+                // The caller that computes it overwrites it from this document; carried so no other caller drops it.
+                contentFingerprint: previous.contentFingerprint
             }
         };
     };
