@@ -130,6 +130,47 @@ test("a source stored before fingerprints existed gains one without a model call
     assert.equal(later.requests.length, 0);
 });
 
+test("a source with validators and no fingerprint is read once without them, so a 304 cannot leave it unfingerprinted", async () => {
+    const { store } = tempStore();
+    await runTracker(game, topic, adapter(PRODUCTION_SPEC, renderedAs(RENDERED), lolAi()), store, NOW);
+    const k = store.load("lol");
+    for (const s of k.sources) {
+        delete s.contentFingerprint;
+        s.etag = 'W/"schedule-v1"';
+    }
+    store.save(k);
+
+    // A server that honours validators: with an ETag it answers 304 and sends no body.
+    const conditional = (inner: RoutedTransport): RoutedTransport => ({
+        ...inner,
+        gets: inner.gets,
+        renders: inner.renders,
+        async get(req) {
+            if (req.etag) { inner.gets.push(req); return { status: 304, finalUrl: req.url, headers: {}, body: "", notModified: true, elapsedMs: 1 }; }
+            return inner.get(req);
+        }
+    });
+    const migration = conditional(renderedAs(RENDERED));
+    const ai = lolAi();
+    await runTracker(game, topic, adapter(PRODUCTION_SPEC, migration, ai), store, new Date("2026-09-15T12:00:00Z"));
+    assert.equal(ai.requests.length, 0, "the page is unchanged by its full hash");
+    assert.ok(migration.gets.some(g => g.url === LOL_PATCH_SCHEDULE_URL && !g.etag), "the migration read went out without validators");
+    assert.ok(scheduleSource(store)?.contentFingerprint, "and recorded the fingerprint");
+
+    // With a fingerprint stored, requests are conditional again: no further unconditional reads.
+    const after = conditional(renderedAs(RENDERED));
+    const k2 = store.load("lol");
+    for (const s of k2.sources) s.etag = 'W/"schedule-v1"';
+    store.save(k2);
+    await runTracker(game, topic, adapter(PRODUCTION_SPEC, after, lolAi()), store, new Date("2026-09-15T18:00:00Z"));
+    assert.ok(after.gets.filter(g => g.url === LOL_PATCH_SCHEDULE_URL).every(g => g.etag), "conditional once migrated");
+
+    const rotated = RENDERED.replace(RELATED_SNIPPET, "The first rotation after rollout, which must not reach the model.");
+    const later = lolAi();
+    await runTracker(game, topic, adapter(PRODUCTION_SPEC, renderedAs(rotated), later), store, new Date("2026-09-16T06:00:00Z"));
+    assert.equal(later.requests.length, 0);
+});
+
 test("without a marker any text change is a change, so other pages behave exactly as before", async () => {
     const { store } = tempStore();
     await runTracker(game, topic, adapter(BASE_SPEC, renderedAs(RENDERED), lolAi()), store, NOW);

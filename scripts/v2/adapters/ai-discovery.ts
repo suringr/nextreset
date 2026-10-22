@@ -320,7 +320,12 @@ export function createAiDiscoveryAdapter(spec: AiTopicSpec, deps: AiDiscoveryDep
 
             const stored = ctx.getSourceState(stateId);
             const previous = stored && stored.url === url ? stored : undefined;
-            const fetched = await smartFetch(url, { expect: { kind: "html", allowDomains: domains, minWords: 120 }, allowRender: true, previous, transport, label: `${game.id}-${topic.type}`, now });
+            // A source stored before fingerprints existed needs one body to fingerprint. A conditional request
+            // can answer 304 with none, and then the first trailing-list rotation would still reach the model,
+            // so that one request goes out without validators. It replaces the conditional request rather than
+            // adding one, and happens once per source: every read with a body records the fingerprint.
+            const migrating = (spec.trailingBoilerplate?.length ?? 0) > 0 && previous !== undefined && previous.contentFingerprint === undefined;
+            const fetched = await smartFetch(url, { expect: { kind: "html", allowDomains: domains, minWords: 120 }, allowRender: true, previous, transport, label: `${game.id}-${topic.type}`, now, ...(migrating ? { unconditional: true } : {}) });
             // Whenever this fetch returned a body, its fingerprint is recorded with it — including on the
             // unchanged path, so a source first seen before fingerprints existed gains one without a model call.
             const fingerprint = fetched.document ? contentFingerprint(fetched.document.text, spec.trailingBoilerplate) : undefined;
