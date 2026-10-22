@@ -14,6 +14,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { validateGameKnowledge } from "./v2/validate";
+import { changesCount, noteSectionsFor, sectionsLine } from "./patch-notes";
 
 export interface KnowledgeEvent {
     key: string;
@@ -65,6 +66,8 @@ export interface BlockRow {
     href?: string;
     /** A verbatim quote, only where the stored quote is prose a person can read. */
     quote?: string;
+    /** A line of facts under the row, where the stored evidence supports one (an update's note sections). */
+    detail?: string;
     /** Where this row sits relative to now. Only a timeline sets it. */
     state?: RowState;
 }
@@ -180,6 +183,16 @@ function evidenceFor(event: KnowledgeEvent, knowledge: GameKnowledge): { href?: 
         if (href || quote) return { href, quote };
     }
     return {};
+}
+
+/** The sections line for a history row, where the tracker summarises notes and the post was stored whole. */
+function noteDetail(event: KnowledgeEvent, knowledge: GameKnowledge): { detail?: string } {
+    const sections = noteSectionsFor(event, knowledge);
+    if (!sections) return {};
+    const total = changesCount(sections);
+    const changes = `${total} ${total === 1 ? "change" : "changes"} listed`;
+    // One section needs no breakdown: "Misc — 7 changes listed", not "Misc 7 — 7 changes listed".
+    return { detail: sections.length === 1 ? `${sections[0].name} — ${changes}` : `${sectionsLine(sections)} — ${changes}` };
 }
 
 /** The link and readable quote an event carries from its official source, where it has them. */
@@ -353,6 +366,19 @@ export function blocksFor(knowledge: GameKnowledge | undefined, topic: string, o
         return blocks;
     }
 
+    // 0. What the headline's own notes list, where the tracker summarises notes and the post was stored
+    //    whole. Under the headline, before the history it belongs to.
+    const headline = answered && options.currentKey ? events.find(e => e.key === options.currentKey) : undefined;
+    const latest = headline ? noteSectionsFor(headline, knowledge) : undefined;
+    if (latest) {
+        const total = changesCount(latest);
+        blocks.push({
+            title: "In the latest update's notes",
+            note: `The sections of the official notes for the update above, and how many changes each lists — ${total} in all. The notes themselves are one link away, at the source.`,
+            rows: latest.map(section => ({ label: section.name, when: `${section.items} ${section.items === 1 ? "change" : "changes"} listed` }))
+        });
+    }
+
     // 1. Everything still ahead that the source has already published, minus the headline value.
     const upcoming = !answered ? [] : events
         .filter(e => e.status === "scheduled" && (endOf(e) ?? 0) > nowMs && e.key !== options.currentKey)
@@ -386,7 +412,7 @@ export function blocksFor(knowledge: GameKnowledge | undefined, topic: string, o
             // shows the publisher announced that date, not that the release happened on it. What is
             // true for every row is that the date came from the official source at the time.
             note: "Each of these dates came from the official source at the time.",
-            rows: past.map(e => ({ label: e.label, when: options.format(e.at!, e.precision), ...evidenceFor(e, knowledge) }))
+            rows: past.map(e => ({ label: e.label, when: options.format(e.at!, e.precision), ...evidenceFor(e, knowledge), ...noteDetail(e, knowledge) }))
         });
     }
 
@@ -449,7 +475,8 @@ export function renderBlocks(blocks: Block[]): string {
             }).join("\n")
             : block.rows.map(row => {
                 const quote = row.quote ? `<div class="data-quote">${escapeHtml(row.quote)}</div>` : "";
-                return `          <li class="data-row"><span class="data-label">${rowLabel(row)}</span><span class="data-when">${escapeHtml(row.when)}</span>${quote}</li>`;
+                const detail = row.detail ? `<div class="data-detail">${escapeHtml(row.detail)}</div>` : "";
+                return `          <li class="data-row"><span class="data-label">${rowLabel(row)}</span><span class="data-when">${escapeHtml(row.when)}</span>${quote}${detail}</li>`;
             }).join("\n");
         const listClass = block.shape === "timeline" ? "timeline" : "data-list";
         parts.push(`      <div class="content-section">

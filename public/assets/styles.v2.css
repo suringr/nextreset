@@ -1102,6 +1102,14 @@
   color: var(--ink-muted);
 }
 
+/* Facts read from an update's own notes (its sections and how many changes each lists), under its row.
+   Not a quote, so not in italics. */
+.data-detail {
+  margin-top: 4px;
+  font-size: var(--size-small);
+  color: var(--ink-muted);
+}
+
 /* ---------- the arcade strip (the demo's .arc) ---------- */
 
 .arc {

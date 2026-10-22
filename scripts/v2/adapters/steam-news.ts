@@ -30,7 +30,7 @@ import * as crypto from "crypto";
 import { Confidence } from "../../types";
 import { failureKindFromFetch } from "../reasons";
 import { Adapter, AdapterContext, AdapterOutcome, EventInput } from "../adapter";
-import { Claim, Document, SourceState } from "../domain";
+import { Claim, Document, GameKnowledge, SourceState } from "../domain";
 import { FetchedDocument, smartFetch } from "../fetch/smart-fetch";
 import { Transport } from "../fetch/transport";
 import { eventKey } from "../identity";
@@ -50,6 +50,12 @@ export interface SteamNewsSpec {
     fallbackUrl: string;
     /** Failure reason when a valid response holds no accepted post. */
     noPostReason: string;
+    /**
+     * The source asks for whole posts (maxlength=0). A post already evidenced only by an excerpt — every
+     * post stored before the source asked for whole ones — then gets one more claim, from the whole read:
+     * the same fact, the same link, fuller evidence. Once per post; never for a re-post.
+     */
+    wholePosts?: boolean;
 }
 
 export interface SteamNewsFeed {
@@ -126,6 +132,17 @@ function firstPublications(posts: SteamPost[]): SteamPost[] {
 
 function sha(text: string): string {
     return crypto.createHash("sha256").update(text).digest("hex");
+}
+
+/** Whether a claim was taken from a response that asked Steam for whole posts (maxlength=0). */
+function readWhole(claim: Claim, knowledge: GameKnowledge): boolean {
+    const document = knowledge.documents.find(d => d.id === claim.documentId);
+    if (!document) return false;
+    try {
+        return new URL(document.url).searchParams.get("maxlength") === "0";
+    } catch {
+        return false;
+    }
 }
 
 async function runFeeds(ctx: AdapterContext, feeds: SteamNewsFeed[], transport: Transport | undefined): Promise<AdapterOutcome> {
@@ -221,7 +238,8 @@ async function runFeeds(ctx: AdapterContext, feeds: SteamNewsFeed[], transport: 
             if (!posts.includes(post)) continue;
             const key = eventKey(game.id, topic.type, post.identity);
             if (instantOf(post) !== post.at) continue;
-            if (knowledge.claims.some(c => c.eventKey === key && c.field === "at" && c.value === post.at)) continue;
+            const stated = knowledge.claims.filter(c => c.eventKey === key && c.field === "at" && c.value === post.at);
+            if (stated.length > 0 && !(feeds.find(f => f.sourceId === feedSourceId)!.spec.wholePosts && !stated.some(c => readWhole(c, knowledge)))) continue;
             claims.push({
                 id: sha(`${document.textHash}|${key}|at|${post.at}`).slice(0, 24),
                 documentId: document.textHash,
