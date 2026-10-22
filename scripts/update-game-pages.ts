@@ -58,14 +58,7 @@ export const gamePages: GamePage[] = [
         metaDescription: "Fortnite season end, read from Epic's official Battle Pass page - a source that began refusing our servers in April 2026. What that means, and what a season change brings.",
         aboutTracker: 'This page tracks the end date of the current Fortnite Battle Pass season, read from the official Battle Pass page on fortnite.com. On 5 April 2026 that source began refusing requests from our servers. While it refuses, this page shows no date rather than an estimate.',
         whatIsIt: 'Every few months, Epic Games launches a new Fortnite season with a completely refreshed Battle Pass, new map changes, fresh weapons, and unique gameplay mechanics. Each season typically lasts 10-13 weeks and introduces a new theme that reshapes the entire game experience. Knowing when the current season ends helps you plan your remaining Battle Pass challenges and prepare for whatever comes next.',
-        whatChanges: [
-            'New Battle Pass with 100+ tiers of cosmetics',
-            'Map changes — new POIs, terrain updates, and biome shifts',
-            'Fresh weapon and item loot pool',
-            'New gameplay mechanics and vehicles',
-            'Seasonal quests and XP challenges reset',
-            'Competitive ranked season may reset'
-        ],
+        whatChanges: [],
         faq: [
             { q: "Why does this page sometimes show no season end date?", a: 'Because the only sources we accept are Epic\'s own, and on 5 April 2026 they began answering our servers with an HTTP 403 challenge rather than a page. We do not work around that challenge, and we do not take season dates from community trackers or unofficial API mirrors, accurate though those often are. When Epic\'s page answers, the date appears here; when it does not, we would rather show nothing than a guess.' },
             { q: 'What happens when a Fortnite season ends?', a: 'When a season ends, your Battle Pass progress resets, the map typically changes, and a new set of weapons and items are introduced. Any unearned Battle Pass rewards from the previous season become unavailable.' },
@@ -83,14 +76,7 @@ export const gamePages: GamePage[] = [
         metaDescription: 'The next League of Legends patch date, read from Riot\'s published patch schedule, with the patches before and after it. Riot gives a day for each patch, not a time.',
         aboutTracker: 'This page shows the next scheduled League of Legends patch, read from the patch schedule Riot publishes on its support site. Riot lists a day for each patch rather than a time, so a day is what this page shows. The schedule is read with the help of a language model, and a date is published only when the text it came from appears word for word on Riot\'s page.',
         whatIsIt: 'League of Legends runs on roughly a two-week patch cycle, give or take a few days, with longer breaks at a couple of points in the year. Each patch brings balance changes to champions, items, and runes, along with occasional new features, visual updates, and gameplay adjustments. Riot Games publishes their patch schedule at the start of each season, making LoL one of the most predictable games to track.',
-        whatChanges: [
-            'Champion balance adjustments (buffs, nerfs, reworks)',
-            'Item stat changes and new item additions',
-            'Rune and summoner spell modifications',
-            'Bug fixes and quality-of-life improvements',
-            'New skins and cosmetic content releases',
-            'Ranked split transitions and seasonal events'
-        ],
+        whatChanges: [],
         faq: [
             { q: 'How often does League of Legends get patched?', a: 'About every two weeks. Riot publishes the full year’s schedule in advance, which is where the dates on this page come from, so the next one is usually known well ahead. The cycle is not rigid, though: the published gaps vary by a day or two either way, and stretch to about three weeks around breaks.' },
             { q: 'What time do LoL patches go live?', a: 'Riot’s annual patch schedule gives a day rather than a time, so a day is what this page publishes — putting a clock on it would mean inventing one. Riot does announce the deployment window closer to the day, on its service status page, with the hour for each region and how long the game will be unavailable.' },
@@ -108,18 +94,11 @@ export const gamePages: GamePage[] = [
         metaDescription: 'When the latest VALORANT patch notes were published, read from Riot\'s game updates on playvalorant.com, with the patches before it.',
         aboutTracker: 'This page shows when the most recent VALORANT patch notes were published, read from Riot\'s game updates page on playvalorant.com. The time is the publication time Riot gives each article.',
         whatIsIt: 'VALORANT receives regular patches from Riot Games that adjust agent abilities, weapon balance, and map rotations. Riot does not publish VALORANT patch dates in advance, and the gap from one patch to the next varies; the list on this page shows the dates Riot actually published.',
-        whatChanges: [
-            'Agent ability balance changes and reworks',
-            'Weapon damage, spread, and price adjustments',
-            'Map rotation updates and new map releases',
-            'Competitive ranking system changes',
-            'Anti-cheat improvements and bug fixes',
-            'New Battle Pass and cosmetic bundles'
-        ],
+        whatChanges: [],
         faq: [
             { q: 'How often does VALORANT get updated?', a: 'Riot does not publish a fixed VALORANT schedule, and the gaps between patches vary. The patches listed on this page are the ones Riot has published, with their dates, so the gaps can be read directly rather than taken from us.' },
-            { q: 'When did the last VALORANT patch come out?', a: 'Whenever Riot last published patch notes. The date is the publication date Riot gave that patch, not one we derived.' },
-            { q: 'Does VALORANT have downtime during patches?', a: 'Yes, VALORANT typically goes offline for a few hours during patch deployment. Riot usually announces the maintenance window in advance on their social media channels.' }
+            { q: 'Where are the VALORANT patch notes?', a: 'On playvalorant.com, under Game Updates. Each patch listed on this page links to its own article there.' },
+            { q: 'Is the time on this page when the patch went live?', a: 'It is when Riot published the patch notes on playvalorant.com, the time the article itself carries. This page does not track when a patch reaches each region\'s servers.' }
         ]
     },
     {
@@ -133,18 +112,11 @@ export const gamePages: GamePage[] = [
         metaDescription: 'When the latest Counter-Strike 2 update was published, read from Valve\'s update posts on Steam, with the updates before it.',
         aboutTracker: 'This page shows the most recent Counter-Strike 2 update, read from the "Counter-Strike 2 Update" posts Valve publishes in the game\'s Steam news feed. The time shown is when Valve published the post.',
         whatIsIt: 'Counter-Strike 2 receives periodic updates from Valve that can include everything from major gameplay changes to small balance tweaks. Unlike games with fixed patch schedules, CS2 updates arrive on Valve\'s own timeline — sometimes weekly, sometimes with longer gaps between releases. Each update is documented on the official Counter-Strike website with detailed release notes.',
-        whatChanges: [
-            'Weapon balance and economy adjustments',
-            'Map updates, fixes, and visual improvements',
-            'Anti-cheat (VAC) system improvements',
-            'Sound, animation, and rendering fixes',
-            'Competitive matchmaking and ranking changes',
-            'New operation content and case releases'
-        ],
+        whatChanges: [],
         faq: [
-            { q: 'How often does CS2 get updated?', a: 'CS2 doesn\'t follow a fixed schedule. Valve releases updates as needed — sometimes weekly for bug fixes, sometimes with longer gaps between major content updates.' },
-            { q: 'When was the last CS2 update?', a: 'Whenever Valve last shipped one - it does not announce updates in advance. Where this tracker has read an announcement, what it shows is Valve\'s own date rather than one derived from anything.' },
-            { q: 'Do CS2 updates require a game restart?', a: 'Yes, updates are downloaded automatically through Steam and typically require restarting the game. Major updates may also require a brief matchmaking interruption.' }
+            { q: 'How often does CS2 get updated?', a: 'Valve does not follow a fixed schedule. It ships updates when they are ready — sometimes several in a week, sometimes with gaps of two weeks or more — and does not announce them in advance, so there is no next date to show.' },
+            { q: 'Where are the CS2 patch notes?', a: 'Valve posts them on Steam and on counter-strike.net. Each update listed on this page links to its Steam post.' },
+            { q: 'Do CS2 updates require a game restart?', a: 'Yes. Steam downloads new versions on its own, and the game has to be restarted to run one.' }
         ]
     },
     {
@@ -158,18 +130,11 @@ export const gamePages: GamePage[] = [
         metaDescription: 'The latest Minecraft: Java Edition release and its release time, read from the version manifest Mojang\'s launcher uses, with the releases before it.',
         aboutTracker: 'This page shows the most recent Minecraft: Java Edition release, read from the version manifest that the official Minecraft Launcher uses. The time is the release time Mojang records there; each release links to Mojang\'s changelogs, where the patch notes are.',
         whatIsIt: 'Since 2026 Mojang numbers Java Edition releases by year (26.1, 26.2, 26.3, with point releases such as 26.1.1); releases before that were numbered 1.21.x. Larger updates introduce large new features like biomes, mobs, and gameplay mechanics, while point releases focus on bug fixes and stability improvements. Mojang typically releases one or two major updates per year, with snapshots and pre-releases available for testing beforehand.',
-        whatChanges: [
-            'New biomes, blocks, and world generation features',
-            'New mobs and creature behavior updates',
-            'Crafting recipes and item additions',
-            'Redstone mechanics and technical changes',
-            'Bug fixes and performance optimizations',
-            'Experimental features from upcoming updates'
-        ],
+        whatChanges: [],
         faq: [
-            { q: 'How often does Minecraft get updated?', a: 'Minecraft typically receives 1-2 major updates per year, with smaller bug-fix releases in between. Snapshots (test versions) are released more frequently for community testing.' },
-            { q: 'When was the last Minecraft release?', a: 'Whenever Mojang last shipped a stable Java Edition release. The date is the release time Mojang records in its own launcher manifest, exact to the second. Snapshots and pre-releases are test builds and are deliberately left out.' },
-            { q: 'Do I need to update manually?', a: 'If you\'re using the official Minecraft Launcher, updates are downloaded automatically. You can also choose to play older versions through the launcher\'s version selector.' }
+            { q: 'How often does Minecraft get updated?', a: 'Since 2026 Mojang has shipped several numbered Java Edition releases a year rather than one or two large ones, with point releases for fixes between them. The release list on this page shows each one with its date.' },
+            { q: 'Why are snapshots and pre-releases not listed?', a: 'They are test builds. This page follows stable Java Edition releases only — the ones the launcher offers as "Latest release" — using the release time Mojang records in its own launcher manifest, exact to the second.' },
+            { q: 'Do I need to update manually?', a: 'No. The official Minecraft Launcher downloads the latest release by itself, and its version selector lets you play an older one.' }
         ]
     },
     {
@@ -183,18 +148,10 @@ export const gamePages: GamePage[] = [
         metaDescription: 'The Roblox service status as Roblox\'s own status page last reported it, and when that status last changed.',
         aboutTracker: 'This page shows the overall Roblox service status, read several times a day from the feed behind status.roblox.com, and when that status last changed. For the minute-by-minute answer, status.roblox.com itself is the place to look.',
         whatIsIt: 'Roblox is a platform hosting millions of user-created games and experiences. Service outages can affect millions of players worldwide, making status monitoring essential. This tracker checks the official Roblox status page to show you whether the platform is fully operational, experiencing degraded performance, or completely down.',
-        whatChanges: [
-            'Platform-wide service availability updates',
-            'Game server connectivity status',
-            'Website and app accessibility',
-            'Roblox Studio functionality',
-            'Marketplace and Robux transaction status',
-            'Authentication and login service health'
-        ],
+        whatChanges: [],
         faq: [
             { q: 'Is Roblox down right now?', a: 'This page shows what Roblox\'s own status feed said when it was last checked, several times a day. For the current minute, status.roblox.com is the source this page reads.' },
-            { q: 'What does "Operational" mean?', a: 'Operational means all Roblox services are running normally with no reported issues. If there\'s a problem, the status will change to reflect the type of disruption.' },
-            { q: 'How long do Roblox outages usually last?', a: 'Most Roblox outages are resolved within a few hours. The platform has a strong track record of uptime, but periodic maintenance and rare incidents can cause temporary disruptions.' }
+            { q: 'What does "Operational" mean?', a: 'It is Roblox\'s own word for the state where no service has a reported problem. When something is wrong, Roblox\'s status page names the affected services and the status changes.' }
         ]
     },
     {
@@ -208,18 +165,11 @@ export const gamePages: GamePage[] = [
         metaDescription: 'Track the next GTA Online weekly reset countdown. Every Thursday at 10:00 UTC, Rockstar refreshes bonuses, discounts, and challenges.',
         aboutTracker: 'This page shows the next GTA Online weekly reset. It is computed from a fixed weekly rule, every Thursday at 10:00 UTC, rather than read from a Rockstar page, so there is no announcement behind each date to check it against.',
         whatIsIt: 'Every Thursday at 10:00 UTC (6:00 AM in New York during daylight saving time, 5:00 AM otherwise), Rockstar Games refreshes GTA Online with new weekly content. This rotation has been a core part of GTA Online for years and gives players a reason to check in every week. The weekly reset brings new discounts, bonus payouts, and featured content that changes the best way to earn money and experience in the game.',
-        whatChanges: [
-            'New podium vehicle at the Diamond Casino',
-            'Discounted properties, vehicles, and upgrades',
-            'Double and triple GTA$ and RP on featured activities',
-            'New time-limited weekly challenges',
-            'Prize Ride challenge rotation',
-            'Featured Adversary Mode and Survival maps'
-        ],
+        whatChanges: [],
         faq: [
             { q: 'What time does GTA Online reset each week?', a: 'GTA Online resets every Thursday at exactly 10:00 UTC. In New York that is 6:00 AM while daylight saving is in effect and 5:00 AM once the clocks go back; in Los Angeles, 3:00 AM and then 2:00 AM. UTC does not shift, so the reset itself never moves - only your offset from it does.' },
-            { q: 'What changes during the GTA Online weekly reset?', a: 'Each week brings new discounted vehicles and properties, bonus payout activities (double/triple GTA$ and RP), a new podium vehicle, and refreshed weekly challenges.' },
-            { q: 'Do I lose anything during the weekly reset?', a: 'No, your character progress, money, vehicles, and properties are never affected by the weekly reset. Only the featured content and discounts change.' }
+            { q: 'What changes during the GTA Online weekly reset?', a: 'The week\'s discounts, bonus payouts and featured activities. Rockstar lists each week\'s changes in its Newswire post for that week; this page tracks when the reset happens, not what it contains.' },
+            { q: 'Do I lose anything during the weekly reset?', a: 'No. Your character\'s progress, money, vehicles and properties are not affected; only the featured content and discounts change.' }
         ]
     },
     {
@@ -233,18 +183,11 @@ export const gamePages: GamePage[] = [
         metaDescription: 'The date of the latest Call of Duty: Warzone patch notes, read from callofduty.com, with the patches before it. Activision gives a date, not a time.',
         aboutTracker: 'This page tracks the most recent Call of Duty Warzone patch release. Data is sourced from the official Call of Duty patch notes page at callofduty.com.',
         whatIsIt: 'Call of Duty: Warzone receives regular patches and updates from Activision and Raven Software that adjust weapon balance, fix bugs, and occasionally introduce new content. Warzone updates are typically synchronized with the broader Call of Duty ecosystem, meaning updates often affect both Warzone and the current mainline Call of Duty title simultaneously.',
-        whatChanges: [
-            'Weapon balance and attachment modifications',
-            'Map changes, new POIs, and zone adjustments',
-            'Anti-cheat (RICOCHET) system improvements',
-            'Loadout and perk system changes',
-            'Seasonal content and limited-time modes',
-            'Performance optimizations and bug fixes'
-        ],
+        whatChanges: [],
         faq: [
             { q: 'How often does Warzone get updated?', a: 'Activision does not publish a schedule. Each season opens with a large update and a "Reloaded" update arrives partway through, with smaller patches in between; the list on this page gives the date of each one, so the gaps can be read directly.' },
-            { q: 'When was the last Warzone patch?', a: 'Whenever Activision last updated its patch notes page. The date is the day that page gives for the current Warzone patch.' },
-            { q: 'Are Warzone updates the same across all platforms?', a: 'Yes, Warzone patches release simultaneously across PlayStation, Xbox, and PC. All platforms receive the same balance changes and content updates.' }
+            { q: 'Why does this page show a date but no time?', a: 'Activision\'s patch notes page dates each patch but gives no time of day. A time would be ours, not Activision\'s, so the page shows the date alone.' },
+            { q: 'Where are the Warzone patch notes?', a: 'On callofduty.com/patchnotes. Each patch listed on this page links to its notes there.' }
         ]
     },
     {
@@ -258,18 +201,11 @@ export const gamePages: GamePage[] = [
         metaDescription: 'When the current Genshin Impact banner phase ends, read from HoYoverse\'s in-game announcements, with the exact time for the Asia, Europe and America servers.',
         aboutTracker: 'This page shows when the current Genshin Impact event wish (banner) phase ends, read from HoYoverse\'s official in-game announcements for the Asia, Europe and America servers. Each region reaches the same server time at a different moment, so each gets its own UTC time.',
         whatIsIt: 'Genshin Impact uses a gacha system where limited-time character and weapon banners rotate every few weeks. Each banner features specific 5-star and 4-star characters that may not return for months. Knowing when a banner ends is critical for players deciding whether to spend their Primogems now or save for an upcoming character they want more.',
-        whatChanges: [
-            'Featured 5-star character rotation',
-            'Featured 4-star character selections',
-            'Weapon banner lineup changes',
-            'Pity counter implications for banner changes',
-            'Event wish duration and phase transitions',
-            'Accompanying in-game events and activities'
-        ],
+        whatChanges: [],
         faq: [
             { q: 'When does the current Genshin banner end?', a: 'Each version has two banner phases, and a phase typically runs about three weeks. HoYoverse announces the end of a phase in its official in-game announcements; where this tracker has read and verified one, it gives the exact UTC instant for each of the three server regions, because they reach the same local time at different moments.' },
-            { q: 'Does my pity reset when the banner changes?', a: 'Pity carries over between banners of the same type (character event wish). If you\'re at 70 pulls on one character banner, you\'ll still be at 70 when the next character banner starts.' },
-            { q: 'How do I know which characters are coming next?', a: 'HoYoverse typically announces upcoming banners through the official Genshin Impact social media channels and in-game notices a few days before the current banner ends.' }
+            { q: 'Why are there three different end times?', a: 'A phase ends at the same server time in every region, and the Asia, Europe and America servers keep different time zones. The same server time is therefore three different moments in UTC, and the page gives each one.' },
+            { q: 'Does my pity reset when the banner changes?', a: 'No. Pity carries over between banners of the same type: if you are at 70 pulls on one character event wish, you will still be at 70 when the next one starts.' }
         ]
     },
     {
@@ -283,18 +219,11 @@ export const gamePages: GamePage[] = [
         metaDescription: 'When the latest PUBG: BATTLEGROUNDS patch notes were published, read from KRAFTON\'s posts on Steam, with the patches before it.',
         aboutTracker: 'This page shows the most recent PUBG: BATTLEGROUNDS patch, read from the "Patch Notes - Update" posts KRAFTON publishes in the game\'s Steam news feed. The time shown is when KRAFTON published the post.',
         whatIsIt: 'PUBG: Battlegrounds receives regular updates from KRAFTON that introduce balance changes, new content, and gameplay improvements. PUBG follows a seasonal update model with major patches at the start of each season and smaller fix patches throughout. Each major update can bring new weapons, vehicles, map changes, and quality-of-life improvements to the battle royale experience.',
-        whatChanges: [
-            'New weapons, attachments, and vehicles',
-            'Map updates and rotation changes',
-            'Weapon balance and damage adjustments',
-            'Ranked season transitions and reward resets',
-            'Anti-cheat improvements and reporting tools',
-            'New survivor pass and cosmetic content'
-        ],
+        whatChanges: [],
         faq: [
             { q: 'How often does PUBG get patched?', a: 'KRAFTON does not publish a fixed schedule, but its patches have come at regular intervals. The reset times page gives the typical gap, measured from the patches listed here rather than estimated. Season starts bring the larger updates; the ones in between are usually fixes.' },
-            { q: 'When was the last PUBG update?', a: 'Whenever KRAFTON last published patch notes. Where this tracker has read one, what it shows is the publication time of that announcement rather than a date we derived.' },
-            { q: 'Does PUBG have downtime during updates?', a: 'Yes, PUBG servers go offline for several hours during major patch deployments. KRAFTON usually announces maintenance schedules in advance through their official channels.' }
+            { q: 'Where are the PUBG patch notes?', a: 'KRAFTON posts them on Steam and on pubg.com. Each patch listed on this page links to its Steam post.' },
+            { q: 'Is the time on this page when the update went live?', a: 'It is when KRAFTON published the patch notes on Steam, the time the post itself carries. This page does not track server maintenance windows.' }
         ]
     },
     {
@@ -308,14 +237,7 @@ export const gamePages: GamePage[] = [
         metaDescription: 'Track the latest Red Dead Redemption 2 and Red Dead Online update from Rockstar Games Newswire.',
         aboutTracker: 'This page tracks the most recent official Red Dead Redemption 2 news from Rockstar Games. Data is sourced from the Rockstar Newswire, which serves as the primary communication channel for all Rockstar game updates.',
         whatIsIt: 'Red Dead Redemption 2 and Red Dead Online receive periodic updates from Rockstar Games, though less frequently than GTA Online. Updates can include bug fixes, stability improvements, and occasional content additions for Red Dead Online. While Rockstar has shifted much of their focus to GTA, the Newswire still serves as the official source for any Red Dead-related announcements.',
-        whatChanges: [
-            'Red Dead Online content updates and events',
-            'Bug fixes and stability improvements',
-            'Platform-specific performance patches',
-            'Seasonal and limited-time events',
-            'Store and catalog rotations',
-            'Anti-griefing and quality-of-life changes'
-        ],
+        whatChanges: [],
         faq: [
             { q: 'Does Red Dead Redemption 2 still get updates?', a: 'Updates have become less frequent, but Rockstar occasionally releases fixes and minor content. This tracker monitors the Rockstar Newswire for the latest official news.' },
             { q: 'Is Red Dead Online still active?', a: 'Red Dead Online still has an active player community, though Rockstar has significantly reduced new content updates compared to its early years. Existing activities and modes remain fully playable.' },
@@ -333,18 +255,11 @@ export const gamePages: GamePage[] = [
         metaDescription: 'When the latest EA SPORTS FC title update was announced, read from EA\'s update posts on Steam for each title year, with the updates before it.',
         aboutTracker: 'This page shows the most recent EA SPORTS FC title update, read from the announcement posts EA publishes on Steam for each title year. The time shown is when EA published the post. EA\'s Forums answer automated requests with a challenge and are not used.',
         whatIsIt: 'EA SPORTS FC (formerly FIFA) receives regular title updates throughout its annual cycle. These updates address gameplay balance, fix bugs, and occasionally introduce new features. Title updates are the primary way EA Sports tunes the game after launch, adjusting everything from player movement and shooting mechanics to goalkeeper AI and set-piece behavior.',
-        whatChanges: [
-            'Gameplay mechanic tuning (shooting, passing, dribbling)',
-            'Goalkeeper and defender AI adjustments',
-            'Ultimate Team card and chemistry changes',
-            'Career mode fixes and improvements',
-            'Set-piece and penalty system tweaks',
-            'Online stability and matchmaking fixes'
-        ],
+        whatChanges: [],
         faq: [
-            { q: 'How often does EA SPORTS FC get title updates?', a: 'Title updates typically arrive every few weeks, with more frequent updates early in the game\'s cycle (October-January) and less frequent updates later in the year.' },
-            { q: 'When was the last EA FC update?', a: 'Whenever EA last published one. EA ships title updates when they are ready rather than on a schedule, so there is no next date until EA names one. Where this tracker has read an announcement, what it shows is its publication time; EA\'s own posts are where the title update notes appear.' },
-            { q: 'Do title updates affect Ultimate Team?', a: 'Yes, title updates can change gameplay mechanics that affect all modes including Ultimate Team. However, content updates (new promos, SBCs, objectives) happen separately through server-side updates.' }
+            { q: 'How often does EA SPORTS FC get title updates?', a: 'EA does not publish a schedule. It ships title updates when they are ready, so there is no next date until EA names one. The list on this page shows each title update EA has posted, with its date.' },
+            { q: 'Which game year does this page follow?', a: 'Both EA SPORTS FC 26 and FC 27 while both receive updates. Each title year has its own Steam announcements, and the page shows whichever update is most recent.' },
+            { q: 'Do title updates affect Ultimate Team?', a: 'Yes. Title updates can change gameplay in every mode, Ultimate Team included. New promos, SBCs and objectives are separate content updates made on EA\'s servers.' }
         ]
     }
 ];
