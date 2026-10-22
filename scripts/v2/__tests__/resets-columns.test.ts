@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
-import { GameKnowledge, KnowledgeEvent, isEvidenced } from "../../render-data-blocks";
+import { GameKnowledge, KnowledgeEvent, MAX_HISTORY_ROWS, isEvidenced } from "../../render-data-blocks";
 import { TrackerData, formatDate } from "../../render-pages";
 import { releaseRhythm } from "../../release-rhythm";
 import { renderResetsHtml, resetRows } from "../../render-resets";
@@ -81,6 +81,9 @@ test("every row has a cell for every column, and the explanation names both new 
     const text = $("body").text().replace(/\s+/g, " ");
     assert.match(text, /From today is how many days away the value is, counted in UTC calendar days/);
     assert.match(text, /not a guarantee that nothing else was released/);
+    assert.doesNotMatch(text, /the same ones each tracker page lists and links/, "a page lists twelve; the count can be larger");
+    assert.match(text, /the page lists the most recent twelve/);
+    assert.equal(MAX_HISTORY_ROWS, 12, "the explanation says twelve; change it with the cap");
 });
 
 test("an observed update a little past the clock is not described as still ahead", () => {
