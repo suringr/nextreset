@@ -4,45 +4,50 @@ name: Vertical slice evaluation
 # twice: with its configured page, and with that page removed so discovery has
 # to find it. Uploads the views, adapter reports and knowledge as an artifact.
 # Never writes the production knowledge branch (a throwaway store under build/).
-# It costs a few live model calls, so it runs once when a pull request that
-# changes the evidence-based adapter, discovery, the AI budget or the model
-# provider is opened, not on every push and not for game configuration changes.
-# Dispatch it by hand after later fixes or a League of Legends config change.
+#
+# It costs a few live model calls (about 4 per run), so it never runs by itself:
+# manual dispatch only, with "confirm_paid_run" ticked. No pull_request, push or
+# schedule trigger: opening a pull request that touched discovery, the budget or
+# the provider used to start it. The deterministic slice tests run in `npm test`.
 on:
   workflow_dispatch:
     inputs:
       game:
-        description: Game id
-        required: false
+        description: Game id (only topics that use AI)
+        type: choice
+        options:
+          - lol
         default: lol
       type:
         description: Topic type
-        required: false
+        type: choice
+        options:
+          - next-patch
         default: next-patch
-  pull_request:
-    branches: [ main ]
-    types: [ opened, reopened, ready_for_review ]
-    paths:
-      - "scripts/v2/adapters/ai-discovery.ts"
-      - "scripts/v2/discovery/**"
-      - "scripts/v2/cost/**"
-      - "scripts/v2/ai/gemini.ts"
-      - "scripts/v2/ai/provider.ts"
-      - "scripts/v2/tools/run-slice.ts"
+      confirm_paid_run:
+        description: This run makes about 4 billed Gemini calls. Tick to confirm.
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
 
+# Never cancel a running slice: its calls are already billed.
 concurrency:
-  group: slice-eval-${{ github.ref }}
-  cancel-in-progress: true
+  group: slice-eval
+  cancel-in-progress: false
 
 jobs:
   slice:
     name: Slice (live)
-    # Forked pull requests cannot read the secret; skip instead of failing them.
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ inputs.confirm_paid_run == true }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Inputs reach the shell as environment variables, never interpolated into the script.
+    env:
+      SLICE_GAME: ${{ inputs.game }}
+      SLICE_TYPE: ${{ inputs.type }}
     steps:
       - uses: actions/checkout@v4
 
@@ -61,6 +66,13 @@ jobs:
       - run: npx playwright install chromium
       - run: npm run build
 
+      - name: Check the topic is one that uses AI
+        run: |
+          case "$SLICE_GAME/$SLICE_TYPE" in
+            lol/next-patch) ;;
+            *) echo "::error::$SLICE_GAME/$SLICE_TYPE is not an approved slice topic"; exit 1 ;;
+          esac
+
       - name: Run with the configured page (first run, then an unchanged second run)
         env:
           AI_PROVIDER: gemini
@@ -68,8 +80,8 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SEARCH_PROVIDER: duckduckgo
         run: |
-          node build/v2/tools/run-slice.js ${{ inputs.game || 'lol' }} ${{ inputs.type || 'next-patch' }} --knowledge build/slice/with-config --out build/slice/with-config-run1.json
-          node build/v2/tools/run-slice.js ${{ inputs.game || 'lol' }} ${{ inputs.type || 'next-patch' }} --knowledge build/slice/with-config --out build/slice/with-config-run2.json
+          node build/v2/tools/run-slice.js "$SLICE_GAME" "$SLICE_TYPE" --knowledge build/slice/with-config --out build/slice/with-config-run1.json
+          node build/v2/tools/run-slice.js "$SLICE_GAME" "$SLICE_TYPE" --knowledge build/slice/with-config --out build/slice/with-config-run2.json
 
       - name: Run without the configured page (discovery must find it)
         env:
@@ -77,11 +89,11 @@ jobs:
           AI_MODEL: gemini-3.5-flash
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SEARCH_PROVIDER: duckduckgo
-        run: node build/v2/tools/run-slice.js ${{ inputs.game || 'lol' }} ${{ inputs.type || 'next-patch' }} --knowledge build/slice/discovery --no-config-url --out build/slice/discovery-run1.json
+        run: node build/v2/tools/run-slice.js "$SLICE_GAME" "$SLICE_TYPE" --knowledge build/slice/discovery --no-config-url --out build/slice/discovery-run1.json
 
       - name: Compare with the V1 provider output
         continue-on-error: true
-        run: node build/v2/tools/compare-v1.js ${{ inputs.game || 'lol' }} ${{ inputs.type || 'next-patch' }} build/slice/with-config-run1.json > build/slice/v1-comparison.json && cat build/slice/v1-comparison.json
+        run: node build/v2/tools/compare-v1.js "$SLICE_GAME" "$SLICE_TYPE" build/slice/with-config-run1.json > build/slice/v1-comparison.json && cat build/slice/v1-comparison.json
 
       - name: Upload slice results
         if: always()

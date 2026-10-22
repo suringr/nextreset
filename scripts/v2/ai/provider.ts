@@ -68,6 +68,15 @@ export interface AiConfig {
 export const DEFAULT_AI_MODEL = "gemini-3.5-flash";
 
 /**
+ * The model id a run will call: AI_MODEL, or the default when it is unset or empty. Whitespace is not
+ * empty here — "  " resolves to "" — and every check that approves a model must ask this same function,
+ * or it approves one model while another is called.
+ */
+export function configuredModel(env: NodeJS.ProcessEnv = process.env): string {
+    return (env.AI_MODEL || DEFAULT_AI_MODEL).trim();
+}
+
+/**
  * Reads AI_PROVIDER (default gemini), AI_MODEL (default gemini-3.5-flash),
  * AI_THINKING_BUDGET (default 0) and GEMINI_API_KEY. Returns undefined when the
  * gemini provider is selected but no key is present, so callers can run without
@@ -75,7 +84,7 @@ export const DEFAULT_AI_MODEL = "gemini-3.5-flash";
  */
 export function readAiConfig(env: NodeJS.ProcessEnv = process.env): AiConfig | undefined {
     const provider = (env.AI_PROVIDER || "gemini").trim().toLowerCase();
-    const model = (env.AI_MODEL || DEFAULT_AI_MODEL).trim();
+    const model = configuredModel(env);
     const budgetRaw = env.AI_THINKING_BUDGET?.trim();
     const thinkingBudget = budgetRaw === undefined || budgetRaw === "" ? 0 : Number(budgetRaw);
     if (!Number.isInteger(thinkingBudget) || thinkingBudget < 0) throw new AiError(`AI_THINKING_BUDGET must be a non-negative integer, got ${JSON.stringify(budgetRaw)}`, false);

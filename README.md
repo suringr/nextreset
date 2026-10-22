@@ -99,11 +99,12 @@ Configuration is environment only (never committed):
 | `GEMINI_API_KEY` | API key; in CI the `GEMINI_API_KEY` repository secret |
 
 Gold evaluation over real publisher documents: `npm run ai:eval` (scripted mock responses, offline) or
-`npm run ai:eval:live` (needs the key). The "AI extraction gold evaluation" workflow runs the live
-evaluation and uploads `build/ai-eval/report.md`. It never runs in routine production refreshes: it runs
-once when a pull request that changes prompts, schemas, extraction, grounding or date logic, or the gold
-set is opened, and on demand (for a model change, or after later fixes). Recorded fixture tests run in
-normal CI.
+`npm run ai:eval:live` (needs the key and `AI_LIVE_EVAL_CONFIRMED=1`). The "AI extraction gold evaluation"
+workflow runs the live evaluation and uploads `build/ai-eval/report.md`. It costs about 23 billed calls, so
+it never starts by itself: only a manual dispatch with **confirm_paid_run** ticked runs it, and only with a
+model on the approved, priced list (`scripts/v2/ai/eval-guard.ts`). No pull request, push or schedule
+triggers it. The offline mock evaluation and the recorded fixture tests run in normal CI, and `npm test`
+removes `GEMINI_API_KEY` from the test environment so no unit test can reach the live model.
 
 ### AI cost guardrails (V2)
 
@@ -197,7 +198,8 @@ knowledge; the changed page is retried by a later run.
 `npm run slice:lol` runs the slice end to end against the live network into a
 throwaway store and prints the report; `--no-config-url` removes the configured
 page so discovery has to find it. The "Vertical slice evaluation" workflow does
-both in CI and uploads the results.
+both in CI and uploads the results; like the gold evaluation it runs only from a manual dispatch with
+**confirm_paid_run** ticked (about 4 billed calls).
 
 ## 📰 Publishing
 

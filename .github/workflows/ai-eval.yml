@@ -1,43 +1,48 @@
 name: AI extraction gold evaluation
 
 # Runs the gold cases in scripts/v2/__tests__/gold against the live model and
-# uploads the report. It costs real model calls (about 23 per run), so it never
-# runs as part of routine production refreshes.
-# Triggers: on demand (dispatch it by hand for a model change, an evaluator
-# change, or when a later push to a pull request touches the files below), and
-# once when a pull request that changes prompts, schemas, extraction, grounding
-# or date logic, or the gold set, is opened. Later pushes do not re-run it.
-# Same-repository branches only can use the secret.
-# The API key comes from the GEMINI_API_KEY repository secret and is never
-# printed; the report contains facts, quotes and token counts, never prompts.
+# uploads the report. It costs real model calls (about 23 per run, billed to the
+# GEMINI_API_KEY account), so it never runs by itself:
+#
+# - Manual dispatch only. No pull_request, push or schedule trigger: opening or
+#   reopening a pull request used to start it, which billed calls nobody asked for.
+# - The dispatch must tick "confirm_paid_run"; without it the job is skipped.
+# - The model is a fixed list of models with a price entry in
+#   scripts/v2/cost/pricing.ts, checked again before the run.
+#
+# The mock evaluation (no network, no key) is part of `npm test` and runs on
+# every pull request; this workflow is only for a deliberate live check.
+# The report contains facts, quotes and token counts, never prompts or the key.
 on:
   workflow_dispatch:
     inputs:
       model:
-        description: Model id to evaluate
-        required: false
+        description: Model to evaluate (only models with a price entry)
+        type: choice
+        options:
+          - gemini-3.5-flash
         default: gemini-3.5-flash
-  pull_request:
-    branches: [ main ]
-    types: [ opened, reopened, ready_for_review ]
-    paths:
-      - "scripts/v2/ai/extraction.ts"
-      - "scripts/v2/ai/dates.ts"
-      - "scripts/v2/__tests__/gold/**"
+      confirm_paid_run:
+        description: This run makes about 23 billed Gemini calls. Tick to confirm.
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
 
+# Never cancel a running evaluation: its calls are already billed, and cancelling
+# only throws the report away. A second dispatch waits for the first.
 concurrency:
-  group: ai-eval-${{ github.ref }}
-  cancel-in-progress: true
+  group: ai-eval
+  cancel-in-progress: false
 
 jobs:
   evaluate:
     name: Gold evaluation (live)
-    # Forked pull requests cannot read the secret; skip instead of failing them.
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ inputs.confirm_paid_run == true }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -49,10 +54,18 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+      # The dispatch form restricts the choice, but the API accepts any string for a
+      # choice input on some clients; refuse a model the cost table cannot price.
+      - name: Check the model is an approved, priced model
+        env:
+          AI_MODEL: ${{ inputs.model }}
+        run: node build/v2/ai/eval-guard.js
+
       - name: Run gold evaluation against the live model
         env:
           AI_PROVIDER: gemini
-          AI_MODEL: ${{ inputs.model || 'gemini-3.5-flash' }}
+          AI_MODEL: ${{ inputs.model }}
+          AI_LIVE_EVAL_CONFIRMED: "1"
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: node build/v2/ai/eval.js --live
 
