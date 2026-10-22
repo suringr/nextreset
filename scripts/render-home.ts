@@ -79,7 +79,8 @@ export function cardValue(data: TrackerData | undefined, now: Date): CardValue {
     const at = Date.parse(value.nextEventUtc);
     const ahead = at > now.getTime();
     const stale = value.status === "stale";
-    const badgeText = stale ? "STALE" : "LIVE";
+    // CURRENT, not LIVE: the source answered on the latest check. Most values are dates already past.
+    const badgeText = stale ? "STALE" : "CURRENT";
     const badgeClass = stale ? "badge badge-stale" : "badge badge-live";
     const state = stale ? "stale" : "live";
     // A time is published only where the pipeline states the instant is exact; otherwise midnight UTC is

@@ -57,7 +57,7 @@ export interface ResetRow {
     when: string;
     /** Whether `when` is an instant the reader's own clock can be given for. */
     exact: boolean;
-    /** LIVE / STALE / NO DATE / UNAVAILABLE, as the homepage badges it. */
+    /** CURRENT / STALE / NO DATE / UNAVAILABLE, as the homepage badges it. */
     badge: string;
     badgeClass: string;
     /** This is ahead of now and within the week. */

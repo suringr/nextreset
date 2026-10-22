@@ -35,7 +35,16 @@ export interface SitePage {
     page: string;
     role: PageRole;
     /** The tracker this page publishes, for a tracker page and nothing else. */
-    tracker?: { game: string; type: string };
+    tracker?: {
+        game: string;
+        type: string;
+        /**
+         * Set when the value is computed from a rule rather than read from a source, with the rule in words.
+         * Such a page must not call its value "verified" or a time "last verified": nothing was read that
+         * could have contradicted it. tracker-claims.test.ts holds this equal to the adapter registry.
+         */
+        computedFrom?: string;
+    };
 }
 
 /**
@@ -53,7 +62,7 @@ export const SITE_PAGES: readonly SitePage[] = [
     { page: "ea-sports-fc/last-title-update/index.html", role: "tracker", tracker: { game: "ea-sports-fc", type: "last-title-update" } },
     { page: "fortnite/next-season/index.html", role: "tracker", tracker: { game: "fortnite", type: "next-season" } },
     { page: "genshin/next-banner/index.html", role: "tracker", tracker: { game: "genshin", type: "next-banner" } },
-    { page: "gta/weekly-reset/index.html", role: "tracker", tracker: { game: "gta", type: "weekly-reset" } },
+    { page: "gta/weekly-reset/index.html", role: "tracker", tracker: { game: "gta", type: "weekly-reset", computedFrom: "a weekly rule, every Thursday at 10:00 UTC" } },
     { page: "lol/next-patch/index.html", role: "tracker", tracker: { game: "lol", type: "next-patch" } },
     { page: "minecraft/last-release/index.html", role: "tracker", tracker: { game: "minecraft", type: "last-release" } },
     { page: "pubg/last-patch/index.html", role: "tracker", tracker: { game: "pubg", type: "last-patch" } },

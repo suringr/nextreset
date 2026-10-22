@@ -259,7 +259,7 @@ test("the manifest's trackers are the registry's trackers, and the pages' own", 
     for (const entry of manifest) {
         assert.ok(entry.tracker, `${entry.page} is declared a tracker with no game/type`);
         const html = fs.readFileSync(path.join(PUBLIC, entry.page), "utf8");
-        assert.deepEqual(trackerOf(html, entry.page), entry.tracker, `${entry.page}: the page and the manifest disagree`);
+        assert.deepEqual(trackerOf(html, entry.page), { game: entry.tracker!.game, type: entry.tracker!.type }, `${entry.page}: the page and the manifest disagree`);
         assert.equal(`${entry.tracker.game}/${entry.tracker.type}/index.html`, entry.page, `${entry.page}: path and tracker disagree`);
     }
     // Nothing that is not a tracker claims one.

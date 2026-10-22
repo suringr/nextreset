@@ -20,7 +20,8 @@
     "design:apply": "node build/update-design.js",
     "chrome:apply": "node build/update-chrome.js",
     "play:apply": "node build/update-play-page.js",
-    "publish:gate": "node build/publish-gate.js"
+    "publish:gate": "node build/publish-gate.js",
+    "copy:apply": "node build/update-copy.js"
   },
   "keywords": [
     "gaming",

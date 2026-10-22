@@ -504,6 +504,15 @@ function compareCadence(read: (page: string) => string): void {
         // Both pages this guard was written for state their cadence in words, so a digits-only parser
         // read neither of them and the comparison never happened (Codex, #73). Requiring a comparison
         // per matched game is what stops that being invisible.
-        assert.ok(compared > 0, `${entry.page} states no cadence this guard can read, so nothing was compared against "${hubRow[1]}"`);
+        //
+        // A page may instead state no figure and send the reader to the hub for it. That cannot drift —
+        // the hub's figure moves with the data (production read "About every 29 days" while PUBG's page
+        // said four weeks) — and any figure such a page does state is still compared above.
+        // Read from the page itself: such an answer states no figure, so cadenceClaims does not collect it.
+        const defers = page("details.faq-item").toArray().some(el => {
+            const text = page(el).text().replace(/\s+/g, " ");
+            return /how often/i.test(page(el).find("summary").text()) && /reset times page/i.test(text) && weeksIn(text) === undefined && !MONTHS.test(text);
+        });
+        assert.ok(compared > 0 || defers, `${entry.page} states no cadence this guard can read, and does not defer to the reset times page, so nothing was compared against "${hubRow[1]}"`);
     }
 }

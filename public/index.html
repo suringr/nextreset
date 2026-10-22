@@ -6,15 +6,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="description"
-    content="Live tracking of official game resets and updates — no predictions. Track Fortnite, League of Legends, CS2, VALORANT, and more.">
-  <meta property="og:title" content="NextReset - Live Game Reset Tracker">
-  <meta property="og:description" content="Live tracking of official game resets and updates — no predictions">
+    content="Official dates for game resets, patches and seasons, each with its source and the time it was checked. No predictions. League of Legends, VALORANT, CS2, Minecraft, GTA Online and more.">
+  <meta property="og:title" content="NextReset - Game Reset and Patch Tracker">
+  <meta property="og:description" content="Official dates for game resets, patches and seasons, each with its source and the time it was checked. No predictions.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://nextreset.co">
   <meta property="og:image" content="https://nextreset.co/og.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <title>NextReset - Live Game Reset Tracker</title>
+  <title>NextReset - Game Reset and Patch Tracker</title>
   <link rel="canonical" href="https://nextreset.co/">
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/favicon.png" sizes="32x32">
@@ -237,7 +237,7 @@
           <h3 class="card-title">Roblox</h3>
           <span class="badge badge-unavailable">--</span>
         </div>
-        <div class="card-topic">Service status</div>
+        <div class="card-topic">Status last changed</div>
         <div class="card-countdown">Loading...</div>
         <div class="card-meta">
           <span class="last-checked">--</span>
@@ -340,10 +340,10 @@
       <div class="content-section">
         <h2>What is NextReset?</h2>
         <p>
-          NextReset is a free, automated tracker that monitors official game publisher sources to show you exactly when your favorite games reset, update, or patch. Unlike community predictions or Reddit rumors, every date on NextReset comes directly from official sources — patch schedules, publisher APIs, and official announcements.
+          NextReset is a free tracker that reads official game publisher sources to show when games reset, update or patch. Every date comes from the publisher itself — a patch schedule, a release feed, an announcement — or, for GTA Online's weekly reset, from a fixed published rule. Nothing comes from leaks, community guesses or predictions.
         </p>
         <p>
-          We currently track 12 of the most popular games including Fortnite, League of Legends, VALORANT, Counter-Strike 2, Minecraft, Roblox, GTA Online, Warzone, Genshin Impact, PUBG, Red Dead Redemption 2, and EA SPORTS FC. Each game has a dedicated page with a live countdown, source attribution, and confidence rating.
+          We track 12 games. Each has a page with the latest verified value, where it came from, how precise it is and when it was last checked. Where a publisher gives an exact time, the page counts down to it (or up from it) in your browser; where it gives only a day, the page shows the day.
         </p>
       </div>
 
@@ -363,7 +363,7 @@
           <div class="how-step">
             <div class="how-icon" aria-hidden="true">⏱️</div>
             <div class="how-title">Display</div>
-            <p>Live countdowns update in real-time on your screen. If a source becomes unavailable, cached data is shown instead.</p>
+            <p>Exact times count down in your browser; days announced without a time are shown as days. If a source cannot be reached, the last verified value is shown and marked stale.</p>
           </div>
         </div>
       </div>
@@ -371,7 +371,7 @@
       <div class="content-section">
         <h2>Why Trust NextReset?</h2>
         <p>
-          Every piece of data on NextReset comes from official sources. We never guess, predict, or speculate about upcoming dates. If a game publisher hasn't announced a date, we show "Data Unavailable" instead of making something up. Each tracker shows its source URL, confidence level, and when it was last checked so you can verify the data yourself.
+          Every value on NextReset comes from an official source. We never guess, predict or speculate about upcoming dates. If a publisher hasn't announced a date, the page says "No official date announced" instead of making one up. Each tracker links to its source and shows its confidence and when it was last checked, so you can check the value yourself.
         </p>
         <p>
           Our system is designed to fail gracefully. If a publisher's website goes down or blocks our checks, we preserve the last known good data instead of showing errors. You'll see a "Stale" badge when this happens, so you always know the freshness of what you're looking at.
@@ -384,18 +384,18 @@
           NextReset currently monitors the following games and events:
         </p>
         <ul class="games-list">
-          <li><a href="/fortnite/next-season/">Fortnite</a> — Season end date from the official Battle Pass page</li>
-          <li><a href="/lol/next-patch/">League of Legends</a> — Next patch from Riot's official schedule</li>
-          <li><a href="/valorant/last-patch/">VALORANT</a> — Latest patch from official game updates</li>
-          <li><a href="/cs2/last-update/">Counter-Strike 2</a> — Latest update from Valve's official page</li>
-          <li><a href="/minecraft/last-release/">Minecraft</a> — Latest release from Mojang's changelog</li>
-          <li><a href="/roblox/status/">Roblox</a> — Platform service status from official API</li>
-          <li><a href="/gta/weekly-reset/">GTA Online</a> — Weekly reset countdown (Thursdays 10:00 UTC)</li>
-          <li><a href="/warzone/last-patch/">Warzone</a> — Latest patch from CoD patch notes</li>
-          <li><a href="/genshin/next-banner/">Genshin Impact</a> — Banner end date from HoYoverse news</li>
-          <li><a href="/pubg/last-patch/">PUBG</a> — Latest patch from official patch notes</li>
-          <li><a href="/red-dead-redemption-2/last-update/">Red Dead Redemption 2</a> — Latest news from Rockstar Newswire</li>
-          <li><a href="/ea-sports-fc/last-title-update/">EA SPORTS FC</a> — Latest title update from EA’s own announcements</li>
+          <li><a href="/fortnite/next-season/">Fortnite</a> — Season end, from Epic’s Battle Pass page (refusing our checks since April 2026, so no date is shown)</li>
+          <li><a href="/lol/next-patch/">League of Legends</a> — Next patch, from Riot’s published patch schedule</li>
+          <li><a href="/valorant/last-patch/">VALORANT</a> — Latest patch, from Riot’s patch notes on playvalorant.com</li>
+          <li><a href="/cs2/last-update/">Counter-Strike 2</a> — Latest update, from Valve’s update posts on Steam</li>
+          <li><a href="/minecraft/last-release/">Minecraft</a> — Latest Java Edition release, from Mojang’s launcher version manifest</li>
+          <li><a href="/roblox/status/">Roblox</a> — Overall service status, from the feed behind status.roblox.com</li>
+          <li><a href="/gta/weekly-reset/">GTA Online</a> — Weekly reset, computed from the Thursday 10:00 UTC rule</li>
+          <li><a href="/warzone/last-patch/">Warzone</a> — Latest patch date, from the Call of Duty patch notes page</li>
+          <li><a href="/genshin/next-banner/">Genshin Impact</a> — Banner phase end for each server region, from HoYoverse’s in-game announcements</li>
+          <li><a href="/pubg/last-patch/">PUBG</a> — Latest patch, from KRAFTON’s patch-notes posts on Steam</li>
+          <li><a href="/red-dead-redemption-2/last-update/">Red Dead Redemption 2</a> — Latest Red Dead Online article, from Rockstar’s Newswire</li>
+          <li><a href="/ea-sports-fc/last-title-update/">EA SPORTS FC</a> — Latest title update, from EA’s update posts on Steam</li>
         </ul>
       </div>
 
@@ -415,7 +415,7 @@
   <!-- Fallback for users with JavaScript disabled -->
   <noscript>
     <div class="noscript-note">
-      Every value below is in this page already. JavaScript only turns the dates into live countdowns.
+      Every value below is in this page already. JavaScript only turns exact times into countdowns.
     </div>
   </noscript>
 
