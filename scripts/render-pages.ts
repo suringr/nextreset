@@ -24,7 +24,7 @@ import { GameKnowledge, blocksFor as dataBlocksFor, loadKnowledge, renderBlocks 
 import { CardGroup, renderHomeHtml } from "./render-home";
 import { SitemapEntry, SitemapInput, renderSitemap } from "./render-sitemap";
 import { renderResetsHtml, resetRows } from "./render-resets";
-import { pageAtUrlPath } from "./site-map";
+import { pageAtUrlPath, pageEntry } from "./site-map";
 import { minifyCss } from "./minify-css";
 import { replaceSlot } from "./render-slots";
 import { VersionedAssets, versionAssets } from "./version-assets";
@@ -86,6 +86,8 @@ export function tidyNotes(value: string): string {
         .replace(new RegExp(`([a-z])(${months})\\b`, "g"), "$1 $2")
         .replace(/(\d{4})([A-Z])/g, "$1 $2");
 }
+
+const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
 export function escapeHtml(value: string): string {
     return value
@@ -253,7 +255,8 @@ export function blocksFor(data: TrackerData | undefined, now: Date = new Date())
     // storage artefact, not an announced time, and must never be presented as one.
     const exact = data.precision === "exact";
     const value = exact ? formatDateTime(data.nextEventUtc) : formatDate(data.nextEventUtc);
-    const label = exact ? "Official date and time" : "Official date";
+    // A status tracker's instant is when the status last changed, not a date anybody announced.
+    const label = data.type === "status" ? "Status last changed" : exact ? "Official date and time" : "Official date";
 
     return {
         label,
@@ -455,6 +458,15 @@ export function pageIdentityOf(html: string): string | undefined {
  */
 export function renderTrackerHtml(html: string, data: TrackerData | undefined, page = "page", now: Date = new Date(), blocksHtml = "", decision?: IndexDecision): string {
     const b = blocksFor(data, now);
+    // A value computed from a rule was never read from anywhere, so nothing could have contradicted it:
+    // it is not "verified", and the time it was produced is when it was computed. The manifest says which
+    // pages these are (site-map.ts), held equal to the adapter registry by tracker-claims.test.ts.
+    const identity = pageIdentityOf(html);
+    const computedFrom = identity ? pageEntry(identity)?.tracker?.computedFrom : undefined;
+    if (computedFrom && hasVerifiedValue(data) && data.status !== "stale" && !isUnanswered(data, now)) {
+        b.state = `Computed from ${computedFrom}, not read from a page`;
+        if (b.label === "Official date and time") b.label = "Computed date and time";
+    }
 
     // A page that cannot answer its question is honest but thin, and asking to be indexed on it is
     // asking to be judged on the page that says the least. It is still crawled, and its links still
@@ -473,7 +485,9 @@ export function renderTrackerHtml(html: string, data: TrackerData | undefined, p
     let out = replaceSlot(html, "answer-label", () => `<div class="countdown-label">${escapeHtml(b.label)}</div>`, page);
     out = replaceSlot(out, "answer-value", () => `<div class="${b.valueClass}">${escapeHtml(b.value)}</div>`, page);
 
-    out = replaceSlot(out, "source", () => b.source
+    out = replaceSlot(out, "source", () => computedFrom && hasVerifiedValue(data)
+        ? `<span class="info-value" id="source" data-basis="rule">${escapeHtml(capitalize(computedFrom))}</span>`
+        : b.source
         ? `<span class="info-value" id="source"><a href="${escapeHtml(b.source.url)}" target="_blank" rel="noopener">${escapeHtml(b.source.name)}</a></span>`
         : `<span class="info-value" id="source">Unavailable</span>`, page);
 
@@ -487,7 +501,7 @@ export function renderTrackerHtml(html: string, data: TrackerData | undefined, p
     out = replaceSlot(out, "meta-rows", element => {
         const indent = element.indent;
         const rows: string[] = [
-            infoRow(indent, eol, "Last Verified", `<span class="info-value" id="last-verified">${escapeHtml(b.lastVerified ?? "Never")}</span>`),
+            infoRow(indent, eol, computedFrom ? "Last Computed" : "Last Verified", `<span class="info-value" id="last-verified">${escapeHtml(b.lastVerified ?? "Never")}</span>`),
             infoRow(indent, eol, "Last Checked", `<span class="info-value" id="last-updated">${escapeHtml(b.lastChecked ?? "Never")}</span>`)
         ];
         if (b.precision) {

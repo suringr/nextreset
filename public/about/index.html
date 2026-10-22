@@ -132,7 +132,7 @@
       <h1>About NextReset</h1>
 
       <p>
-        NextReset is a free, fully automated website that tracks official game resets, updates, and patch releases for popular video games. Our mission is simple: give gamers accurate, honest information about when their games change — sourced directly from game publishers, with zero guesswork.
+        NextReset is a free website that tracks official game resets, updates, and patch releases for popular video games. Our mission is simple: give gamers accurate, honest information about when their games change — sourced directly from game publishers, with zero guesswork.
       </p>
 
       <h2>Why We Built This</h2>
@@ -142,22 +142,22 @@
 
       <h2>How It Works</h2>
       <p>
-        NextReset runs on a fully automated pipeline with no manual intervention required:
+        The checks run on an automated schedule. The code that reads each source, and every page, is changed through reviewed pull requests in a public repository:
       </p>
       <ul>
         <li><strong>Several times a day</strong>, our system checks official game publisher websites, APIs, and news feeds for the latest dates and status information.</li>
-        <li><strong>Data is extracted</strong> using specialized scrapers for each game that understand the specific format of each publisher's announcements.</li>
+        <li><strong>Data is extracted</strong> by code written for each source, from a structured feed wherever the publisher offers one. One source, Riot's League of Legends patch schedule, is read with the help of a language model; a date it reports is kept only if the text it came from appears word for word on Riot's page.</li>
         <li><strong>Dates are validated</strong> with sanity checks — we reject anything that looks like a parsing error or falls outside a reasonable range.</li>
-        <li><strong>Results are published</strong> as static JSON files that power the countdown timers you see on each page.</li>
+        <li><strong>Results are published</strong> as static pages. Where a publisher gives an exact time, your browser turns it into a countdown; where it gives only a day, the page shows the day.</li>
         <li><strong>If a source fails</strong>, we preserve the last known good data rather than showing errors. You'll see a "Stale" indicator when this happens.</li>
       </ul>
 
       <h2>What We Track</h2>
       <p>
-        We currently track 12 games covering battle royales, MOBAs, tactical shooters, sandbox games, and sports titles. Each game has its own dedicated tracker page with a live countdown, source attribution, confidence rating, and detailed information about what changes during each event.
+        We track 12 games covering battle royales, MOBAs, tactical shooters, sandbox games, and sports titles. Each game has a page with the latest value — verified from its official source, or for GTA Online's weekly reset computed from its fixed rule — and where it came from, how precise it is, and when it was last checked.
       </p>
       <p>
-        Our sources include official game websites (fortnite.com, counter-strike.net, playvalorant.com), publisher APIs (Roblox status API), official news feeds (Steam news announcements, Rockstar Newswire), and published patch schedules (Riot Games).
+        Our sources are the publishers' own: Riot's League of Legends patch schedule and its VALORANT patch notes on playvalorant.com; the update posts Valve, KRAFTON and EA publish on Steam; the version manifest Mojang's launcher uses; HoYoverse's in-game announcements; the Call of Duty patch notes page; the feed behind status.roblox.com; and Rockstar's Newswire. GTA Online's weekly reset is computed from its fixed Thursday 10:00 UTC rule. Fortnite's season end is read from Epic's Battle Pass page; while that page refuses our checks, as it has since April 2026, no Fortnite date is shown.
       </p>
 
       <h2>Our Principles</h2>
@@ -165,13 +165,13 @@
         <li><strong>Official sources only</strong> — We never rely on leaks, rumors, or community speculation.</li>
         <li><strong>Honest data</strong> — If we don't have a date, we say so. We never fabricate or predict dates.</li>
         <li><strong>Transparency</strong> — Every tracker shows its source, confidence level, and last update time.</li>
-        <li><strong>Zero maintenance</strong> — The system runs automatically with no manual updates needed.</li>
-        <li><strong>Privacy first</strong> — We don't require accounts, don't track personal data, and use minimal analytics.</li>
+        <li><strong>Corrections</strong> — When a value or a sentence here turns out to be wrong, we fix what produced it, not just the page, and add a check so it cannot come back.</li>
+        <li><strong>No accounts</strong> — Nothing here needs a sign-in. The site uses Google Analytics and Google AdSense as the <a href="/privacy/">Privacy Policy</a> describes, and asks for consent first where the law requires it.</li>
       </ul>
 
       <h2>Technical Details</h2>
       <p>
-        NextReset is open source and built with TypeScript, running on GitHub Actions for automation and served as static files. The frontend uses vanilla HTML, CSS, and JavaScript with no framework overhead — resulting in near-instant page loads. Data extraction uses a combination of HTTP requests and headless browser rendering to handle both static and dynamic publisher websites.
+        NextReset is open source and built with TypeScript, running on GitHub Actions for automation and served as static files. The frontend uses vanilla HTML, CSS, and JavaScript with no framework overhead — resulting in near-instant page loads. Most sources are read with plain HTTP requests; a few publisher pages that only render in a browser are read with a headless browser.
       </p>
 
       <h2>Contact</h2>

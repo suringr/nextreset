@@ -109,7 +109,7 @@ test("a future-facing instant that has just passed says so rather than pretendin
     const value = cardValue(justPassed, NOW);
     assert.equal(value.value, "Updating...", "the same words app.js uses for this moment");
     assert.equal(value.group, "upcoming");
-    assert.equal(value.badgeText, "LIVE", "it was verified an hour ago; only the next value is pending");
+    assert.equal(value.badgeText, "CURRENT", "it was verified an hour ago; only the next value is pending");
 });
 
 test("a date-only value stays its date, and stays next up, for the whole day it names", () => {

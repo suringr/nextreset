@@ -76,7 +76,7 @@ test("no state is signalled by colour alone", () => {
     // Every badge carries its own word, so a reader who cannot separate the hues still reads the state.
     // The renderer decides both together; this holds them together.
     const home = fs.readFileSync(path.join(ROOT, "scripts", "render-home.ts"), "utf8");
-    for (const [badge, text] of [["badge-live", "LIVE"], ["badge-stale", "STALE"], ["badge-unavailable", "UNAVAILABLE"], ["badge-unavailable", "NO DATE"]]) {
+    for (const [badge, text] of [["badge-live", "CURRENT"], ["badge-stale", "STALE"], ["badge-unavailable", "UNAVAILABLE"], ["badge-unavailable", "NO DATE"]]) {
         assert.ok(home.includes(badge) && home.includes(text), `${badge} has no accompanying text (${text})`);
     }
 });

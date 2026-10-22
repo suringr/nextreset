@@ -216,6 +216,12 @@ both in CI and uploads the results; like the gold evaluation it runs only from a
 
 ## 📰 Publishing
 
+Each tracker's copy (meta description, About, What Is, What Changes, FAQ and its JSON-LD) lives in
+`gamePages` in `scripts/update-game-pages.ts`. Edit it there and run `npm run copy:apply`, which writes those
+fields into the authored pages and nothing else. `tracker-claims.test.ts` fails when a page and `gamePages`
+disagree, when a page describes a source the registry does not read, when a computed value is labelled
+"verified", or when a page promises behaviour the site does not have ("live countdown", "real-time").
+
 The pages are rendered from verified facts at build time, not assembled in the browser:
 
 ```

@@ -156,7 +156,9 @@ function eventDisplay(data, nowMs) {
     if (!isFuture && isUpcoming) {
         return { mode: 'updating', label: 'Status', value: 'Updating...' };
     }
-    return { mode: 'countdown', label: isFuture ? 'Time Until Event' : 'Time Since Event', value: formatDuration(diff) };
+    // A status tracker's instant is when the status last changed, not an event anybody announced.
+    var sinceLabel = data.type === 'status' ? 'Since the status last changed' : 'Time Since Event';
+    return { mode: 'countdown', label: isFuture ? 'Time Until Event' : sinceLabel, value: formatDuration(diff) };
 }
 
 // Check if data is unavailable. A timestamp that cannot be parsed counts: the build renders such a
@@ -213,8 +215,12 @@ function updateCountdown(data) {
         return; // Don't start countdown
     }
 
-    // Update source
-    if (sourceEl) {
+    // Update source. A computed value names its rule, written by the build; there is no source to link.
+    // A link the build already wrote names the source itself ("Steam", "Riot Games"), from the same
+    // published file, so it is left alone. Rewriting it with the tracker's title put "Counter-Strike 2
+    // Last Update" in a field labelled Source. Only a page the build left without a link is filled in.
+    const builtLink = sourceEl && typeof sourceEl.querySelector === 'function' ? sourceEl.querySelector('a') : null;
+    if (sourceEl && !builtLink && !(sourceEl.dataset && sourceEl.dataset.basis === 'rule')) {
         const sourceUrl = data.source_url || data.source?.url;
         const sourceName = data.sourceName || data.title || data.source?.name || 'Official Source';
         if (sourceUrl) {
@@ -390,7 +396,9 @@ function renderCard(card, data) {
         // source cannot be reached is stale whichever side of the date we are on. Badging a past event
         // LIVE would also contradict the badge the build rendered into this same card.
         state = data.status === 'stale' ? 'stale' : 'live';
-        badgeText = state === 'stale' ? 'STALE' : 'LIVE';
+        // CURRENT, not LIVE: the badge says the source answered on the latest check, and most of these
+        // values are dates that have already passed. Nothing about them is happening live.
+        badgeText = state === 'stale' ? 'STALE' : 'CURRENT';
         badgeClass = state === 'stale' ? 'badge badge-stale' : 'badge badge-live';
     }
 
