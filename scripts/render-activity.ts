@@ -20,6 +20,7 @@ import { TrackerData, escapeHtml, formatDate, formatDateTime, hasVerifiedValue, 
 import { isListed } from "./indexing";
 import { trackerPages } from "./site-map";
 import { gamePages } from "./update-game-pages";
+import { GAMES } from "./v2/games";
 
 const DAY_MS = 86_400_000;
 /** How far back "published lately" reaches. */
@@ -68,6 +69,11 @@ export function activityFor(input: ActivityInput): Activity {
         // A tracker whose own page cannot answer does not get to announce its next date here either.
         const answering = hasVerifiedValue(data) && !isUnanswered(data, input.now);
         const seen = new Set<number>();
+        // The same rule the tracker pages follow (sourceUrlFor in v2/views.ts): a topic whose evidence is
+        // machine data — Genshin's announcement API, Mojang's manifest — sends visitors to its configured
+        // human page instead of the raw JSON (Codex, #80).
+        const v2Topic = GAMES.find(g => g.id === game)?.topics.find(t => t.type === type);
+        const humanPage = v2Topic?.view.linkEvidence === false ? v2Topic.view.sourceUrl : undefined;
         for (const event of publishedEvents(knowledge.events, type)) {
             if (event.kind === "recurring") continue;
             const at = Date.parse(event.at!);
@@ -79,12 +85,15 @@ export function activityFor(input: ActivityInput): Activity {
                 game: title,
                 ...(page ? { page } : {}),
                 label: displayLabel(event.label, type),
-                ...(evidence.href ? { source: evidence.href } : {}),
+                ...(humanPage ?? evidence.href ? { source: humanPage ?? evidence.href } : {}),
                 at,
                 when: event.precision === "exact" ? formatDateTime(event.at!) : formatDate(event.at!)
             };
             const end = at + (event.precision === "exact" ? 0 : DAY_MS);
-            if (end <= nowMs && nowMs - at < RECENT_ACTIVITY_DAYS * DAY_MS && isRelease(event)) {
+            // A release is published from its own start: a day-precision release (Warzone's patch notes) is
+            // published on its date, not from the midnight after it (Codex, #80). A scheduled date, by
+            // contrast, stays upcoming until its whole day has passed.
+            if (at <= nowMs && nowMs - at < RECENT_ACTIVITY_DAYS * DAY_MS && isRelease(event)) {
                 // Two events at one instant are one release.
                 if (seen.has(at)) continue;
                 seen.add(at);

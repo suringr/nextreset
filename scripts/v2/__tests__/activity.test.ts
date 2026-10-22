@@ -88,7 +88,8 @@ test("each entry links to its official source, and to its tracker only where tha
     const $ = cheerio.load(html);
     $("li").each((_, li) => {
         const links = $(li).find("a").map((_, a) => $(a).attr("href")).get();
-        assert.ok(links.some(href => href.startsWith("https://official.example/")), `no source link: ${$(li).text()}`);
+        // The evidence link, or the human page a topic configures instead of machine data (Genshin).
+        assert.ok(links.some(href => href.startsWith("https://official.example/") || href === "https://genshin.hoyoverse.com/en/news"), `no source link: ${$(li).text()}`);
     });
     assert.equal($('a[href="/cs2/last-update/"]').length, 1);
     assert.doesNotMatch(html, /Status change/, "a status change is not a release");
@@ -111,4 +112,20 @@ test("the hub declares exactly one region for it, and a page without one fails t
     const rendered = renderActivityHtml(PAGE, { published: [], scheduled: [] });
     assert.match(rendered, /<h3>Published in the last 14 days<\/h3>/);
     assert.throws(() => renderActivityHtml(PAGE.replace('data-nr-region="activity"', ""), { published: [], scheduled: [] }), /exactly one "activity" region/);
+});
+
+test("a day-precision release is published on its own date", () => {
+    const today = NOW.toISOString().slice(0, 10) + "T00:00:00.000Z";
+    const k = store([ev("warzone", "last-patch", "season-06-reloaded", today, { kind: "occurrence", precision: "day", label: "Call of Duty: Warzone Season 06 Reloaded Patch Notes" })]);
+    const activity = activityFor({ read: () => undefined, knowledge: g => (g === "warzone" ? k : undefined), now: NOW });
+    assert.deepEqual(activity.published.map(i => i.label), ["Call of Duty: Warzone Season 06 Reloaded Patch Notes"]);
+});
+
+test("a topic whose evidence is machine data links its human page, as the tracker pages do", () => {
+    const { knowledge, data } = fixture();
+    const activity = activityFor({ read: (g, t) => data[`${g}/${t}`], knowledge: g => knowledge[g], now: NOW });
+    const genshin = activity.scheduled.find(i => i.game === "Genshin Impact")!;
+    assert.equal(genshin.source, "https://genshin.hoyoverse.com/en/news", "not the announcement API");
+    const lol = activity.scheduled.find(i => i.game === "League of Legends")!;
+    assert.match(lol.source!, /^https:\/\/official\.example\//, "a topic that links its evidence keeps doing so");
 });
