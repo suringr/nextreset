@@ -55,8 +55,16 @@ export function applyCopy(html: string, page: GamePage): string {
     const changes = /\n[ \t]*<!-- What Changes -->\s*<div class="content-section">\s*<h2>What Changes<\/h2>\s*<ul>[\s\S]*?<\/ul>\s*<\/div>\n/;
     if (page.whatChanges.length === 0) {
         // No list worth keeping: the section goes rather than standing empty.
-        if (changes.test(out)) out = replaceOnce(out, changes, () => "\n", "What Changes section", label);
+        if (changes.test(out)) out = replaceOnce(out, changes, () => "", "What Changes section", label);
     } else {
+        if (!/<!-- What Changes -->/.test(out)) {
+            // A list emptied earlier took its section with it. Adding items back recreates the section where it
+            // stood, just before the FAQ, in the markup it had — removing and restoring a list is a round trip.
+            out = replaceOnce(out, /\n([ \t]*)<!-- FAQ -->/, m => [
+                "", `${m[1]}<!-- What Changes -->`, `${m[1]}<div class="content-section">`, `${m[1]}  <h2>What Changes</h2>`,
+                `${m[1]}  <ul>`, `${m[1]}      </ul>`, `${m[1]}</div>`, "", `${m[1]}<!-- FAQ -->`
+            ].join("\n"), "FAQ marker", label);
+        }
         out = replaceOnce(out, /(<!-- What Changes -->\s*<div class="content-section">\s*<h2>What Changes<\/h2>\s*<ul>)[\s\S]*?(\n[ \t]*<\/ul>)/,
             m => `${m[1]}${page.whatChanges.map(item => `\n              <li>${text(item)}</li>`).join("")}${m[2]}`, "What Changes list", label);
     }

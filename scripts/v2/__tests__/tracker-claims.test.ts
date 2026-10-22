@@ -80,6 +80,11 @@ test("the copy tool owns the fields it claims, and nothing else", () => {
     assert.equal(strip(edited), strip(html));
     const dropped = applyCopy(html, { ...page, whatChanges: [] });
     assert.doesNotMatch(dropped, /<!-- What Changes -->/, "an empty list removes the section rather than leaving it empty");
+    assert.doesNotMatch(dropped.replace(/\r\n/g, "\n"), /<\/div>\n\n\n/, "and leaves no double blank line behind");
+    // Codex, #76: removing a section also removed the only marker that found it, so a list could never come
+    // back. Restoring the list must recreate the section, byte for byte where it was.
+    assert.equal(applyCopy(dropped, page), html, "removing and restoring a list is a round trip");
+    assert.equal(applyCopy(applyCopy(dropped, page), page), html, "and stays idempotent");
 });
 
 test("each tracker names the kind of source the registry actually reads", () => {
