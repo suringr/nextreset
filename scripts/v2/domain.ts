@@ -201,6 +201,12 @@ export interface SourceState {
     etag?: string;
     lastModified?: string;
     textHash?: string;
+    /**
+     * Hash of the page's own content, without trailing material the topic names as not the page's
+     * (see `contentFingerprint`). Set by sources read by the AI discovery adapter; a change here, not in
+     * `textHash`, is what sends a page back to the model.
+     */
+    contentFingerprint?: string;
     lastFetchedAt?: string;
     lastUsableAt?: string;
     lastVerdict?: string;

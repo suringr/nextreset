@@ -18,6 +18,8 @@ import { MockAiProvider, scriptedResponder } from "./mock";
 import { AiProvider, AiUsageTracker, TrackedAiProvider, createAiProvider, readAiConfig } from "./provider";
 import { liveEvalRefusal } from "./eval-guard";
 import { priceFor } from "../cost/pricing";
+import { AiGate, createAiGate, currentRunId, readAiBudgetLimits } from "../cost/budget";
+import { AiUsageLedger } from "../cost/ledger";
 
 export interface GoldExpectation {
     /** Any of these may satisfy the expectation, matched against the normalized identity or label. */
@@ -203,6 +205,12 @@ export interface RunGoldEvalOptions {
     /** USD per 1M tokens, when known; the report includes an estimate. */
     pricePerMInput?: number;
     pricePerMOutput?: number;
+    /**
+     * The budget gate every call goes through, each gold case as its own topic. A live run passes one, so
+     * the daily ceilings that bind production refreshes (estimated USD, calls, calls per topic) bind an
+     * evaluation too; a refused call fails its case, and the report says so. Mock runs pass none.
+     */
+    budget?: AiGate;
 }
 
 export async function runGoldEval(options: RunGoldEvalOptions): Promise<EvalReport> {
@@ -210,7 +218,7 @@ export async function runGoldEval(options: RunGoldEvalOptions): Promise<EvalRepo
     const cases = options.cases ?? loadGoldCases(goldDir);
     validateGoldCases(cases);
     const tracker = new AiUsageTracker();
-    const provider = new TrackedAiProvider(options.provider, tracker);
+    const unbudgeted = new TrackedAiProvider(options.provider, tracker);
     const reports: CaseReport[] = [];
     let expectations = 0;
     let expectationsMet = 0;
@@ -222,6 +230,8 @@ export async function runGoldEval(options: RunGoldEvalOptions): Promise<EvalRepo
         const now = new Date(gold.now);
         const report: CaseReport = { id: gold.id, passed: false, failures: [], items: [], rejected: [], grounding: { fields: 0, accepted: 0, rejected: 0 } };
         try {
+            const budgeted = options.budget ? await options.budget.providerFor("eval", gold.id, new Date()) : undefined;
+            const provider = budgeted ? new TrackedAiProvider(budgeted, tracker) : unbudgeted;
             const { classification } = await classifyDocument(provider, topic, doc, { now });
             report.classification = { relevant: classification.relevant, docType: classification.docType, summary: classification.summary };
             const extraction = await extractFacts(provider, topic, doc, { now });
@@ -327,6 +337,7 @@ async function main(): Promise<void> {
     const outDir = path.resolve(process.cwd(), "build", "ai-eval");
     const cases = loadGoldCases();
     let provider: AiProvider;
+    let budget: AiGate | undefined;
     if (live) {
         const refusal = liveEvalRefusal(process.env);
         if (refusal) {
@@ -338,8 +349,19 @@ async function main(): Promise<void> {
             console.error("Live evaluation needs GEMINI_API_KEY (and optionally AI_MODEL).");
             process.exit(2);
         }
-        provider = await createAiProvider(config);
-        console.log(`Live evaluation with ${provider.name} / ${provider.model}`);
+        const live = await createAiProvider(config);
+        provider = live;
+        // The production ceilings, held in a ledger of this run alone: an evaluation cannot write the
+        // production ledger (it has no knowledge checkout), so it gets the same limits, not a share of them.
+        budget = createAiGate({
+            ledger: AiUsageLedger.inMemory(),
+            limits: readAiBudgetLimits(),
+            runId: `eval-${currentRunId()}`,
+            model: live.model,
+            clock: () => new Date(),
+            loadProvider: async () => live
+        });
+        console.log(`Live evaluation with ${provider.name} / ${provider.model}; limits per run: $${budget.limits.dailyCostUsd.toFixed(2)} estimated, ${budget.limits.dailyCalls} calls, ${budget.limits.perTopicCalls} per case`);
     } else {
         provider = mockGoldProvider(loadMockScript(), cases);
     }
@@ -348,7 +370,8 @@ async function main(): Promise<void> {
     const price = priceFor(provider.model);
     const report = await runGoldEval({
         provider, cases, mode: live ? "live" : "mock",
-        pricePerMInput: price?.inputPerMillionUsd, pricePerMOutput: price?.outputPerMillionUsd
+        pricePerMInput: price?.inputPerMillionUsd, pricePerMOutput: price?.outputPerMillionUsd,
+        ...(budget ? { budget } : {})
     });
 
     fs.mkdirSync(outDir, { recursive: true });

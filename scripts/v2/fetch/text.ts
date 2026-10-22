@@ -42,6 +42,30 @@ export function hashText(text: string): string {
     return createHash("sha256").update(text, "utf8").digest("hex");
 }
 
+/**
+ * The hash of a page's own content, for deciding whether it changed enough to be read again.
+ *
+ * Some official pages end with material that is not theirs: Riot's support articles close with a
+ * "Related Articles" list that rotates as Riot edits *other* articles. The full text hash changes with
+ * it, so a schedule nobody touched was sent to the model again — six LoL documents between 15 September
+ * and 14 October 2026 produced the identical 24 claims.
+ *
+ * `markers` names where that trailing material starts. The text is cut at the LAST occurrence of a
+ * marker, and only when that occurrence sits in the second half of the text: a marker near the top is
+ * navigation or a heading, and cutting there could hide the article itself. With no marker, or none in
+ * a safe position, this is the full-text hash, so a page this rule does not understand behaves exactly
+ * as before. Everything before the cut still counts — a one-character edit to the schedule changes it.
+ */
+export function contentFingerprint(text: string, markers: readonly string[] = []): string {
+    let cut = text.length;
+    for (const marker of markers) {
+        if (!marker) continue;
+        const at = text.lastIndexOf(marker);
+        if (at >= text.length / 2 && at < cut) cut = at;
+    }
+    return hashText(cut === text.length ? text : text.slice(0, cut).trimEnd());
+}
+
 export function extractText(html: string): ExtractedText {
     const $ = cheerio.load(html);
 

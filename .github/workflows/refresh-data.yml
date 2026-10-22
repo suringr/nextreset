@@ -11,15 +11,20 @@ on:
     - cron: "0 */6 * * *"
   workflow_dispatch:
 
-concurrency:
-  group: publish-dist
-  cancel-in-progress: true
+# Concurrency is per job, not per workflow. A workflow-level group put pull-request checks and production
+# publishes in one queue with cancel-in-progress, so pushing to any pull request could cancel a scheduled
+# publish mid-run: after its model calls were billed, before the knowledge branch (and the usage ledger in
+# it) was pushed. Those calls then counted against no daily limit.
 
 jobs:
   pr-check:
     name: PR check (build only)
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
+    # A newer push to the same pull request supersedes the old check; nothing here is billed or persisted.
+    concurrency:
+      group: pr-check-${{ github.ref }}
+      cancel-in-progress: true
     permissions:
       contents: read
     steps:
@@ -39,6 +44,13 @@ jobs:
     name: Build site + publish dist (push/schedule/manual)
     if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
+    # One writer at a time, and a running publish is never cancelled: it may already have made billed model
+    # calls that only its "Persist knowledge branch" step records. GitHub keeps at most one run pending in a
+    # group; a newer trigger replaces the pending one (which has not started, so nothing is lost) and waits
+    # for the running one to finish. The pending run starts from the knowledge branch the running one pushed.
+    concurrency:
+      group: publish-dist
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:
@@ -99,8 +111,12 @@ jobs:
 
       # Commit and push knowledge changes (fast-forward only, never force) and detach the
       # worktree. Must run before the publish step, which wipes the working tree.
+      # Runs even when the build failed after the refresh (render, publish gate) or the job was cancelled:
+      # the knowledge store and the AI usage ledger are written atomically as the refresh goes, and calls
+      # already billed must reach the ledger, or the next run's daily limit undercounts them.
       - name: Persist knowledge branch
         id: persist
+        if: always()
         continue-on-error: true
         run: bash .github/scripts/knowledge-persist.sh
 

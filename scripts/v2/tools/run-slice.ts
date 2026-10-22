@@ -17,7 +17,7 @@ import * as path from "path";
 import { createAiProvider, readAiConfig } from "../ai/provider";
 import { createAiGate, currentRunId, readAiBudgetLimits } from "../cost/budget";
 import { AiUsageLedger, utcDate } from "../cost/ledger";
-import { usageLedgerDir } from "../cost/run";
+import { localAiRefusal, usageLedgerDir } from "../cost/run";
 import { readSearchConfig } from "../discovery/search-provider";
 import { adapterFor, findGame, findTopic } from "../games";
 import { runTracker } from "../pipeline";
@@ -56,6 +56,8 @@ async function main(): Promise<void> {
         limits: readAiBudgetLimits(),
         model: ai?.model,
         runId: `${currentRunId(process.env, now)}-${path.basename(outFile, ".json")}`,
+        // Outside CI the model is refused unless AI_ALLOW_LOCAL=1 (see localAiRefusal).
+        unavailable: localAiRefusal(process.env),
         // A simulated --now keeps budget days on the simulated time; a real run follows the wall clock.
         ...(arg("--now") ? {} : { clock: () => new Date() }),
         loadProvider: async () => (ai ? createAiProvider(ai) : undefined)

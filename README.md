@@ -136,7 +136,20 @@ targets, per UTC day:
   and total cost, success, retries, repair) in `knowledge/usage/ai/<date>.json` on the knowledge branch, so
   the limits hold across the day's runs. Prompts, documents, responses and keys are never recorded. When CI
   runs without the knowledge checkout, no model call is made that run.
-- **Costs are estimates** from the price table in `scripts/v2/cost/pricing.ts`, not billing data.
+- **A billed call always reaches the ledger.** The publish job is its own concurrency group with
+  `cancel-in-progress: false` (one writer, never cancelled mid-run; a newer trigger waits), pull-request
+  checks queue separately, and "Persist knowledge branch" runs `if: always()`, so a failed or cancelled
+  build still pushes the calls it already made.
+- **Trailing page furniture is not a change.** Riot's schedule ends with a rotating "Related Articles" list;
+  a page whose text changed only after that marker is treated as unchanged (`trailingBoilerplate` in the
+  topic spec, `contentFingerprint` in `scripts/v2/fetch/text.ts`). Without a marker the fingerprint is the
+  full-text hash, so no other page's behaviour changes.
+- **Model calls happen in CI only.** A refresh or slice run on a developer machine is refused the model unless
+  `AI_ALLOW_LOCAL=1` is set, because its spend would be counted only in a local ledger. Live evaluations run
+  under the same daily ceilings, in a ledger of their own run.
+- **Costs are estimates** from the price table in `scripts/v2/cost/pricing.ts`, not billing data. None of
+  these limits caps what Google can bill the API key; a provider-side budget or quota is a Google Cloud
+  billing setting, outside this repository.
 - **Discovery runs at most once a day per topic** (`minIntervalHours` in the topic's discovery config), sooner
   only when a scheduled event has passed since the last search or evidence is held. Known sources are still
   re-checked on every 6-hourly refresh, which costs nothing when they are unchanged.

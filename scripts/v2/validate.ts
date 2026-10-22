@@ -157,6 +157,7 @@ function validateSourceState(value: unknown, path: string): void {
     requireString(state, "etag", path, true);
     requireString(state, "lastModified", path, true);
     requireString(state, "textHash", path, true);
+    requireString(state, "contentFingerprint", path, true);
     requireIso(state, "lastFetchedAt", path, true);
     requireIso(state, "lastUsableAt", path, true);
     requireString(state, "lastVerdict", path, true);
