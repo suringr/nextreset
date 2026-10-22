@@ -168,3 +168,18 @@ test("a status tracker's instant is labelled as when the status changed, not as 
     const lol = blocksFor({ game: "lol", type: "next-patch", status: "fresh", nextEventUtc: "2026-11-04T00:00:00.000Z", confidence: "high", precision: "day" } as any, new Date("2026-10-22T12:00:00Z"));
     assert.equal(lol.label, "Official date");
 });
+
+test("while any tracker is computed, no site-wide sentence calls every value verified or read from a publisher", () => {
+    // Codex, #76/#77: "Each has a page with the latest verified value" and "every date comes from the
+    // publisher" were true of eleven trackers and false of GTA Online's computed weekly reset.
+    const computed = trackerPages().some(entry => entry.tracker!.computedFrom);
+    assert.ok(computed, "this test only means something while a computed tracker exists");
+    for (const page of ["index.html", "about/index.html"]) {
+        const sentences = visibleText(read(page)).split(/(?<=[.!?])\s+/);
+        for (const sentence of sentences) {
+            const blanket = /\b(each|every)\b[^.]*\b(verified value|value[^.]*official source|date[^.]*from the publisher|answer is[^.]*from the publisher)/i.test(sentence);
+            if (!blanket) continue;
+            assert.match(sentence, /rule|computed/i, `${page}: "${sentence.slice(0, 140)}" claims every value is read, with no word for the computed one`);
+        }
+    }
+});
