@@ -16,6 +16,7 @@ import { normalizeIdentity } from "../identity";
 import { AiDocument, DocType, ExtractionTopic, GroundedItem, classifyDocument, extractFacts, tokensOf } from "./extraction";
 import { MockAiProvider, scriptedResponder } from "./mock";
 import { AiProvider, AiUsageTracker, TrackedAiProvider, createAiProvider, readAiConfig } from "./provider";
+import { liveEvalRefusal } from "./eval-guard";
 import { priceFor } from "../cost/pricing";
 
 export interface GoldExpectation {
@@ -327,6 +328,11 @@ async function main(): Promise<void> {
     const cases = loadGoldCases();
     let provider: AiProvider;
     if (live) {
+        const refusal = liveEvalRefusal(process.env);
+        if (refusal) {
+            console.error(`Live evaluation refused: ${refusal}.`);
+            process.exit(2);
+        }
         const config = readAiConfig();
         if (!config) {
             console.error("Live evaluation needs GEMINI_API_KEY (and optionally AI_MODEL).");
