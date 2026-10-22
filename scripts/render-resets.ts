@@ -20,12 +20,12 @@
 import { findByAttribute, spliceElement } from "./html-elements";
 import { REGION_ATTRIBUTE } from "./render-slots";
 import { CardValue, cardValue } from "./render-home";
-import { GameKnowledge, KnowledgeEvent, loadKnowledge, publishedEvents } from "./render-data-blocks";
+import { GameKnowledge, KnowledgeEvent, isEvidenced, loadKnowledge, publishedEvents } from "./render-data-blocks";
 import { TrackerData, escapeHtml, formatDate, formatDateTime } from "./render-pages";
 import { isListed } from "./indexing";
 import { trackerPages } from "./site-map";
 import { gamePages } from "./update-game-pages";
-import { RECENT_GAPS, cadenceFor, cadenceOf } from "./release-rhythm";
+import { RECENT_GAPS, cadenceFor, cadenceOf, recentCount, recordedReleases, subjectFor, utcDaysBetween } from "./release-rhythm";
 
 // Defined with the rest of the release-history arithmetic, so a tracker page and this table read the
 // same figure from the same code. Re-exported because this is where callers have always found them.
@@ -52,6 +52,10 @@ export interface ResetRow {
     atIso?: string;
     /** The published value as the page states it: a date, a date and time, or a sentence. */
     when: string;
+    /** How far the value is from today, in UTC days: "in 7 days", "today", "8 days ago". Absent with no value. */
+    distance?: string;
+    /** Releases this site recorded in the last RECENT_WINDOW_DAYS days, for a release feed; absent otherwise. */
+    recorded?: string;
     /** Whether `when` is an instant the reader's own clock can be given for. */
     exact: boolean;
     /** CURRENT / STALE / NO DATE / UNAVAILABLE, as the homepage badges it. */
@@ -111,11 +115,29 @@ export function resetRows(input: ResetsInput): ResetRow[] {
         const when = value.at !== undefined
             ? (exact ? formatDateTime(atIso!) : formatDate(atIso!))
             : value.value;
+        // Counted in UTC calendar days, like every other day count on the site, so a clock change
+        // cannot move it. A day-precision value is a day, and a day has no hours to be "in 0.6 days".
+        const offset = value.at !== undefined && !value.unanswered ? utcDaysBetween(input.now.getTime(), value.at) : undefined;
+        const distance = offset === undefined ? undefined
+            : offset === 0 ? "Today"
+            : offset > 0 ? `in ${offset} ${offset === 1 ? "day" : "days"}`
+            : `${-offset} ${offset === -1 ? "day" : "days"} ago`;
+        // Only a release feed has releases to count; a schedule, a rule and a status do not. The count
+        // is of what this site recorded from the official source, by the same rule the tracker pages
+        // use, and it is labelled as such: zero recorded is not proof that nothing was released.
+        const subject = subjectFor(type);
+        const knowledge = input.knowledge(game);
+        const releases = subject && knowledge ? recordedReleases(knowledge, type, input.now, event => isEvidenced(event, knowledge)) : undefined;
+        const recorded = subject && releases && releases.instants.length > 0
+            ? (() => { const n = recentCount(releases.instants, input.now); return `${n} ${n === 1 ? subject.singular : subject.plural}`; })()
+            : undefined;
         rows.push({
             game,
             type,
             title: page.title,
             tracks: page.typeTitle,
+            ...(distance ? { distance } : {}),
+            ...(recorded ? { recorded } : {}),
             href: isListed(entry.page) ? `/${game}/${type}/` : undefined,
             cadence: cadenceFor(input.knowledge(game), type, input.now, STATED_CADENCE[`${game}/${type}`]),
             atIso: value.unanswered ? undefined : atIso,
@@ -176,6 +198,8 @@ function rowHtml(row: ResetRow, indent: string): string {
         `${pad(1)}<td>${row.cadence ? escapeHtml(row.cadence) : `<span class="is-none">—</span>`}</td>`,
         `${pad(1)}<td>${when}${row.soon ? ` <span class="reset-soon">within ${SOON_DAYS} days</span>` : ""}</td>`,
         `${pad(1)}<td>${local}</td>`,
+        `${pad(1)}<td>${row.distance ? escapeHtml(row.distance) : `<span class="is-none">—</span>`}</td>`,
+        `${pad(1)}<td>${row.recorded ? escapeHtml(row.recorded) : `<span class="is-none">—</span>`}</td>`,
         `${pad(1)}<td><span class="${row.badgeClass}">${escapeHtml(row.badge)}</span></td>`,
         `${indent}</tr>`
     ].join("\n");

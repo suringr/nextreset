@@ -150,6 +150,8 @@
               <th scope="col">How often</th>
               <th scope="col">When (UTC)</th>
               <th scope="col">Your time</th>
+              <th scope="col">From today</th>
+              <th scope="col">Recorded, last 90 days</th>
               <th scope="col">Status</th>
             </tr>
           </thead>
@@ -181,6 +183,17 @@
         the most recent check. <em>Stale</em> means it did not, and the last verified value is being
         shown rather than an error. <em>No date</em> means the publisher has not announced one — we show
         that instead of guessing.
+      </p>
+
+      <p>
+        <strong>From today</strong> is how many days away the value is, counted in UTC calendar days:
+        ahead for a reset or a scheduled patch, behind for the last update a game has had.
+      </p>
+      <p>
+        <strong>Recorded, last 90 days</strong> counts the updates this site has recorded from each
+        game's official source in the last 90 days — the same ones each tracker page lists and links. It
+        is a count of what was recorded, not a guarantee that nothing else was released, and it is left
+        empty for schedules, weekly rules and service statuses, which have no releases to count.
       </p>
 
       <h2>A note on daylight saving</h2>

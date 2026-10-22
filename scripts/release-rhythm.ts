@@ -161,28 +161,43 @@ export interface RhythmOptions extends BlockOptions {
  * A release feed in numbers: when the last recorded release was, how many there have been lately, how
  * often (as /resets/ says), and the gaps themselves. Undefined where there are fewer than two releases.
  */
+/**
+ * The releases a tracker has recorded, as one series of distinct instants, oldest first.
+ *
+ * Releases that have happened and that the official source evidenced — the same rows the history list
+ * shows, plus the headline's own. Held events and future timestamps are not releases yet; two events at
+ * one instant are one release; a tracker following two title years is measured within the newest.
+ * Shared by the tracker pages and /resets/, so the two count the same things.
+ */
+export function recordedReleases(knowledge: GameKnowledge | undefined, topic: string, now: Date, evidenced: (event: KnowledgeEvent) => boolean): { instants: number[]; series?: string } {
+    if (!knowledge) return { instants: [] };
+    let events = publishedEvents(knowledge.events, topic).filter(e => Date.parse(e.at!) <= now.getTime() && evidenced(e));
+    if (events.length === 0) return { instants: [] };
+    const newest = [...events].sort((a, b) => Date.parse(b.at!) - Date.parse(a.at!))[0];
+    const series = seriesOf(newest);
+    if (series) events = events.filter(e => seriesOf(e) === series);
+    return { instants: distinctInstants(events), ...(series ? { series } : {}) };
+}
+
+/** How many recorded releases fall in the last RECENT_WINDOW_DAYS UTC days. */
+export function recentCount(instants: number[], now: Date): number {
+    return instants.filter(at => utcDaysBetween(at, now.getTime()) < RECENT_WINDOW_DAYS).length;
+}
+
 export function releaseRhythm(knowledge: GameKnowledge | undefined, topic: string, type: string, options: RhythmOptions): Block | undefined {
     const subject = subjectFor(type);
     if (!knowledge || !subject) return undefined;
     const nowMs = options.now.getTime();
-    // Releases that have happened and that the official source evidenced — the same rows the history
-    // list shows, plus the headline's own. Held events and future timestamps are not releases yet.
-    let events = publishedEvents(knowledge.events, topic).filter(e => Date.parse(e.at!) <= nowMs && options.evidenced(e));
-    if (events.length === 0) return undefined;
+    const { instants, series } = recordedReleases(knowledge, topic, options.now, options.evidenced);
     // Whether "how often" had enough to judge is a question about what cadenceOf saw — every published
     // event of the topic, both title years included — not about the one series the gaps below describe.
     const judged = distinctInstants(publishedEvents(knowledge.events, topic)).length;
-    const newest = [...events].sort((a, b) => Date.parse(b.at!) - Date.parse(a.at!))[0];
-    const series = seriesOf(newest);
-    if (series) events = events.filter(e => seriesOf(e) === series);
-
-    const instants = distinctInstants(events);
     if (instants.length < 2) return undefined;
     const gaps = gapsOf(instants);
     const first = instants[0];
     const last = instants[instants.length - 1];
     const sinceLast = utcDaysBetween(last, nowMs);
-    const recent = instants.filter(at => utcDaysBetween(at, nowMs) < RECENT_WINDOW_DAYS).length;
+    const recent = recentCount(instants, options.now);
     // cadenceOf needs four events (three gaps) before it will call anything a rhythm.
     const enough = judged >= 4;
     const firstDate = options.format(new Date(first).toISOString());
