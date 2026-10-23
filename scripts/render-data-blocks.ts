@@ -182,6 +182,12 @@ function evidenceFor(event: KnowledgeEvent, knowledge: GameKnowledge): { href?: 
     return {};
 }
 
+/** Whether an event carries a link or a readable quote from its official source. */
+export function isEvidenced(event: KnowledgeEvent, knowledge: GameKnowledge): boolean {
+    const evidence = evidenceFor(event, knowledge);
+    return evidence.href !== undefined || evidence.quote !== undefined;
+}
+
 /**
  * Genshin's event label states the same wall clock for three server regions, each a different real
  * instant: "… ends 2026-09-22 14:59 server time (Asia 06:59 UTC, Europe 13:59 UTC, America 19:59 UTC)".

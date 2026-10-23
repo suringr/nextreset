@@ -25,20 +25,17 @@ import { TrackerData, escapeHtml, formatDate, formatDateTime } from "./render-pa
 import { isListed } from "./indexing";
 import { trackerPages } from "./site-map";
 import { gamePages } from "./update-game-pages";
+import { RECENT_GAPS, cadenceFor, cadenceOf } from "./release-rhythm";
+
+// Defined with the rest of the release-history arithmetic, so a tracker page and this table read the
+// same figure from the same code. Re-exported because this is where callers have always found them.
+export { RECENT_GAPS, cadenceOf };
 
 const DAY_MS = 86_400_000;
 
 /** How far ahead "soon" reaches. A week is the window the weekly resets actually live in. */
 export const SOON_DAYS = 7;
 
-/**
- * How many of the most recent intervals decide what "how often" says.
- *
- * Ten is roughly five months of a fortnightly game and two and a half of a weekly one: long enough
- * that one odd interval cannot invent or destroy a rhythm, short enough that the answer describes what
- * the game is doing now rather than what it did two years ago.
- */
-export const RECENT_GAPS = 10;
 
 export interface ResetRow {
     game: string;
@@ -66,70 +63,6 @@ export interface ResetRow {
     at?: number;
     /** Future-facing trackers come first; the data decides, as it does on the homepage. */
     upcoming: boolean;
-}
-
-/**
- * How often a tracker comes round, in words, or undefined where saying would be a guess.
- *
- * Two honest sources and no third. A recurring topic states its rule — Rockstar publishes GTA's, and
- * the adapter computes from it — and that rule is quotable as it stands. Everything else can only be
- * observed: if a game's published history is evenly spaced, the spacing is a fact about the history and
- * is worth reporting as "about every N", hedged because it describes what has happened rather than a
- * promise. Where the gaps are uneven — Valve ships Counter-Strike updates when they are ready — there
- * is no cadence to report, and the column stays empty rather than inventing a rhythm.
- */
-export function cadenceOf(knowledge: GameKnowledge | undefined, topic: string, rule?: string, now?: Date): string | undefined {
-    if (rule) return rule;
-    const events = publishedEvents(knowledge?.events, topic)
-        .map((event: KnowledgeEvent) => (event.at ? Date.parse(event.at) : NaN))
-        .filter(Number.isFinite)
-        .sort((a, b) => a - b);
-    // Four events is three gaps: enough for "evenly spaced" to mean something rather than describing a
-    // single interval twice. Fewer, and there is nothing to be consistent about.
-    if (events.length < 4) return undefined;
-    // The recent window, not the whole history.
-    //
-    // "How often" is a claim about now, and judging it on everything a game has ever done gets both
-    // ends wrong. A hiatus in 2024 followed by two years of weekly releases is a weekly game, and a
-    // rule that remembers the hiatus forever would never say so. Four weekly releases followed by a
-    // two-year silence and one more release is not a weekly game, however tidy those four gaps were.
-    // Looking at the last few gaps answers both: the hiatus falls out of the window once the rhythm
-    // has resumed, and the two-year gap is still in it.
-    const allGaps = events.slice(1).map((at, index) => at - events[index]);
-    const gaps = allGaps.slice(-RECENT_GAPS);
-    if (gaps.length < 3) return undefined;
-    const sorted = [...gaps].sort((a, b) => a - b);
-    const median = sorted[Math.floor(sorted.length / 2)];
-    if (median <= 0) return undefined;
-    // Most gaps close to the median, rather than all of them.
-    //
-    // This is a test of whether a rhythm is there to report, not a bar a game has to clear to deserve
-    // something. League of Legends is the case that sets it: twenty-three gaps, twenty-one of them
-    // thirteen to fifteen days, and two of twenty-one where a split break falls. Demanding that every
-    // gap agree would throw away a two-week cycle that genuinely exists, because Riot takes Christmas
-    // off. Allowing a quarter of them to disagree keeps that and still rejects Counter-Strike, where
-    // Valve ships twice in a day and then not for a month and there is no rhythm to find.
-    // Strictly below, so that a quarter disagreeing is allowed rather than only fewer than a quarter —
-    // which is what the sentence above says, and what `<=` quietly did not do. With four intervals,
-    // three fortnights and one split break is exactly 0.75, and is a fortnightly game.
-    const close = gaps.filter(gap => Math.abs(gap - median) <= median * 0.25).length;
-    if (close / gaps.length < 0.75) return undefined;
-    // A break is a break; an abandonment is not a rhythm. The ratio alone cannot tell them apart —
-    // four weekly gaps and then a two-year silence is four fifths "close to the median", and would
-    // have been published as "About weekly" for a game nobody has updated since. An outlier may be
-    // twice the median, which covers Riot's split breaks, and not more. Within the recent window, so
-    // an old hiatus stops counting against a game that has since resumed.
-    if (gaps.some(gap => gap > median * 2)) return undefined;
-    // And the rhythm has to still be running. "How often" is a claim in the present tense, so a
-    // history that stopped longer ago than the rhythm itself no longer describes anything current.
-    const last = events[events.length - 1];
-    if (now && now.getTime() - last > median * 2) return undefined;
-    const days = Math.round(median / DAY_MS);
-    if (days < 1) return undefined;
-    if (days === 1) return "About daily";
-    if (days === 7) return "About weekly";
-    if (days % 7 === 0) return `About every ${days / 7} weeks`;
-    return `About every ${days} days`;
 }
 
 /** The stated rule for a tracker whose cadence the publisher defines rather than the history showing. */
@@ -184,7 +117,7 @@ export function resetRows(input: ResetsInput): ResetRow[] {
             title: page.title,
             tracks: page.typeTitle,
             href: isListed(entry.page) ? `/${game}/${type}/` : undefined,
-            cadence: cadenceOf(input.knowledge(game), type, STATED_CADENCE[`${game}/${type}`], input.now),
+            cadence: cadenceFor(input.knowledge(game), type, input.now, STATED_CADENCE[`${game}/${type}`]),
             atIso: value.unanswered ? undefined : atIso,
             when,
             exact,
