@@ -146,3 +146,17 @@ test("only the pilot tracker is summarised", () => {
     const pubg = { game: "pubg", events: [], claims: [], documents: [] };
     assert.equal(noteSectionsFor({ key: "pubg/last-patch/43.2", topic: "last-patch", label: "x", status: "observed", at: "2026-10-13T06:00:00Z" }, pubg), undefined);
 });
+
+test("notes edited and then restored are followed back to the original", async () => {
+    const { store } = tempStore();
+    const original = FULL;
+    const edited = JSON.parse(FULL);
+    edited.appnews.newsitems[0].contents += "[p]\[ MAPS ][/p][list][*][p]Fixed a spot on Mirage[/p][/*][/list]";
+    const gid = edited.appnews.newsitems[0].gid;
+    const runs: Array<[string, string]> = [[original, "2026-10-22T12:00:00Z"], [JSON.stringify(edited), "2026-10-22T14:00:00Z"], [original, "2026-10-22T16:00:00Z"]];
+    for (const [body, at] of runs) await runTracker(game, topic, createCs2UpdatesAdapter(fakeTransport({ http: [json(body)] })), store, new Date(at));
+    const k = store.load("cs2") as any;
+    const event = k.events.find((e: any) => e.key.endsWith(gid));
+    assert.deepEqual(noteSectionsFor(event, k)!.map(s => s.name), ["UI", "Misc"], "A -> B -> A ends on A");
+    assert.equal(k.claims.filter((c: any) => c.eventKey === event.key).length, 3, "three readings, three claims");
+});

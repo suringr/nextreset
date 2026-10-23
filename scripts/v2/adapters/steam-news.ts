@@ -259,8 +259,13 @@ async function runFeeds(ctx: AdapterContext, feeds: SteamNewsFeed[], transport: 
                 const newestWhole = stated.filter(c => readWhole(c, knowledge)).sort((a, b) => b.extractedAt.localeCompare(a.extractedAt))[0];
                 if (newestWhole && notesOf(newestWhole.quote) === notesOf(post.excerpt)) continue;
             }
+            // A claim for a post already on record is a later reading of it, so its identity carries the time
+            // of that reading. Otherwise notes edited A -> B -> A would produce the very id A's first claim has,
+            // the pipeline would drop it as a duplicate, and B would stay the newest evidence (Codex, #81).
+            // A first claim keeps the identity it has always had.
+            const reading = stated.length > 0 ? `|${document.fetchedAt}` : "";
             claims.push({
-                id: sha(`${document.textHash}|${key}|at|${post.at}`).slice(0, 24),
+                id: sha(`${document.textHash}|${key}|at|${post.at}${reading}`).slice(0, 24),
                 documentId: document.textHash,
                 eventKey: key,
                 field: "at",
