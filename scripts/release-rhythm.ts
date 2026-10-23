@@ -173,8 +173,12 @@ export function recordedReleases(knowledge: GameKnowledge | undefined, topic: st
     if (!knowledge) return { instants: [] };
     // A release is something observed, whatever its timestamp says: the pipeline keeps a just-published
     // update stamped a little past the clock (source skew, or a change mid-request) as current, and the
-    // count must include the update the same row shows (Codex, #79). Anything not observed must have passed.
-    let events = publishedEvents(knowledge.events, topic).filter(e => (e.status === "observed" || Date.parse(e.at!) <= now.getTime()) && evidenced(e));
+    // count must include the update the same row shows (Codex, #79). "A little" is up to a day; an
+    // "observed" event further ahead than that is not skew but bad data, and is not counted. Anything not
+    // observed must have passed.
+    const limit = now.getTime() + DAY_MS;
+    let events = publishedEvents(knowledge.events, topic)
+        .filter(e => (e.status === "observed" ? Date.parse(e.at!) <= limit : Date.parse(e.at!) <= now.getTime()) && evidenced(e));
     if (events.length === 0) return { instants: [] };
     const newest = [...events].sort((a, b) => Date.parse(b.at!) - Date.parse(a.at!))[0];
     const series = seriesOf(newest);
