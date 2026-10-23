@@ -171,7 +171,10 @@ export interface RhythmOptions extends BlockOptions {
  */
 export function recordedReleases(knowledge: GameKnowledge | undefined, topic: string, now: Date, evidenced: (event: KnowledgeEvent) => boolean): { instants: number[]; series?: string } {
     if (!knowledge) return { instants: [] };
-    let events = publishedEvents(knowledge.events, topic).filter(e => Date.parse(e.at!) <= now.getTime() && evidenced(e));
+    // A release is something observed, whatever its timestamp says: the pipeline keeps a just-published
+    // update stamped a little past the clock (source skew, or a change mid-request) as current, and the
+    // count must include the update the same row shows (Codex, #79). Anything not observed must have passed.
+    let events = publishedEvents(knowledge.events, topic).filter(e => (e.status === "observed" || Date.parse(e.at!) <= now.getTime()) && evidenced(e));
     if (events.length === 0) return { instants: [] };
     const newest = [...events].sort((a, b) => Date.parse(b.at!) - Date.parse(a.at!))[0];
     const series = seriesOf(newest);
@@ -206,7 +209,7 @@ export function releaseRhythm(knowledge: GameKnowledge | undefined, topic: strin
     const seriesWord = seriesName ? ` of ${seriesName}` : "";
 
     const rows: BlockRow[] = [
-        { label: `Last recorded ${subject.singular}`, when: sinceLast === 0 ? "Today" : `${plural(sinceLast, "day", "days")} ago, on ${options.format(new Date(last).toISOString())}` },
+        { label: `Last recorded ${subject.singular}`, when: sinceLast <= 0 ? "Today" : `${plural(sinceLast, "day", "days")} ago, on ${options.format(new Date(last).toISOString())}` },
         { label: `In the last ${RECENT_WINDOW_DAYS} days`, when: plural(recent, subject.singular, subject.plural) },
         {
             label: "How often",

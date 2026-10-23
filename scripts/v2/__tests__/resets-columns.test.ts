@@ -95,3 +95,18 @@ test("an observed update a little past the clock is not described as still ahead
     const upcoming = resetRows({ read: (game, type) => (game === "gta" ? answered(game, type, "2026-10-29T10:00:00.000Z") : undefined), knowledge: () => undefined, now });
     assert.equal(upcoming.find(r => r.game === "gta")!.distance, "in 7 days");
 });
+
+test("an observed update stamped a little past the clock is counted, and is \"Today\", not ahead", () => {
+    const now = new Date("2026-10-22T23:59:30.000Z");
+    const skewed = "2026-10-23T00:00:20.000Z";
+    const k = pubgKnowledge();
+    k.events!.push({ key: "pubg/last-patch/43.3", game: "pubg", topic: "last-patch", kind: "version", label: "Update 43.3", status: "observed", at: skewed, precision: "exact", publishState: "published" });
+    k.claims!.push({ eventKey: "pubg/last-patch/43.3", field: "at", value: skewed, method: "deterministic", quote: "{}", linkUrl: "https://example.invalid/43.3" });
+    const built = resetRows({ read: (game, type) => (game === "pubg" ? answered(game, type, skewed) : undefined), knowledge: g => (g === "pubg" ? k : undefined), now });
+    const pubg = built.find(r => r.game === "pubg")!;
+    assert.equal(pubg.distance, "Today");
+    // 43.3 now, and the fixture's three inside the window: four.
+    assert.equal(pubg.recorded, "4 patches", "the update the row shows is in the count");
+    const block = releaseRhythm(k, "last-patch", "last-patch", { format: (iso: string) => formatDate(iso), now, evidenced: e => isEvidenced(e, k) })!;
+    assert.equal(block.rows.find(r => r.label === "Last recorded patch")!.when, "Today");
+});
