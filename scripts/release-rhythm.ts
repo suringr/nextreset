@@ -47,7 +47,10 @@ export function cadenceOf(knowledge: GameKnowledge | undefined, topic: string, r
     const events = publishedEvents(knowledge?.events, topic)
         .map((event: KnowledgeEvent) => (event.at ? Date.parse(event.at) : NaN))
         .filter(Number.isFinite)
-        .sort((a, b) => a - b);
+        .sort((a, b) => a - b)
+        // Two records at one instant are one release: a duplicate would add a zero-length gap and could
+        // hide a rhythm that the deduplicated gaps on the page plainly show (Codex, #78).
+        .filter((at, index, all) => index === 0 || at !== all[index - 1]);
     // Four events is three gaps: enough for "evenly spaced" to mean something rather than describing a
     // single interval twice. Fewer, and there is nothing to be consistent about.
     if (events.length < 4) return undefined;

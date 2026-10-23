@@ -206,3 +206,10 @@ test("a completed schedule keeps its rhythm; a release feed that went quiet lose
     const feed: GameKnowledge = { events: schedule.events!.map(e => ({ ...e, topic: "last-patch", key: e.key.replace("next-patch", "last-patch") })) };
     assert.equal(cadenceFor(feed, "last-patch", NOW), undefined);
 });
+
+test("duplicate records at one instant do not hide a rhythm", () => {
+    const base = [0, 1, 2, 3, 4, 5].map(i => event(String(i), new Date(NOW.getTime() - (5 - i) * 14 * DAY - 3600_000).toISOString()));
+    const dupes = base.flatMap(e => [e, { ...e, key: `${e.key}-repost` }]);
+    assert.equal(cadenceOf({ events: base }, "last-patch", undefined, NOW), "About every 2 weeks");
+    assert.equal(cadenceOf({ events: dupes }, "last-patch", undefined, NOW), "About every 2 weeks");
+});
