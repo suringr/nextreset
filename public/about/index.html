@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <meta name="description" content="About NextReset — a free, automated game reset and update tracker using official publisher sources. Learn how we work and why we built this.">
+  <meta name="description" content="Where every NextReset value comes from, how it is checked, what the site shows when a source fails, and how mistakes are corrected.">
   <meta property="og:title" content="About - NextReset">
-  <meta property="og:description" content="Learn about NextReset, a free automated game reset tracker.">
+  <meta property="og:description" content="Where every NextReset value comes from, how it is checked, what the site shows when a source fails, and how mistakes are corrected.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://nextreset.co/og.jpg">
   <meta property="og:image:width" content="1200">
@@ -132,51 +132,69 @@
       <h1>About NextReset</h1>
 
       <p>
-        NextReset is a free website that tracks official game resets, updates, and patch releases for popular video games. Our mission is simple: give gamers accurate, honest information about when their games change — sourced directly from game publishers, with zero guesswork.
+        NextReset answers one question for twelve games: when does it next reset, patch or change season, or when did it last? Each answer is a date or a time taken from the publisher (or, for GTA Online's weekly reset, computed from its fixed rule), shown with where it came from, how precise it is, and when it was last checked.
       </p>
 
-      <h2>Why We Built This</h2>
-      <p>
-        If you've ever searched "when does Fortnite season end" or "GTA Online weekly reset time," you've probably landed on pages full of speculation, outdated information, or clickbait. We got tired of that. NextReset was built to be the opposite — a clean, fast site that shows you verified data from official sources and nothing else.
-      </p>
-
-      <h2>How It Works</h2>
-      <p>
-        The checks run on an automated schedule. The code that reads each source, and every page, is changed through reviewed pull requests in a public repository:
-      </p>
+      <h2>What you will find here</h2>
       <ul>
-        <li><strong>Several times a day</strong>, our system checks official game publisher websites, APIs, and news feeds for the latest dates and status information.</li>
-        <li><strong>Data is extracted</strong> by code written for each source, from a structured feed wherever the publisher offers one. One source, Riot's League of Legends patch schedule, is read with the help of a language model; a date it reports is kept only if the text it came from appears word for word on Riot's page.</li>
-        <li><strong>Dates are validated</strong> with sanity checks — we reject anything that looks like a parsing error or falls outside a reasonable range.</li>
-        <li><strong>Results are published</strong> as static pages. Where a publisher gives an exact time, your browser turns it into a countdown; where it gives only a day, the page shows the day.</li>
-        <li><strong>If a source fails</strong>, we preserve the last known good data rather than showing errors. You'll see a "Stale" indicator when this happens.</li>
+        <li><strong>A page for each game</strong> with the latest value — verified from the publisher's own source and linked to it, or for GTA Online computed from its weekly rule and named as such — its precision (an exact time, or a date only), and when it was last checked.</li>
+        <li><strong>The history the trackers have kept</strong>: earlier patches and releases, and scheduled ones where a publisher announces them, each linked to the publisher's own page where it has one.</li>
+        <li><strong><a href="/resets/">One table for every game</a></strong>, side by side, in UTC and in your own time zone.</li>
+        <li><strong>Your own list</strong>: star the games you follow to keep them at the top. It stays on your device; there is no account.</li>
       </ul>
 
-      <h2>What We Track</h2>
+      <h2>How sources are chosen</h2>
       <p>
-        We track 12 games covering battle royales, MOBAs, tactical shooters, sandbox games, and sports titles. Each game has a page with the latest value — verified from its official source, or for GTA Online's weekly reset computed from its fixed rule — and where it came from, how precise it is, and when it was last checked.
+        A source is used only if the publisher runs it: Riot's League of Legends patch schedule and its VALORANT patch notes on playvalorant.com; the update posts Valve, KRAFTON and EA publish on Steam; the version manifest Mojang's launcher uses; HoYoverse's in-game announcements; the Call of Duty patch notes page; the feed behind status.roblox.com; and Rockstar's Newswire. GTA Online's weekly reset is computed from its fixed Thursday 10:00 UTC rule, and its page says so.
       </p>
       <p>
-        Our sources are the publishers' own: Riot's League of Legends patch schedule and its VALORANT patch notes on playvalorant.com; the update posts Valve, KRAFTON and EA publish on Steam; the version manifest Mojang's launcher uses; HoYoverse's in-game announcements; the Call of Duty patch notes page; the feed behind status.roblox.com; and Rockstar's Newswire. GTA Online's weekly reset is computed from its fixed Thursday 10:00 UTC rule. Fortnite's season end is read from Epic's Battle Pass page; while that page refuses our checks, as it has since April 2026, no Fortnite date is shown.
+        Fan wikis, community trackers, leaks and unofficial APIs are not used, even where they are often right. When a publisher's own source cannot be read, the page says so instead of borrowing a date: Fortnite's season end is read from Epic's Battle Pass page, and while that page refuses our checks, as it has since April 2026, no Fortnite date is shown. A source that blocks automated requests is not worked around.
       </p>
 
-      <h2>Our Principles</h2>
+      <h2>How values are checked</h2>
       <ul>
-        <li><strong>Official sources only</strong> — We never rely on leaks, rumors, or community speculation.</li>
-        <li><strong>Honest data</strong> — If we don't have a date, we say so. We never fabricate or predict dates.</li>
-        <li><strong>Transparency</strong> — Every tracker shows its source, confidence level, and last update time.</li>
-        <li><strong>Corrections</strong> — When a value or a sentence here turns out to be wrong, we fix what produced it, not just the page, and add a check so it cannot come back.</li>
-        <li><strong>No accounts</strong> — Nothing here needs a sign-in. The site uses Google Analytics and Google AdSense as the <a href="/privacy/">Privacy Policy</a> describes, and asks for consent first where the law requires it.</li>
+        <li><strong>Each source is read by code written for it</strong>, from a structured feed wherever the publisher offers one, several times a day.</li>
+        <li><strong>One source is read with the help of a language model</strong>: Riot's League of Legends patch schedule. A date the model reports is kept only if the text it came from appears word for word on Riot's page, and only if it falls within two years of the day it was read.</li>
+        <li><strong>Precision is kept as the publisher gave it.</strong> A day announced without a time is shown as a day; a time is never added that the publisher did not state.</li>
+        <li><strong>The site is rebuilt from these values</strong>, and a page whose value cannot be filled in is not published with a placeholder in its place.</li>
       </ul>
 
-      <h2>Technical Details</h2>
+      <h2>When we do not know</h2>
+      <ul>
+        <li>If a publisher has not announced a date, the page says <em>No official date announced</em>.</li>
+        <li>If a source cannot be reached, the last verified value stays on the page, marked <em>Stale</em>, with the time it was last verified.</li>
+        <li>If there is no value we stand behind at all, the page says <em>Data unavailable</em>.</li>
+        <li>Pages that cannot currently answer their question well (Fortnite, Roblox and Red Dead Redemption 2) stay online but are kept out of search results. Their values still appear in the reset table.</li>
+      </ul>
+
+      <h2>Corrections</h2>
       <p>
-        NextReset is open source and built with TypeScript, running on GitHub Actions for automation and served as static files. The frontend uses vanilla HTML, CSS, and JavaScript with no framework overhead — resulting in near-instant page loads. Most sources are read with plain HTTP requests; a few publisher pages that only render in a browser are read with a headless browser.
+        When a value or a sentence here turns out to be wrong, we fix what produced it, not just the page, and add an automated check so the same mistake cannot come back. Every correction is a public change in the project's repository. Recent ones:
+      </p>
+      <ul>
+        <li><strong>October 2026</strong>: four trackers described a source they do not read, pages promised countdowns that do not run, and GTA Online's computed reset was labelled "verified". Corrected, with a test that ties each page's description to the source it actually reads (<a href="https://github.com/suringr/nextreset/pull/76" target="_blank" rel="noopener">change #76</a>).</li>
+        <li><strong>12 October 2026</strong>: three statements about how often PUBG and League of Legends patch disagreed with the site's own data. Corrected (<a href="https://github.com/suringr/nextreset/pull/73" target="_blank" rel="noopener">change #73</a>).</li>
+        <li><strong>12 October 2026</strong>: the Fortnite page described a countdown it no longer had after Epic's page began refusing our checks. Corrected (<a href="https://github.com/suringr/nextreset/pull/67" target="_blank" rel="noopener">change #67</a>).</li>
+      </ul>
+
+      <h2>Who runs NextReset</h2>
+      <p>
+        NextReset is an independent project. It is not affiliated with, endorsed by or sponsored by any game publisher, and all trademarks belong to their owners. The site and the code that produces it are public: every change is a reviewed pull request in the <a href="https://github.com/suringr/nextreset" target="_blank" rel="noopener">nextreset repository on GitHub</a>, so the history of every page and every source decision can be read there.
+      </p>
+
+      <h2>Advertising and privacy</h2>
+      <p>
+        The site is free and may show Google ads. No page is written or changed to suit an advertiser, and the arcade carries no ads at all. Nothing here needs a sign-in. The site uses Google Analytics and Google AdSense as the <a href="/privacy/">Privacy Policy</a> describes, and asks for consent first where the law requires it.
+      </p>
+
+      <h2>Technical details</h2>
+      <p>
+        NextReset is open source and built with TypeScript, running on GitHub Actions for automation and served as static files. The frontend uses vanilla HTML, CSS, and JavaScript with no framework overhead. Most sources are read with plain HTTP requests; a few publisher pages that only render in a browser are read with a headless browser.
       </p>
 
       <h2>Contact</h2>
       <p>
-        NextReset is a passion project. If you have suggestions, notice incorrect data, or want to request a new game tracker, feel free to open an issue on our <a href="https://github.com/suringr/nextreset" target="_blank" rel="noopener">GitHub repository</a>.
+        To report a wrong value or sentence, suggest a better source, or ask for a game to be tracked, open an issue on our <a href="https://github.com/suringr/nextreset/issues" target="_blank" rel="noopener">GitHub repository</a>.
       </p>
     </div>
 
