@@ -25,7 +25,7 @@ import { TrackerData, escapeHtml, formatDate, formatDateTime } from "./render-pa
 import { isListed } from "./indexing";
 import { trackerPages } from "./site-map";
 import { gamePages } from "./update-game-pages";
-import { RECENT_GAPS, cadenceOf } from "./release-rhythm";
+import { RECENT_GAPS, cadenceFor, cadenceOf } from "./release-rhythm";
 
 // Defined with the rest of the release-history arithmetic, so a tracker page and this table read the
 // same figure from the same code. Re-exported because this is where callers have always found them.
@@ -117,7 +117,7 @@ export function resetRows(input: ResetsInput): ResetRow[] {
             title: page.title,
             tracks: page.typeTitle,
             href: isListed(entry.page) ? `/${game}/${type}/` : undefined,
-            cadence: cadenceOf(input.knowledge(game), type, STATED_CADENCE[`${game}/${type}`], input.now),
+            cadence: cadenceFor(input.knowledge(game), type, input.now, STATED_CADENCE[`${game}/${type}`]),
             atIso: value.unanswered ? undefined : atIso,
             when,
             exact,

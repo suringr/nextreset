@@ -21,7 +21,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { IndexDecision, NOINDEX_TAG, staticPageDecision, trackerDecision } from "./indexing";
 import { GameKnowledge, KnowledgeEvent, blocksFor as dataBlocksFor, isEvidenced, loadKnowledge, renderBlocks } from "./render-data-blocks";
-import { cadenceOf, rhythmFor } from "./release-rhythm";
+import { cadenceFor, rhythmFor } from "./release-rhythm";
 import { CardGroup, renderHomeHtml } from "./render-home";
 import { SitemapEntry, SitemapInput, renderSitemap } from "./render-sitemap";
 import { renderResetsHtml, resetRows } from "./render-resets";
@@ -708,7 +708,7 @@ export function renderSite(distDir: string, now: Date = new Date(), root: string
             if (knowledge) {
                 const rhythmOptions = {
                     format: readable, now, currentKey, headlineAnswered,
-                    cadence: cadenceOf(knowledge, tracker.type, undefined, now),
+                    cadence: cadenceFor(knowledge, tracker.type, now),
                     evidenced: (event: KnowledgeEvent) => isEvidenced(event, knowledge)
                 };
                 const rhythm = rhythmFor(knowledge, tracker.type, rhythmOptions);

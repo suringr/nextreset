@@ -264,3 +264,16 @@ export function isScheduleTopic(knowledge: GameKnowledge | undefined, topic: str
 export function rhythmFor(knowledge: GameKnowledge | undefined, topic: string, options: RhythmOptions): Block | undefined {
     return isScheduleTopic(knowledge, topic) ? scheduleRhythm(knowledge, topic, options) : releaseRhythm(knowledge, topic, topic, options);
 }
+
+/**
+ * "How often", as both the tracker page and /resets/ state it.
+ *
+ * cadenceOf refuses a rhythm whose last release is more than two intervals old — a release feed that has
+ * gone quiet is no longer running at that pace. A published schedule is different: its dates are the
+ * publisher's, and a year whose last date has passed was still a fortnightly schedule. Applying the
+ * feed's cutoff told readers a completed schedule "has no regular rhythm" (Codex, #78), so a schedule
+ * is judged without it. One function, so the two pages cannot answer differently.
+ */
+export function cadenceFor(knowledge: GameKnowledge | undefined, topic: string, now: Date, rule?: string): string | undefined {
+    return cadenceOf(knowledge, topic, rule, isScheduleTopic(knowledge, topic) ? undefined : now);
+}

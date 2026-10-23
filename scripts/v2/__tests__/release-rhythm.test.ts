@@ -10,7 +10,7 @@ import * as os from "os";
 import * as path from "path";
 import { KnowledgeEvent, GameKnowledge } from "../../render-data-blocks";
 import { formatDate, renderSite } from "../../render-pages";
-import { RhythmOptions, cadenceOf, isScheduleTopic, releaseRhythm, rhythmFor, scheduleRhythm, seriesOf, utcDaysBetween } from "../../release-rhythm";
+import { RhythmOptions, cadenceFor, cadenceOf, isScheduleTopic, releaseRhythm, rhythmFor, scheduleRhythm, seriesOf, utcDaysBetween } from "../../release-rhythm";
 
 const DAY = 86_400_000;
 const NOW = new Date("2026-10-22T12:00:00Z");
@@ -192,4 +192,17 @@ test("with an unanswered headline, the schedule's numbers use past dates only", 
     assert.match(counted, /^5 dates/);
     assert.ok(!/November|December/.test(counted), `no future date named: ${counted}`);
     assert.equal(row(unanswered, "Next scheduled"), undefined);
+});
+
+test("a completed schedule keeps its rhythm; a release feed that went quiet loses it", () => {
+    // Fourteen-day schedule whose last date was 29 days ago: the year is over, the schedule was regular.
+    const schedule: GameKnowledge = { events: [-99, -85, -71, -57, -43, -29].map((d, i) => ({
+        key: `lol/next-patch/26.2${i}`, game: "lol", topic: "next-patch", kind: "version", label: `26.2${i}`, status: "observed",
+        at: new Date(NOW.getTime() + d * DAY).toISOString().slice(0, 10) + "T00:00:00.000Z", precision: "day", publishState: "published"
+    })) };
+    assert.equal(cadenceOf(schedule, "next-patch", undefined, NOW), undefined, "the feed rule alone would drop it");
+    assert.equal(cadenceFor(schedule, "next-patch", NOW), "About every 2 weeks");
+    // The same spacing as a release feed that stopped: no rhythm is claimed for it.
+    const feed: GameKnowledge = { events: schedule.events!.map(e => ({ ...e, topic: "last-patch", key: e.key.replace("next-patch", "last-patch") })) };
+    assert.equal(cadenceFor(feed, "last-patch", NOW), undefined);
 });
