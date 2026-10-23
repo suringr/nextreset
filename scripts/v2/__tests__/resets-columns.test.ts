@@ -110,3 +110,9 @@ test("an observed update stamped a little past the clock is counted, and is \"To
     const block = releaseRhythm(k, "last-patch", "last-patch", { format: (iso: string) => formatDate(iso), now, evidenced: e => isEvidenced(e, k) })!;
     assert.equal(block.rows.find(r => r.label === "Last recorded patch")!.when, "Today");
 });
+
+test("an observation dated more than a day ahead is bad data: no distance, not \"Today\"", () => {
+    const now = new Date("2026-10-22T12:00:00.000Z");
+    const built = resetRows({ read: (game, type) => (game === "cs2" ? answered(game, type, "2026-10-25T12:00:00.000Z") : undefined), knowledge: () => undefined, now });
+    assert.equal(built.find(r => r.game === "cs2")!.distance, undefined);
+});

@@ -121,7 +121,10 @@ export function resetRows(input: ResetsInput): ResetRow[] {
         // An observation is never ahead, whatever its timestamp says. The pipeline keeps a just-published
         // update whose time is a little past the clock (source skew, or a change mid-request); across UTC
         // midnight that would read "in 1 day" for an update that has already shipped (Codex, #79).
-        const offset = raw !== undefined && raw > 0 && value.group !== "upcoming" ? 0 : raw;
+        // Within the same one-day allowance recordedReleases uses; an observation further ahead is bad
+        // data, not skew, and gets no distance at all rather than a "Today" beside a future date (Codex, #79).
+        const skewedAt = raw !== undefined && value.group !== "upcoming" && value.at! > input.now.getTime();
+        const offset = !skewedAt ? raw : value.at! - input.now.getTime() <= DAY_MS ? 0 : undefined;
         const distance = offset === undefined ? undefined
             : offset === 0 ? "Today"
             : offset > 0 ? `in ${offset} ${offset === 1 ? "day" : "days"}`
