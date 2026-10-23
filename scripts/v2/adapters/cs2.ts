@@ -14,7 +14,9 @@ import { Adapter } from "../adapter";
 import { Transport } from "../fetch/transport";
 import { SteamNewsSpec, SteamPost, createSteamNewsAdapter, parseSteamNews } from "./steam-news";
 
-export const CS2_NEWS_URL = "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=730&count=20&maxlength=240&feeds=steam_community_announcements&tags=patchnotes";
+// maxlength=0 asks for whole posts. It is the same request on the same schedule, about 29 KB instead of
+// 12 KB; the whole post is what lets a page say which sections an update's notes list (patch-notes.ts).
+export const CS2_NEWS_URL = "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=730&count=20&maxlength=0&feeds=steam_community_announcements&tags=patchnotes";
 
 /** Where visitors are sent when a post carries no usable link of its own. */
 export const CS2_UPDATES_PAGE = "https://www.counter-strike.net/news/updates";
@@ -25,7 +27,8 @@ export const CS2_STEAM_SPEC: SteamNewsSpec = {
     title: /^counter-strike 2 update$/i,
     identity: "gid",
     fallbackUrl: CS2_UPDATES_PAGE,
-    noPostReason: "no \"Counter-Strike 2 Update\" post among the latest Steam patch-note announcements"
+    noPostReason: "no \"Counter-Strike 2 Update\" post among the latest Steam patch-note announcements",
+    wholePosts: true
 };
 
 /** Live update posts in a news API response, newest first. Throws when the response is not the news API shape. */

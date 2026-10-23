@@ -30,7 +30,7 @@ import * as crypto from "crypto";
 import { Confidence } from "../../types";
 import { failureKindFromFetch } from "../reasons";
 import { Adapter, AdapterContext, AdapterOutcome, EventInput } from "../adapter";
-import { Claim, Document, SourceState } from "../domain";
+import { Claim, Document, GameKnowledge, SourceState } from "../domain";
 import { FetchedDocument, smartFetch } from "../fetch/smart-fetch";
 import { Transport } from "../fetch/transport";
 import { eventKey } from "../identity";
@@ -50,6 +50,12 @@ export interface SteamNewsSpec {
     fallbackUrl: string;
     /** Failure reason when a valid response holds no accepted post. */
     noPostReason: string;
+    /**
+     * The source asks for whole posts (maxlength=0). A post already evidenced only by an excerpt — every
+     * post stored before the source asked for whole ones — then gets one more claim, from the whole read:
+     * the same fact, the same link, fuller evidence. Once per post; never for a re-post.
+     */
+    wholePosts?: boolean;
 }
 
 export interface SteamNewsFeed {
@@ -126,6 +132,28 @@ function firstPublications(posts: SteamPost[]): SteamPost[] {
 
 function sha(text: string): string {
     return crypto.createHash("sha256").update(text).digest("hex");
+}
+
+/** A stored or fetched post's notes text, or undefined where the quote is not a post object. */
+function notesOf(quote: string | undefined): string | undefined {
+    if (!quote) return undefined;
+    try {
+        const contents = (JSON.parse(quote) as { contents?: unknown }).contents;
+        return typeof contents === "string" ? contents : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+/** Whether a claim was taken from a response that asked Steam for whole posts (maxlength=0). */
+function readWhole(claim: Claim, knowledge: GameKnowledge): boolean {
+    const document = knowledge.documents.find(d => d.id === claim.documentId);
+    if (!document) return false;
+    try {
+        return new URL(document.url).searchParams.get("maxlength") === "0";
+    } catch {
+        return false;
+    }
 }
 
 async function runFeeds(ctx: AdapterContext, feeds: SteamNewsFeed[], transport: Transport | undefined): Promise<AdapterOutcome> {
@@ -221,9 +249,23 @@ async function runFeeds(ctx: AdapterContext, feeds: SteamNewsFeed[], transport: 
             if (!posts.includes(post)) continue;
             const key = eventKey(game.id, topic.type, post.identity);
             if (instantOf(post) !== post.at) continue;
-            if (knowledge.claims.some(c => c.eventKey === key && c.field === "at" && c.value === post.at)) continue;
+            const stated = knowledge.claims.filter(c => c.eventKey === key && c.field === "at" && c.value === post.at);
+            if (stated.length > 0) {
+                // A known post adds evidence only where the source asks for whole posts and the notes this
+                // response carries are not already stored whole: the first whole read of a post stored from
+                // an excerpt, or a post Valve has since edited (Codex, #81). Only the notes are compared,
+                // so metadata elsewhere in the item cannot add a claim on every run.
+                if (!feeds.find(f => f.sourceId === feedSourceId)!.spec.wholePosts) continue;
+                const newestWhole = stated.filter(c => readWhole(c, knowledge)).sort((a, b) => b.extractedAt.localeCompare(a.extractedAt))[0];
+                if (newestWhole && notesOf(newestWhole.quote) === notesOf(post.excerpt)) continue;
+            }
+            // A claim for a post already on record is a later reading of it, so its identity carries the time
+            // of that reading. Otherwise notes edited A -> B -> A would produce the very id A's first claim has,
+            // the pipeline would drop it as a duplicate, and B would stay the newest evidence (Codex, #81).
+            // A first claim keeps the identity it has always had.
+            const reading = stated.length > 0 ? `|${document.fetchedAt}` : "";
             claims.push({
-                id: sha(`${document.textHash}|${key}|at|${post.at}`).slice(0, 24),
+                id: sha(`${document.textHash}|${key}|at|${post.at}${reading}`).slice(0, 24),
                 documentId: document.textHash,
                 eventKey: key,
                 field: "at",
