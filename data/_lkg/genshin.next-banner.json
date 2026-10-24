@@ -1,0 +1,16 @@
+{
+  "provider_id": "genshin",
+  "game": "genshin",
+  "type": "next-banner",
+  "title": "Genshin Impact Next Banner End",
+  "status": "fresh",
+  "nextEventUtc": "2026-11-03T06:59:59.000Z",
+  "fetched_at_utc": "2026-10-24T15:03:48.494Z",
+  "last_success_at_utc": "2026-10-24T15:03:48.494Z",
+  "source_url": "https://genshin.hoyoverse.com/en/news",
+  "confidence": "high",
+  "http_status": 200,
+  "fetch_mode": "http",
+  "notes": "Void Star's Advent / La Chanson Cerise / Epitome Invocation: ends 2026-11-03 14:59 server time (Asia 06:59 UTC, Europe 13:59 UTC, America 19:59 UTC)",
+  "precision": "exact"
+}
