@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "warzone",
-  "updatedAt": "2026-10-26T02:19:22.163Z",
+  "updatedAt": "2026-10-26T11:52:17.796Z",
   "events": [
     {
       "key": "warzone/last-patch/call-of-duty-bo6-warzone-season-05-patch-notes-2025-09-03",
@@ -221,7 +221,7 @@
       "at": "2026-10-14T00:00:00.000Z",
       "precision": "day",
       "firstSeen": "2026-10-14T21:06:31.108Z",
-      "lastVerified": "2026-10-26T02:19:22.163Z",
+      "lastVerified": "2026-10-26T11:52:17.796Z",
       "publishState": "published"
     }
   ],
@@ -631,7 +631,7 @@
       "etag": "W/\"28b07-65eb4d76ad342-gzip\"",
       "lastModified": "Mon, 26 Oct 2026 02:11:01 GMT",
       "textHash": "acec11a89091cdfe96eac7ad225ea79d61761ef3a89b087b8c736206cd728c9a",
-      "lastFetchedAt": "2026-10-26T02:19:22.163Z",
+      "lastFetchedAt": "2026-10-26T11:52:17.796Z",
       "lastUsableAt": "2026-10-26T02:19:22.163Z",
       "lastVerdict": "usable",
       "lastMode": "http",
