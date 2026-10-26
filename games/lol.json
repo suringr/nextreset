@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "lol",
-  "updatedAt": "2026-10-25T20:08:47.256Z",
+  "updatedAt": "2026-10-26T02:19:19.583Z",
   "events": [
     {
       "key": "lol/next-patch/26.01",
@@ -308,7 +308,7 @@
       "precision": "day",
       "timezone": "America/Los_Angeles",
       "firstSeen": "2026-09-15T20:04:34.116Z",
-      "lastVerified": "2026-10-25T20:08:47.256Z",
+      "lastVerified": "2026-10-26T02:19:19.583Z",
       "publishState": "published"
     },
     {
@@ -2099,8 +2099,8 @@
       "url": "https://support-leagueoflegends.riotgames.com/hc/en-us/articles/360018987893-League-of-Legends-Patch-Schedule",
       "textHash": "75c1059d255b7ce93161e5b8fea1a9c9be3b9e3fe6524d28cb1038ada7075640",
       "contentFingerprint": "72d4ea0efb22d4c5fc847d0b7df6a0bb63fad94b998ab2e67acf52c50400170c",
-      "lastFetchedAt": "2026-10-25T20:08:47.256Z",
-      "lastUsableAt": "2026-10-25T20:08:47.256Z",
+      "lastFetchedAt": "2026-10-26T02:19:19.583Z",
+      "lastUsableAt": "2026-10-26T02:19:19.583Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
