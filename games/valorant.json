@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "valorant",
-  "updatedAt": "2026-10-27T11:15:49.930Z",
+  "updatedAt": "2026-10-27T17:01:24.883Z",
   "events": [
     {
       "key": "valorant/last-patch/12.07",
@@ -56,7 +56,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:27:17.654Z",
-      "lastVerified": "2026-10-27T02:55:06.544Z",
+      "lastVerified": "2026-10-27T17:01:24.883Z",
       "publishState": "published"
     },
     {
@@ -70,7 +70,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:27:17.654Z",
-      "lastVerified": "2026-10-27T02:55:06.544Z",
+      "lastVerified": "2026-10-27T17:01:24.883Z",
       "publishState": "published"
     },
     {
@@ -84,7 +84,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:27:17.654Z",
-      "lastVerified": "2026-10-27T02:55:06.544Z",
+      "lastVerified": "2026-10-27T17:01:24.883Z",
       "publishState": "published"
     },
     {
@@ -98,7 +98,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:27:17.654Z",
-      "lastVerified": "2026-10-27T02:55:06.544Z",
+      "lastVerified": "2026-10-27T17:01:24.883Z",
       "publishState": "published"
     },
     {
@@ -112,7 +112,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:27:17.654Z",
-      "lastVerified": "2026-10-27T02:55:06.544Z",
+      "lastVerified": "2026-10-27T17:01:24.883Z",
       "publishState": "published"
     },
     {
@@ -126,7 +126,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:27:17.654Z",
-      "lastVerified": "2026-10-27T02:55:06.544Z",
+      "lastVerified": "2026-10-27T17:01:24.883Z",
       "publishState": "published"
     },
     {
@@ -140,7 +140,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T22:27:17.654Z",
-      "lastVerified": "2026-10-27T02:55:06.544Z",
+      "lastVerified": "2026-10-27T17:01:24.883Z",
       "publishState": "published"
     },
     {
@@ -154,7 +154,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-22T15:57:11.252Z",
-      "lastVerified": "2026-10-27T02:55:06.544Z",
+      "lastVerified": "2026-10-27T17:01:24.883Z",
       "publishState": "published"
     },
     {
@@ -168,7 +168,21 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-13T13:10:52.208Z",
-      "lastVerified": "2026-10-27T11:15:49.930Z",
+      "lastVerified": "2026-10-27T17:01:24.883Z",
+      "publishState": "published"
+    },
+    {
+      "key": "valorant/last-patch/13.09",
+      "game": "valorant",
+      "topic": "last-patch",
+      "kind": "version",
+      "label": "VALORANT Patch Notes 13.09",
+      "status": "observed",
+      "at": "2026-10-27T13:00:00.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-10-27T17:01:24.883Z",
+      "lastVerified": "2026-10-27T17:01:24.883Z",
       "publishState": "published"
     }
   ],
@@ -280,6 +294,15 @@
       "at": "2026-10-13T13:10:52.208Z",
       "reason": "observed by valorant-patch-notes-page",
       "decision": "applied"
+    },
+    {
+      "entityKey": "valorant/last-patch/13.09",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "VALORANT Patch Notes 13.09 @ 2026-10-27T13:00:00.000Z",
+      "at": "2026-10-27T17:01:24.883Z",
+      "reason": "observed by valorant-patch-notes-page",
+      "decision": "applied"
     }
   ],
   "overrides": [],
@@ -307,6 +330,15 @@
       "url": "https://playvalorant.com/en-us/news/tags/patch-notes/",
       "sourceId": "valorant-patch-notes-page",
       "fetchedAt": "2026-10-13T13:10:52.208Z",
+      "title": "VALORANT patch notes",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "0c0024e962b4632711785fd56b73314028cad00362651d44018543cc51ecb0cd",
+      "url": "https://playvalorant.com/en-us/news/tags/patch-notes/",
+      "sourceId": "valorant-patch-notes-page",
+      "fetchedAt": "2026-10-27T17:01:24.883Z",
       "title": "VALORANT patch notes",
       "fetchMode": "http",
       "confidence": "high"
@@ -444,16 +476,27 @@
       "quote": "{\"media\":{\"type\":\"image\",\"provider\":\"sanity\",\"url\":\"https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/268cd89fa38e291d3cd389ac950cc03e1c2c4e2f-1920x1080.jpg?accountingTag=VAL\",\"dimensions\":{\"width\":1920,\"height\":1080,\"aspectRatio\":1.7777777777777777},\"colors\":{\"primary\":\"#190E1B\",\"secondary\":\"#F9DCEB\",\"label\":\"#000000\"},\"mimeType\":\"image/jpeg\"},\"imageMedia\":{\"type\":\"image\",\"provider\":\"sanity\",\"url\":\"https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/268cd89fa38e291d3cd389ac950cc03e1c2c4e2f-1920x1080.jpg?accountingTag=VAL\",\"dimensions\":{\"width\":1920,\"height\":1080,\"aspectRatio\":1.7777777777777777},\"colors\":{\"primary\":\"#190E1B\",\"secondary\":\"#F9DCEB\",\"label\":\"#000000\"},\"mimeType\":\"image/jpeg\"},\"title\":\"VALORANT Patch Notes 13.08\",\"action\":{\"type\":\"weblink\",\"payload\":{\"url\":\"/en-us/news/game-updates/valorant-patch-notes-13-08\"}},\"analytics\":{\"contentId\":\"59548d3e-1b35-4606-8f38-41c7cf352612.en-us\",\"contentLocale\":\"en-us\",\"rev\":\"tgvYETtoXtE10JgHQe4t7a\",\"publishDate\":\"2026-10-13T13:00:00.000Z\"},\"category\":{\"machineName\":\"game_updates\",\"title\":\"Game Updates\",\"description\":\"The definitive source on all updates coming to the game.\"},\"description\":{\"type\":\"html\",\"body\":\"Act 6 starts now.\"},\"publishedAt\":\"2026-10-13T13:00:00.000Z\",\"product\":{\"title\":\"Valorant (en-us)\",\"machineName\":\"valorant\",\"id\":\"product.valorant.en-us\",\"media\":{\"type\":\"image\",\"provider\":\"sanity\",\"url\":\"https://cmsassets.rgpub.io/sanity/images/dsfx7636/content_organization/e5be4d2bb291c9f399ea1fde8ae2c69dc256733e-24x24.svg?accountingTag=VAL\",\"dimensions\":{\"width\":24,\"height\":24,\"aspectRatio\":1},\"colors\":{\"primary\":\"#ff4655\",\"secondary\":\"#FFD6DA\",\"label\":\"#060606\"},\"mimeType\":\"image/svg+xml\"}},\"tags\":[{\"machineName\":\"patch_notes\",\"title\":\"Patch Notes\"}]}",
       "linkUrl": "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-13-08",
       "extractedAt": "2026-10-13T13:10:52.208Z"
+    },
+    {
+      "id": "5c7d26a92bd77cddab4f627c",
+      "documentId": "0c0024e962b4632711785fd56b73314028cad00362651d44018543cc51ecb0cd",
+      "eventKey": "valorant/last-patch/13.09",
+      "field": "at",
+      "value": "2026-10-27T13:00:00.000Z",
+      "method": "deterministic",
+      "quote": "{\"media\":{\"type\":\"image\",\"provider\":\"sanity\",\"url\":\"https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/b8299cbf36d68d63a8d359d513ae1619a98b38c9-1920x1080.png?accountingTag=VAL\",\"dimensions\":{\"width\":1920,\"height\":1080,\"aspectRatio\":1.7777777777777777},\"colors\":{\"primary\":\"#100B16\",\"secondary\":\"#F8D6FF\",\"label\":\"#000000\"},\"mimeType\":\"image/png\"},\"imageMedia\":{\"type\":\"image\",\"provider\":\"sanity\",\"url\":\"https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/b8299cbf36d68d63a8d359d513ae1619a98b38c9-1920x1080.png?accountingTag=VAL\",\"dimensions\":{\"width\":1920,\"height\":1080,\"aspectRatio\":1.7777777777777777},\"colors\":{\"primary\":\"#100B16\",\"secondary\":\"#F8D6FF\",\"label\":\"#000000\"},\"mimeType\":\"image/png\"},\"title\":\"VALORANT Patch Notes 13.09\",\"action\":{\"type\":\"weblink\",\"payload\":{\"url\":\"/en-us/news/game-updates/valorant-patch-notes-1309\"}},\"analytics\":{\"contentId\":\"3f9b4a01-fc80-4423-83bb-46db0ba59d89.en-us\",\"contentLocale\":\"en-us\",\"rev\":\"mA0YduBggbdWkWYiZpOO6v\",\"publishDate\":\"2026-10-27T13:00:00.000Z\"},\"category\":{\"machineName\":\"game_updates\",\"title\":\"Game Updates\",\"description\":\"The definitive source on all updates coming to the game.\"},\"description\":{\"type\":\"html\",\"body\":\"Hush is here.\"},\"publishedAt\":\"2026-10-27T13:00:00.000Z\",\"product\":{\"title\":\"Valorant (en-us)\",\"machineName\":\"valorant\",\"id\":\"product.valorant.en-us\",\"media\":{\"type\":\"image\",\"provider\":\"sanity\",\"url\":\"https://cmsassets.rgpub.io/sanity/images/dsfx7636/content_organization/e5be4d2bb291c9f399ea1fde8ae2c69dc256733e-24x24.svg?accountingTag=VAL\",\"dimensions\":{\"width\":24,\"height\":24,\"aspectRatio\":1},\"colors\":{\"primary\":\"#ff4655\",\"secondary\":\"#FFD6DA\",\"label\":\"#060606\"},\"mimeType\":\"image/svg+xml\"}},\"tags\":[{\"machineName\":\"patch_notes\",\"title\":\"Patch Notes\"}]}",
+      "linkUrl": "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-1309",
+      "extractedAt": "2026-10-27T17:01:24.883Z"
     }
   ],
   "sources": [
     {
       "id": "valorant-patch-notes-page",
       "url": "https://playvalorant.com/en-us/news/tags/patch-notes/",
-      "etag": "W/\"13ys9squ3wr9kaw-df\"",
-      "textHash": "1509f619efeca56b9142c34e87408f78cbd3c93ad9e3679e9fd5ea9312861030",
-      "lastFetchedAt": "2026-10-27T11:15:49.930Z",
-      "lastUsableAt": "2026-10-27T11:15:49.930Z",
+      "etag": "W/\"n53k27hasc9lm9-df\"",
+      "textHash": "0c0024e962b4632711785fd56b73314028cad00362651d44018543cc51ecb0cd",
+      "lastFetchedAt": "2026-10-27T17:01:24.883Z",
+      "lastUsableAt": "2026-10-27T17:01:24.883Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
