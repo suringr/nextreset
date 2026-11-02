@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "genshin",
-  "updatedAt": "2026-11-02T03:25:23.795Z",
+  "updatedAt": "2026-11-02T14:12:15.681Z",
   "events": [
     {
       "key": "genshin/next-banner/event-wishes-2026-09-22-14-59-59",
@@ -42,7 +42,21 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-08T12:28:16.609Z",
-      "lastVerified": "2026-11-02T03:25:23.795Z",
+      "lastVerified": "2026-11-02T14:12:15.681Z",
+      "publishState": "published"
+    },
+    {
+      "key": "genshin/next-banner/event-wishes-2026-11-24-17-59-00",
+      "game": "genshin",
+      "topic": "next-banner",
+      "kind": "occurrence",
+      "label": "Myriad Patterns Unfold / Chanson of Many Waters / Epitome Invocation: ends 2026-11-24 17:59 server time (Asia 09:59 UTC, Europe 16:59 UTC, America 22:59 UTC)",
+      "status": "scheduled",
+      "at": "2026-11-24T09:59:00.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-11-02T14:12:15.681Z",
+      "lastVerified": "2026-11-02T14:12:15.681Z",
       "publishState": "published"
     }
   ],
@@ -91,6 +105,15 @@
       "at": "2026-10-13T13:10:53.013Z",
       "reason": "scheduled instant has passed",
       "decision": "applied"
+    },
+    {
+      "entityKey": "genshin/next-banner/event-wishes-2026-11-24-17-59-00",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Myriad Patterns Unfold / Chanson of Many Waters / Epitome Invocation: ends 2026-11-24 17:59 server time (Asia 09:59 UTC, Europe 16:59 UTC, America 22:59 UTC) @ 2026-11-24T09:59:00.000Z",
+      "at": "2026-11-02T14:12:15.681Z",
+      "reason": "observed by genshin-announcements-os_asia",
+      "decision": "applied"
     }
   ],
   "overrides": [],
@@ -118,6 +141,15 @@
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_asia",
       "sourceId": "genshin-announcements-os_asia",
       "fetchedAt": "2026-10-08T12:28:16.609Z",
+      "title": "Genshin Impact announcements (Asia server)",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "f3d8886dee5e1f2763748fc7deb715212c24bea6fd1025c3fd549c0378ee5582",
+      "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_asia",
+      "sourceId": "genshin-announcements-os_asia",
+      "fetchedAt": "2026-11-02T14:12:15.681Z",
       "title": "Genshin Impact announcements (Asia server)",
       "fetchMode": "http",
       "confidence": "high"
@@ -153,15 +185,25 @@
       "method": "deterministic",
       "quote": "{\"ann_id\":21888,\"title\":\"Event Wish \\\"Void Star's Advent\\\" - Boosted Drop Rate for \\\"Void Star\\\" Skirk (Cryo)!\",\"subtitle\":\"Event Wish \\\"Void Star's Advent\\\"\",\"banner\":\"https://sdk.hoyoverse.com/upload/ann/2026/09/23/8668a2e84580c1426c290a447320bcd9_5708783295049261864_transformed.jpg\",\"content\":\"\",\"type_label\":\"Event\",\"tag_label\":\"2\",\"tag_icon\":\"https://sdk.hoyoverse.com/upload/announcement/2020/03/05/2cf7327b5fb2c050872ead29e338e368_7400353291716098710.png\",\"login_alert\":1,\"lang\":\"en-us\",\"start_time\":\"2026-10-08 16:00:00\",\"end_time\":\"2026-11-03 14:59:59\",\"type\":1,\"remind\":1,\"alert\":0,\"tag_start_time\":\"2000-01-02 15:04:05\",\"tag_end_time\":\"2030-01-02 15:04:05\",\"remind_ver\":1,\"has_content\":true,\"extra_remind\":0,\"tag_icon_hover\":\"\",\"logout_remind\":0,\"logout_remind_ver\":1,\"country\":\"\",\"need_remind_text\":0,\"remind_text\":\"\",\"weak_remind\":1,\"remind_consumption_type\":0}",
       "extractedAt": "2026-10-08T12:28:16.609Z"
+    },
+    {
+      "id": "87a72d6be893c9a31507206f",
+      "documentId": "f3d8886dee5e1f2763748fc7deb715212c24bea6fd1025c3fd549c0378ee5582",
+      "eventKey": "genshin/next-banner/event-wishes-2026-11-24-17-59-00",
+      "field": "at",
+      "value": "2026-11-24T09:59:00.000Z",
+      "method": "deterministic",
+      "quote": "{\"ann_id\":21997,\"title\":\"Event Wish \\\"Myriad Patterns Unfold\\\" - Boosted drop rate for \\\"Rules Set at Naught\\\" Mitya (Electro)!\",\"subtitle\":\"Event Wish \\\"Myriad Patterns Unfold\\\"\",\"banner\":\"https://sdk.hoyoverse.com/upload/ann/2026/10/29/3cd76fed0001990a4f53fc06ad510ccd_794691239659394631_transformed.png\",\"content\":\"\",\"type_label\":\"Event\",\"tag_label\":\"2\",\"tag_icon\":\"https://sdk.hoyoverse.com/upload/announcement/2020/03/05/2cf7327b5fb2c050872ead29e338e368_7400353291716098710.png\",\"login_alert\":1,\"lang\":\"en-us\",\"start_time\":\"2026-11-02 12:00:00\",\"end_time\":\"2026-11-24 17:59:00\",\"type\":1,\"remind\":0,\"alert\":0,\"tag_start_time\":\"2000-01-02 15:04:05\",\"tag_end_time\":\"2030-01-02 15:04:05\",\"remind_ver\":1,\"has_content\":true,\"extra_remind\":0,\"tag_icon_hover\":\"\",\"logout_remind\":0,\"logout_remind_ver\":1,\"country\":\"\",\"need_remind_text\":0,\"remind_text\":\"\",\"weak_remind\":0,\"remind_consumption_type\":0}",
+      "extractedAt": "2026-11-02T14:12:15.681Z"
     }
   ],
   "sources": [
     {
       "id": "genshin-announcements-os_asia",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_asia",
-      "textHash": "657b4a640bd90fa021d7018a15223d5e827f76ac75dd0e676913935a8039d557",
-      "lastFetchedAt": "2026-11-02T03:25:23.795Z",
-      "lastUsableAt": "2026-11-02T03:25:23.795Z",
+      "textHash": "f3d8886dee5e1f2763748fc7deb715212c24bea6fd1025c3fd549c0378ee5582",
+      "lastFetchedAt": "2026-11-02T14:12:15.681Z",
+      "lastUsableAt": "2026-11-02T14:12:15.681Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -169,9 +211,9 @@
     {
       "id": "genshin-announcements-os_euro",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_euro",
-      "textHash": "4a9d4334305e09f79ac50197fde9fa1fd5904825fd245f42c7162fbaab240db4",
-      "lastFetchedAt": "2026-11-02T03:25:23.795Z",
-      "lastUsableAt": "2026-11-02T03:25:23.795Z",
+      "textHash": "e6aa89e1fc4429bf2055d0c300794c5c663802ffd76568a55ac885670f11b469",
+      "lastFetchedAt": "2026-11-02T14:12:15.681Z",
+      "lastUsableAt": "2026-11-02T14:12:15.681Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -179,9 +221,9 @@
     {
       "id": "genshin-announcements-os_usa",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_usa",
-      "textHash": "b1336408c2c008c87aaa2e5239ad53404257baec0c805572a155a8740c79b7b7",
-      "lastFetchedAt": "2026-11-02T03:25:23.795Z",
-      "lastUsableAt": "2026-11-02T03:25:23.795Z",
+      "textHash": "61d95e387d3fdd01de4782b177328b9dd6fae5031271f07aed2e87fdab238b69",
+      "lastFetchedAt": "2026-11-02T14:12:15.681Z",
+      "lastUsableAt": "2026-11-02T14:12:15.681Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
