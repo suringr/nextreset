@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "genshin",
-  "updatedAt": "2026-11-03T00:11:22.613Z",
+  "updatedAt": "2026-11-03T13:15:35.969Z",
   "events": [
     {
       "key": "genshin/next-banner/event-wishes-2026-09-22-14-59-59",
@@ -37,12 +37,12 @@
       "topic": "next-banner",
       "kind": "occurrence",
       "label": "Void Star's Advent / La Chanson Cerise / Epitome Invocation: ends 2026-11-03 14:59 server time (Asia 06:59 UTC, Europe 13:59 UTC, America 19:59 UTC)",
-      "status": "scheduled",
+      "status": "ended",
       "at": "2026-11-03T06:59:59.000Z",
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-08T12:28:16.609Z",
-      "lastVerified": "2026-11-03T00:11:22.613Z",
+      "lastVerified": "2026-11-03T13:15:35.969Z",
       "publishState": "published"
     },
     {
@@ -56,7 +56,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-11-02T14:12:15.681Z",
-      "lastVerified": "2026-11-03T00:11:22.613Z",
+      "lastVerified": "2026-11-03T13:15:35.969Z",
       "publishState": "published"
     }
   ],
@@ -113,6 +113,15 @@
       "newValue": "Myriad Patterns Unfold / Chanson of Many Waters / Epitome Invocation: ends 2026-11-24 17:59 server time (Asia 09:59 UTC, Europe 16:59 UTC, America 22:59 UTC) @ 2026-11-24T09:59:00.000Z",
       "at": "2026-11-02T14:12:15.681Z",
       "reason": "observed by genshin-announcements-os_asia",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "genshin/next-banner/event-wishes-2026-11-03-14-59-59",
+      "field": "status",
+      "oldValue": "scheduled",
+      "newValue": "ended",
+      "at": "2026-11-03T13:15:35.969Z",
+      "reason": "scheduled instant has passed",
       "decision": "applied"
     }
   ],
@@ -201,9 +210,9 @@
     {
       "id": "genshin-announcements-os_asia",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_asia",
-      "textHash": "36d5ffdfb3acc7b520896d15b9fddd95638f7fe85fb8ba3ce93ccacc6707dbd9",
-      "lastFetchedAt": "2026-11-03T00:11:22.613Z",
-      "lastUsableAt": "2026-11-03T00:11:22.613Z",
+      "textHash": "02f7f21a01a987e857b858eb51116e0ee2f8c8cccd457d820bf73c47a1acde0b",
+      "lastFetchedAt": "2026-11-03T13:15:35.969Z",
+      "lastUsableAt": "2026-11-03T13:15:35.969Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -211,9 +220,9 @@
     {
       "id": "genshin-announcements-os_euro",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_euro",
-      "textHash": "f061dbff2206cb1d443a6b7dd85fd785adb33019dde206299f84dfa11f87b908",
-      "lastFetchedAt": "2026-11-03T00:11:22.613Z",
-      "lastUsableAt": "2026-11-03T00:11:22.613Z",
+      "textHash": "dcf59875950c66ce4eae3f789f519d3d6ffc91bc2bd01262485e9b1c66e4514c",
+      "lastFetchedAt": "2026-11-03T13:15:35.969Z",
+      "lastUsableAt": "2026-11-03T13:15:35.969Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -221,9 +230,9 @@
     {
       "id": "genshin-announcements-os_usa",
       "url": "https://sg-hk4e-api.hoyoverse.com/common/hk4e_global/announcement/api/getAnnList?game=hk4e&game_biz=hk4e_global&lang=en&bundle_id=hk4e_global&platform=pc&level=55&uid=100000000&region=os_usa",
-      "textHash": "656e50fece997ad98f2cbd5c42a6a0155b1c72e19dad78a3450add2d1b2d6ba9",
-      "lastFetchedAt": "2026-11-03T00:11:22.613Z",
-      "lastUsableAt": "2026-11-03T00:11:22.613Z",
+      "textHash": "b26feb06d694462a6c0b25d2256350255b0a864f7acc97ab07d6e28b7b1db103",
+      "lastFetchedAt": "2026-11-03T13:15:35.969Z",
+      "lastUsableAt": "2026-11-03T13:15:35.969Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
