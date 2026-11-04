@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "cs2",
-  "updatedAt": "2026-11-03T22:41:28.087Z",
+  "updatedAt": "2026-11-04T03:55:28.395Z",
   "events": [
     {
       "key": "cs2/last-update/1831432155569878",
@@ -182,7 +182,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -196,7 +196,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -210,7 +210,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -224,7 +224,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -238,7 +238,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -252,7 +252,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -266,7 +266,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -280,7 +280,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-23T02:26:11.344Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -294,7 +294,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-24T02:14:52.820Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -308,7 +308,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-25T02:31:16.126Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -322,7 +322,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-26T02:34:45.835Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -336,7 +336,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-28T22:45:31.546Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -350,7 +350,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-01T03:07:10.755Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -364,7 +364,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-03T02:55:20.012Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -378,7 +378,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-06T03:51:50.199Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -392,7 +392,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-08T22:39:24.509Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -406,7 +406,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-15T02:22:34.428Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -420,7 +420,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-23T00:00:04.442Z",
-      "lastVerified": "2026-10-28T21:59:55.989Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     },
     {
@@ -434,7 +434,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-28T21:59:55.989Z",
-      "lastVerified": "2026-11-03T22:41:28.087Z",
+      "lastVerified": "2026-11-04T03:55:28.395Z",
       "publishState": "published"
     }
   ],
@@ -1547,9 +1547,9 @@
     {
       "id": "cs2-steam-patchnotes",
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=730&count=20&maxlength=0&feeds=steam_community_announcements&tags=patchnotes",
-      "textHash": "5b547a58450dd3a31574ed05c2309ac0815fbdffa556225f16fb1957c04ad8e6",
-      "lastFetchedAt": "2026-11-03T22:41:28.087Z",
-      "lastUsableAt": "2026-11-03T22:41:28.087Z",
+      "textHash": "d6f2f34349439d2cbef7f509019ea65aad27882b8637c8d26de1c673a0e805c4",
+      "lastFetchedAt": "2026-11-04T03:55:28.395Z",
+      "lastUsableAt": "2026-11-04T03:55:28.395Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
