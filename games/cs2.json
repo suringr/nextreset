@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "cs2",
-  "updatedAt": "2026-11-04T22:59:41.745Z",
+  "updatedAt": "2026-11-05T04:15:12.187Z",
   "events": [
     {
       "key": "cs2/last-update/1831432155569878",
@@ -182,7 +182,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -196,7 +196,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -210,7 +210,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -224,7 +224,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -238,7 +238,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -252,7 +252,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -266,7 +266,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T21:38:48.666Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -280,7 +280,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-23T02:26:11.344Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -294,7 +294,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-24T02:14:52.820Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -308,7 +308,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-25T02:31:16.126Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -322,7 +322,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-26T02:34:45.835Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -336,7 +336,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-28T22:45:31.546Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -350,7 +350,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-01T03:07:10.755Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -364,7 +364,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-03T02:55:20.012Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -378,7 +378,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-06T03:51:50.199Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -392,7 +392,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-08T22:39:24.509Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -406,7 +406,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-15T02:22:34.428Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -420,7 +420,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-23T00:00:04.442Z",
-      "lastVerified": "2026-11-04T03:55:28.395Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     },
     {
@@ -434,7 +434,21 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-28T21:59:55.989Z",
-      "lastVerified": "2026-11-04T22:59:41.745Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
+      "publishState": "published"
+    },
+    {
+      "key": "cs2/last-update/1848557880481353",
+      "game": "cs2",
+      "topic": "last-update",
+      "kind": "occurrence",
+      "label": "Counter-Strike 2 Update",
+      "status": "observed",
+      "at": "2026-11-05T00:54:07.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-11-05T04:15:12.187Z",
+      "lastVerified": "2026-11-05T04:15:12.187Z",
       "publishState": "published"
     }
   ],
@@ -715,6 +729,15 @@
       "oldValue": null,
       "newValue": "Counter-Strike 2 Update @ 2026-10-28T21:48:09.000Z",
       "at": "2026-10-28T21:59:55.989Z",
+      "reason": "observed by cs2-steam-patchnotes",
+      "decision": "applied"
+    },
+    {
+      "entityKey": "cs2/last-update/1848557880481353",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Counter-Strike 2 Update @ 2026-11-05T00:54:07.000Z",
+      "at": "2026-11-05T04:15:12.187Z",
       "reason": "observed by cs2-steam-patchnotes",
       "decision": "applied"
     }
@@ -1005,6 +1028,15 @@
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=730&count=20&maxlength=0&feeds=steam_community_announcements&tags=patchnotes",
       "sourceId": "cs2-steam-patchnotes",
       "fetchedAt": "2026-10-28T21:59:55.989Z",
+      "title": "Steam news API response",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "4c42b2bc7216beecb5b81d85d55e266cd1edc0316fd8f3ee3c35c1f107052bed",
+      "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=730&count=20&maxlength=0&feeds=steam_community_announcements&tags=patchnotes",
+      "sourceId": "cs2-steam-patchnotes",
+      "fetchedAt": "2026-11-05T04:15:12.187Z",
       "title": "Steam news API response",
       "fetchMode": "http",
       "confidence": "high"
@@ -1541,15 +1573,26 @@
       "quote": "{\"gid\":\"1847920302232686\",\"title\":\"Counter-Strike 2 Update\",\"url\":\"https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1847920302232686\",\"is_external_url\":true,\"author\":\"Vitaliy\",\"contents\":\"[p]\\\\[ GAMEPLAY ][/p][list][*][p]Added an option to switch Silent Reload Mode between Hold and Toggle. With toggle enabled, once the silent reload starts you can let go of the reload button. To cancel a silent reload and go back to a fast reload, you can tap the reload button again.[/p][/*][*][p]Fixed various cases where the first sound of a reload was audible irrespective if a user requested a silent reload or not.[/p][/*][/list][p]\\\\[ MISC ][/p][list][*][p]Fixed a bug where liquid could render as black on AMD video cards[/p][/*][*][p]Fixed some sound and UI bugs when rewinding during demo playback[/p][/*][/list]\",\"feedlabel\":\"Community Announcements\",\"date\":1793224089,\"feedname\":\"steam_community_announcements\",\"feed_type\":1,\"appid\":730,\"tags\":[\"patchnotes\"]}",
       "linkUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1847920302232686",
       "extractedAt": "2026-10-28T21:59:55.989Z"
+    },
+    {
+      "id": "f0177aacfdde2da4ab2d99eb",
+      "documentId": "4c42b2bc7216beecb5b81d85d55e266cd1edc0316fd8f3ee3c35c1f107052bed",
+      "eventKey": "cs2/last-update/1848557880481353",
+      "field": "at",
+      "value": "2026-11-05T00:54:07.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1848557880481353\",\"title\":\"Counter-Strike 2 Update\",\"url\":\"https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1848557880481353\",\"is_external_url\":true,\"author\":\"Vitaliy\",\"contents\":\"[p]\\\\[ GAMEPLAY ][/p][list][*][p]Bomb defusal in Retakes mode will now instantly finish when there is sufficient time remaining in the round and no active utility remains to prevent the defuse.[/p][/*][*][p]Reduced freeze time and round restart delay in Retakes mode.[/p][/*][*][p]Pinging pet chickens during freeze time will request a trick from them.[/p][/*][*][p]Pet chicken names are no longer displayed when customized item text game option is set to hidden.[/p][/*][/list][p]\\\\[ MAP SCRIPTING ][/p][list][*][p]Instance.Precache now accepts entities to precache[/p][/*][*][p]Added new top level export Entities[/p][/*][*][p]Added Entities.Spawn[/p][/*][*][p]Added Instance.OnBotControl[/p][/*][*][p]Added CSPlayerController.IsControllingBot[/p][/*][*][p]Added CSPlayerController.GetControlledBotPawn[/p][/*][*][p]Added CSPlayerPawn.Reset[/p][/*][*][p]Moved Instance.ConnectOutput to Entities and changed it to accept a config object[/p][/*][*][p]Moved Instance.DisconnectOutput to Entities[/p][/*][*][p]Renamed Instance.EntFireAtName to Entities.FireInput[/p][/*][*][p]Renamed Instance.FindEntitiesByName to Entities.FindByName[/p][/*][*][p]Renamed Instance.FindEntitiesByClass to Entities.FindByClass[/p][/*][*][p]Renamed Instance.EntFireAtTarget to Entity.FireInput[/p][/*][*][p]Moved and renamed methods are still available in their original location, deprecated[/p][/*][*][p]Deprecated Instance.FindEntityByName and FindEntityByClass[/p][/*][*][p]Calling a method on an invalid (removed) Entity now reports that the Entity is invalid[/p][/*][*][p]ConnectOutput now logs a warning when the target has no output with that name[/p][/*][/list]\",\"feedlabel\":\"Community Announcements\",\"date\":1793840047,\"feedname\":\"steam_community_announcements\",\"feed_type\":1,\"appid\":730,\"tags\":[\"patchnotes\"]}",
+      "linkUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1848557880481353",
+      "extractedAt": "2026-11-05T04:15:12.187Z"
     }
   ],
   "sources": [
     {
       "id": "cs2-steam-patchnotes",
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=730&count=20&maxlength=0&feeds=steam_community_announcements&tags=patchnotes",
-      "textHash": "d6f2f34349439d2cbef7f509019ea65aad27882b8637c8d26de1c673a0e805c4",
-      "lastFetchedAt": "2026-11-04T22:59:41.745Z",
-      "lastUsableAt": "2026-11-04T22:59:41.745Z",
+      "textHash": "4c42b2bc7216beecb5b81d85d55e266cd1edc0316fd8f3ee3c35c1f107052bed",
+      "lastFetchedAt": "2026-11-05T04:15:12.187Z",
+      "lastUsableAt": "2026-11-05T04:15:12.187Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
