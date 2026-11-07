@@ -1,0 +1,16 @@
+{
+  "provider_id": "warzone",
+  "game": "warzone",
+  "type": "last-patch",
+  "title": "Call of Duty Warzone Last Patch",
+  "status": "fresh",
+  "nextEventUtc": "2026-11-05T00:00:00.000Z",
+  "fetched_at_utc": "2026-11-07T03:45:07.363Z",
+  "last_success_at_utc": "2026-11-07T03:45:07.363Z",
+  "source_url": "https://www.callofduty.com/patchnotes/2026/11/call-of-duty-mw4-warzone-season-1-patch-notes",
+  "confidence": "high",
+  "http_status": 304,
+  "fetch_mode": "http",
+  "notes": "Call of Duty: Warzone Season 1 Patch Notes",
+  "precision": "day"
+}

@@ -1,0 +1,14 @@
+{
+  "provider_id": "red-dead-redemption-2",
+  "game": "red-dead-redemption-2",
+  "type": "last-update",
+  "title": "Red Dead Redemption 2 Last Update",
+  "status": "fresh",
+  "nextEventUtc": "2026-11-03T00:00:00.000Z",
+  "fetched_at_utc": "2026-11-07T03:45:12.943Z",
+  "last_success_at_utc": "2026-11-07T03:45:12.943Z",
+  "source_url": "https://www.rockstargames.com/newswire/article/o3985a44ka4172/celebrate-thanksgiving-with-bonuses-for-traders-in-red-dead-online",
+  "confidence": "high",
+  "fetch_mode": "browser",
+  "notes": "Red Dead OnlineNovember 3, 2026Celebrate Thanksgiving with Bonuses for Traders in Red Dead Online"
+}
