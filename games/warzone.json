@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "warzone",
-  "updatedAt": "2026-11-08T03:23:14.387Z",
+  "updatedAt": "2026-11-08T12:27:07.933Z",
   "events": [
     {
       "key": "warzone/last-patch/call-of-duty-bo6-warzone-season-05-patch-notes-2025-09-03",
@@ -26,7 +26,7 @@
       "at": "2025-10-08T00:00:00.000Z",
       "precision": "day",
       "firstSeen": "2026-10-12T13:55:35.516Z",
-      "lastVerified": "2026-11-08T03:23:14.387Z",
+      "lastVerified": "2026-11-08T12:27:07.933Z",
       "publishState": "published"
     },
     {
@@ -39,7 +39,7 @@
       "at": "2025-12-16T00:00:00.000Z",
       "precision": "day",
       "firstSeen": "2026-10-12T13:55:35.516Z",
-      "lastVerified": "2026-11-08T03:23:14.387Z",
+      "lastVerified": "2026-11-08T12:27:07.933Z",
       "publishState": "published"
     },
     {
@@ -52,7 +52,7 @@
       "at": "2026-01-08T00:00:00.000Z",
       "precision": "day",
       "firstSeen": "2026-10-12T13:55:35.516Z",
-      "lastVerified": "2026-11-08T03:23:14.387Z",
+      "lastVerified": "2026-11-08T12:27:07.933Z",
       "publishState": "published"
     },
     {
@@ -65,7 +65,7 @@
       "at": "2026-03-03T00:00:00.000Z",
       "precision": "day",
       "firstSeen": "2026-10-12T13:55:35.516Z",
-      "lastVerified": "2026-11-08T03:23:14.387Z",
+      "lastVerified": "2026-11-08T12:27:07.933Z",
       "publishState": "published"
     },
     {
@@ -78,7 +78,7 @@
       "at": "2026-03-10T00:00:00.000Z",
       "precision": "day",
       "firstSeen": "2026-10-12T13:55:35.516Z",
-      "lastVerified": "2026-11-08T03:23:14.387Z",
+      "lastVerified": "2026-11-08T12:27:07.933Z",
       "publishState": "published"
     },
     {
@@ -91,7 +91,7 @@
       "at": "2026-04-21T00:00:00.000Z",
       "precision": "day",
       "firstSeen": "2026-10-12T13:55:35.516Z",
-      "lastVerified": "2026-11-08T03:23:14.387Z",
+      "lastVerified": "2026-11-08T12:27:07.933Z",
       "publishState": "published"
     },
     {
@@ -104,7 +104,7 @@
       "at": "2026-05-21T00:00:00.000Z",
       "precision": "day",
       "firstSeen": "2026-10-12T13:55:35.516Z",
-      "lastVerified": "2026-11-08T03:23:14.387Z",
+      "lastVerified": "2026-11-08T12:27:07.933Z",
       "publishState": "published"
     },
     {
@@ -117,7 +117,7 @@
       "at": "2026-06-16T00:00:00.000Z",
       "precision": "day",
       "firstSeen": "2026-10-12T13:55:35.516Z",
-      "lastVerified": "2026-11-08T03:23:14.387Z",
+      "lastVerified": "2026-11-08T12:27:07.933Z",
       "publishState": "published"
     },
     {
@@ -130,7 +130,7 @@
       "at": "2026-07-15T00:00:00.000Z",
       "precision": "day",
       "firstSeen": "2026-10-12T13:55:35.516Z",
-      "lastVerified": "2026-11-08T03:23:14.387Z",
+      "lastVerified": "2026-11-08T12:27:07.933Z",
       "publishState": "published"
     },
     {
@@ -143,7 +143,7 @@
       "at": "2026-08-12T00:00:00.000Z",
       "precision": "day",
       "firstSeen": "2026-10-12T13:55:35.516Z",
-      "lastVerified": "2026-11-08T03:23:14.387Z",
+      "lastVerified": "2026-11-08T12:27:07.933Z",
       "publishState": "published"
     },
     {
@@ -156,7 +156,7 @@
       "at": "2026-08-28T00:00:00.000Z",
       "precision": "day",
       "firstSeen": "2026-09-15T22:41:25.137Z",
-      "lastVerified": "2026-11-08T03:23:14.387Z",
+      "lastVerified": "2026-11-08T12:27:07.933Z",
       "publishState": "published"
     },
     {
@@ -221,7 +221,7 @@
       "at": "2026-10-14T00:00:00.000Z",
       "precision": "day",
       "firstSeen": "2026-10-14T21:06:31.108Z",
-      "lastVerified": "2026-11-08T03:23:14.387Z",
+      "lastVerified": "2026-11-08T12:27:07.933Z",
       "publishState": "published"
     },
     {
@@ -247,7 +247,7 @@
       "at": "2026-11-07T00:00:00.000Z",
       "precision": "day",
       "firstSeen": "2026-11-08T03:23:14.387Z",
-      "lastVerified": "2026-11-08T03:23:14.387Z",
+      "lastVerified": "2026-11-08T12:27:07.933Z",
       "publishState": "published"
     }
   ],
@@ -712,11 +712,11 @@
     {
       "id": "warzone-patch-notes-page",
       "url": "https://www.callofduty.com/patchnotes",
-      "etag": "W/\"28e9a-65fb9a2f49166-gzip\"",
-      "lastModified": "Sun, 08 Nov 2026 01:19:27 GMT",
-      "textHash": "b2437a53a78c1b50803ac805c71938b5ee6caa37b6783b83c71c6500ff840570",
-      "lastFetchedAt": "2026-11-08T03:23:14.387Z",
-      "lastUsableAt": "2026-11-08T03:23:14.387Z",
+      "etag": "W/\"28e9a-65fb9a3016561-gzip\"",
+      "lastModified": "Sun, 08 Nov 2026 01:19:28 GMT",
+      "textHash": "04d4d95f5b65dfa7f2a0d4116550718e7367fe5ce9e572f475b225b820f4f652",
+      "lastFetchedAt": "2026-11-08T12:27:07.933Z",
+      "lastUsableAt": "2026-11-08T12:27:07.933Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0,
