@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "ea-sports-fc",
-  "updatedAt": "2026-11-09T14:41:57.674Z",
+  "updatedAt": "2026-11-10T00:58:43.947Z",
   "events": [
     {
       "key": "ea-sports-fc/last-title-update/fc26-1.0.2",
@@ -14,7 +14,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -28,7 +28,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -42,7 +42,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -56,7 +56,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -70,7 +70,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -84,7 +84,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -98,7 +98,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -112,7 +112,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -126,7 +126,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -140,7 +140,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -154,7 +154,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -168,7 +168,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -182,7 +182,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -196,7 +196,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -210,7 +210,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -224,7 +224,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -238,7 +238,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -252,7 +252,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -266,7 +266,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-15T23:23:52.031Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -280,7 +280,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-09-23T15:46:56.333Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -294,7 +294,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-02T11:34:55.925Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -308,7 +308,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-07T12:18:58.294Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -322,7 +322,7 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-26T17:54:28.917Z",
-      "lastVerified": "2026-11-06T22:31:29.811Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     },
     {
@@ -336,7 +336,21 @@
       "precision": "exact",
       "timezone": "UTC",
       "firstSeen": "2026-10-27T17:01:30.392Z",
-      "lastVerified": "2026-11-09T14:41:57.674Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
+      "publishState": "published"
+    },
+    {
+      "key": "ea-sports-fc/last-title-update/fc27-1.2.0",
+      "game": "ea-sports-fc",
+      "topic": "last-title-update",
+      "kind": "version",
+      "label": "EA SPORTS FC™ 27 | Title Update v1.2.0 Pitch Notes",
+      "status": "observed",
+      "at": "2026-11-09T16:05:06.000Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-11-10T00:58:43.947Z",
+      "lastVerified": "2026-11-10T00:58:43.947Z",
       "publishState": "published"
     }
   ],
@@ -556,6 +570,15 @@
       "at": "2026-10-27T17:01:30.392Z",
       "reason": "observed by eafc-steam-fc27",
       "decision": "applied"
+    },
+    {
+      "entityKey": "ea-sports-fc/last-title-update/fc27-1.2.0",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "EA SPORTS FC™ 27 | Title Update v1.2.0 Pitch Notes @ 2026-11-09T16:05:06.000Z",
+      "at": "2026-11-10T00:58:43.947Z",
+      "reason": "observed by eafc-steam-fc27",
+      "decision": "applied"
     }
   ],
   "overrides": [],
@@ -610,6 +633,15 @@
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=4080220&count=100&maxlength=240&feeds=steam_community_announcements",
       "sourceId": "eafc-steam-fc27",
       "fetchedAt": "2026-10-27T17:01:30.392Z",
+      "title": "Steam news API response",
+      "fetchMode": "http",
+      "confidence": "high"
+    },
+    {
+      "id": "d1155e3d89e132d9f9a90b6b8d59978b32ad28e9de9d89f57feaea5bda114c40",
+      "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=4080220&count=100&maxlength=240&feeds=steam_community_announcements",
+      "sourceId": "eafc-steam-fc27",
+      "fetchedAt": "2026-11-10T00:58:43.947Z",
       "title": "Steam news API response",
       "fetchMode": "http",
       "confidence": "high"
@@ -879,6 +911,17 @@
       "quote": "{\"gid\":\"1847286114048576\",\"title\":\"EA SPORTS FC™ 27 | Title Update v1.1.0\",\"url\":\"https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1847286114048576\",\"is_external_url\":true,\"author\":\"Hecka9\",\"contents\":\"EA SPORTS FC 27 version 1.1.0 is now live and includes the updates below. There are no gameplay balance and tuning changes in this update. GameplayAddressed the following issues: In some cases, players could become stuck during the game ope...\",\"feedlabel\":\"Community Announcements\",\"date\":1793100935,\"feedname\":\"steam_community_announcements\",\"feed_type\":1,\"appid\":4080220}",
       "linkUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1847286114048576",
       "extractedAt": "2026-10-27T17:01:30.392Z"
+    },
+    {
+      "id": "fb80d0468740b04aa245b89c",
+      "documentId": "d1155e3d89e132d9f9a90b6b8d59978b32ad28e9de9d89f57feaea5bda114c40",
+      "eventKey": "ea-sports-fc/last-title-update/fc27-1.2.0",
+      "field": "at",
+      "value": "2026-11-09T16:05:06.000Z",
+      "method": "deterministic",
+      "quote": "{\"gid\":\"1848664643356052\",\"title\":\"EA SPORTS FC™ 27 | Title Update v1.2.0 Pitch Notes\",\"url\":\"https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1848664643356052\",\"is_external_url\":true,\"author\":\"Hecka9\",\"contents\":\"Welcome back to our latest Pitch Notes for Title Update v1.2.0, which begins rolling out on 10 November across PlayStation, Xbox, and PC, with Nintendo Switch releasing a little later on 12 November.With this update, we’ll be delivering our...\",\"feedlabel\":\"Community Announcements\",\"date\":1794240306,\"feedname\":\"steam_community_announcements\",\"feed_type\":1,\"appid\":4080220}",
+      "linkUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1848664643356052",
+      "extractedAt": "2026-11-10T00:58:43.947Z"
     }
   ],
   "sources": [
@@ -886,8 +929,8 @@
       "id": "eafc-steam-fc26",
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=3405690&count=100&maxlength=240&feeds=steam_community_announcements",
       "textHash": "758c0ecfe8c7f10ba9103688041807f93870c6223d7d58c4859d3e0264f1587c",
-      "lastFetchedAt": "2026-11-09T14:41:57.674Z",
-      "lastUsableAt": "2026-11-09T14:41:57.674Z",
+      "lastFetchedAt": "2026-11-10T00:58:43.947Z",
+      "lastUsableAt": "2026-11-10T00:58:43.947Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
@@ -895,9 +938,9 @@
     {
       "id": "eafc-steam-fc27",
       "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=4080220&count=100&maxlength=240&feeds=steam_community_announcements",
-      "textHash": "5f1c2fe24ff1b4cd9d6c3b130e1d09741141e0c0e15858103c95f722877eb2e9",
-      "lastFetchedAt": "2026-11-09T14:41:57.674Z",
-      "lastUsableAt": "2026-11-09T14:41:57.674Z",
+      "textHash": "d1155e3d89e132d9f9a90b6b8d59978b32ad28e9de9d89f57feaea5bda114c40",
+      "lastFetchedAt": "2026-11-10T00:58:43.947Z",
+      "lastUsableAt": "2026-11-10T00:58:43.947Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
