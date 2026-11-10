@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "game": "roblox",
-  "updatedAt": "2026-11-10T00:58:38.261Z",
+  "updatedAt": "2026-11-10T13:57:37.807Z",
   "events": [
     {
       "key": "roblox/status/2026-08-07t04-48-28z",
@@ -58,6 +58,20 @@
       "firstSeen": "2026-11-03T22:41:28.306Z",
       "lastVerified": "2026-11-10T00:58:38.261Z",
       "publishState": "published"
+    },
+    {
+      "key": "roblox/status/2026-11-10t06-00-03z",
+      "game": "roblox",
+      "topic": "status",
+      "kind": "occurrence",
+      "label": "Operational",
+      "status": "observed",
+      "at": "2026-11-10T06:00:03.539Z",
+      "precision": "exact",
+      "timezone": "UTC",
+      "firstSeen": "2026-11-10T13:57:37.807Z",
+      "lastVerified": "2026-11-10T13:57:37.807Z",
+      "publishState": "published"
     }
   ],
   "changes": [
@@ -96,6 +110,15 @@
       "at": "2026-11-03T22:41:28.306Z",
       "reason": "observed by roblox-hostedstatus",
       "decision": "applied"
+    },
+    {
+      "entityKey": "roblox/status/2026-11-10t06-00-03z",
+      "field": "event",
+      "oldValue": null,
+      "newValue": "Operational @ 2026-11-10T06:00:03.539Z",
+      "at": "2026-11-10T13:57:37.807Z",
+      "reason": "observed by roblox-hostedstatus",
+      "decision": "applied"
     }
   ],
   "overrides": [],
@@ -105,10 +128,10 @@
     {
       "id": "roblox-hostedstatus",
       "url": "http://hostedstatus.com/1.0/status/59db90dbcdeb2f04dadcf16d",
-      "etag": "W/\"15e3-AzR/0QDt7KVNlXGIK2yUfsr80gk\"",
-      "textHash": "0d1a71f82fd9b1ec2a029c41ce563e4ad6b533b49da42c395b836f9e3ba67820",
-      "lastFetchedAt": "2026-11-10T00:58:38.261Z",
-      "lastUsableAt": "2026-11-03T22:41:28.306Z",
+      "etag": "W/\"15e3-5ueEeaBBgvTXfHtENhU3FnEoEzQ\"",
+      "textHash": "12d9d3d0764ee04096af0e379322a36a0383b1dd744b5479837558f0de9db0fe",
+      "lastFetchedAt": "2026-11-10T13:57:37.807Z",
+      "lastUsableAt": "2026-11-10T13:57:37.807Z",
       "lastVerdict": "usable",
       "lastMode": "http",
       "consecutiveFailures": 0
