@@ -1,0 +1,16 @@
+{
+  "provider_id": "ea-sports-fc",
+  "game": "ea-sports-fc",
+  "type": "last-title-update",
+  "title": "EA SPORTS FC Last Title Update",
+  "status": "fresh",
+  "nextEventUtc": "2026-11-09T16:05:06.000Z",
+  "fetched_at_utc": "2026-11-14T12:42:54.595Z",
+  "last_success_at_utc": "2026-11-14T12:42:54.595Z",
+  "source_url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1848664643356052",
+  "confidence": "high",
+  "http_status": 200,
+  "fetch_mode": "http",
+  "notes": "EA SPORTS FC™ 27 | Title Update v1.2.0 Pitch Notes",
+  "precision": "exact"
+}

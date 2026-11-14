@@ -1,0 +1,16 @@
+{
+  "provider_id": "genshin",
+  "game": "genshin",
+  "type": "next-banner",
+  "title": "Genshin Impact Next Banner End",
+  "status": "fresh",
+  "nextEventUtc": "2026-11-24T09:59:00.000Z",
+  "fetched_at_utc": "2026-11-14T12:42:49.291Z",
+  "last_success_at_utc": "2026-11-14T12:42:49.291Z",
+  "source_url": "https://genshin.hoyoverse.com/en/news",
+  "confidence": "high",
+  "http_status": 200,
+  "fetch_mode": "http",
+  "notes": "Myriad Patterns Unfold / Chanson of Many Waters / Epitome Invocation: ends 2026-11-24 17:59 server time (Asia 09:59 UTC, Europe 16:59 UTC, America 22:59 UTC)",
+  "precision": "exact"
+}

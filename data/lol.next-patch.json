@@ -1,0 +1,16 @@
+{
+  "provider_id": "lol",
+  "game": "lol",
+  "type": "next-patch",
+  "title": "League of Legends Next Patch",
+  "status": "fresh",
+  "nextEventUtc": "2026-11-18T00:00:00.000Z",
+  "fetched_at_utc": "2026-11-14T12:42:46.823Z",
+  "last_success_at_utc": "2026-11-14T12:42:46.823Z",
+  "source_url": "https://support.riotgames.com/en-us/league-of-legends/gameplay/patch-schedule-league-of-legends",
+  "confidence": "high",
+  "http_status": 200,
+  "fetch_mode": "http",
+  "notes": "Patch 26.23",
+  "precision": "day"
+}

@@ -1,0 +1,16 @@
+{
+  "provider_id": "pubg",
+  "game": "pubg",
+  "type": "last-patch",
+  "title": "PUBG Last Patch",
+  "status": "fresh",
+  "nextEventUtc": "2026-11-03T06:00:02.000Z",
+  "fetched_at_utc": "2026-11-14T12:42:50.435Z",
+  "last_success_at_utc": "2026-11-14T12:42:50.435Z",
+  "source_url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1847920302250730",
+  "confidence": "high",
+  "http_status": 200,
+  "fetch_mode": "http",
+  "notes": "Patch Notes - Update 44.1",
+  "precision": "exact"
+}
